@@ -1,0 +1,23 @@
+version: "3.9"
+name: sevensa-core3
+services:
+  wp-control-suite:
+    profiles: ["wpctl"]
+    build: { context: ./wp-control-suite }
+    env_file: [./wp-control-suite/.env]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.wpctl.rule=Host(`${WPC_HOST}`)
+      - traefik.http.routers.wpctl.entrypoints=websecure
+      - traefik.http.routers.wpctl.tls.certresolver=le
+      - traefik.http.services.wpctl.loadbalancer.server.port=3030
+    healthcheck:
+      test: ["CMD-SHELL","curl -fsS http://localhost:3030/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks: [traefik, backend]
+networks:
+  traefik: { external: true, name: sevensa-core3_traefik }
+  backend: { external: true, name: sevensa-core3_backend }

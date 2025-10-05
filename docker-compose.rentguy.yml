@@ -1,0 +1,132 @@
+version: "3.9"
+
+services:
+  rentguy-frontend:
+    build: 
+      context: ../rentguy/apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3000"
+    environment:
+      - REACT_APP_API_URL=https://dakslopers.nl/api/rentguy
+      - REACT_APP_KEYCLOAK_URL=https://dakslopers.nl/auth
+      - REACT_APP_KEYCLOAK_REALM=dakslopers
+      - REACT_APP_KEYCLOAK_CLIENT_ID=rentguy-frontend
+    depends_on:
+      - rentguy-backend
+    networks:
+      - rentguy_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  rentguy-backend:
+    build:
+      context: ../rentguy/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg://rentguy:${RENTGUY_DB_PASSWORD}@rentguy-postgres:5432/rentguy
+      - JWT_SECRET=${RENTGUY_JWT_SECRET}
+      - SMTP_HOST=${RENTGUY_SMTP_HOST}
+      - SMTP_PORT=${RENTGUY_SMTP_PORT}
+      - SMTP_USER=${RENTGUY_SMTP_USER}
+      - SMTP_PASSWORD=${RENTGUY_SMTP_PASSWORD}
+      - KEYCLOAK_URL=https://dakslopers.nl/auth
+      - KEYCLOAK_REALM=dakslopers
+      - KEYCLOAK_CLIENT_ID=rentguy-backend
+      - KEYCLOAK_CLIENT_SECRET=${RENTGUY_KEYCLOAK_CLIENT_SECRET}
+      - REDIS_URL=redis://rentguy-redis:6379/1
+    depends_on:
+      rentguy-postgres:
+        condition: service_healthy
+      rentguy-redis:
+        condition: service_healthy
+    networks:
+      - rentguy_network
+      - shared_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  rentguy-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rentguy
+      POSTGRES_USER: rentguy
+      POSTGRES_PASSWORD: ${RENTGUY_DB_PASSWORD}
+    volumes:
+      - rentguy_db_data:/var/lib/postgresql/data
+      - ../rentguy/backend/alembic/versions:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"  # Different port to avoid conflict with main PostgreSQL
+    networks:
+      - rentguy_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rentguy -d rentguy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  rentguy-redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${RENTGUY_REDIS_PASSWORD}
+    volumes:
+      - rentguy_redis_data:/data
+    ports:
+      - "6380:6379"  # Different port to avoid conflict with main Redis
+    networks:
+      - rentguy_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  rentguy-nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"  # Internal nginx for RentGuy-specific routing
+    volumes:
+      - ./nginx/rentguy.conf:/etc/nginx/conf.d/default.conf
+      - ../rentguy/apps/web/dist:/usr/share/nginx/html
+    depends_on:
+      - rentguy-frontend
+      - rentguy-backend
+    networks:
+      - rentguy_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  rentguy_db_data:
+    driver: local
+  rentguy_redis_data:
+    driver: local
+
+networks:
+  rentguy_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  shared_network:
+    external: true
+    name: psra_shared_network

@@ -1,0 +1,32 @@
+[MODE: LYRA.DETAILED | ROLE: Principal SRE + DevOps + Full‑stack | TONE: crisp, actionable, production‑grade]
+
+OBJECTIVE
+- Restore three core Sevensa services to PRODUCTION: PSRA/LTSD, RentGuy (FastAPI+Vite), WP‑Control‑Suite.
+- Enforce safety: DB snapshots, strict health‑gates, rollbacks, DNS/domain separation to Sevensa.
+- Plan (but park) other services: AI suite, n8n.sevensa.nl, trading.sevensa.nl, orchestrator, vector DB.
+
+INPUTS
+- PSRA Comprehensive backup path: /root/psra_final_comprehensive_backup_20250927_211818.tar.gz
+- RentGuy source: integrated in this kit (backend FastAPI + frontend Vite)
+- WPCTL: code will be supplied as ZIP later (bootstrap harness included)
+
+MANDATES
+- Use Traefik v3 (TLS) + host‑based routing; avoid port conflicts.
+- For RentGuy: run Alembic migrations before starting uvicorn; provide Redis and optional Keycloak.
+- Health‑gates must pass (/healthz AND /readyz) before progressing.
+- Make DB snapshots before any destructive action.
+
+EXECUTION (step-by-step)
+1) Preflight → start Traefik + Postgres (`scripts/00_preflight.sh`).
+2) PSRA full restore (`scripts/01_restore_psra.sh`), then gate on `http://localhost:8000/health`.
+3) RentGuy DB bootstrap → Alembic verify → build & up (`scripts/13_*, 14_*, 15_*`). Gate on `/healthz`, `/readyz`, web `/`.
+4) WPCTL bootstrap once real code is provided (`scripts/40_*`), then enable compose profile `wpctl`.
+5) Verify Sevensa migration + domain separation (`scripts/10_*`, `11_*`).
+6) Take snapshots regularly (`scripts/12_*`, `98_*`). Emergency stop: `scripts/99_rollback.sh`.
+
+OUTPUTS
+- All core services live behind Sevensa hostnames with valid TLS.
+- Snapshots stored under /root/backups/.
+- State logs under /root/manus-logs (extend as needed).
+
+STOP when any health‑gate fails; print last 200 lines of logs and roll back.

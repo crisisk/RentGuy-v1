@@ -1,0 +1,24 @@
+version: "3.9"
+name: sevensa-core3
+services:
+  psra:
+    build: { context: ./psra }
+    env_file: [./psra/.env, ./db/.env]
+    depends_on:
+      db: { condition: service_healthy }
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.psra.rule=Host(`${PSRA_HOST}`)
+      - traefik.http.routers.psra.entrypoints=websecure
+      - traefik.http.routers.psra.tls.certresolver=le
+      - traefik.http.services.psra.loadbalancer.server.port=8000
+    healthcheck:
+      test: ["CMD-SHELL","curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks: [traefik, backend]
+networks:
+  traefik: { external: true, name: sevensa-core3_traefik }
+  backend: { external: true, name: sevensa-core3_backend }

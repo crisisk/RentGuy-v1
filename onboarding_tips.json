@@ -1,0 +1,22 @@
+[
+  {
+    "module": "projects",
+    "message": "Sleep projecten in de kalender om snel te herplannen.",
+    "cta": "Open Planner"
+  },
+  {
+    "module": "inventory",
+    "message": "Maak een bundel (DJ-set) zodat accessories automatisch meeliften.",
+    "cta": "Maak bundel"
+  },
+  {
+    "module": "warehouse",
+    "message": "Scan een item met de PWA om uitgifte te boeken.",
+    "cta": "Open Scanner"
+  },
+  {
+    "module": "billing",
+    "message": "Maak een factuur vanuit je projectregels en exporteer CSV.",
+    "cta": "Maak factuur"
+  }
+]

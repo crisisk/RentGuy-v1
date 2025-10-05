@@ -211,19 +211,89 @@ export const useErrorActions = () => useStore((state) => ({
 export const getStoreState = () => useStore.getState();
 export const subscribeToStore = (selector, callback) => useStore.subscribe(selector, callback);
 
-// Performance monitoring
+// Performance monitoring and analytics
 if (process.env.NODE_ENV === 'development') {
   // Subscribe to all state changes for debugging
   useStore.subscribe(
     (state) => state,
     (state, prevState) => {
-      console.log('Store updated:', {
-        timestamp: new Date().toISOString(),
-        changes: Object.keys(state).filter(key => state[key] !== prevState[key]),
-        state: state,
-      });
+      const changes = Object.keys(state).filter(key => state[key] !== prevState[key]);
+      if (changes.length > 0) {
+        console.log('Store updated:', {
+          timestamp: new Date().toISOString(),
+          changes,
+          performance: {
+            memory: performance.memory ? {
+              used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+              total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024),
+            } : null,
+            timing: performance.now(),
+          },
+        });
+      }
     }
   );
+
+  // Global store access for debugging
+  window.rentguyStore = useStore;
+  window.resetRentGuyStore = () => useStore.getState().resetStore();
 }
+
+// Store initialization and cleanup utilities
+export const initializeStore = () => {
+  // Set up global error handling
+  window.addEventListener('error', (event) => {
+    useStore.getState().addError?.({
+      type: 'javascript',
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+      stack: event.error?.stack,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Set up unhandled promise rejection handling
+  window.addEventListener('unhandledrejection', (event) => {
+    useStore.getState().addError?.({
+      type: 'promise',
+      message: event.reason?.message || 'Unhandled promise rejection',
+      reason: event.reason,
+      stack: event.reason?.stack,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Performance monitoring setup
+  if ('PerformanceObserver' in window) {
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.entryType === 'navigation') {
+          console.log('Navigation performance:', {
+            domContentLoaded: entry.domContentLoadedEventEnd - entry.domContentLoadedEventStart,
+            loadComplete: entry.loadEventEnd - entry.loadEventStart,
+            totalTime: entry.loadEventEnd - entry.fetchStart,
+          });
+        }
+      }
+    });
+    
+    try {
+      observer.observe({ entryTypes: ['navigation', 'paint', 'largest-contentful-paint'] });
+    } catch (error) {
+      console.warn('Performance observer not fully supported:', error);
+    }
+  }
+};
+
+// Store cleanup for component unmounting
+export const cleanupStore = () => {
+  // Clean up any subscriptions or timers
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('error', () => {});
+    window.removeEventListener('unhandledrejection', () => {});
+  }
+};
 
 export default useStore;

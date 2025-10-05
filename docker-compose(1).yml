@@ -1,0 +1,81 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rentguy
+      POSTGRES_USER: rentguy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rentguy -d rentguy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rentguy_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file: ./ops/env/.env
+    environment:
+      - DATABASE_URL=postgresql+psycopg://rentguy:${POSTGRES_PASSWORD}@db:5432/rentguy
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./docs:/app/docs:ro
+      - ./seed_bart_user.py:/app/seed_bart_user.py:ro
+    command: >
+      sh -c "
+        echo 'Running database migrations...' &&
+        alembic upgrade head &&
+        echo 'Seeding onboarding data...' &&
+        python -c 'from app.modules.onboarding.repo import OnboardingRepo; from app.core.db import get_db; import json; db = next(get_db()); repo = OnboardingRepo(db); repo.ensure_seed(); db.commit(); print(\"Onboarding steps seeded\")' &&
+        echo 'Creating Bart user...' &&
+        python seed_bart_user.py &&
+        echo 'Loading onboarding tips...' &&
+        python -c 'from app.modules.onboarding.models import Tip; from app.core.db import get_db; import json; db = next(get_db()); 
+        try:
+          with open(\"/app/docs/onboarding_tips.json\", \"r\") as f:
+            tips_data = json.load(f)
+          for tip_data in tips_data:
+            existing = db.query(Tip).filter_by(module=tip_data[\"module\"]).first()
+            if not existing:
+              tip = Tip(**tip_data)
+              db.add(tip)
+          db.commit()
+          print(\"Tips loaded successfully\")
+        except Exception as e:
+          print(f\"Error loading tips: {e}\")' &&
+        echo 'Starting FastAPI server...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    networks:
+      - rentguy_network
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    networks:
+      - rentguy_network
+
+volumes:
+  dbdata:
+
+networks:
+  rentguy_network:
+    driver: bridge

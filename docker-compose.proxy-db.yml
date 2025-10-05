@@ -1,0 +1,45 @@
+version: "3.9"
+name: sevensa-core3
+
+networks:
+  traefik:
+  backend:
+
+volumes:
+  traefik_le:
+  psql_data:
+
+services:
+  proxy:
+    image: traefik:v3.1
+    env_file: [./proxy/.env]
+    command:
+      - --api.dashboard=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --accesslog=true
+      - --log.level=INFO
+    ports: ["80:80","443:443"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./proxy/dynamic:/etc/traefik/dynamic:ro
+      - traefik_le:/letsencrypt
+    restart: unless-stopped
+    networks: [traefik]
+
+  db:
+    image: postgres:15
+    env_file: [./db/.env]
+    volumes: [psql_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [backend]
