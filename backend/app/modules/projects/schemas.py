@@ -1,6 +1,9 @@
-from pydantic import BaseModel
-from typing import List
+from __future__ import annotations
+
 from datetime import date
+from typing import List, Literal
+
+from pydantic import BaseModel
 
 class ProjectIn(BaseModel):
     name: str
@@ -16,6 +19,11 @@ class ProjectOut(BaseModel):
     start_date: date
     end_date: date
     notes: str = ""
+    status: Literal["upcoming", "active", "completed", "at_risk"] | None = None
+    days_until_start: int | None = None
+    duration_days: int | None = None
+    inventory_risk: Literal["ok", "warning", "critical"] | None = None
+    inventory_alerts: List[str] | None = None
     class Config:
         from_attributes = True
 

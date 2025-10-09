@@ -12,12 +12,12 @@ export default function Login({ onLogin }) {
     try {
       // backend expects email; map username -> email
       const email = `${user}@demo.local`
-      const form = new FormData()
-      form.append('email', email)
-      form.append('password', password)
-      const { data } = await api.post('/api/v1/auth/login', form)
+      const { data } = await api.post('/api/v1/auth/login', {
+        email,
+        password,
+      })
       setToken(data.access_token)
-      onLogin(data.access_token)
+      onLogin(data.access_token, email)
     } catch (err) {
       setError('Login mislukt. Controleer gegevens.')
     }
