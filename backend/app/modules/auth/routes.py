@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .schemas import UserCreate, UserOut, TokenOut
+from .schemas import UserCreate, UserOut, TokenOut, UserLogin
 from .models import User
 from .repo import UserRepo
 from .security import hash_password, verify_password, create_access_token
 from .deps import get_db, require_role
-from pydantic import EmailStr
 
 router = APIRouter()
 
@@ -20,10 +19,10 @@ def register(payload: UserCreate, db: Session = Depends(get_db), user=Depends(re
     return UserOut(id=u.id, email=u.email, role=u.role)
 
 @router.post("/login", response_model=TokenOut)
-def login(email: EmailStr = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+def login(payload: UserLogin, db: Session = Depends(get_db)):
     repo = UserRepo(db)
-    u = repo.by_email(str(email))
-    if not u or not verify_password(password, u.password_hash):
+    u = repo.by_email(payload.email)
+    if not u or not verify_password(payload.password, u.password_hash):
         raise HTTPException(401, "Invalid credentials")
     token = create_access_token(u.email)
     return TokenOut(access_token=token)
