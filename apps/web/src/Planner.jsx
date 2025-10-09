@@ -92,6 +92,11 @@ const riskLabels = {
   critical: 'Kritiek',
 }
 
+const severityLabels = {
+  warning: 'Let op',
+  critical: 'Kritiek',
+}
+
 const statusPriority = {
   at_risk: 0,
   active: 1,
@@ -118,6 +123,45 @@ const cardPalette = {
   warning: '#fef3c7',
   danger: '#fee2e2',
 }
+
+const complianceTargets = [
+  {
+    category: 'Beschikbaarheid',
+    target: '99.9% uptime-monitoring',
+    status: 'In uitvoering',
+    tone: 'warning',
+    notes:
+      'Uptime dashboards worden voorbereid (fase 7/13) en koppeling met planner alerts staat ingepland.',
+    personas: ['Bart', 'Sven'],
+  },
+  {
+    category: 'Performance',
+    target: '95% API-responses < 200ms',
+    status: 'Op koers',
+    tone: 'success',
+    notes:
+      'Project-API levert nu compacte payloads met cachebare metadata voor Anna en David.',
+    personas: ['Anna', 'David'],
+  },
+  {
+    category: 'Beveiliging',
+    target: 'OWASP Top 10 mitigaties',
+    status: 'Verbeterd',
+    tone: 'warning',
+    notes:
+      'Consistente validatie en foutafhandeling staan, automatische security-scans volgen in de CI-pijplijn.',
+    personas: ['Sven', 'Peter'],
+  },
+  {
+    category: 'Onderhoudbaarheid',
+    target: 'Gestandaardiseerde API-uitvoer',
+    status: 'Voldoet',
+    tone: 'success',
+    notes:
+      'Uniforme projectresponses versnellen Nadia’s onboarding en Peters automatiseringen.',
+    personas: ['Peter', 'Nadia'],
+  },
+]
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   day: '2-digit',
@@ -225,6 +269,94 @@ function SummaryMetric({ label, value, tone = 'neutral', helpText }) {
   )
 }
 
+function ComplianceChecklist({ items }) {
+  if (!items?.length) return null
+  const toneAccent = {
+    success: '#15803d',
+    warning: '#d97706',
+    danger: '#b91c1c',
+    neutral: '#4b5563',
+  }
+  return (
+    <div style={{ display: 'grid', gap: '12px' }}>
+      {items.map(item => {
+        const accent = toneAccent[item.tone] || toneAccent.neutral
+        return (
+          <div
+            key={item.category}
+            style={{
+              background: cardPalette[item.tone] || cardPalette.neutral,
+              padding: '12px 16px',
+              borderRadius: '12px',
+              borderLeft: `4px solid ${accent}`,
+              display: 'grid',
+              gap: '8px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>{item.category}</div>
+                <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>{item.target}</div>
+              </div>
+              <span style={{ fontWeight: 600, color: accent }}>{item.status}</span>
+            </div>
+            <div style={{ fontSize: '0.9rem', color: '#374151' }}>{item.notes}</div>
+            <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Personas: {item.personas.join(', ')}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function InventoryAlertDetails({ details }) {
+  if (!details?.length) return null
+  const accentMap = {
+    warning: '#d97706',
+    critical: '#b91c1c',
+  }
+  return (
+    <div style={{ display: 'grid', gap: '8px' }}>
+      {details.map(detail => {
+        const accent = accentMap[detail.severity] || '#4b5563'
+        return (
+          <div
+            key={`${detail.itemId}-${detail.severity}-${detail.label}`}
+            style={{
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              backgroundColor: `${accent}10`,
+              border: `1px solid ${accent}30`,
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                color: accent,
+              }}
+            >
+              {severityLabels[detail.severity] || detail.severity}
+            </span>
+            <div style={{ display: 'grid', gap: '4px' }}>
+              <div style={{ fontWeight: 600 }}>{detail.label}</div>
+              <div style={{ fontSize: '0.9rem', color: '#374151' }}>{detail.message}</div>
+              {detail.suggestedAction && (
+                <div style={{ fontSize: '0.8rem', color: '#4b5563' }}>Advies: {detail.suggestedAction}</div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function LoadingRows() {
   return (
     <tbody>
@@ -290,6 +422,15 @@ export default function Planner({ onLogout }) {
         status: project.status || 'upcoming',
         risk: project.inventory_risk || 'ok',
         alerts: Array.isArray(project.inventory_alerts) ? project.inventory_alerts : [],
+        alertDetails: Array.isArray(project.inventory_alerts_detailed)
+          ? project.inventory_alerts_detailed.map(detail => ({
+              itemId: detail.item_id,
+              label: detail.label,
+              severity: detail.severity,
+              message: detail.message,
+              suggestedAction: detail.suggested_action || '',
+            }))
+          : [],
         durationDays: typeof project.duration_days === 'number' ? project.duration_days : null,
         daysUntilStart: typeof project.days_until_start === 'number' ? project.days_until_start : null,
         notes: project.notes || '',
@@ -305,8 +446,23 @@ export default function Planner({ onLogout }) {
   }
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedPreset = window.localStorage.getItem('planner.personaPreset')
+      if (storedPreset && personaPresets[storedPreset]) {
+        applyPersonaPreset(storedPreset)
+      }
+    }
     loadProjects()
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem('planner.personaPreset', personaPreset)
+    } catch (storageError) {
+      // Ignoreren wanneer opslag niet beschikbaar is (bv. private mode)
+    }
+  }, [personaPreset])
 
   function openEditor(event) {
     setEditing(event)
@@ -324,6 +480,10 @@ export default function Planner({ onLogout }) {
   function closeEditor() {
     setEditing(null)
     setFormState({ name: '', client: '', start: '', end: '', notes: '' })
+  }
+
+  function toggleDetails(projectId) {
+    setExpandedRow(current => (current === projectId ? null : projectId))
   }
 
   function applyPersonaPreset(value) {
@@ -378,7 +538,11 @@ export default function Planner({ onLogout }) {
         return (
           event.name.toLowerCase().includes(term) ||
           event.client.toLowerCase().includes(term) ||
-          (event.notes && event.notes.toLowerCase().includes(term))
+          (event.notes && event.notes.toLowerCase().includes(term)) ||
+          event.status.toLowerCase().includes(term) ||
+          event.alertDetails?.some(detail =>
+            detail.label.toLowerCase().includes(term) || detail.message.toLowerCase().includes(term)
+          )
         )
       })
       .sort((a, b) => {
@@ -423,13 +587,25 @@ export default function Planner({ onLogout }) {
         if (event.status === 'completed') acc.completed += 1
         if (event.risk === 'warning') acc.warning += 1
         if (event.risk === 'critical') acc.critical += 1
+        if ((event.alertDetails && event.alertDetails.length > 0) || event.alerts.length > 0) {
+          acc.withAlerts += 1
+        }
         return acc
       },
-      { total: 0, active: 0, upcoming: 0, completed: 0, atRisk: 0, warning: 0, critical: 0 }
+      { total: 0, active: 0, upcoming: 0, completed: 0, atRisk: 0, warning: 0, critical: 0, withAlerts: 0 }
     )
   }, [events])
 
   const personaHint = personaPresets[personaPreset]?.description
+
+  const riskOutlook =
+    summary.total === 0
+      ? 'Nog geen projecten geladen.'
+      : summary.critical > 0
+      ? `${summary.critical} project(en) hebben kritieke voorraad en vereisen escalatie.`
+      : summary.warning > 0
+      ? `${summary.warning} project(en) hebben voorraadwaarschuwingen voor follow-up.`
+      : 'Alle geplande projecten liggen op schema qua voorraad.'
 
   function shiftRange(delta) {
     setFormState(prev => ({
@@ -437,6 +613,35 @@ export default function Planner({ onLogout }) {
       start: shiftDate(prev.start, delta),
       end: shiftDate(prev.end, delta),
     }))
+  }
+
+  async function copySummaryToClipboard() {
+    const personaLabel = personaPresets[personaPreset]?.label ?? 'Alle rollen'
+    const lines = [
+      'RentGuy Enterprise – UAT snapshot',
+      `Persona preset: ${personaLabel}`,
+      `Totaal projecten: ${summary.total}`,
+      `Actief: ${summary.active}`,
+      `Komend: ${summary.upcoming}`,
+      `Afgerond: ${summary.completed}`,
+      `Voorraadrisico: ${summary.critical} kritisch / ${summary.warning} waarschuwing`,
+      `Projecten met alerts: ${summary.withAlerts}`,
+      `Risico-inschatting: ${riskOutlook}`,
+      '',
+      'Compliance voortgang:',
+      ...complianceTargets.map(item => `- ${item.category}: ${item.status} (${item.target}) – ${item.notes}`),
+    ].join('\n')
+    try {
+      if (typeof window !== 'undefined' && window.navigator?.clipboard?.writeText) {
+        await window.navigator.clipboard.writeText(lines)
+        setFeedback({ type: 'success', message: 'UAT samenvatting gekopieerd naar het klembord.' })
+      } else {
+        throw new Error('clipboard_unavailable')
+      }
+    } catch (error) {
+      console.error(error)
+      setFeedback({ type: 'error', message: 'Klembord niet beschikbaar. Kopieer de tekst handmatig.' })
+    }
   }
 
   return (
@@ -460,6 +665,7 @@ export default function Planner({ onLogout }) {
         }}
         aria-live="polite"
       >
+        <SummaryMetric label="Totaal" value={summary.total} helpText="Projecten in overzicht" />
         <SummaryMetric label="Actief" value={summary.active} tone="success" helpText="Inclusief risicoprojecten" />
         <SummaryMetric label="Komend" value={summary.upcoming} />
         <SummaryMetric label="Afgerond" value={summary.completed} />
@@ -467,8 +673,35 @@ export default function Planner({ onLogout }) {
           label="Voorraadrisico"
           value={`${summary.critical} kritisch / ${summary.warning} waarschuwing`}
           tone={summary.critical ? 'danger' : summary.warning ? 'warning' : 'neutral'}
+          helpText={`${summary.withAlerts} projecten met alerts`}
         />
       </div>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      >
+        <span style={{ fontSize: '0.9rem', color: '#374151' }}>{riskOutlook}</span>
+        <button type="button" onClick={copySummaryToClipboard} style={{ padding: '8px 12px' }}>
+          Kopieer UAT-snapshot
+        </button>
+      </div>
+
+      <section style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>Compliance-check systeemeisen</h3>
+          <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
+            Reflectie op de architectuur- en NFR-doelstellingen uit fase 2 en recente UAT-verbeteringen.
+          </p>
+        </div>
+        <ComplianceChecklist items={complianceTargets} />
+      </section>
 
       <div style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
@@ -608,6 +841,7 @@ export default function Planner({ onLogout }) {
             <tbody>
               {filteredEvents.map(event => {
                 const isExpanded = expandedRow === event.id
+                const detailRowId = `project-details-${event.id}`
                 return (
                   <React.Fragment key={event.id}>
                     <tr
@@ -626,7 +860,12 @@ export default function Planner({ onLogout }) {
                       <td style={{ padding: '12px 8px', color: '#4b5563' }}>{formatDate(event.start)}</td>
                       <td style={{ padding: '12px 8px', color: '#4b5563' }}>{formatDate(event.end)}</td>
                       <td style={{ padding: '12px 8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button type="button" onClick={() => setExpandedRow(isExpanded ? null : event.id)}>
+                        <button
+                          type="button"
+                          onClick={() => toggleDetails(event.id)}
+                          aria-expanded={isExpanded}
+                          aria-controls={detailRowId}
+                        >
                           {isExpanded ? 'Sluit details' : 'Details'}
                         </button>
                         <button type="button" onClick={() => openEditor(event)}>
@@ -635,7 +874,7 @@ export default function Planner({ onLogout }) {
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr>
+                      <tr id={detailRowId}>
                         <td colSpan={8} style={{ padding: '16px 24px', backgroundColor: '#f9fafb' }}>
                           <div style={{ display: 'grid', gap: '12px' }}>
                             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: '#4b5563' }}>
@@ -646,7 +885,12 @@ export default function Planner({ onLogout }) {
                             <div style={{ color: '#4b5563', whiteSpace: 'pre-wrap' }}>
                               {event.notes ? event.notes : 'Geen notities toegevoegd.'}
                             </div>
-                            {event.alerts.length > 0 ? (
+                            {event.alertDetails && event.alertDetails.length > 0 ? (
+                              <div style={{ display: 'grid', gap: '8px' }}>
+                                <div style={{ color: '#111827', fontWeight: 600 }}>Voorraaddetails & acties</div>
+                                <InventoryAlertDetails details={event.alertDetails} />
+                              </div>
+                            ) : event.alerts.length > 0 ? (
                               <div>
                                 <div style={{ color: '#111827', fontWeight: 600, marginBottom: '6px' }}>Voorraaddetails</div>
                                 <ul style={{ margin: 0, paddingLeft: '20px', color: '#b91c1c' }}>

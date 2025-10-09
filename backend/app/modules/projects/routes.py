@@ -8,7 +8,14 @@ from app.modules.auth.deps import get_db, require_role
 from app.modules.inventory.models import Item
 from .models import Project
 from .repo import ProjectsRepo
-from .schemas import ProjectDetail, ProjectIn, ProjectItemOut, ProjectOut, ReserveRequest
+from .schemas import (
+    InventoryAlert,
+    ProjectDetail,
+    ProjectIn,
+    ProjectItemOut,
+    ProjectOut,
+    ReserveRequest,
+)
 from .usecases import ReservationService
 
 router = APIRouter()
@@ -23,29 +30,87 @@ def _project_schedule_metadata(project: Project) -> tuple[str, int | None, int |
     return "active", 0, duration
 
 
-def _inventory_health(repo: ProjectsRepo, project: Project) -> tuple[str, list[str]]:
+def _inventory_health(
+    repo: ProjectsRepo,
+    project: Project,
+    item_rows: list | None = None,
+) -> tuple[str, list[str], list[InventoryAlert]]:
     risk = "ok"
     alerts: list[str] = []
-    item_rows = repo.list_items(project.id)
+    detailed: list[InventoryAlert] = []
+    item_rows = item_rows or repo.list_items(project.id)
     for item_row in item_rows:
         item = repo.db.get(Item, item_row.item_id)
         total_qty = int(item.quantity_total) if item and item.quantity_total is not None else 0
+        label = item.name if item and getattr(item, "name", None) else f"Item #{item_row.item_id}"
         if total_qty == 0:
             risk = "critical"
-            label = item.name if item and getattr(item, "name", None) else f"Item #{item_row.item_id}"
-            alerts.append(f"Geen voorraad geregistreerd voor {label}.")
+            message = f"Geen voorraad geregistreerd voor {label}."
+            alerts.append(message)
+            detailed.append(
+                InventoryAlert(
+                    item_id=item_row.item_id,
+                    label=label,
+                    severity="critical",
+                    message=message,
+                    suggested_action="Controleer voorraadbeheer of markeer als extern ingekocht.",
+                )
+            )
             continue
         ratio = item_row.qty_reserved / total_qty
-        label = item.name if item and getattr(item, "name", None) else f"Item #{item_row.item_id}"
         percentage = round(ratio * 100)
         if ratio >= 1:
             risk = "critical"
-            alerts.append(f"{label}: alle {total_qty} stuks zijn gereserveerd.")
+            message = f"{label}: alle {total_qty} stuks zijn gereserveerd."
+            alerts.append(message)
+            detailed.append(
+                InventoryAlert(
+                    item_id=item_row.item_id,
+                    label=label,
+                    severity="critical",
+                    message=message,
+                    suggested_action="Herplan leveringen of verhoog de voorraad voor dit item.",
+                )
+            )
         elif ratio >= 0.75:
             if risk == "ok":
                 risk = "warning"
-            alerts.append(f"{label}: {percentage}% van de voorraad is gepland.")
-    return risk, alerts
+            message = f"{label}: {percentage}% van de voorraad is gepland."
+            alerts.append(message)
+            detailed.append(
+                InventoryAlert(
+                    item_id=item_row.item_id,
+                    label=label,
+                    severity="warning",
+                    message=message,
+                    suggested_action="Bevestig levertijden en overweeg een backup-item.",
+                )
+            )
+    return risk, alerts, detailed
+
+
+def _compose_project_out(
+    repo: ProjectsRepo,
+    project: Project,
+    item_rows: list | None = None,
+) -> ProjectOut:
+    status, days_until_start, duration = _project_schedule_metadata(project)
+    inventory_risk, alerts, detailed_alerts = _inventory_health(repo, project, item_rows)
+    derived_status = "at_risk" if status != "completed" and inventory_risk == "critical" else status
+    return ProjectOut(
+        id=project.id,
+        name=project.name,
+        client_name=project.client_name,
+        start_date=project.start_date,
+        end_date=project.end_date,
+        notes=project.notes,
+        status=derived_status,
+        days_until_start=days_until_start,
+        duration_days=duration,
+        inventory_risk=inventory_risk,
+        inventory_alerts=alerts,
+        inventory_alerts_detailed=detailed_alerts,
+    )
 
 
 @router.get("/projects", response_model=list[ProjectOut])
@@ -54,33 +119,16 @@ def list_projects(
     user=Depends(require_role("admin", "planner", "warehouse", "viewer")),
 ):
     repo = ProjectsRepo(db)
-    projects = []
-    for project in repo.list():
-        status, days_until_start, duration = _project_schedule_metadata(project)
-        inventory_risk, alerts = _inventory_health(repo, project)
-        derived_status = "at_risk" if status != "completed" and inventory_risk == "critical" else status
-        projects.append(
-            ProjectOut(
-                id=project.id,
-                name=project.name,
-                client_name=project.client_name,
-                start_date=project.start_date,
-                end_date=project.end_date,
-                notes=project.notes,
-                status=derived_status,
-                days_until_start=days_until_start,
-                duration_days=duration,
-                inventory_risk=inventory_risk,
-                inventory_alerts=alerts,
-            )
-        )
-    return projects
+    return [_compose_project_out(repo, project) for project in repo.list()]
 
 @router.post("/projects", response_model=ProjectOut)
 def create_project(payload: ProjectIn, db: Session = Depends(get_db), user=Depends(require_role("admin","planner"))):
-    p = Project(**payload.model_dump())
-    ProjectsRepo(db).add(p); db.commit()
-    return p
+    repo = ProjectsRepo(db)
+    project = Project(**payload.model_dump())
+    repo.add(project)
+    db.commit()
+    db.refresh(project)
+    return _compose_project_out(repo, project)
 
 @router.get("/projects/{project_id}", response_model=ProjectDetail)
 def get_project(
@@ -91,8 +139,9 @@ def get_project(
     repo = ProjectsRepo(db)
     p = repo.get(project_id)
     if not p: raise HTTPException(404, "Project not found")
-    items = [ProjectItemOut(id=i.id, project_id=i.project_id, item_id=i.item_id, qty_reserved=i.qty_reserved) for i in repo.list_items(project_id)]
-    return ProjectDetail(project=p, items=items)
+    item_rows = repo.list_items(project_id)
+    items = [ProjectItemOut(id=i.id, project_id=i.project_id, item_id=i.item_id, qty_reserved=i.qty_reserved) for i in item_rows]
+    return ProjectDetail(project=_compose_project_out(repo, p, item_rows), items=items)
 
 @router.post("/projects/{project_id}/reserve", response_model=list[ProjectItemOut])
 def reserve_items(
@@ -146,4 +195,4 @@ def update_project_dates(
     prj.notes = payload.notes
     db.commit()
     db.refresh(prj)
-    return prj
+    return _compose_project_out(repo, prj)

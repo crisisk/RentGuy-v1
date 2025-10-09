@@ -5,6 +5,15 @@ from typing import List, Literal
 
 from pydantic import BaseModel
 
+
+class InventoryAlert(BaseModel):
+    item_id: int
+    label: str
+    severity: Literal["warning", "critical"]
+    message: str
+    suggested_action: str | None = None
+
+
 class ProjectIn(BaseModel):
     name: str
     client_name: str
@@ -24,6 +33,7 @@ class ProjectOut(BaseModel):
     duration_days: int | None = None
     inventory_risk: Literal["ok", "warning", "critical"] | None = None
     inventory_alerts: List[str] | None = None
+    inventory_alerts_detailed: List[InventoryAlert] | None = None
     class Config:
         from_attributes = True
 
