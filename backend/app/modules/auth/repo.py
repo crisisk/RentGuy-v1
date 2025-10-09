@@ -7,7 +7,8 @@ class UserRepo:
         self.db = db
 
     def by_email(self, email: str) -> User | None:
-        return self.db.execute(select(User).where(User.email==email)).scalar_one_or_none()
+        normalized = email.strip().lower()
+        return self.db.execute(select(User).where(User.email == normalized)).scalar_one_or_none()
 
     def add(self, user: User) -> User:
         self.db.add(user)
