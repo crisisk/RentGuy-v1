@@ -1,0 +1,71 @@
+diff --git a/OnboardingOverlay.jsx b/OnboardingOverlay.jsx
+index 7edda87..347f7bc 100644
+--- a/OnboardingOverlay.jsx
++++ b/OnboardingOverlay.jsx
+@@ -107,6 +107,11 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
+   const [busyStep, setBusyStep] = useState('')
+   const [refreshingProgress, setRefreshingProgress] = useState(false)
+   const controllersRef = useRef(new Set())
++  const containerRef = useRef(null)
++  const [headingId] = useState(() => `onboarding-heading-${Math.random().toString(36).slice(2)}`)
++  const [descriptionId] = useState(
++    () => `onboarding-description-${Math.random().toString(36).slice(2)}`
++  )
+ 
+   useEffect(() => {
+     return () => {
+@@ -187,6 +192,27 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
+     }
+   }, [email])
+ 
++  useEffect(() => {
++    if (!containerRef.current) return
++    const previouslyFocused = document.activeElement
++    containerRef.current.focus({ preventScroll: true })
++    return () => {
++      if (previouslyFocused && previouslyFocused.focus) {
++        previouslyFocused.focus({ preventScroll: true })
++      }
++    }
++  }, [])
++
++  const handleKeyDown = useCallback(
++    event => {
++      if (event.key === 'Escape') {
++        event.stopPropagation()
++        onSnooze?.()
++      }
++    },
++    [onSnooze]
++  )
++
+   const progress = useMemo(() => {
+     return steps.length ? Math.round((done.size / steps.length) * 100) : 0
+   }, [done, steps])
+@@ -244,6 +270,13 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
+ 
+   return (
+     <div
++      ref={containerRef}
++      role="dialog"
++      aria-modal="true"
++      aria-labelledby={headingId}
++      aria-describedby={descriptionId}
++      tabIndex={-1}
++      onKeyDown={handleKeyDown}
+       style={{
+         position: 'fixed',
+         inset: 0,
+@@ -333,8 +366,10 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
+           <span style={{ textTransform: 'uppercase', letterSpacing: '0.24em', fontSize: '0.8rem', opacity: 0.85 }}>
+             Sevensa Launchpad
+           </span>
+-          <h2 style={{ margin: 0, fontSize: '2.2rem' }}>Onboarding cockpit</h2>
+-          <p style={{ margin: 0, maxWidth: 540, lineHeight: 1.5 }}>
++          <h2 id={headingId} style={{ margin: 0, fontSize: '2.2rem' }}>
++            Onboarding cockpit
++          </h2>
++          <p id={descriptionId} style={{ margin: 0, maxWidth: 540, lineHeight: 1.5 }}>
+             {allComplete
+               ? 'Fantastisch! Alle Sevensa modules draaien. Gebruik de tips hieronder om jullie AI-workflows verder te optimaliseren.'
+               : 'Volg de stappen om elke Sevensa module te activeren. We geven contextuele tips zodat elk teamlid precies weet wat de volgende stap is.'}
