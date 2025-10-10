@@ -13,8 +13,20 @@ const API_BASE_URL = 'https://g8h3ilc3k6q1.manus.space'
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    Accept: 'application/json',
   },
+})
+
+api.interceptors.request.use(config => {
+  const isFormData =
+    typeof FormData !== 'undefined' && config.data instanceof FormData
+  if (!isFormData && config.method && config.method !== 'get') {
+    config.headers = config.headers || {}
+    if (!config.headers['Content-Type'] && !config.headers['content-type']) {
+      config.headers['Content-Type'] = 'application/json'
+    }
+  }
+  return config
 })
 
 let token = getLocalStorageItem('token', '')
