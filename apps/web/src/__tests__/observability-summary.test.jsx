@@ -14,7 +14,7 @@ let api
 describe('ObservabilitySummary', () => {
   beforeEach(async () => {
     ;({ api } = await import('../api.js'))
-    vi.useFakeTimers()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
   })
 
   afterEach(() => {
