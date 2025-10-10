@@ -1,21 +1,27 @@
 export const brand = {
-  name: 'MR-DJ Enterprise Suite',
-  shortName: 'MR•DJ',
-  url: 'https://mr-dj.nl',
-  tagline: 'Backstage control voor premium eventprofessionals.',
+  name: 'Sevensa Intelligence Platform',
+  shortName: 'Sevensa',
+  url: 'https://sevensa.ai',
+  tagline: 'AI-powered solutions for businesses.',
   colors: {
-    primary: '#ff2d92',
-    primaryDark: '#b31163',
-    secondary: '#1a0938',
-    accent: '#33f0ff',
-    surface: '#f7f5ff',
-    text: '#1f1d2b',
-    mutedText: '#5a5472',
-    gradient: 'linear-gradient(135deg, #ff2d92 0%, #5f2eea 48%, #33f0ff 100%)',
+    primary: '#00A896',
+    primaryDark: '#04706C',
+    secondary: '#2D3A45',
+    accent: '#4FD1C5',
+    surface: '#F5FAF9',
+    surfaceMuted: '#E0F2EF',
+    text: '#1F2A32',
+    mutedText: '#4A5A65',
+    gradient: 'linear-gradient(135deg, #0BC5EA 0%, #00A896 45%, #0D3B66 100%)',
+    outline: 'rgba(4, 112, 108, 0.18)',
+    shadow: '0 28px 60px rgba(13, 59, 102, 0.22)',
+    success: '#4CAF50',
+    danger: '#F44336',
+    warning: '#F59E0B',
   },
 }
 
-export const brandFontStack = `'Poppins', 'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
+export const brandFontStack = `'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
 
 export function withOpacity(hex, alpha = 1) {
   if (!hex || hex[0] !== '#' || (hex.length !== 4 && hex.length !== 7)) {

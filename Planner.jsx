@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
+import { brand, brandFontStack, withOpacity } from './branding.js'
 
 const personaPresets = {
   all: {
@@ -100,23 +101,23 @@ const statusPriority = {
 }
 
 const badgePalette = {
-  active: '#2563eb',
-  upcoming: '#0ea5e9',
-  completed: '#10b981',
-  at_risk: '#dc2626',
+  active: brand.colors.primary,
+  upcoming: brand.colors.accent,
+  completed: brand.colors.success,
+  at_risk: brand.colors.danger,
 }
 
 const riskPalette = {
-  ok: '#16a34a',
-  warning: '#d97706',
-  critical: '#b91c1c',
+  ok: brand.colors.success,
+  warning: brand.colors.warning,
+  critical: brand.colors.danger,
 }
 
 const cardPalette = {
-  neutral: '#f3f4f6',
-  success: '#dcfce7',
-  warning: '#fef3c7',
-  danger: '#fee2e2',
+  neutral: withOpacity('#ffffff', 0.92),
+  success: withOpacity(brand.colors.success, 0.15),
+  warning: withOpacity(brand.colors.warning, 0.16),
+  danger: withOpacity(brand.colors.danger, 0.16),
 }
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
@@ -174,7 +175,7 @@ function RiskBadge({ risk }) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '6px',
-        backgroundColor: `${riskPalette[risk] || '#4b5563'}20`,
+        backgroundColor: withOpacity(riskPalette[risk] || brand.colors.mutedText, 0.16),
         color: riskPalette[risk] || '#4b5563',
         padding: '2px 8px',
         borderRadius: '999px',
@@ -194,7 +195,7 @@ function StatusBadge({ status }) {
   return (
     <span
       style={{
-        backgroundColor: `${badgePalette[status] || '#6b7280'}1a`,
+        backgroundColor: withOpacity(badgePalette[status] || brand.colors.mutedText, 0.16),
         color: badgePalette[status] || '#6b7280',
         padding: '4px 10px',
         borderRadius: '999px',
@@ -207,20 +208,43 @@ function StatusBadge({ status }) {
 }
 
 function SummaryMetric({ label, value, tone = 'neutral', helpText }) {
+  const accent =
+    tone === 'success'
+      ? brand.colors.success
+      : tone === 'warning'
+      ? brand.colors.warning
+      : tone === 'danger'
+      ? brand.colors.danger
+      : brand.colors.primary
   return (
     <div
       style={{
         background: cardPalette[tone] || cardPalette.neutral,
-        padding: '12px 16px',
-        borderRadius: '12px',
+        padding: '16px 18px',
+        borderRadius: '16px',
         display: 'grid',
-        gap: '4px',
-        minWidth: '150px',
+        gap: '6px',
+        minWidth: '160px',
+        border: `1px solid ${withOpacity(accent, 0.35)}`,
+        boxShadow: '0 16px 28px rgba(13, 59, 102, 0.12)',
       }}
     >
-      <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>{label}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{value}</div>
-      {helpText && <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{helpText}</div>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: accent,
+            boxShadow: `0 0 0 4px ${withOpacity(accent, 0.18)}`,
+          }}
+        />
+        <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {label}
+        </div>
+      </div>
+      <div style={{ fontSize: '1.6rem', fontWeight: 700, color: brand.colors.secondary }}>{value}</div>
+      {helpText && <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{helpText}</div>}
     </div>
   )
 }
@@ -236,7 +260,7 @@ function LoadingRows() {
                 style={{
                   height: '12px',
                   borderRadius: '999px',
-                  background: '#e5e7eb',
+                  background: withOpacity(brand.colors.surfaceMuted, 0.7),
                   width: `${40 + cellIdx * 10}%`,
                 }}
               />
@@ -249,10 +273,61 @@ function LoadingRows() {
 }
 
 const emptyMessageStyles = {
-  padding: '32px',
+  padding: '36px',
   textAlign: 'center',
-  color: '#4b5563',
+  color: brand.colors.mutedText,
   fontStyle: 'italic',
+  background: withOpacity('#ffffff', 0.8),
+  borderRadius: 18,
+}
+
+const filterControlStyle = {
+  padding: '10px 14px',
+  borderRadius: 12,
+  border: `1px solid ${withOpacity(brand.colors.primary, 0.25)}`,
+  background: withOpacity('#ffffff', 0.85),
+  color: brand.colors.secondary,
+  fontSize: '0.95rem',
+  minWidth: 180,
+}
+
+const tableCellStyle = {
+  padding: '14px 16px',
+  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+  color: brand.colors.secondary,
+  fontSize: '0.95rem',
+  verticalAlign: 'top',
+}
+
+const primaryActionStyle = {
+  padding: '8px 16px',
+  borderRadius: 999,
+  border: 'none',
+  backgroundImage: brand.colors.gradient,
+  color: '#fff',
+  fontWeight: 600,
+  cursor: 'pointer',
+  boxShadow: '0 14px 28px rgba(11, 197, 234, 0.2)',
+}
+
+const secondaryActionStyle = {
+  padding: '8px 16px',
+  borderRadius: 999,
+  border: `1px solid ${withOpacity(brand.colors.primary, 0.35)}`,
+  background: withOpacity('#ffffff', 0.85),
+  color: brand.colors.primaryDark,
+  fontWeight: 600,
+  cursor: 'pointer',
+}
+
+const tertiaryActionStyle = {
+  padding: '8px 14px',
+  borderRadius: 999,
+  border: `1px solid ${withOpacity(brand.colors.secondary, 0.18)}`,
+  background: withOpacity(brand.colors.surfaceMuted, 0.7),
+  color: brand.colors.secondary,
+  fontWeight: 600,
+  cursor: 'pointer',
 }
 
 function shiftDate(dateString, delta) {
@@ -440,29 +515,64 @@ export default function Planner({ onLogout }) {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', padding: '12px', maxWidth: '1120px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Projectplanner</h2>
-          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-            Verbeterde UAT cockpit met persona-presets, voorraadbewaking en inline herplanning.
-          </p>
+    <div
+      style={{
+        background: brand.colors.surface,
+        minHeight: '100vh',
+        fontFamily: brandFontStack,
+        padding: '32px 20px',
+      }}
+    >
+      <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gap: 24 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: '#fff',
+            borderRadius: 28,
+            padding: '28px 32px',
+            boxShadow: '0 24px 60px rgba(13, 59, 102, 0.16)',
+            border: `1px solid ${brand.colors.outline}`,
+          }}
+        >
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.22em', color: brand.colors.mutedText }}>
+              Sevensa Operations
+            </span>
+            <h2 style={{ margin: 0, fontSize: '2rem', color: brand.colors.secondary }}>Projectplanner</h2>
+            <p style={{ margin: 0, color: brand.colors.mutedText, maxWidth: 520 }}>
+              Persona presets, voorraadbewaking en inline herplanning in één AI-gestuurde cockpit.
+            </p>
+          </div>
+          <button
+            onClick={onLogout}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 999,
+              border: 'none',
+              backgroundImage: brand.colors.gradient,
+              color: '#fff',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 18px 34px rgba(11, 197, 234, 0.24)',
+            }}
+          >
+            Uitloggen
+          </button>
         </div>
-        <button onClick={onLogout}>Uitloggen</button>
-      </div>
 
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '20px',
-        }}
-        aria-live="polite"
-      >
-        <SummaryMetric label="Actief" value={summary.active} tone="success" helpText="Inclusief risicoprojecten" />
-        <SummaryMetric label="Komend" value={summary.upcoming} />
-        <SummaryMetric label="Afgerond" value={summary.completed} />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 16,
+          }}
+          aria-live="polite"
+        >
+          <SummaryMetric label="Actief" value={summary.active} tone="success" helpText="Inclusief risicoprojecten" />
+          <SummaryMetric label="Komend" value={summary.upcoming} />
+          <SummaryMetric label="Afgerond" value={summary.completed} />
         <SummaryMetric
           label="Voorraadrisico"
           value={`${summary.critical} kritisch / ${summary.warning} waarschuwing`}
@@ -470,306 +580,375 @@ export default function Planner({ onLogout }) {
         />
       </div>
 
-      <div style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
-            Persona preset
-            <select
-              value={personaPreset}
-              onChange={event => applyPersonaPreset(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-            >
-              {Object.entries(personaPresets).map(([key, value]) => (
-                <option key={key} value={key}>
-                  {value.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
-            Statusfilter
-            <select
-              value={statusFilter}
-              onChange={event => setStatusFilter(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-            >
-              <option value="all">Alle</option>
-              <option value="active">Actief</option>
-              <option value="upcoming">Komend</option>
-              <option value="completed">Afgerond</option>
-              <option value="at_risk">Risico</option>
-            </select>
-          </label>
-
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
-            Voorraadrisico
-            <select
-              value={riskFilter}
-              onChange={event => setRiskFilter(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-            >
-              <option value="all">Alle</option>
-              <option value="ok">Op schema</option>
-              <option value="warning">Let op</option>
-              <option value="critical">Kritiek</option>
-            </select>
-          </label>
-
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563', flex: '1 1 200px' }}>
-            Zoeken
-            <input
-              type="search"
-              placeholder="Zoek op project, klant of notitie"
-              value={searchTerm}
-              onChange={event => setSearchTerm(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-            />
-          </label>
-
-          <button
-            type="button"
-            onClick={() => {
-              setPersonaPreset('all')
-              setStatusFilter('all')
-              setRiskFilter('all')
-              setSortKey('start')
-              setSortDir('asc')
-              setSearchTerm('')
-            }}
-            style={{ alignSelf: 'flex-end', padding: '8px 12px' }}
-          >
-            Reset filters
-          </button>
-        </div>
-        {personaHint && <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>{personaHint}</div>}
-      </div>
-
-      {feedback && (
         <div
-          role="alert"
           style={{
-            padding: '10px 16px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            backgroundColor: feedback.type === 'success' ? '#d1fae5' : '#fee2e2',
-            color: feedback.type === 'success' ? '#065f46' : '#991b1b',
+            background: '#fff',
+            borderRadius: 24,
+            padding: '24px 28px',
+            border: `1px solid ${brand.colors.outline}`,
+            boxShadow: '0 18px 44px rgba(13, 59, 102, 0.12)',
+            display: 'grid',
+            gap: 18,
           }}
         >
-          {feedback.message}
-        </div>
-      )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.85rem', color: brand.colors.mutedText }}>
+              Persona preset
+              <select
+                value={personaPreset}
+                onChange={event => applyPersonaPreset(event.target.value)}
+                style={filterControlStyle}
+              >
+                {Object.entries(personaPresets).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Project</th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Klant</th>
-              <th
-                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
-                onClick={() => toggleSort('status')}
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.85rem', color: brand.colors.mutedText }}>
+              Statusfilter
+              <select
+                value={statusFilter}
+                onChange={event => setStatusFilter(event.target.value)}
+                style={filterControlStyle}
               >
-                Status
-              </th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Planning</th>
-              <th
-                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
-                onClick={() => toggleSort('risk')}
+                <option value="all">Alle</option>
+                <option value="active">Actief</option>
+                <option value="upcoming">Komend</option>
+                <option value="completed">Afgerond</option>
+                <option value="at_risk">Risico</option>
+              </select>
+            </label>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.85rem', color: brand.colors.mutedText }}>
+              Voorraadrisico
+              <select
+                value={riskFilter}
+                onChange={event => setRiskFilter(event.target.value)}
+                style={filterControlStyle}
               >
-                Voorraad
-              </th>
-              <th
-                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
-                onClick={() => toggleSort('start')}
-              >
-                Start
-              </th>
-              <th
-                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
-                onClick={() => toggleSort('end')}
-              >
-                Einde
-              </th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Acties</th>
-            </tr>
-          </thead>
-          {loading ? (
-            <LoadingRows />
-          ) : filteredEvents.length === 0 ? (
-            <tbody>
+                <option value="all">Alle</option>
+                <option value="ok">Op schema</option>
+                <option value="warning">Let op</option>
+                <option value="critical">Kritiek</option>
+              </select>
+            </label>
+
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                fontSize: '0.85rem',
+                color: brand.colors.mutedText,
+                flex: '1 1 220px',
+              }}
+            >
+              Zoeken
+              <input
+                type="search"
+                placeholder="Zoek op project, klant of notitie"
+                value={searchTerm}
+                onChange={event => setSearchTerm(event.target.value)}
+                style={filterControlStyle}
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPersonaPreset('all')
+                setStatusFilter('all')
+                setRiskFilter('all')
+                setSortKey('start')
+                setSortDir('asc')
+                setSearchTerm('')
+              }}
+              style={{
+                alignSelf: 'flex-end',
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: 'none',
+                background: withOpacity(brand.colors.primary, 0.12),
+                color: brand.colors.primaryDark,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Reset filters
+            </button>
+          </div>
+          {personaHint && (
+            <div style={{ fontSize: '0.9rem', color: brand.colors.mutedText }}>{personaHint}</div>
+          )}
+        </div>
+
+        {feedback && (
+          <div
+            role="alert"
+            style={{
+              padding: '14px 18px',
+              borderRadius: 14,
+              backgroundColor:
+                feedback.type === 'success'
+                  ? withOpacity(brand.colors.success, 0.15)
+                  : withOpacity(brand.colors.danger, 0.15),
+              color: feedback.type === 'success' ? brand.colors.secondary : '#9B1C1C',
+              border: `1px solid ${withOpacity(
+                feedback.type === 'success' ? brand.colors.success : brand.colors.danger,
+                0.35
+              )}`,
+            }}
+          >
+            {feedback.message}
+          </div>
+        )}
+
+        <div
+          style={{
+            overflowX: 'auto',
+            background: '#fff',
+            borderRadius: 28,
+            border: `1px solid ${brand.colors.outline}`,
+            boxShadow: '0 20px 48px rgba(13, 59, 102, 0.16)',
+            padding: '12px',
+          }}
+        >
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
               <tr>
-                <td colSpan={8} style={emptyMessageStyles}>
-                  Geen projecten gevonden voor deze filters. Pas de filters aan of reset ze om alles te tonen.
-                </td>
-              </tr>
-            </tbody>
-          ) : (
-            <tbody>
-              {filteredEvents.map(event => {
-                const isExpanded = expandedRow === event.id
-                return (
-                  <React.Fragment key={event.id}>
-                    <tr
-                      style={{ backgroundColor: isExpanded ? '#f9fafb' : 'transparent' }}
-                      onDoubleClick={() => openEditor(event)}
+                {['Project', 'Klant', 'Status', 'Planning', 'Voorraad', 'Start', 'Einde', 'Acties'].map(label => {
+                  const sortable = ['Status', 'Voorraad', 'Start', 'Einde'].includes(label)
+                  const sortKeyMap = { Status: 'status', Voorraad: 'risk', Start: 'start', Einde: 'end' }
+                  return (
+                    <th
+                      key={label}
+                      style={{
+                        textAlign: 'left',
+                        padding: '14px 16px',
+                        background: withOpacity(brand.colors.secondary, 0.06),
+                        color: brand.colors.secondary,
+                        fontSize: '0.85rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        cursor: sortable ? 'pointer' : 'default',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`,
+                        position: 'sticky',
+                        top: 0,
+                      }}
+                      onClick={() => sortable && toggleSort(sortKeyMap[label])}
                     >
-                      <td style={{ padding: '12px 8px', fontWeight: 600 }}>{event.name}</td>
-                      <td style={{ padding: '12px 8px' }}>{event.client}</td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <StatusBadge status={event.status} />
-                      </td>
-                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{timelineLabel(event)}</td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <RiskBadge risk={event.risk} />
-                      </td>
-                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{formatDate(event.start)}</td>
-                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{formatDate(event.end)}</td>
-                      <td style={{ padding: '12px 8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button type="button" onClick={() => setExpandedRow(isExpanded ? null : event.id)}>
-                          {isExpanded ? 'Sluit details' : 'Details'}
-                        </button>
-                        <button type="button" onClick={() => openEditor(event)}>
-                          Herplan
-                        </button>
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={8} style={{ padding: '16px 24px', backgroundColor: '#f9fafb' }}>
-                          <div style={{ display: 'grid', gap: '12px' }}>
-                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: '#4b5563' }}>
-                              <span><strong>Doorlooptijd:</strong> {event.durationDays ? `${event.durationDays} dagen` : 'Onbekend'}</span>
-                              <span><strong>Eindigt op:</strong> {formatDate(event.end)}</span>
-                            </div>
-                            <div style={{ color: '#111827', fontWeight: 600 }}>Projectnotities</div>
-                            <div style={{ color: '#4b5563', whiteSpace: 'pre-wrap' }}>
-                              {event.notes ? event.notes : 'Geen notities toegevoegd.'}
-                            </div>
-                            {event.alerts.length > 0 ? (
-                              <div>
-                                <div style={{ color: '#111827', fontWeight: 600, marginBottom: '6px' }}>Voorraaddetails</div>
-                                <ul style={{ margin: 0, paddingLeft: '20px', color: '#b91c1c' }}>
-                                  {event.alerts.map((alert, index) => (
-                                    <li key={index}>{alert}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ) : (
-                              <div style={{ color: '#059669' }}>Geen voorraadissues voor dit project.</div>
-                            )}
-                          </div>
+                      {label}
+                    </th>
+                  )
+                })}
+              </tr>
+            </thead>
+            {loading ? (
+              <LoadingRows />
+            ) : filteredEvents.length === 0 ? (
+              <tbody>
+                <tr>
+                  <td colSpan={8} style={emptyMessageStyles}>
+                    Geen projecten gevonden voor deze filters. Pas de filters aan of reset ze om alles te tonen.
+                  </td>
+                </tr>
+              </tbody>
+            ) : (
+              <tbody>
+                {filteredEvents.map(event => {
+                  const isExpanded = expandedRow === event.id
+                  return (
+                    <React.Fragment key={event.id}>
+                      <tr
+                        style={{
+                          backgroundColor: isExpanded ? withOpacity(brand.colors.surfaceMuted, 0.45) : 'transparent',
+                          transition: 'background-color 0.2s ease',
+                        }}
+                        onDoubleClick={() => openEditor(event)}
+                      >
+                        <td style={tableCellStyle}>{event.name}</td>
+                        <td style={tableCellStyle}>{event.client}</td>
+                        <td style={tableCellStyle}>
+                          <StatusBadge status={event.status} />
+                        </td>
+                        <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>{timelineLabel(event)}</td>
+                        <td style={tableCellStyle}>
+                          <RiskBadge risk={event.risk} />
+                        </td>
+                        <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>{formatDate(event.start)}</td>
+                        <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>{formatDate(event.end)}</td>
+                        <td style={{ ...tableCellStyle, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedRow(isExpanded ? null : event.id)}
+                            style={secondaryActionStyle}
+                          >
+                            {isExpanded ? 'Sluit details' : 'Details'}
+                          </button>
+                          <button type="button" onClick={() => openEditor(event)} style={primaryActionStyle}>
+                            Herplan
+                          </button>
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                )
-              })}
-            </tbody>
-          )}
-        </table>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={8} style={{ padding: '18px 28px', backgroundColor: withOpacity('#ffffff', 0.85) }}>
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: brand.colors.mutedText }}>
+                                <span><strong>Doorlooptijd:</strong> {event.durationDays ? `${event.durationDays} dagen` : 'Onbekend'}</span>
+                                <span><strong>Eindigt op:</strong> {formatDate(event.end)}</span>
+                              </div>
+                              <div style={{ color: brand.colors.secondary, fontWeight: 600 }}>Projectnotities</div>
+                              <div style={{ color: brand.colors.mutedText, whiteSpace: 'pre-wrap' }}>
+                                {event.notes ? event.notes : 'Geen notities toegevoegd.'}
+                              </div>
+                              {event.alerts.length > 0 ? (
+                                <div>
+                                  <div style={{ color: brand.colors.secondary, fontWeight: 600, marginBottom: '6px' }}>Voorraaddetails</div>
+                                  <ul style={{ margin: 0, paddingLeft: '20px', color: brand.colors.danger }}>
+                                    {event.alerts.map((alert, index) => (
+                                      <li key={index}>{alert}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : (
+                                <div style={{ color: brand.colors.success }}>Geen voorraadissues voor dit project.</div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
+              </tbody>
+            )}
+          </table>
+        </div>
+
+        {editing && (
+          <form
+            onSubmit={submitUpdate}
+            style={{
+              marginTop: 32,
+              display: 'grid',
+              gap: 16,
+              maxWidth: 560,
+              padding: '28px 32px',
+              border: `1px solid ${brand.colors.outline}`,
+              borderRadius: 24,
+              background: '#fff',
+              boxShadow: '0 18px 44px rgba(13, 59, 102, 0.14)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <h3 style={{ margin: 0, color: brand.colors.secondary }}>Project herplannen</h3>
+              <button type="button" onClick={closeEditor} style={secondaryActionStyle}>
+                Sluiten
+              </button>
+            </div>
+            <p style={{ margin: 0, color: brand.colors.mutedText }}>
+              Pas data en notities aan. Quick actions helpen om datumreeksen met één klik te verschuiven.
+            </p>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, color: brand.colors.mutedText }}>
+              Projectnaam
+              <input
+                type="text"
+                value={formState.name}
+                onChange={event => setFormState(current => ({ ...current, name: event.target.value }))}
+                required
+                style={{ ...filterControlStyle, width: '100%' }}
+              />
+            </label>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, color: brand.colors.mutedText }}>
+              Klant
+              <input
+                type="text"
+                value={formState.client}
+                onChange={event => setFormState(current => ({ ...current, client: event.target.value }))}
+                required
+                style={{ ...filterControlStyle, width: '100%' }}
+              />
+            </label>
+
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 200px', color: brand.colors.mutedText }}>
+                Startdatum
+                <input
+                  type="date"
+                  value={formState.start}
+                  onChange={event => setFormState(current => ({ ...current, start: event.target.value }))}
+                  required
+                  style={{ ...filterControlStyle, width: '100%' }}
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 200px', color: brand.colors.mutedText }}>
+                Einddatum
+                <input
+                  type="date"
+                  value={formState.end}
+                  onChange={event => setFormState(current => ({ ...current, end: event.target.value }))}
+                  required
+                  style={{ ...filterControlStyle, width: '100%' }}
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              <button type="button" onClick={() => shiftRange(-1)} style={tertiaryActionStyle}>
+                Vervroeg beide data 1 dag
+              </button>
+              <button type="button" onClick={() => shiftRange(1)} style={tertiaryActionStyle}>
+                Verleng beide data 1 dag
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormState({
+                    name: editing.name,
+                    client: editing.client,
+                    start: editing.start,
+                    end: editing.end,
+                    notes: editing.notes,
+                  })
+                }
+                style={tertiaryActionStyle}
+              >
+                Herstel oorspronkelijke waarden
+              </button>
+            </div>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, color: brand.colors.mutedText }}>
+              Notities voor crew & finance
+              <textarea
+                value={formState.notes}
+                onChange={event => setFormState(current => ({ ...current, notes: event.target.value }))}
+                rows={3}
+                style={{
+                  ...filterControlStyle,
+                  width: '100%',
+                  minHeight: 96,
+                  resize: 'vertical',
+                }}
+              />
+            </label>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button type="submit" style={primaryActionStyle}>
+                Opslaan
+              </button>
+              <button type="button" onClick={closeEditor} style={secondaryActionStyle}>
+                Annuleren
+              </button>
+            </div>
+          </form>
+        )}
       </div>
-
-      {editing && (
-        <form
-          onSubmit={submitUpdate}
-          style={{
-            marginTop: '32px',
-            display: 'grid',
-            gap: '12px',
-            maxWidth: '520px',
-            padding: '20px',
-            border: '1px solid #e5e7eb',
-            borderRadius: '12px',
-            backgroundColor: '#ffffff',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>Project herplannen</h3>
-            <button type="button" onClick={closeEditor}>
-              Sluiten
-            </button>
-          </div>
-          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-            Pas data en notities aan. Quick actions helpen om datumreeksen met één klik te verschuiven.
-          </p>
-
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            Projectnaam
-            <input
-              type="text"
-              value={formState.name}
-              onChange={event => setFormState(current => ({ ...current, name: event.target.value }))}
-              required
-            />
-          </label>
-
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            Klant
-            <input
-              type="text"
-              value={formState.client}
-              onChange={event => setFormState(current => ({ ...current, client: event.target.value }))}
-              required
-            />
-          </label>
-
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 200px' }}>
-              Startdatum
-              <input
-                type="date"
-                value={formState.start}
-                onChange={event => setFormState(current => ({ ...current, start: event.target.value }))}
-                required
-              />
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 200px' }}>
-              Einddatum
-              <input
-                type="date"
-                value={formState.end}
-                onChange={event => setFormState(current => ({ ...current, end: event.target.value }))}
-                required
-              />
-            </label>
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            <button type="button" onClick={() => shiftRange(-1)}>
-              Vervroeg beide data 1 dag
-            </button>
-            <button type="button" onClick={() => shiftRange(1)}>
-              Verleng beide data 1 dag
-            </button>
-            <button type="button" onClick={() => setFormState({
-              name: editing.name,
-              client: editing.client,
-              start: editing.start,
-              end: editing.end,
-              notes: editing.notes,
-            })}>
-              Herstel oorspronkelijke waarden
-            </button>
-          </div>
-
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            Notities voor crew & finance
-            <textarea
-              value={formState.notes}
-              onChange={event => setFormState(current => ({ ...current, notes: event.target.value }))}
-              rows={3}
-            />
-          </label>
-
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <button type="submit">Opslaan</button>
-            <button type="button" onClick={closeEditor}>
-              Annuleren
-            </button>
-          </div>
-        </form>
-      )}
     </div>
   )
 }
