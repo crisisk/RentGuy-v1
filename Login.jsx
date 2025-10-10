@@ -4,7 +4,7 @@ import { brand, brandFontStack, withOpacity } from './branding.js'
 import { setLocalStorageItem } from './storage.js'
 
 export default function Login({ onLogin }) {
-  const [user, setUser] = useState('admin')
+  const [user, setUser] = useState('bart')
   const [password, setPassword] = useState('mr-dj')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -16,9 +16,9 @@ export default function Login({ onLogin }) {
     try {
       // Map username to email format
       let email
-      if (user === 'bart' || user === 'admin') {
+      if (user === 'bart') {
         email = 'bart@rentguy.demo'
-      } else if (user === 'rentguy' || user === 'finance') {
+      } else if (user === 'rentguy') {
         email = 'rentguy@demo.local'
       } else {
         email = `${user}@demo.local`
@@ -69,11 +69,11 @@ export default function Login({ onLogin }) {
             {brand.shortName} Onboarding
           </span>
           <h1 style={{margin: 0, fontSize: '2.4rem', color: brand.colors.secondary, lineHeight: 1.1}}>
-            Welkom in de rolgestuurde cockpit
+            Welkom bij de MR-DJ cockpit
           </h1>
           <p style={{margin: 0, color: brand.colors.mutedText, fontSize: '1.05rem', maxWidth: 420}}>
-            Meld je aan om admin, finance, planner, crew en viewer dashboards te activeren binnen de {brand.name}.
-            Elke rol krijgt direct luxe toegang tot eigen workflows, alerts en rapportages.
+            Meld je aan om de volledige MR-DJ workflow te activeren: planner, crew, warehouse en billing.
+            We hebben de standaard templates alvast in jullie huisstijl gezet.
           </p>
           <div
             style={{
@@ -89,8 +89,8 @@ export default function Login({ onLogin }) {
           >
             <strong style={{fontSize: '0.95rem'}}>Demo accounts</strong>
             <div style={{display: 'grid', gap: 8}}>
-              <CredentialHint label="Admin – Portfolio oversight" username="admin" password="mr-dj" description="Volledige toegang tot alle modules." />
-              <CredentialHint label="Finance – Cashflow" username="finance" password="rentguy" description="Gefocuste toegang op facturatie en reporting." />
+              <CredentialHint label="Bart – Operations" username="bart" password="mr-dj" description="Toegang tot alle MR-DJ modules." />
+              <CredentialHint label="Demo – Finance" username="rentguy" password="rentguy" description="Focus op facturatie en rapportages." />
             </div>
             <a
               href={brand.url}
@@ -125,7 +125,7 @@ export default function Login({ onLogin }) {
                 id="username"
                 value={user}
                 onChange={e=>setUser(e.target.value)}
-                placeholder="bijv. admin"
+                placeholder="bijv. bart"
                 style={inputStyle}
                 autoComplete="username"
               />

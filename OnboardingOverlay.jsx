@@ -6,38 +6,43 @@ import { brand, brandFontStack, withOpacity } from './branding.js'
 const fallbackSteps = [
   {
     code: 'welcome',
-    title: 'Welkom bij RentGuy Enterprise',
-    description: 'Kies je rol en activeer de executive dashboards, rapportages en alerts.',
+    title: 'Welkom bij MR-DJ Enterprise',
+    description: 'Doorloop de checklist om planner, crew, warehouse en billing te activeren.',
   },
   {
-    code: 'admin-console',
-    title: 'Activeer admin command center',
-    description: 'Configureer teams, toegangsrechten en portfolio meldingen voor admins.',
+    code: 'project',
+    title: 'Maak je eerste MR-DJ show',
+    description: 'Plan een evenement in de planner en voeg klant- en podiumdetails toe.',
   },
   {
-    code: 'planning-studio',
-    title: 'Stel de planning studio in',
-    description: 'Importeer sjablonen, definieer rolgebaseerde filters en verfijn je projectpipeline.',
+    code: 'crew',
+    title: 'Nodig crewleden uit',
+    description: 'Stuur een uitnodiging naar technici en DJ’s met de MR-DJ briefing template.',
   },
   {
-    code: 'crew-ops',
-    title: 'Lanceer crew operations',
-    description: 'Plan shifts, publiceer briefings en synchroniseer materiaal en transport.',
+    code: 'booking',
+    title: 'Plan je eerste crewbooking',
+    description: 'Koppel een team aan het project en verstuur automatisch de draaiboeken.',
   },
   {
-    code: 'finance-cockpit',
-    title: 'Open de finance cockpit',
-    description: 'Koppel facturatie, cashflowmonitoring en documentatiecontroles voor finance.',
+    code: 'scan',
+    title: 'Scan je gear met de PWA',
+    description: 'Gebruik de mobiele scanner om decks, speakers en lichten uit te geven.',
   },
   {
-    code: 'viewer-suite',
-    title: 'Personaliseer stakeholder viewer',
-    description: 'Bepaal welke KPI’s, projecten en meldingen je deelt met stakeholders en klanten.',
+    code: 'transport',
+    title: 'Optimaliseer transport en logistiek',
+    description: 'Genereer een MR-DJ routebrief en coördineer het warehouse-team.',
   },
   {
-    code: 'automation-launch',
-    title: 'Automatiseringen activeren',
-    description: 'Start triggers voor alerts, rapportages en integraties zodra rollen live zijn.',
+    code: 'invoice',
+    title: 'Activeer facturatie',
+    description: 'Genereer een factuur met het MR-DJ factuursjabloon en verstuur naar de klant.',
+  },
+  {
+    code: 'templates',
+    title: 'Personaliseer templates',
+    description: 'Pas crewbriefings, transportdocumenten en offertes aan in jullie MR-DJ branding.',
   },
 ]
 
@@ -47,33 +52,36 @@ const fallbackTips = onboardingTips.map((tip, index) => ({
 }))
 
 const stepMeta = {
-  welcome: { module: 'admin', icon: '🚀' },
-  'admin-console': { module: 'admin', icon: '🛡️' },
-  'planning-studio': { module: 'planning', icon: '🗺️' },
-  'crew-ops': { module: 'crew', icon: '🎧' },
-  'finance-cockpit': { module: 'finance', icon: '💠' },
-  'viewer-suite': { module: 'viewer', icon: '🪞' },
-  'automation-launch': { module: 'automation', icon: '⚙️' },
+  welcome: { module: 'projects', icon: '🚀' },
+  project: { module: 'projects', icon: '🎛️' },
+  crew: { module: 'crew', icon: '🎤' },
+  booking: { module: 'crew', icon: '📅' },
+  scan: { module: 'warehouse', icon: '📲' },
+  transport: { module: 'transport', icon: '🚚' },
+  invoice: { module: 'billing', icon: '💸' },
+  templates: { module: 'templates', icon: '🧾' },
 }
 
 const moduleLabels = {
-  admin: 'Admin Console',
-  planning: 'Planning Studio',
-  crew: 'Crew Operations',
-  finance: 'Finance',
-  viewer: 'Stakeholder Viewer',
+  projects: 'Planner',
+  inventory: 'Inventory',
+  crew: 'Crew & HR',
+  warehouse: 'Warehouse',
+  billing: 'Billing',
+  transport: 'Transport',
+  templates: 'Templates',
   automation: 'Automations',
-  analytics: 'Analytics',
 }
 
 const moduleIcons = {
-  admin: '🛡️',
-  planning: '🗺️',
-  crew: '🎧',
-  finance: '💠',
-  viewer: '🪞',
+  projects: '🎚️',
+  inventory: '📦',
+  crew: '🎤',
+  warehouse: '🏭',
+  billing: '💳',
+  transport: '🚚',
+  templates: '🧾',
   automation: '⚙️',
-  analytics: '📊',
 }
 
 function normalizeSteps(list) {
@@ -150,7 +158,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
 
         if (usedFallbackSteps || usedFallbackTips || usedFallbackProgress) {
           setErrorMessage(
-            'We tonen de RentGuy standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
+            'We tonen de MR-DJ standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
           )
         }
       } catch (error) {
@@ -161,7 +169,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
           setTips(normalizeTips(fallbackTips))
           setDone(new Set())
           setErrorMessage(
-            'We tonen de RentGuy standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
+            'We tonen de MR-DJ standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
           )
         }
       } finally {
@@ -202,7 +210,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Kon voortgang niet verversen', error)
-      setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer RentGuy support.')
+      setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer MR-DJ support.')
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
@@ -225,7 +233,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Stap kon niet worden bijgewerkt', error)
-      setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer RentGuy support.')
+      setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer MR-DJ support.')
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
@@ -317,13 +325,13 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
               </button>
             )}
           </div>
-          <span style={{textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.8rem'}}>RentGuy Launchpad</span>
-          <h2 style={{margin: 0, fontSize: '2.1rem'}}>Rolgebaseerde onboarding</h2>
-          <p style={{margin: 0, maxWidth: 520, lineHeight: 1.5}}>
-            {allComplete
-              ? 'Fantastisch! Alle rolgerichte modules zijn geactiveerd. Gebruik de tips hieronder om je workflow te verfijnen.'
-              : 'Volg de stappen om admin, finance, planning, crew en viewer flows te activeren. We tonen contextuele tips per rol zodat jouw team direct kan excelleren.'}
-          </p>
+          <span style={{textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.8rem'}}>MR-DJ Launchpad</span>
+            <h2 style={{margin: 0, fontSize: '2.1rem'}}>Persona onboarding</h2>
+            <p style={{margin: 0, maxWidth: 520, lineHeight: 1.5}}>
+              {allComplete
+                ? 'Fantastisch! Alle MR-DJ modules staan klaar. Gebruik de tips hieronder om iedere persona verder te finetunen.'
+                : 'Volg de stappen om planner, crew, warehouse, transport en billing flows te activeren. De tips lichten toe hoe Bart, Anna, Tom, Carla, Frank en de rest meteen waarde halen.'}
+            </p>
           <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem', flexWrap: 'wrap', gap: 8}}>
               <span>{progress}% voltooid</span>

@@ -8,50 +8,95 @@ const personaPresets = {
     description: 'Toont de volledige planning zonder filters, ideaal voor gezamenlijke UAT-sessies.',
     timeFilter: 'all',
   },
-  admin: {
-    label: 'Admin command suite',
-    description: 'Executive overzicht met focus op kritieke risico’s, cashflow en documentatieplicht.',
-    statusFilter: 'all',
-    riskFilter: 'all',
-    sortKey: 'risk',
-    sortDir: 'desc',
-    timeFilter: 'all',
+  bart: {
+    label: 'Bart de Manager',
+    description: 'Focus op lopende en risicovolle producties zodat Bart direct kan bijsturen.',
+    statusFilter: 'active',
+    riskFilter: 'warning',
+    sortKey: 'start',
+    sortDir: 'asc',
+    timeFilter: 'next7',
   },
-  finance: {
-    label: 'Finance cockpit',
-    description: 'Filtert afgeronde en risicovolle projecten om cashflow, facturatie en compliance te versnellen.',
-    statusFilter: 'completed',
-    riskFilter: 'all',
-    sortKey: 'end',
-    sortDir: 'desc',
-    timeFilter: 'past30',
-  },
-  planner: {
-    label: 'Planning studio',
-    description: 'Chronologisch venster met opstarttaken, afhankelijkheden en voorraadafstemming voor planners.',
+  anna: {
+    label: 'Anna de Planner',
+    description: 'Chronologisch overzicht van komende shows met afhankelijkheden en voorraadmatch.',
     statusFilter: 'upcoming',
     riskFilter: 'all',
     sortKey: 'start',
     sortDir: 'asc',
     timeFilter: 'next14',
   },
-  crew: {
-    label: 'Crew operations',
-    description: 'Realtime zicht op vandaag lopende opdrachten, briefingnotities en urgente voorraadalerts.',
+  tom: {
+    label: 'Tom de Technicus',
+    description: 'Realtime zicht op vandaag lopende opdrachten inclusief briefingnotities.',
     statusFilter: 'active',
     riskFilter: 'ok',
     sortKey: 'start',
     sortDir: 'asc',
     timeFilter: 'today',
   },
-  viewer: {
-    label: 'Stakeholder viewer',
-    description: 'Geconsolideerde highlights voor stakeholders met focus op impact en statusupdates.',
+  carla: {
+    label: 'Carla van Front-Office',
+    description: 'Upcoming shows gegroepeerd per klant om vragen snel te beantwoorden.',
+    statusFilter: 'upcoming',
+    riskFilter: 'all',
+    sortKey: 'client',
+    sortDir: 'asc',
+    timeFilter: 'next30',
+  },
+  frank: {
+    label: 'Frank de Financieel Specialist',
+    description: 'Afgeronde projecten en documentatie om facturatie te versnellen.',
+    statusFilter: 'completed',
+    riskFilter: 'all',
+    sortKey: 'end',
+    sortDir: 'desc',
+    timeFilter: 'past30',
+  },
+  sven: {
+    label: 'Sven de Systeembeheerder',
+    description: 'Filtert kritieke risico’s en voorraadalerts voor escalatiebeheer.',
+    statusFilter: 'all',
+    riskFilter: 'critical',
+    sortKey: 'risk',
+    sortDir: 'desc',
+    timeFilter: 'all',
+  },
+  isabelle: {
+    label: 'Isabelle de International',
+    description: 'Kijkt weken vooruit om internationale producties tijdig te synchroniseren.',
+    statusFilter: 'upcoming',
+    riskFilter: 'all',
+    sortKey: 'start',
+    sortDir: 'asc',
+    timeFilter: 'next30',
+  },
+  peter: {
+    label: 'Peter de Power-User',
+    description: 'Combineert status- en risicoviews voor API-automatiseringen en alerts.',
     statusFilter: 'all',
     riskFilter: 'warning',
     sortKey: 'status',
     sortDir: 'asc',
-    timeFilter: 'next30',
+    timeFilter: 'all',
+  },
+  nadia: {
+    label: 'Nadia de Nieuweling',
+    description: 'Behoudt een rustige kijk op de eerstvolgende simpele taken voor onboarding.',
+    statusFilter: 'upcoming',
+    riskFilter: 'ok',
+    sortKey: 'start',
+    sortDir: 'asc',
+    timeFilter: 'next7',
+  },
+  david: {
+    label: 'David de Developer',
+    description: 'Ziet alle statussen tegelijk om integraties en automatiseringen te testen.',
+    statusFilter: 'all',
+    riskFilter: 'all',
+    sortKey: 'status',
+    sortDir: 'asc',
+    timeFilter: 'all',
   },
 }
 
@@ -158,30 +203,55 @@ const timeFilterOptions = {
 }
 
 const personaQuickActions = {
-  admin: [
-    { key: 'showExecutivePulse', label: 'Toon executive pulse' },
-    { key: 'focusCritical', label: 'Highlight kritieke risico’s' },
-    { key: 'resetPersona', label: 'Herstel admin-voorkeuren' },
+  bart: [
+    { key: 'showExecutivePulse', label: 'Escalaties tonen' },
+    { key: 'focusCritical', label: 'Kritieke risico’s prioriteren' },
+    { key: 'resetPersona', label: 'Herstel Bart preset' },
   ],
-  finance: [
-    { key: 'showReadyToBill', label: 'Facturatie klaar' },
-    { key: 'focusCashflow', label: 'Cashflowvenster' },
-    { key: 'resetPersona', label: 'Herstel finance-voorkeuren' },
-  ],
-  planner: [
+  anna: [
     { key: 'showPlannerHorizon', label: 'Bekijk 14-daagse horizon' },
-    { key: 'highlightDependencies', label: 'Toon risicovolle ketens' },
-    { key: 'resetPersona', label: 'Herstel planner-voorkeuren' },
+    { key: 'highlightDependencies', label: 'Toon afhankelijkheden' },
+    { key: 'resetPersona', label: 'Herstel Anna preset' },
   ],
-  crew: [
+  tom: [
     { key: 'crewToday', label: 'Shift van vandaag' },
-    { key: 'crewDocs', label: 'Toon briefings zonder notities' },
-    { key: 'resetPersona', label: 'Herstel crew-voorkeuren' },
+    { key: 'crewDocs', label: 'Briefings controleren' },
+    { key: 'resetPersona', label: 'Herstel Tom preset' },
   ],
-  viewer: [
-    { key: 'viewerHighlights', label: 'Impact highlights' },
-    { key: 'viewerCalm', label: 'Minimaliseer ruis' },
-    { key: 'resetPersona', label: 'Herstel viewer-voorkeuren' },
+  carla: [
+    { key: 'carlaClients', label: 'Groeperen op klant' },
+    { key: 'viewerCalm', label: 'Rustige statusweergave' },
+    { key: 'resetPersona', label: 'Herstel Carla preset' },
+  ],
+  frank: [
+    { key: 'showReadyToBill', label: 'Facturatie klaarzetten' },
+    { key: 'focusCashflow', label: 'Cashflow venster' },
+    { key: 'resetPersona', label: 'Herstel Frank preset' },
+  ],
+  sven: [
+    { key: 'focusCritical', label: 'Escalaties tonen' },
+    { key: 'svenSystems', label: 'Inventarisalerts bundelen' },
+    { key: 'resetPersona', label: 'Herstel Sven preset' },
+  ],
+  isabelle: [
+    { key: 'isabelleWindow', label: '30-daagse horizon' },
+    { key: 'highlightDependencies', label: 'Controleer ketens' },
+    { key: 'resetPersona', label: 'Herstel Isabelle preset' },
+  ],
+  peter: [
+    { key: 'viewerHighlights', label: 'Highlights & risico’s' },
+    { key: 'peterAutomation', label: 'Automatiseringsfocus' },
+    { key: 'resetPersona', label: 'Herstel Peter preset' },
+  ],
+  nadia: [
+    { key: 'nadiaCalm', label: 'Alleen basics tonen' },
+    { key: 'showPlannerHorizon', label: 'Komende week' },
+    { key: 'resetPersona', label: 'Herstel Nadia preset' },
+  ],
+  david: [
+    { key: 'davidAudit', label: 'Statusmatrix' },
+    { key: 'peterAutomation', label: 'API-ready overzicht' },
+    { key: 'resetPersona', label: 'Herstel David preset' },
   ],
 }
 
@@ -352,30 +422,54 @@ function buildPersonaPlaybook(personaKey, events, signals) {
   }
 
   switch (personaKey) {
-    case 'admin':
-      addSection('Executive escalaties', opportunities.riskMitigation, `${riskCount} projecten met risico`)
-      addSection('Documentatieplicht', opportunities.documentation, `${docCount} dossiers aanvullen`)
+    case 'bart':
+      addSection('Escalaties voor Bart', opportunities.riskMitigation, `${riskCount} projecten met risico`)
       addSection('Cashflow versnellen', opportunities.readyToBill, `${readyCount} facturen klaar`)
+      addSection('Documentatie opvolgen', opportunities.documentation, `${docCount} dossiers aanvullen`)
       break
-    case 'finance':
-      addSection('Facturatie direct verzenden', opportunities.readyToBill, `${readyCount} facturen klaar`)
-      addSection('Cashflow bewaken', opportunities.riskMitigation, `${riskCount} projecten met impact`)
-      addSection('Compliance afronden', opportunities.documentation, `${docCount} dossiers missen notities`)
+    case 'anna':
+      addSection('Komende 14 dagen', opportunities.upcomingWindow, `${upcomingCount} projecten binnen 14 dagen`)
+      addSection('Afhankelijkheden check', opportunities.riskMitigation, `${riskCount} ketens monitoren`)
+      addSection('Briefing updates', opportunities.documentation, `${docCount} projecten missen notities`)
       break
-    case 'planner':
-      addSection('Planning komende 14 dagen', opportunities.upcomingWindow, `${upcomingCount} projecten binnen 14 dagen`)
-      addSection('Afhankelijkheden onder controle', opportunities.riskMitigation, `${riskCount} ketens monitoren`)
-      addSection('Voorraadcoördinatie', opportunities.inventoryAlerts, `${inventoryCount} voorraadalerts`)
-      break
-    case 'crew':
+    case 'tom':
       addSection('Shiftvoorbereiding', opportunities.upcomingWindow, `${upcomingCount} opdrachten starten snel`)
-      addSection('Briefings aanvullen', opportunities.documentation, `${docCount} projecten missen notities`)
       addSection('Materiaalalerts', opportunities.inventoryAlerts, `${inventoryCount} urgente meldingen`)
+      addSection('Briefings aanvullen', opportunities.documentation, `${docCount} projecten missen notities`)
       break
-    case 'viewer':
-      addSection('Hoogtepunten', opportunities.readyToBill, `${readyCount} successen gereed`)
-      addSection('Focus op risico’s', opportunities.riskMitigation, `${riskCount} projecten om te bespreken`)
-      addSection('Binnenkort live', opportunities.upcomingWindow, `${upcomingCount} start binnen 30 dagen`)
+    case 'carla':
+      addSection('Klantbevestigingen', opportunities.upcomingWindow, `${upcomingCount} klanten wachten op update`)
+      addSection('Service highlights', opportunities.readyToBill, `${readyCount} successen om te delen`)
+      addSection('Documentatie klaarzetten', opportunities.documentation, `${docCount} dossiers af te ronden`)
+      break
+    case 'frank':
+      addSection('Facturatie direct verzenden', opportunities.readyToBill, `${readyCount} facturen klaar`)
+      addSection('Compliance afronden', opportunities.documentation, `${docCount} dossiers missen notities`)
+      addSection('Cashflow bewaken', opportunities.riskMitigation, `${riskCount} projecten met impact`)
+      break
+    case 'sven':
+      addSection('Escalaties', opportunities.riskMitigation, `${riskCount} kritieke ketens`)
+      addSection('Voorraadalerts', opportunities.inventoryAlerts, `${inventoryCount} meldingen te bevestigen`)
+      addSection('Documentatieplicht', opportunities.documentation, `${docCount} dossiers bijwerken`)
+      break
+    case 'isabelle':
+      addSection('Internationale voorbereiding', opportunities.upcomingWindow, `${upcomingCount} projecten binnen 30 dagen`)
+      addSection('Risico-inschatting', opportunities.riskMitigation, `${riskCount} afhankelijkheden bewaken`)
+      addSection('Succesverhalen', opportunities.readyToBill, `${readyCount} afgerond voor aftercare`)
+      break
+    case 'peter':
+      addSection('Automation kansen', opportunities.inventoryAlerts, `${inventoryCount} alerts te koppelen`)
+      addSection('Cashflow triggers', opportunities.readyToBill, `${readyCount} facturen klaar`)
+      addSection('Risico watchlist', opportunities.riskMitigation, `${riskCount} projecten met waarschuwing`)
+      break
+    case 'nadia':
+      addSection('Eerste taken', opportunities.upcomingWindow.slice(0, 2), `${upcomingCount} startmomenten in zicht`)
+      addSection('Checklist aanvullen', opportunities.documentation, `${docCount} dossiers met ontbrekende info`)
+      break
+    case 'david':
+      addSection('Status matrix', opportunities.upcomingWindow.concat(opportunities.riskMitigation), `${upcomingCount} gepland • ${riskCount} risico`)
+      addSection('API-validaties', opportunities.inventoryAlerts, `${inventoryCount} alerts voor webhook-test`)
+      addSection('Facturatie endpoints', opportunities.readyToBill, `${readyCount} facturatiecases`)
       break
     default:
       addSection('Planning focus', opportunities.upcomingWindow, `${upcomingCount} projecten binnen 14 dagen`)
@@ -407,108 +501,182 @@ function deriveImpact(event) {
 }
 
 const personaInsightsGenerators = {
-  admin(events, summary, financialSignals) {
+  bart(events, summary, financialSignals) {
     const critical = events.filter(event => event.status === 'at_risk' || event.risk === 'critical')
+    const active = events.filter(event => event.status === 'active')
     const docsMissing = financialSignals?.docsMissing ?? 0
-    const billingReady = financialSignals?.billingReady ?? events.filter(event => event.status === 'completed').length
-    const highlight = critical.length ? critical : events.filter(event => event.status === 'active')
+    const highlight = critical.length ? critical : active
     return {
-      headline: critical.length ? 'Directe escalaties' : 'Executive overzicht',
+      headline: critical.length ? 'Escalaties voor Bart' : 'Operaties op koers',
       summary: critical.length
-        ? `Er staan ${critical.length} projecten onder druk. Plan een escalatie en herverdeel capaciteit.`
-        : 'Geen kritieke incidenten gemeld. Monitor actief de voorraad- en cashflowindicatoren.',
+        ? `Er staan ${critical.length} producties onder druk. Herverdeel crew en voorraad waar nodig.`
+        : `Er zijn ${active.length || 'geen'} actieve opdrachten. Houd de voorraadindicatoren in de gaten.`,
       bullets: highlight.slice(0, 3).map(event => `${event.name} – ${timelineLabel(event)}`),
       emphasis:
         docsMissing > 0
-          ? `${docsMissing} projecten missen documentatie. Markeer als prioriteit voor kwaliteitsborging.`
-          : billingReady > 0
-          ? `${billingReady} projecten zijn factureerbaar en versterken de cashpositie.`
+          ? `${docsMissing} opdrachten missen draaiboeknotities. Zet dit uit bij planning.`
+          : financialSignals?.inventoryAlerts
+          ? `${financialSignals.inventoryAlerts} voorraadalerts geregistreerd. Check magazijnstatus.`
           : null,
     }
   },
-  finance(events, summary, financialSignals) {
-    const completed = events.filter(event => event.status === 'completed')
-    const readyShare = financialSignals?.total
-      ? Math.round((financialSignals.billingReady / financialSignals.total) * 100)
-      : null
-    const revenueAtRisk = financialSignals?.revenueAtRisk ?? summary.atRisk
-    const docsMissing = financialSignals?.docsMissing ?? 0
-    return {
-      headline: completed.length ? 'Facturatie klaarzetten' : 'Nog geen facturen gereed',
-      summary: completed.length
-        ? `Er zijn ${completed.length} afgeronde projecten. ${
-            readyShare !== null
-              ? `${readyShare}% van de selectie is factureerbaar.`
-              : 'Start met facturatie om cashflow te borgen.'
-          }`
-        : 'Nog geen afgeronde projecten in dit venster. Controleer of planning tijdig afsluit.',
-      bullets: completed.slice(0, 3).map(event => `${event.name} – afgerond op ${formatDate(event.end)}`),
-      emphasis:
-        revenueAtRisk > 0
-          ? `${revenueAtRisk} projecten kennen omzetrisico. Stem af met planning voor versnelling.`
-          : docsMissing > 0
-          ? `${docsMissing} projecten missen notities voor compliance.`
-          : null,
-    }
-  },
-  planner(events) {
+  anna(events) {
     const upcoming = events
       .filter(event => event.status === 'upcoming')
       .sort((a, b) => getDateValue(a.start) - getDateValue(b.start))
-    const riskyUpcoming = upcoming.filter(event => event.risk !== 'ok')
+    const riskyUpcoming = upcoming.filter(event => event.risk && event.risk !== 'ok')
     return {
-      headline: upcoming.length ? 'Volgende startmomenten' : 'Geen geplande projecten',
+      headline: upcoming.length ? 'Anna’s komende producties' : 'Nog geen nieuwe shows',
       summary: upcoming.length
-        ? `Bereid de eerstvolgende ${Math.min(upcoming.length, 3)} projecten voor en bevestig resources.`
-        : 'Er zijn geen nieuwe projecten gepland binnen dit venster. Synchroniseer met sales voor instroom.',
+        ? `Voorbereiden op ${Math.min(upcoming.length, 3)} startmomenten. Controleer crew & materiaal.`
+        : 'Geen nieuwe producties in deze periode. Stem af met sales voor nieuwe aanvragen.',
       bullets: upcoming.slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
       emphasis:
         riskyUpcoming.length > 0
-          ? `${riskyUpcoming.length} aankomende projecten hebben voorraad- of risicoalerts.`
+          ? `${riskyUpcoming.length} projecten hebben afhankelijkheden of risicoalerts.`
           : null,
     }
   },
-  crew(events) {
+  tom(events) {
     const active = events.filter(event => event.status === 'active')
-    const docsMissing = events.filter(
-      event => (event.status === 'active' || event.status === 'completed') && !event.notes?.trim()
-    )
+    const docsMissing = active.filter(event => !event.notes?.trim())
     return {
-      headline: active.length ? 'Vandaag in uitvoering' : 'Geen actieve opdrachten',
+      headline: active.length ? 'Tom’s shifts vandaag' : 'Geen actieve shifts',
       summary: active.length
-        ? `Zorg dat crew en materiaal klaarstaan voor ${active.length === 1 ? 'deze opdracht' : 'deze opdrachten'}.`
-        : 'Er zijn momenteel geen actieve opdrachten. Check straks opnieuw voor nieuwe shifts.',
+        ? `Zorg dat crew, stage en transport klaarstaan voor ${active.length === 1 ? 'deze opdracht' : 'deze opdrachten'}.`
+        : 'Vandaag geen live opdrachten. Controleer later opnieuw.',
       bullets: active.slice(0, 3).map(event => `${event.name} – eindigt ${formatDate(event.end)}`),
       emphasis:
         docsMissing.length > 0
-          ? `${docsMissing.length} opdrachten missen briefingnotities. Vul deze aan voor de start.`
+          ? `${docsMissing.length} opdrachten missen briefingnotities. Vul ze aan vóór vertrek.`
           : null,
     }
   },
-  viewer(events, summary, financialSignals) {
-    const highlights = events
-      .filter(event => event.status === 'completed' || event.status === 'active')
-      .slice(0, 3)
+  carla(events) {
+    const upcoming = events
+      .filter(event => event.status === 'upcoming')
+      .sort((a, b) => a.client.localeCompare(b.client, 'nl'))
+    const soon = upcoming.filter(event => {
+      const days = getDaysFromToday(event.start)
+      return typeof days === 'number' && days >= 0 && days <= 7
+    })
+    return {
+      headline: upcoming.length ? 'Klantoverzicht voor Carla' : 'Geen geplande klantmomenten',
+      summary: upcoming.length
+        ? `Bereid antwoorden voor op ${Math.min(upcoming.length, 3)} klantvragen en bevestig details.`
+        : 'Geen aankomende events. Houd saleskanalen in de gaten voor nieuwe aanvragen.',
+      bullets: upcoming.slice(0, 3).map(event => `${event.client} – ${event.name}`),
+      emphasis:
+        soon.length > 0
+          ? `${soon.length} klanten verwachten deze week updates. Bel of mail ter bevestiging.`
+          : null,
+    }
+  },
+  frank(events, summary, financialSignals) {
+    const completed = events
+      .filter(event => event.status === 'completed')
+      .sort((a, b) => getDateValue(b.end) - getDateValue(a.end))
+    const readyShare = financialSignals?.total
+      ? Math.round((financialSignals.billingReady / financialSignals.total) * 100)
+      : null
+    const docsMissing = financialSignals?.docsMissing ?? 0
+    const revenueAtRisk = financialSignals?.revenueAtRisk ?? summary.atRisk
+    return {
+      headline: completed.length ? 'Facturatie klaarzetten' : 'Nog geen afrondingen',
+      summary: completed.length
+        ? `Er zijn ${completed.length} afgeronde projecten. ${
+            readyShare !== null ? `${readyShare}% is direct factureerbaar.` : 'Start facturatie om cashflow te versterken.'
+          }`
+        : 'Geen afgeronde projecten in deze periode. Controleer of projecten tijdig worden afgesloten.',
+      bullets: completed.slice(0, 3).map(event => `${event.name} – afgerond op ${formatDate(event.end)}`),
+      emphasis:
+        docsMissing > 0
+          ? `${docsMissing} dossiers missen notities voor compliance.`
+          : revenueAtRisk > 0
+          ? `${revenueAtRisk} projecten hebben risico op omzetverlies.`
+          : null,
+    }
+  },
+  sven(events, summary, financialSignals) {
+    const critical = events.filter(event => event.risk === 'critical' || event.status === 'at_risk')
+    const alerts = events.filter(event => event.alerts?.length)
+    return {
+      headline: critical.length ? 'Kritieke incidenten voor Sven' : 'Geen kritieke incidenten',
+      summary: critical.length
+        ? `Escalaties actief bij ${critical.length} projecten. Check voorraad, API en monitoring.`
+        : 'Geen kritieke meldingen. Houd de automations en sensoren actief.',
+      bullets: critical.slice(0, 3).map(event => `${event.name} – ${timelineLabel(event)}`),
+      emphasis:
+        alerts.length > 0
+          ? `${alerts.length} projecten genereren voorraadalerts. Bevestig acties met het warehouse.`
+          : summary.warning > 0
+          ? `${summary.warning} projecten hebben een waarschuwing. Plan een check-in.`
+          : null,
+    }
+  },
+  isabelle(events) {
     const upcoming = events
       .filter(event => event.status === 'upcoming')
       .sort((a, b) => getDateValue(a.start) - getDateValue(b.start))
-    const revenueAtRisk = financialSignals?.revenueAtRisk ?? summary.atRisk
+    const longLead = upcoming.filter(event => {
+      const days = getDaysFromToday(event.start)
+      return typeof days === 'number' && days > 14
+    })
     return {
-      headline: 'Portfolio highlights',
-      summary:
-        highlights.length > 0
-          ? 'Belangrijkste resultaten en lopende projecten op een rij voor stakeholders.'
-          : 'Geen highlights beschikbaar. Pas filters aan om bredere context te tonen.',
-      bullets:
-        highlights.length > 0
-          ? highlights.map(event => `${event.name} – ${statusLabels[event.status] || event.status}`)
-          : upcoming.slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
+      headline: upcoming.length ? 'Internationale horizon' : 'Geen internationale events gepland',
+      summary: upcoming.length
+        ? `Bekijk visa, travel en vertaling voor ${Math.min(upcoming.length, 3)} komende shows.`
+        : 'Geen internationale producties zichtbaar. Controleer of filters te strikt zijn.',
+      bullets: upcoming.slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
       emphasis:
-        revenueAtRisk > 0
-          ? `${revenueAtRisk} projecten hebben aandacht nodig om omzetverlies te voorkomen.`
-          : upcoming.length > 0
-          ? `${upcoming.length} projecten starten binnenkort.`
+        longLead.length > 0
+          ? `${longLead.length} projecten hebben een langere doorlooptijd. Start voorbereidingen nu.`
           : null,
+    }
+  },
+  peter(events, summary, financialSignals) {
+    const warnings = events.filter(event => event.risk === 'warning')
+    const highlights = events.filter(event => event.status === 'completed' || event.status === 'active')
+    return {
+      headline: 'Automation & alerts',
+      summary:
+        warnings.length > 0
+          ? `${warnings.length} projecten hebben waarschuwingen. Koppel automatiseringen of scripts.`
+          : 'Geen waarschuwingen. Gebruik data om optimalisaties te testen.',
+      bullets: highlights.slice(0, 3).map(event => `${event.name} – ${statusLabels[event.status] || event.status}`),
+      emphasis:
+        financialSignals?.inventoryAlerts
+          ? `${financialSignals.inventoryAlerts} voorraadalerts detecteerbaar via webhooks.`
+          : null,
+    }
+  },
+  nadia(events) {
+    const upcoming = events
+      .filter(event => event.status === 'upcoming')
+      .sort((a, b) => getDateValue(a.start) - getDateValue(b.start))
+    const safe = upcoming.filter(event => event.risk === 'ok')
+    return {
+      headline: upcoming.length ? 'Eerste stappen voor Nadia' : 'Nog geen taken toegewezen',
+      summary: upcoming.length
+        ? `Begin met ${safe.length ? safe.length : upcoming.length} laag-risico taken om de tooling te leren.`
+        : 'Geen taken in zicht. Vraag een collega om samen de planner te doorlopen.',
+      bullets: (safe.length ? safe : upcoming).slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
+      emphasis: safe.length === 0 && upcoming.length > 0 ? 'Let op: alle zichtbare taken bevatten risico’s. Vraag ondersteuning.' : null,
+    }
+  },
+  david(events, summary) {
+    const statusInfo = [
+      { label: 'Actief', value: summary.active },
+      { label: 'Komend', value: summary.upcoming },
+      { label: 'Afgerond', value: summary.completed },
+      { label: 'Risico', value: summary.atRisk },
+    ]
+    const highlights = events.slice(0, 3)
+    return {
+      headline: 'Integratie-audit',
+      summary: 'Gebruik dit overzicht om API-calls en webhooks tegen de planner te testen.',
+      bullets: highlights.map(event => `${event.name} – ${statusLabels[event.status] || event.status}`),
+      emphasis: statusInfo.map(item => `${item.label}: ${item.value}`).join(' • '),
     }
   },
 }
@@ -596,7 +764,7 @@ function PersonaSpotlight({
       {playbookSections && (
         <div style={{ display: 'grid', gap: '8px' }}>
           <div style={{ fontWeight: 600, fontSize: '0.95rem', color: brand.colors.secondary }}>
-            Rolgebaseerde kansen
+            Personagerichte kansen
           </div>
           {playbookSections.length > 0 ? (
             <div style={{ display: 'grid', gap: '12px' }}>
@@ -788,7 +956,7 @@ function FinancialPulsePanel({ cards, focusCards = [], focusLabel }) {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
         <h3 style={{ margin: 0, fontSize: '1.1rem', color: brand.colors.secondary }}>Financiële puls</h3>
         <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>
-          Realtime cashflow-impact per rol
+          Realtime cashflow-impact per persona
         </span>
       </header>
       {cards.length > 0 && (
@@ -1131,6 +1299,51 @@ export default function Planner({ onLogout }) {
         setTimeFilter('next14')
         setSearchTerm('')
         break
+      case 'carlaClients':
+        setStatusFilter('upcoming')
+        setRiskFilter('all')
+        setSortKey('client')
+        setSortDir('asc')
+        setTimeFilter('next30')
+        setSearchTerm('')
+        break
+      case 'svenSystems':
+        setStatusFilter('all')
+        setRiskFilter('critical')
+        setSortKey('risk')
+        setSortDir('desc')
+        setTimeFilter('all')
+        break
+      case 'isabelleWindow':
+        setStatusFilter('upcoming')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next30')
+        setSearchTerm('')
+        break
+      case 'peterAutomation':
+        setStatusFilter('all')
+        setRiskFilter('warning')
+        setSortKey('status')
+        setSortDir('asc')
+        setTimeFilter('all')
+        break
+      case 'nadiaCalm':
+        setStatusFilter('upcoming')
+        setRiskFilter('ok')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next7')
+        setSearchTerm('')
+        break
+      case 'davidAudit':
+        setStatusFilter('all')
+        setRiskFilter('all')
+        setSortKey('status')
+        setSortDir('asc')
+        setTimeFilter('all')
+        break
       case 'resetPersona':
         applyPersonaPreset(personaPreset)
         break
@@ -1174,11 +1387,11 @@ export default function Planner({ onLogout }) {
       >
         <div style={{ display: 'grid', gap: '6px' }}>
           <span style={{ fontSize: '0.85rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: brand.colors.mutedText }}>
-            RentGuy Enterprise
+            MR-DJ Persona Hub
           </span>
-          <h2 style={{ margin: 0, fontSize: '2rem' }}>Rolgestuurde projectplanner</h2>
+          <h2 style={{ margin: 0, fontSize: '2rem' }}>MR-DJ projectcockpit</h2>
           <p style={{ margin: 0, color: brand.colors.mutedText, maxWidth: 560 }}>
-            Combineer executive inzicht, financiële signalen en dagoperatie in één luxueuze cockpit per rol.
+            Combineer executive inzicht, financiële signalen en dagoperatie in één luxueuze cockpit per persona.
           </p>
         </div>
         <button
