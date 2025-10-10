@@ -1,45 +1,16 @@
-# Usability & Accessibility Audit
+# Usability & Accessibility Audit (WCAG 2.2 AA)
 
-## Nielsen heuristieken
-- **Zichtbaarheid systeemstatus**: Onboarding overlay verbergt fouten achter generieke fallback tekst → gebruikers weten niet dat live data ontbreekt.【F:OnboardingOverlay.jsx†L149-L173】
-- **Gebruikerscontrole**: Geen manier om onboarding te resetten of stappen over te slaan behalve snooze; snooze verstopt state in localStorage.【F:App.jsx†L16-L116】
-- **Consistentie**: Planner persona-namen (Bart, Anna) wijken af van zakelijke persona’s; verwart gebruikers.【F:Planner.jsx†L5-L101】
+## Summary
+| Issue | WCAG Ref | Evidence | Impact | Recommended Fix |
+| --- | --- | --- | --- | --- |
+| Lack of role-targeted guidance in onboarding checklist | 3.3.5 Help | `fallbackSteps` are generic and do not mention persona-specific tasks (`OnboardingOverlay.jsx` lines 6-45). | Users do not receive contextual help; increases abandonment. | Replace static copy with persona-aware content fetched from API; include direct CTAs per persona.
+| Dialog missing accessible semantics (addressed in patch) | 1.3.1 Info and Relationships | Overlay previously rendered as plain `div` without `role`/`aria` (now fixed lines 271-280). | Screen-reader users could not identify modal context or dismiss with keyboard. | Keep new dialog semantics and add focus trap fallback for browsers without `preventScroll` support.
+| Default credentials exposed in UI | 2.2.6 Timeout, 2.3.1 Three Flashes (security/perception) | Login pre-populates `bart`/`mr-dj` and surfaces demo credentials (`Login.jsx` lines 7-138). | Encourages shared accounts, bypassing MFA and auditing; also confuses new users. | Detect environment (demo vs. production) and remove hard-coded credentials in production builds.
+| No skip navigation or heading structure on Planner | 2.4.1 Bypass Blocks | Planner renders complex tables without skip links or headings (`Planner.jsx` lines 294-350). | Keyboard users must tab through large datasets. | Add skip link and semantic headings per section, ensure table headers use `<th scope="col">`.
+| Poor error feedback for login failures | 3.3.3 Error Suggestion | Error message lacks actionable guidance (`Login.jsx` lines 34-35). | Users can't resolve login issues quickly. | Include retry steps, password reset CTA, and highlight required password policy.
+| Missing keyboard shortcut to close onboarding overlay | 2.1.1 Keyboard | Prior to fix there was no ESC handler; now added at lines 206-213. | Users relying on keyboard could not dismiss overlay. | Keep ESC support and add focus return logic (implemented lines 195-203).
+| High contrast gradients without text contrast checks | 1.4.3 Contrast (Minimum) | Buttons use gradient backgrounds without verifying text contrast (`OnboardingOverlay.jsx` lines 344-363). | Possible failure on low-vision conditions. | Add design tokens with pre-calculated contrast ratios or fallback to solid backgrounds.
 
-## WCAG 2.2 AA risico’s
-| Issue | Component | WCAG referentie | Bevinding |
-| --- | --- | --- | --- |
-| Focus zichtbaarheid | Buttons in overlay hebben geen custom focus styles, relying op browser defaults die slecht zichtbaar zijn op gradient achtergrond.【F:OnboardingOverlay.jsx†L297-L330】 | 2.4.7 | Voeg `:focus-visible` styles toe met hoge contrast rand. |
-| Keyboard traps | Overlay fixed op viewport maar sluitknop ontbreekt; alleen snooze of finish, geen `Esc` handler.【F:OnboardingOverlay.jsx†L245-L374】 | 2.1.2 | Voeg keyboard listener + `aria-modal`. |
-| Color contrast | Tekst op gradient (login) heeft onvoldoende contrast (wit op lichtblauw) voor kleine tekst.【F:Login.jsx†L41-L207】 | 1.4.3 | Pas kleuren of achtergrond aan. |
-| Labels | Inputs hebben labels, maar geen aria-describedby voor foutmeldingen; screenreaders missen context.【F:Login.jsx†L165-L219】 | 3.3.1 | Koppel foutmelding met `aria-live`. |
-| Live status | Error/success updates in overlay niet aangekondigd (`setErrorMessage` toont div zonder live region).【F:OnboardingOverlay.jsx†L149-L237】 | 4.1.3 | Voeg `role="alert"`. |
-
-## Usability quick wins
-1. **Add exit button** in overlay (close/skip) + keyboard support.
-2. **Replace persona names** met zakelijke rollen en toon onboarding progress indicator per rol.【F:Planner.jsx†L5-L101】
-3. **Add skeletons/empty states** bij lege data, met CTA’s om data te importeren.【F:Planner.jsx†L162-L200】
-4. **Surface API status** met toasts/banners, zodat gebruikers weten wat er gebeurt.【F:OnboardingOverlay.jsx†L201-L237】
-
-## Aanbevolen code snippets
-```jsx
-<button
-  onClick={refreshProgress}
-  onKeyDown={event => {
-    if (event.key === 'Escape') {
-      onSnooze?.();
-    }
-  }}
-  aria-live="polite"
-  className="onboarding-refresh"
->
-  {refreshingProgress ? 'Verversen…' : 'Voortgang verversen'}
-</button>
-```
-
-```css
-.onboarding-refresh:focus-visible {
-  outline: 3px solid #0BC5EA;
-  outline-offset: 3px;
-}
-```
-
+## Additional Observations
+- Ensure all inline buttons receive visible focus states; current styles rely on default outlines which are removed on some elements (`Login.jsx` input style lines 166-187).
+- Provide responsive layout testing for zoom (200%); inline styles may cause overflow in Planner timeline cards.

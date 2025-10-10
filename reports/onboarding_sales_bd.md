@@ -1,37 +1,45 @@
-# Onboarding Audit — Sales / Business Development
+# Sales / Business Development Onboarding Audit
 
-**Friction score:** 4 / 5  
-**Estimated time-to-value:** ~3 dagen (sales pipeline ontbreekt)
+## Overview
+- **Primary goals:** Generate quotes, upsell kits, convert leads to contracts.
+- **Entry point:** Logs in via demo credentials, sees Planner timeline not optimized for pipeline.
+- **Critical path coverage:** account → company setup → CRM import (missing) → create job/event → send quote → contract sign → deposit capture.
 
+## Current Experience Snapshot
+1. Login screen highlights demo accounts but lacks CTA for CRM/lead import.
+2. Planner view does not show quote stages; sales must infer status from job cards.
+3. Onboarding tips omit pricing strategy, upsell suggestions, or discount guardrails.
+4. No integration path for Stripe deposit capture triggered from quote acceptance.
+
+## Friction & Risks
+- Sales lacks context on conversion funnel; hard to track quote-to-book.
+- Manual entry for upsell items reduces attach rate.
+- Discounting guardrails absent, risking margin erosion.
+
+## Recommendations
+| Priority | Recommendation | Expected KPI Lift |
+| --- | --- | --- |
+| P0 | Add sales-focused onboarding step linking to quote builder with suggested kits. | Quote-to-book +14% |
+| P0 | Introduce pricing playbook tip cards referencing average discount thresholds. | Avg. discount -5pp |
+| P1 | Provide CRM import wizard (CSV + API) in onboarding overlay. | Upsell attach rate +8% |
+| P1 | Automate deposit capture trigger on quote acceptance, surfaced in onboarding. | Deposit capture rate +10% |
+
+## Persona KPI Instrumentation
+- **Quote-to-book %:** track accepted quotes vs. total sent.
+- **Average discount:** compute discount amount vs. list price per quote.
+- **Upsell attach rate:** measure optional kit add-ons accepted per job.
+
+## Proposed Flow (Mermaid)
 ```mermaid
-flowchart TD
-    A[Login.jsx demo account] --> B[Token opslag]
-    B --> C[App.jsx planner]
-    C --> D[OnboardingOverlay.jsx stappen]
-    D --> E[Tips uit onboarding_tips.json]
+timeline
+    title Sales to Revenue
+    section Lead Intake
+      Import leads & opportunities: Day 0
+      Configure templates for quotes: Day 0
+    section Quote Cycle
+      Build job & recommended upsell bundle: Day 0
+      Send quote & capture e-signature: Day 0
+    section Revenue
+      Collect deposit automatically: Day 1
+      Trigger invoice + CRM status update: Day 1
 ```
-
-## Flow mapping
-| Stap | Component | API | Bevinding |
-| --- | --- | --- | --- |
-| Sign-in | `<Login>` | `/api/v1/auth/login` | Geen sales persona keuze; demo copy verwijst naar operations/finance.【F:Login.jsx†L6-L155】 |
-| Dashboard | `<Planner>` | n.b. | Presets focussen op operations (Bart, Anna, etc.), geen Sales pipeline of funnel metrics.【F:Planner.jsx†L5-L101】 |
-| Onboarding | `<OnboardingOverlay>` | `/api/v1/onboarding/*` | Geen stap voor CRM-sync of lead import; fallback tips verwijzen naar MR-DJ features (niet sales).【F:onboarding_tips.json†L1-L32】 |
-
-## Blokkades
-1. **Geen sales data** – Onboarding bevat geen import of sample leads, dus geen pipeline inzicht.【F:OnboardingOverlay.jsx†L6-L173】
-2. **Tips niet relevant** – CTA’s verwijzen naar operations workflows, geen conversie-optimalisatie.【F:onboarding_tips.json†L1-L32】
-3. **Geen rol-specifieke copy** – Planner presets noemen andere persona’s, sales weet niet welk filter te gebruiken.【F:Planner.jsx†L5-L101】
-
-## Fixes & acceptatiecriteria
-- Voeg sales stap "Sync CRM" toe met API-guided import.
-  - *Acceptatie*: Stap toont progress + error state bij mislukte sync.【F:OnboardingOverlay.jsx†L245-L374】
-- Maak sales preset met pipeline/funnel widgets en lege-state instructie.
-  - *Acceptatie*: Preset bevat statuskolommen "Prospect", "Negotiation", etc.【F:Planner.jsx†L5-L200】
-- Update tips JSON met sales CTA’s (demo pitch deck, pipeline export).
-  - *Acceptatie*: Tips tonen module `sales` met relevante CTA’s.【F:onboarding_tips.json†L1-L32】
-
-## Risico
-- **Revenue impact**: Hoog – geen pipeline → geen forecast.
-- **Adoptie**: Middel – Sales team mist guidance, kost extra enablement.
-

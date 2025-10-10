@@ -1,0 +1,30 @@
+[
+  {
+    "id": "RG-CODE-001",
+    "title": "Onboarding overlay falls back to generic steps without persona context",
+    "description": "When onboarding APIs fail the UI renders hard-coded Sevensa steps, so finance, warehouse, and other personas lose targeted guidance during first-run.",
+    "severity": "high",
+    "files": ["OnboardingOverlay.jsx"]
+  },
+  {
+    "id": "RG-CODE-002",
+    "title": "Session tokens persist indefinitely in localStorage",
+    "description": "Tokens are stored without expiry and logout forces a window reload, breaking OIDC flows and increasing risk of stale credentials.",
+    "severity": "high",
+    "files": ["App.jsx"]
+  },
+  {
+    "id": "RG-CODE-003",
+    "title": "Demo credentials hard-coded into login UI",
+    "description": "Login initializes with shared usernames/passwords and displays credential hints, blocking MFA adoption and confusing enterprise onboarding.",
+    "severity": "critical",
+    "files": ["Login.jsx"]
+  },
+  {
+    "id": "RG-CODE-004",
+    "title": "Planner persona presets inaccessible from UI",
+    "description": "Multiple persona filters are defined in code but not exposed, so onboarding cannot tailor dashboards per role.",
+    "severity": "medium",
+    "files": ["Planner.jsx"]
+  }
+]
