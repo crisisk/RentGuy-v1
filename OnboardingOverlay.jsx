@@ -84,6 +84,36 @@ const moduleIcons = {
   automation: '⚙️',
 }
 
+const stepActions = {
+  welcome: { href: '/onboarding/company', label: 'Bedrijfsprofiel openen', description: 'Controleer bedrijfsgegevens en contactinformatie vóórdat je teams uitnodigt.' },
+  project: { href: '/jobs/new', label: 'Start job wizard', description: 'Begin met het aanmaken van het eerste evenement inclusief datum en locatie.' },
+  crew: { href: '/crew', label: 'Crewplanning bekijken', description: 'Controleer beschikbaarheid en wijs direct de juiste rollen toe.' },
+  booking: { href: '/inventory/import', label: 'Importeer inventory CSV', description: 'Upload de voorraadlijst zodat conflicten automatisch bewaakt worden.' },
+  scan: { href: '/warehouse/scanner', label: 'Open scanmodule', description: 'Activeer de magazijnscanner om picklijsten en retouren te registreren.' },
+  transport: { href: '/transport/routes', label: 'Routeplanning instellen', description: 'Plan logistiek, buffertijden en chauffeurs vanuit transportdashboard.' },
+  invoice: { href: '/billing/invoices/new', label: 'Genereer factuur', description: 'Controleer voorschotten en zet de eerste factuur klaar voor verzending.' },
+  templates: { href: '/communications/templates', label: 'Communicatie templates aanpassen', description: 'Personaliseer klantmails en statusupdates voor jullie tone of voice.' },
+}
+
+const COMPLETION_RATE_LIMIT_MS = 1500
+
+function emitOnboardingEvent(type, payload = {}) {
+  const detail = { type, timestamp: new Date().toISOString(), ...payload }
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('rentguy:onboarding', { detail }))
+      if (Array.isArray(window.dataLayer)) {
+        window.dataLayer.push({ event: `rentguy_${type}`, ...detail })
+      }
+    } catch (error) {
+      console.warn('Onboarding event kon niet verstuurd worden', error)
+    }
+  }
+  if (typeof console !== 'undefined' && console.info) {
+    console.info('[onboarding]', type, detail)
+  }
+}
+
 function normalizeSteps(list) {
   return (list ?? []).map(step => ({
     ...step,
@@ -105,6 +135,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [busyStep, setBusyStep] = useState('')
+  const [busyActionStep, setBusyActionStep] = useState('')
   const [refreshingProgress, setRefreshingProgress] = useState(false)
   const controllersRef = useRef(new Set())
   const containerRef = useRef(null)
@@ -112,6 +143,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
   const [descriptionId] = useState(
     () => `onboarding-description-${Math.random().toString(36).slice(2)}`
   )
+  const lastCompletionRef = useRef(0)
 
   useEffect(() => {
     return () => {
@@ -165,6 +197,12 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
           setErrorMessage(
             'We tonen de Sevensa standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
           )
+          emitOnboardingEvent('data_fallback', {
+            email,
+            usedFallbackSteps,
+            usedFallbackTips,
+            usedFallbackProgress,
+          })
         }
       } catch (error) {
         if (controller.signal.aborted) return
@@ -176,6 +214,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
           setErrorMessage(
             'We tonen de Sevensa standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
           )
+          emitOnboardingEvent('data_error', { email, message: error?.message })
         }
       } finally {
         controllersRef.current.delete(controller)
@@ -247,6 +286,11 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
 
   async function mark(step) {
     if (busyStep) return
+    const now = Date.now()
+    if (now - lastCompletionRef.current < COMPLETION_RATE_LIMIT_MS) {
+      setErrorMessage('Rustig aan! Wacht een paar tellen voordat je de volgende stap afrondt.')
+      return
+    }
     const controller = new AbortController()
     controllersRef.current.add(controller)
     setBusyStep(step.code)
@@ -256,10 +300,13 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
       const progressData = await getProgress(email, { signal: controller.signal })
       if (controller.signal.aborted) return
       setDone(new Set(progressData.filter(item => item.status === 'complete').map(item => item.step_code)))
+      lastCompletionRef.current = Date.now()
+      emitOnboardingEvent('step_completed', { email, step: step.code })
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Stap kon niet worden bijgewerkt', error)
       setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer Sevensa support.')
+      emitOnboardingEvent('step_error', { email, step: step.code, message: error?.message })
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
@@ -267,6 +314,28 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
       }
     }
   }
+
+  const handleAction = useCallback(
+    step => {
+      if (!step?.code) return
+      const action = stepActions[step.code]
+      if (!action?.href) return
+      setBusyActionStep(step.code)
+      emitOnboardingEvent('cta_clicked', { email, step: step.code, href: action.href })
+      if (typeof window === 'undefined') {
+        setBusyActionStep('')
+        return
+      }
+      window.requestAnimationFrame(() => {
+        try {
+          window.open(action.href, '_blank', 'noopener,noreferrer')
+        } finally {
+          setTimeout(() => setBusyActionStep(''), 400)
+        }
+      })
+    },
+    [email]
+  )
 
   return (
     <div
@@ -430,6 +499,8 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
               color: brand.colors.secondary,
               fontSize: '0.95rem',
             }}
+            role="alert"
+            aria-live="assertive"
           >
             {errorMessage}
           </div>
@@ -445,10 +516,14 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
           <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <h3 style={{ margin: 0, fontSize: '1.2rem', color: brand.colors.secondary }}>Checklist</h3>
             <ol style={{listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14}}>
-              {steps.map(step => {
+              {loading && (
+                <SkeletonRows />
+              )}
+              {!loading && steps.map(step => {
                 const meta = stepMeta[step.code] || {}
                 const completed = done.has(step.code)
                 const isNext = !completed && step.code === nextStepCode
+                const action = stepActions[step.code]
                 return (
                   <StepCard
                     key={step.code}
@@ -458,6 +533,9 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
                     onMark={() => mark(step)}
                     busy={busyStep === step.code}
                     isNext={isNext}
+                    action={action}
+                    onAction={() => handleAction(step)}
+                    actionBusy={busyActionStep === step.code}
                   />
                 )
               })}
@@ -477,7 +555,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
   )
 }
 
-function StepCard({ step, meta, completed, onMark, busy, isNext }) {
+function StepCard({ step, meta, completed, onMark, busy, isNext, action, onAction, actionBusy }) {
   const highlight = isNext && !completed
   const borderColor = highlight
     ? withOpacity(brand.colors.primary, 0.48)
@@ -539,32 +617,63 @@ function StepCard({ step, meta, completed, onMark, busy, isNext }) {
           <span style={{ fontSize: '0.95rem', color: brand.colors.mutedText }}>{step.description}</span>
       </div>
     </div>
-    <div style={{display: 'flex', justifyContent: 'flex-end'}}>
-      {completed ? (
-        <span style={{display: 'inline-flex', alignItems: 'center', gap: 6, color: '#0f5132', fontWeight: 600}}>
-          ✅ Gereed
-        </span>
-      ) : (
-        <button
-          onClick={onMark}
-          disabled={busy}
-          style={{
-            border: 'none',
-            padding: '8px 18px',
-            borderRadius: 999,
-            backgroundImage: brand.colors.gradient,
-            color: '#fff',
-            fontWeight: 600,
-            cursor: busy ? 'wait' : 'pointer',
-            boxShadow: busy ? 'none' : '0 16px 30px rgba(11, 197, 234, 0.26)',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            opacity: busy ? 0.75 : 1,
-          }}
-        >
-          {busy ? 'Bezig…' : 'Markeer gereed'}
-        </button>
-      )}
+    <div style={{display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap'}}>
+      <div style={{display: 'flex', flexDirection: 'column', gap: 6, minWidth: 220, flex: 1}}>
+        {action?.description && (
+          <p style={{margin: 0, fontSize: '0.85rem', color: brand.colors.mutedText}}>{action.description}</p>
+        )}
+        {action && (
+          <button
+            type="button"
+            onClick={onAction}
+            disabled={actionBusy}
+            style={{
+              alignSelf: 'flex-start',
+              border: '1px solid rgba(9, 91, 133, 0.24)',
+              padding: '8px 16px',
+              borderRadius: 12,
+              background: actionBusy
+                ? withOpacity(brand.colors.primary, 0.15)
+                : withOpacity('#ffffff', 0.95),
+              color: brand.colors.secondary,
+              fontWeight: 600,
+              cursor: actionBusy ? 'wait' : 'pointer',
+              boxShadow: actionBusy ? 'none' : '0 14px 28px rgba(13, 59, 102, 0.18)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}
+          >
+            {actionBusy ? 'Openen…' : action.label}
+          </button>
+        )}
       </div>
+      <div>
+        {completed ? (
+          <span style={{display: 'inline-flex', alignItems: 'center', gap: 6, color: '#0f5132', fontWeight: 600}}>
+            ✅ Gereed
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onMark}
+            disabled={busy}
+            style={{
+              border: 'none',
+              padding: '8px 18px',
+              borderRadius: 999,
+              backgroundImage: brand.colors.gradient,
+              color: '#fff',
+              fontWeight: 600,
+              cursor: busy ? 'wait' : 'pointer',
+              boxShadow: busy ? 'none' : '0 16px 30px rgba(11, 197, 234, 0.26)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              opacity: busy ? 0.75 : 1,
+            }}
+          >
+            {busy ? 'Bezig…' : 'Markeer gereed'}
+          </button>
+        )}
+      </div>
+    </div>
     </li>
   )
 }
@@ -598,5 +707,38 @@ function TipCard({ tip }) {
         <span style={{fontSize: '0.85rem', color: brand.colors.primaryDark, fontWeight: 600}}>{tip.cta}</span>
       )}
     </article>
+  )
+}
+
+function SkeletonRows() {
+  const baseStyle = {
+    padding: '18px 20px',
+    borderRadius: 18,
+    border: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+    background: withOpacity('#ffffff', 0.7),
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  }
+  const barStyle = height => ({
+    height,
+    borderRadius: 8,
+    background: withOpacity('#0d3b66', 0.1),
+  })
+  return (
+    <>
+      {[0, 1, 2].map(index => (
+        <li key={`skeleton-${index}`} aria-hidden="true" style={baseStyle}>
+          <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+            <span style={{width: 28, height: 28, borderRadius: '50%', background: withOpacity('#0d3b66', 0.12)}}></span>
+            <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: 6}}>
+              <span style={barStyle(16)}></span>
+              <span style={{...barStyle(12), width: '65%'}}></span>
+            </div>
+          </div>
+          <span style={{...barStyle(10), width: '40%'}}></span>
+        </li>
+      ))}
+    </>
   )
 }
