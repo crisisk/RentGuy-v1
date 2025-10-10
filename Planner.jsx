@@ -808,6 +808,293 @@ function PersonaSpotlight({
   )
 }
 
+const timeFilterOptions = {
+  all: {
+    label: 'Alle periodes',
+    description: 'Toont elk project ongeacht datum.',
+  },
+  today: {
+    label: 'Vandaag',
+    description: 'Accentueert projecten die vandaag starten of actief zijn.',
+  },
+  next7: {
+    label: 'Volgende 7 dagen',
+    description: 'Helpt bij korte termijn planning.',
+  },
+  next14: {
+    label: 'Volgende 14 dagen',
+    description: 'Geeft zicht op de komende twee weken.',
+  },
+  next30: {
+    label: 'Volgende 30 dagen',
+    description: 'Geschikt voor maandelijkse vooruitblik.',
+  },
+  past30: {
+    label: 'Laatste 30 dagen',
+    description: 'Focus op recent afgeronde projecten.',
+  },
+}
+
+const personaQuickActions = {
+  bart: [
+    { key: 'focusRisk', label: 'Focus op risicoprojecten' },
+    { key: 'resetPersona', label: 'Herstel Bart-voorkeuren' },
+  ],
+  anna: [
+    { key: 'showNextWeek', label: 'Plan komende week' },
+    { key: 'resetPersona', label: 'Herstel Anna-voorkeuren' },
+  ],
+  tom: [
+    { key: 'focusTodayCrew', label: 'Toon opdrachten van vandaag' },
+    { key: 'resetPersona', label: 'Herstel Tom-voorkeuren' },
+  ],
+  carla: [
+    { key: 'sortByClient', label: 'Sorteer op klantnaam' },
+    { key: 'resetPersona', label: 'Herstel Carla-voorkeuren' },
+  ],
+  frank: [
+    { key: 'showCompletedMonth', label: 'Afgerond deze maand' },
+    { key: 'resetPersona', label: 'Herstel Frank-voorkeuren' },
+  ],
+  sven: [
+    { key: 'showCriticalRisk', label: 'Alle kritieke risico’s' },
+    { key: 'resetPersona', label: 'Herstel Sven-voorkeuren' },
+  ],
+  isabelle: [
+    { key: 'showNextMonth', label: 'Bekijk internationale maand' },
+    { key: 'resetPersona', label: 'Herstel Isabelle-voorkeuren' },
+  ],
+  peter: [
+    { key: 'focusAutomation', label: 'API-test weergave' },
+    { key: 'resetPersona', label: 'Herstel Peter-voorkeuren' },
+  ],
+  nadia: [
+    { key: 'showGuidedView', label: 'Toon eenvoudige planning' },
+    { key: 'resetPersona', label: 'Herstel Nadia-voorkeuren' },
+  ],
+  david: [
+    { key: 'devOverview', label: 'API status overzicht' },
+    { key: 'resetPersona', label: 'Herstel David-voorkeuren' },
+  ],
+}
+
+function getDaysFromToday(dateString) {
+  if (!dateString) return null
+  const date = new Date(`${dateString}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return null
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diffMs = date.getTime() - today.getTime()
+  return Math.round(diffMs / (1000 * 60 * 60 * 24))
+}
+
+function matchesTimeFilter(event, filter) {
+  if (filter === 'all') return true
+  const startDiff = getDaysFromToday(event.start)
+  const endDiff = getDaysFromToday(event.end)
+
+  if (filter === 'today') {
+    if (startDiff === 0) return true
+    if (startDiff !== null && startDiff < 0 && endDiff !== null && endDiff >= 0) return true
+    if (event.status === 'active') return true
+    return false
+  }
+
+  if (filter === 'next7') {
+    return startDiff !== null && startDiff >= 0 && startDiff <= 7
+  }
+
+  if (filter === 'next14') {
+    return startDiff !== null && startDiff >= 0 && startDiff <= 14
+  }
+
+  if (filter === 'next30') {
+    return startDiff !== null && startDiff >= 0 && startDiff <= 30
+  }
+
+  if (filter === 'past30') {
+    return endDiff !== null && endDiff <= 0 && endDiff >= -30
+  }
+
+  return true
+}
+
+const personaInsightsGenerators = {
+  bart(events, summary) {
+    const atRiskProjects = events.filter(event => event.status === 'at_risk' || event.risk === 'critical')
+    return {
+      headline: atRiskProjects.length ? 'Actie vereist' : 'Alles onder controle',
+      summary: atRiskProjects.length
+        ? `Er staan ${atRiskProjects.length} projecten onder druk. Prioriteer voorraadcontrole om vertragingen te voorkomen.`
+        : 'Er zijn momenteel geen kritieke voorraadissues. Blijf de planning monitoren voor nieuwe waarschuwingen.',
+      bullets: atRiskProjects.slice(0, 3).map(event => `${event.name} – ${timelineLabel(event)}`),
+    }
+  },
+  anna(events) {
+    const upcoming = events
+      .filter(event => event.status === 'upcoming')
+      .sort((a, b) => getDateValue(a.start) - getDateValue(b.start))
+    return {
+      headline: upcoming.length ? 'Komende projecten' : 'Geen nieuwe projecten',
+      summary: upcoming.length
+        ? `Plan nu de logistiek voor de eerstvolgende ${Math.min(upcoming.length, 3)} projecten.`
+        : 'Er staan geen nieuwe projecten ingepland. Controleer of offertes moeten worden omgezet naar opdrachten.',
+      bullets: upcoming.slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
+    }
+  },
+  tom(events) {
+    const active = events.filter(event => event.status === 'active')
+    return {
+      headline: active.length ? 'Vandaag in het veld' : 'Geen actieve opdrachten',
+      summary: active.length
+        ? `Zorg dat je crew up-to-date pakbonnen heeft voor ${active.length === 1 ? 'deze opdracht' : 'deze opdrachten'}.`
+        : 'Er zijn momenteel geen actieve opdrachten. Controleer later of er nieuwe taken zijn.',
+      bullets: active.slice(0, 3).map(event => `${event.name} – eindigt ${formatDate(event.end)}`),
+    }
+  },
+  carla(events) {
+    const upcomingClients = events
+      .filter(event => event.status === 'upcoming')
+      .sort((a, b) => a.client.localeCompare(b.client, 'nl'))
+    return {
+      headline: 'Klantcommunicatie',
+      summary: upcomingClients.length
+        ? 'Bel of mail de volgende klanten om bevestigingen en betalingen te finaliseren.'
+        : 'Geen openstaande klantvragen voor komende events.',
+      bullets: upcomingClients.slice(0, 3).map(event => `${event.client} – ${event.name}`),
+    }
+  },
+  frank(events, summary) {
+    const completed = events.filter(event => event.status === 'completed')
+    return {
+      headline: 'Facturatie klaarzetten',
+      summary: completed.length
+        ? `Er zijn ${completed.length} afgeronde projecten. Start met facturatie voor een gezonde cashflow.`
+        : 'Nog geen projecten afgerond in de geselecteerde periode. Controleer of alles tijdig wordt afgesloten.',
+      bullets: completed.slice(0, 3).map(event => `${event.name} – afgerond op ${formatDate(event.end)}`),
+      emphasis: summary.warning ? 'Let op: er zijn nog openstaande voorraadwaarschuwingen die facturen kunnen vertragen.' : null,
+    }
+  },
+  sven(events) {
+    const critical = events.filter(event => event.risk === 'critical')
+    return {
+      headline: critical.length ? 'Escalaties voorkomen' : 'Geen kritieke waarschuwingen',
+      summary: critical.length
+        ? `Plan direct een check-in met het magazijn voor ${critical.length} kritieke projecten.`
+        : 'Alle systemen draaien zonder kritieke meldingen. Monitor logging voor nieuwe signalen.',
+      bullets: critical.slice(0, 3).map(event => `${event.name} – ${timelineLabel(event)}`),
+    }
+  },
+  isabelle(events) {
+    const international = events.filter(event => /intl|international|global/i.test(`${event.name} ${event.notes}`))
+    return {
+      headline: international.length ? 'Internationale voorbereiding' : 'Geen internationale events gevonden',
+      summary: international.length
+        ? 'Controleer vertalingen, valuta en transportdocumenten voor onderstaande events.'
+        : 'Geen projecten met internationale kenmerken in deze selectie.',
+      bullets: international.slice(0, 3).map(event => `${event.name} – ${formatDate(event.start)}`),
+    }
+  },
+  peter(events) {
+    const risky = events.filter(event => event.risk === 'warning')
+    return {
+      headline: 'Automatisering kansen',
+      summary: risky.length
+        ? 'Koppel API-triggers aan voorraadwaarschuwingen om het magazijn proactief te sturen.'
+        : 'Geen nieuwe waarschuwingen voor automatisering. Controleer API logs voor consistentie.',
+      bullets: risky.slice(0, 3).map(event => `${event.name} – ${riskLabels[event.risk] || 'Onbekend'}`),
+    }
+  },
+  nadia(events) {
+    const simpleTasks = events
+      .filter(event => event.status === 'upcoming')
+      .slice(0, 3)
+    return {
+      headline: 'Stap-voor-stap starten',
+      summary: simpleTasks.length
+        ? 'Volg de checklist: klant controleren, datum bevestigen, materiaal reserveren.'
+        : 'Geen eenvoudige taken gevonden. Vraag een collega om een geschikte opdracht toe te wijzen.',
+      bullets: simpleTasks.map(event => `${event.name} – ${timelineLabel(event)}`),
+    }
+  },
+  david(events) {
+    const allStatuses = Array.from(new Set(events.map(event => statusLabels[event.status] || event.status)))
+    return {
+      headline: 'API validatie',
+      summary: 'Controleer of alle statusovergangen correct worden teruggegeven door de API responses.',
+      bullets: allStatuses.slice(0, 3).map(status => `Status beschikbaar: ${status}`),
+    }
+  },
+}
+
+function buildPersonaInsights(personaKey, events, summary) {
+  const generator = personaInsightsGenerators[personaKey]
+  if (!generator) return null
+  return generator(events, summary)
+}
+
+function PersonaSpotlight({ personaKey, personaLabel, description, insights, quickActions, onQuickAction, timeFilter }) {
+  if (!personaKey || personaKey === 'all') return null
+
+  return (
+    <section
+      style={{
+        border: '1px solid #e5e7eb',
+        borderRadius: '16px',
+        padding: '16px',
+        background: '#ffffff',
+        display: 'grid',
+        gap: '12px',
+      }}
+      aria-live="polite"
+    >
+      <header style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '8px' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>{personaLabel}</h3>
+          <p style={{ margin: 0, color: '#4b5563', fontSize: '0.9rem' }}>{description}</p>
+        </div>
+        <div style={{ fontSize: '0.8rem', color: '#6b7280', textAlign: 'right' }}>
+          {timeFilterOptions[timeFilter]?.label}
+        </div>
+      </header>
+      {insights && (
+        <div style={{ display: 'grid', gap: '8px' }}>
+          <strong>{insights.headline}</strong>
+          <p style={{ margin: 0, color: '#374151' }}>{insights.summary}</p>
+          {insights.emphasis && <p style={{ margin: 0, color: '#b45309' }}>{insights.emphasis}</p>}
+          {insights.bullets?.length > 0 && (
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563' }}>
+              {insights.bullets.map((bullet, index) => (
+                <li key={index}>{bullet}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {quickActions?.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {quickActions.map(action => (
+            <button
+              key={action.key}
+              type="button"
+              onClick={() => onQuickAction(action.key)}
+              style={{
+                borderRadius: '999px',
+                padding: '6px 14px',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                cursor: 'pointer',
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   day: '2-digit',
   month: 'short',
