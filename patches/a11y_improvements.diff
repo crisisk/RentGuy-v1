@@ -1,0 +1,191 @@
+Subject: fix(a11y): announce form errors and add escape handling
+
+diff --git a/Login.jsx b/Login.jsx
+index 5555555..6666666 100644
+--- a/Login.jsx
++++ b/Login.jsx
+@@
+-  const [error, setError] = useState('')
++  const [error, setError] = useState('')
+   const [isSubmitting, setIsSubmitting] = useState(false)
+@@
+-      <div
++      <div
+         style={{
+           display: 'grid',
+           gap: '32px',
+@@
+-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
++          <form
++            onSubmit={handleSubmit}
++            style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
++            noValidate
++            aria-describedby={error ? 'login-error' : undefined}
++          >
+             <div style={{ display: 'grid', gap: 12 }}>
+               <label htmlFor="username" style={{ fontWeight: 600, color: brand.colors.secondary }}>E-mailadres of gebruikersnaam</label>
+               <input
+                 id="username"
+                 value={user}
+                 onChange={e => setUser(e.target.value)}
+                 placeholder="bijv. bart"
+                 style={inputStyle}
+                 autoComplete="username"
++                aria-required="true"
+               />
+             </div>
+             <div style={{ display: 'grid', gap: 12 }}>
+               <label htmlFor="password" style={{ fontWeight: 600, color: brand.colors.secondary }}>Wachtwoord</label>
+               <input
+                 id="password"
+                 type="password"
+                 value={password}
+                 onChange={e => setPassword(e.target.value)}
+                 placeholder="mr-dj"
+                 style={inputStyle}
+                 autoComplete="current-password"
++                aria-required="true"
+               />
+             </div>
+@@
+-            {error && (
+-              <p style={{
+-                margin: 0,
+-                background: withOpacity(brand.colors.danger, 0.12),
+-                borderRadius: 14,
+-                padding: '12px 16px',
+-                color: '#B71C1C',
+-                fontSize: '0.95rem',
+-              }}>
+-                {error}
+-              </p>
+-            )}
++            {error && (
++              <p
++                id="login-error"
++                role="alert"
++                aria-live="assertive"
++                style={{
++                  margin: 0,
++                  background: withOpacity(brand.colors.danger, 0.12),
++                  borderRadius: 14,
++                  padding: '12px 16px',
++                  color: '#B71C1C',
++                  fontSize: '0.95rem',
++                }}
++              >
++                {error}
++              </p>
++            )}
+           </form>
+         </section>
+@@
+-const inputStyle = {
++const inputStyle = {
+   width: '100%',
+   padding: '12px 16px',
+@@
+diff --git a/OnboardingOverlay.jsx b/OnboardingOverlay.jsx
+index 7777777..8888888 100644
+--- a/OnboardingOverlay.jsx
++++ b/OnboardingOverlay.jsx
+@@
+-    <div
++    <div
+       style={{
+         position: 'fixed',
+         inset: 0,
+@@
+-            <div
++            <div
+               style={{
+                 position: 'absolute',
+                 top: 20,
+                 right: 20,
+                 display: 'flex',
+                 gap: 12,
+                 flexWrap: 'wrap',
+                 justifyContent: 'flex-end',
+               }}
+             >
+-              <button
+-                onClick={() => onSnooze?.()}
++              <button
++                onClick={() => onSnooze?.()}
++                onKeyDown={event => {
++                  if (event.key === 'Escape') {
++                    onSnooze?.()
++                  }
++                }}
+                 style={{
+                   background: withOpacity('#ffffff', 0.2),
+                   border: '1px solid rgba(255,255,255,0.45)',
+                   borderRadius: 999,
+                   color: '#fff',
+                   padding: '8px 16px',
+                   fontWeight: 600,
+                   cursor: 'pointer',
+                 }}
+               >
+                 Later doorgaan
+               </button>
+@@
+-                style={{
++                style={{
+                   backgroundImage: allComplete
+                     ? 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))'
+                     : withOpacity('#ffffff', 0.1),
+                   border: allComplete ? '1px solid rgba(255,255,255,0.8)' : '1px solid rgba(255,255,255,0.35)',
+                   borderRadius: 999,
+                   color: allComplete ? brand.colors.secondary : 'rgba(255,255,255,0.85)',
+                   padding: '8px 18px',
+                   fontWeight: 600,
+                   cursor: allComplete ? 'pointer' : 'not-allowed',
+                   opacity: allComplete ? 1 : 0.6,
+                   transition: 'transform 0.2s ease',
++                  outline: 'none',
+                 }}
+               >
+                 Checklist afgerond
+               </button>
+             )}
+@@
+-                <button
++                <button
+                   onClick={refreshProgress}
+                   disabled={refreshingProgress || loading}
+                   style={{
+                     border: 'none',
+                     borderRadius: 999,
+                     background: withOpacity('#ffffff', refreshingProgress || loading ? 0.22 : 0.35),
+                     color: '#0B2B40',
+                     padding: '6px 18px',
+                     fontWeight: 600,
+                     cursor: refreshingProgress || loading ? 'wait' : 'pointer',
+                     boxShadow: refreshingProgress || loading ? 'none' : '0 16px 30px rgba(12, 198, 234, 0.22)',
++                    outline: 'none',
+                   }}
+                 >
+                   {refreshingProgress ? 'Verversen…' : 'Voortgang verversen'}
+                 </button>
+@@
+-        <button
++        <button
+           onClick={onMark}
+           disabled={busy}
+           style={{
+             border: 'none',
+             padding: '8px 18px',
+             borderRadius: 999,
+             backgroundImage: brand.colors.gradient,
+             color: '#fff',
+             fontWeight: 600,
+             cursor: busy ? 'wait' : 'pointer',
+             boxShadow: busy ? 'none' : '0 16px 30px rgba(11, 197, 234, 0.26)',
+             transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+             opacity: busy ? 0.75 : 1,
++            outline: 'none',
+           }}
+         >
+           {busy ? 'Bezig…' : 'Markeer gereed'}
+         </button>

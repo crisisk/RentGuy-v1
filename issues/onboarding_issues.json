@@ -1,0 +1,47 @@
+[
+  {
+    "id": "ONB-001",
+    "area": "onboarding",
+    "severity": "high",
+    "location": "OnboardingOverlay.jsx:6-47",
+    "persona": "n/a",
+    "description": "Checklist gebruikt generieke fallback-stappen en dekt geen zakelijke persona’s.",
+    "evidence": "const fallbackSteps = [\n  { code: 'welcome', title: 'Welkom bij Sevensa', ... }\n  ...\n]",
+    "impact": "Gebruikers krijgen geen rolgerichte guidance en behalen hun eerste waarde niet.",
+    "fix": "Introduceer persona-specifieke stappen en laad ze via API/feature flags; zie patches/onboarding_fix.diff.",
+    "acceptance": [
+      "Fallback data toont minstens één stap per kernpersona",
+      "Checklist titel/cta verwijst naar relevante module"
+    ]
+  },
+  {
+    "id": "ONB-002",
+    "area": "onboarding",
+    "severity": "critical",
+    "location": "OnboardingOverlay.jsx:149-214",
+    "persona": "Support Agent",
+    "description": "API-fouten worden gemaskeerd door generieke fallback copy zonder statusmelding.",
+    "evidence": "setErrorMessage('We tonen de Sevensa standaard onboarding omdat live data tijdelijk niet beschikbaar is.')",
+    "impact": "Gebruikers denken dat onboarding voltooid is terwijl backend faalt, wat go-live blokkeert.",
+    "fix": "Toon errorbanner met statuscode, retry/backoff en link naar support.",
+    "acceptance": [
+      "500/404 responses tonen duidelijke foutmelding",
+      "Retryknop voert nieuwe API-call uit en logt resultaat"
+    ]
+  },
+  {
+    "id": "ONB-003",
+    "area": "onboarding",
+    "severity": "medium",
+    "location": "App.jsx:78-116",
+    "persona": "External Supplier",
+    "description": "Onboarding overlay is enkel beschikbaar na intern token; externe partners kunnen flow niet starten.",
+    "evidence": "if (!token) { return <Login onLogin={handleLogin} /> }",
+    "impact": "Partners kunnen geen toegangsrechten aanvragen en blijven geblokkeerd.",
+    "fix": "Implementeer invite-based onboarding met scoped tokens of gastflow.",
+    "acceptance": [
+      "Gastgebruiker kan onboarding overlay betreden",
+      "Scoped token restricties worden afgedwongen"
+    ]
+  }
+]
