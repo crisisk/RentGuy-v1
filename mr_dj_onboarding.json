@@ -1,0 +1,111 @@
+{
+  "steps": [
+    {
+      "code": "welcome",
+      "title": "Welkom bij MR-DJ Enterprise",
+      "description": "Doorloop de checklist om planner, crew en warehouse modules te activeren.",
+      "module": "projects",
+      "icon": "🚀"
+    },
+    {
+      "code": "project",
+      "title": "Plan je eerste MR-DJ show",
+      "description": "Maak een evenement aan in de planner en vul klant- en podiumdetails in.",
+      "module": "projects",
+      "icon": "🎛️"
+    },
+    {
+      "code": "crew",
+      "title": "Nodig crewleden uit",
+      "description": "Stuur uitnodigingen naar technici en DJ's met de MR-DJ briefing template.",
+      "module": "crew",
+      "icon": "🎤"
+    },
+    {
+      "code": "booking",
+      "title": "Plan je eerste crewbooking",
+      "description": "Koppel een team aan het project en verstuur automatisch de draaiboeken.",
+      "module": "crew",
+      "icon": "📅"
+    },
+    {
+      "code": "scan",
+      "title": "Scan je gear met de PWA",
+      "description": "Gebruik de mobiele scanner om decks, speakers en lichten uit te geven.",
+      "module": "warehouse",
+      "icon": "📲"
+    },
+    {
+      "code": "transport",
+      "title": "Optimaliseer transport en logistiek",
+      "description": "Genereer een MR-DJ routebrief en coördineer het warehouse-team.",
+      "module": "transport",
+      "icon": "🚚"
+    },
+    {
+      "code": "invoice",
+      "title": "Activeer facturatie",
+      "description": "Genereer een factuur met het MR-DJ factuursjabloon en verstuur naar de klant.",
+      "module": "billing",
+      "icon": "💸"
+    },
+    {
+      "code": "templates",
+      "title": "Personaliseer templates",
+      "description": "Pas crewbriefings, transportdocumenten en offertes aan in jullie MR-DJ branding.",
+      "module": "templates",
+      "icon": "🧾"
+    }
+  ],
+  "tips": [
+    {
+      "id": "projects-flow",
+      "module": "projects",
+      "message": "Gebruik de MR-DJ showbuilder om events modulair te plannen en dubbele boekingen te voorkomen.",
+      "cta": "Open de planner",
+      "icon": "🎚️"
+    },
+    {
+      "id": "crew-briefings",
+      "module": "crew",
+      "message": "Activeer automatische briefings zodat technici per shift de MR-DJ draaiboeken ontvangen.",
+      "cta": "Configureer crewbriefing",
+      "icon": "🎧"
+    },
+    {
+      "id": "inventory-kits",
+      "module": "inventory",
+      "message": "Bundel decks, microfoons en effecten tot MR-DJ kits zodat warehouse scanning sneller gaat.",
+      "cta": "Maak een gear kit",
+      "icon": "📦"
+    },
+    {
+      "id": "warehouse-pwa",
+      "module": "warehouse",
+      "message": "Gebruik de PWA-scanner bij in- en uitgifte voor realtime magazijnstatus.",
+      "cta": "Start mobiele scanner",
+      "icon": "🏭"
+    },
+    {
+      "id": "transport-routes",
+      "module": "transport",
+      "message": "Plan ritten met MR-DJ routekaarten en deel de QR-code met chauffeurs.",
+      "cta": "Genereer transportbrief",
+      "icon": "🚚"
+    },
+    {
+      "id": "billing-templates",
+      "module": "billing",
+      "message": "Koppel projecten aan het MR-DJ factuursjabloon en verstuur met één klik.",
+      "cta": "Maak factuur",
+      "icon": "💳"
+    },
+    {
+      "id": "templates-branding",
+      "module": "templates",
+      "message": "Werk met de MR-DJ branding kit voor offertes, crewbriefings en QR-check-ins.",
+      "cta": "Open templatebeheer",
+      "icon": "🖌️"
+    }
+  ]
+}
