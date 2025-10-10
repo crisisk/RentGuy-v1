@@ -31,6 +31,7 @@ export function removeLocalStorageItem(key) {
 
 export function clearOnboardingState() {
   removeLocalStorageItem('onb_seen')
+  removeLocalStorageItem('onb_snooze_until')
 }
 
 export const storageAvailable = hasLocalStorage

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { getSteps, getProgress, completeStep, getTips } from './onbApi.js'
 import onboardingTips from './onboarding_tips.json'
 import { brand, brandFontStack, withOpacity } from './branding.js'
@@ -98,27 +98,38 @@ function normalizeTips(list) {
   }))
 }
 
-export default function OnboardingOverlay({ email, onClose }) {
+export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
   const [steps, setSteps] = useState(() => normalizeSteps(fallbackSteps))
   const [done, setDone] = useState(new Set())
   const [tips, setTips] = useState(() => normalizeTips(fallbackTips))
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [busyStep, setBusyStep] = useState('')
+  const [refreshingProgress, setRefreshingProgress] = useState(false)
+  const controllersRef = useRef(new Set())
+
+  useEffect(() => {
+    return () => {
+      controllersRef.current.forEach(controller => controller.abort())
+      controllersRef.current.clear()
+    }
+  }, [])
 
   useEffect(() => {
     let ignore = false
+    const controller = new AbortController()
+    controllersRef.current.add(controller)
     setLoading(true)
     setErrorMessage('')
     ;(async () => {
       try {
         const [stepsResult, progressResult, tipsResult] = await Promise.allSettled([
-          getSteps(),
-          getProgress(email),
-          getTips(),
+          getSteps({ signal: controller.signal }),
+          getProgress(email, { signal: controller.signal }),
+          getTips(undefined, { signal: controller.signal }),
         ])
 
-        if (ignore) return
+        if (ignore || controller.signal.aborted) return
 
         const resolvedSteps =
           stepsResult.status === 'fulfilled' && stepsResult.value.length
@@ -151,6 +162,7 @@ export default function OnboardingOverlay({ email, onClose }) {
           )
         }
       } catch (error) {
+        if (controller.signal.aborted) return
         console.error('Kon onboardinggegevens niet laden', error)
         if (!ignore) {
           setSteps(normalizeSteps(fallbackSteps))
@@ -161,7 +173,8 @@ export default function OnboardingOverlay({ email, onClose }) {
           )
         }
       } finally {
-        if (!ignore) {
+        controllersRef.current.delete(controller)
+        if (!ignore && !controller.signal.aborted) {
           setLoading(false)
         }
       }
@@ -169,6 +182,8 @@ export default function OnboardingOverlay({ email, onClose }) {
 
     return () => {
       ignore = true
+      controller.abort()
+      controllersRef.current.delete(controller)
     }
   }, [email])
 
@@ -176,21 +191,54 @@ export default function OnboardingOverlay({ email, onClose }) {
     return steps.length ? Math.round((done.size / steps.length) * 100) : 0
   }, [done, steps])
 
+  const nextStep = useMemo(() => {
+    return steps.find(step => !done.has(step.code)) || null
+  }, [steps, done])
+
   const allComplete = steps.length > 0 && done.size === steps.length
+  const nextStepCode = nextStep?.code || ''
+
+  const refreshProgress = useCallback(async () => {
+    if (refreshingProgress) return
+    const controller = new AbortController()
+    controllersRef.current.add(controller)
+    setRefreshingProgress(true)
+    try {
+      const progressData = await getProgress(email, { signal: controller.signal })
+      if (controller.signal.aborted) return
+      setDone(new Set(progressData.filter(item => item.status === 'complete').map(item => item.step_code)))
+    } catch (error) {
+      if (controller.signal.aborted) return
+      console.error('Kon voortgang niet verversen', error)
+      setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer MR-DJ support.')
+    } finally {
+      controllersRef.current.delete(controller)
+      if (!controller.signal.aborted) {
+        setRefreshingProgress(false)
+      }
+    }
+  }, [email, refreshingProgress])
 
   async function mark(step) {
     if (busyStep) return
+    const controller = new AbortController()
+    controllersRef.current.add(controller)
     setBusyStep(step.code)
     setErrorMessage('')
     try {
-      await completeStep(email, step.code)
-      const progressData = await getProgress(email)
+      await completeStep(email, step.code, { signal: controller.signal })
+      const progressData = await getProgress(email, { signal: controller.signal })
+      if (controller.signal.aborted) return
       setDone(new Set(progressData.filter(item => item.status === 'complete').map(item => item.step_code)))
     } catch (error) {
+      if (controller.signal.aborted) return
       console.error('Stap kon niet worden bijgewerkt', error)
       setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer MR-DJ support.')
     } finally {
-      setBusyStep('')
+      controllersRef.current.delete(controller)
+      if (!controller.signal.aborted) {
+        setBusyStep('')
+      }
     }
   }
 
@@ -232,23 +280,51 @@ export default function OnboardingOverlay({ email, onClose }) {
             position: 'relative',
           }}
         >
-          <button
-            onClick={onClose}
+          <div
             style={{
               position: 'absolute',
               top: 20,
               right: 20,
-              background: withOpacity('#ffffff', 0.14),
-              border: 'none',
-              borderRadius: 999,
-              color: '#fff',
-              padding: '8px 16px',
-              fontWeight: 600,
-              cursor: 'pointer',
+              display: 'flex',
+              gap: 12,
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
             }}
           >
-            Later doorgaan
-          </button>
+            <button
+              onClick={() => onSnooze?.()}
+              style={{
+                background: withOpacity('#ffffff', 0.14),
+                border: 'none',
+                borderRadius: 999,
+                color: '#fff',
+                padding: '8px 16px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Later doorgaan
+            </button>
+            {onFinish && (
+              <button
+                onClick={() => allComplete && onFinish?.()}
+                disabled={!allComplete}
+                style={{
+                  background: withOpacity('#ffffff', allComplete ? 0.25 : 0.1),
+                  border: allComplete ? '1px solid rgba(255,255,255,0.6)' : '1px solid rgba(255,255,255,0.3)',
+                  borderRadius: 999,
+                  color: '#fff',
+                  padding: '8px 18px',
+                  fontWeight: 600,
+                  cursor: allComplete ? 'pointer' : 'not-allowed',
+                  opacity: allComplete ? 1 : 0.6,
+                  transition: 'transform 0.2s ease',
+                }}
+              >
+                Checklist afgerond
+              </button>
+            )}
+          </div>
           <span style={{textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.8rem'}}>MR-DJ Launchpad</span>
           <h2 style={{margin: 0, fontSize: '2.1rem'}}>Onboarding cockpit</h2>
           <p style={{margin: 0, maxWidth: 520, lineHeight: 1.5}}>
@@ -256,10 +332,27 @@ export default function OnboardingOverlay({ email, onClose }) {
               ? 'Fantastisch! Alle modules zijn geactiveerd. Gebruik de tips hieronder om je workflow te verfijnen.'
               : 'Volg de stappen om alle MR-DJ modules te activeren. We tonen contextuele tips per module zodat jouw team direct aan de slag kan.'}
           </p>
-          <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem'}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem', flexWrap: 'wrap', gap: 8}}>
               <span>{progress}% voltooid</span>
-              {loading && <span style={{fontSize: '0.85rem'}}>Data laden…</span>}
+              <div style={{display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap'}}>
+                {loading && <span style={{fontSize: '0.85rem'}}>Data laden…</span>}
+                <button
+                  onClick={refreshProgress}
+                  disabled={refreshingProgress || loading}
+                  style={{
+                    border: 'none',
+                    borderRadius: 999,
+                    background: withOpacity('#ffffff', refreshingProgress || loading ? 0.18 : 0.28),
+                    color: '#fff',
+                    padding: '6px 16px',
+                    fontWeight: 600,
+                    cursor: refreshingProgress || loading ? 'wait' : 'pointer',
+                  }}
+                >
+                  {refreshingProgress ? 'Verversen…' : 'Voortgang verversen'}
+                </button>
+              </div>
             </div>
             <div style={{height: 14, background: withOpacity('#ffffff', 0.2), borderRadius: 999}}>
               <div
@@ -272,6 +365,15 @@ export default function OnboardingOverlay({ email, onClose }) {
                 }}
               ></div>
             </div>
+            {!allComplete && nextStep && (
+              <div style={{display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', flexWrap: 'wrap'}}>
+                <span style={{opacity: 0.85}}>Volgende actie:</span>
+                <strong style={{display: 'inline-flex', alignItems: 'center', gap: 6}}>
+                  <span>{stepMeta[nextStep.code]?.icon || '✨'}</span>
+                  {nextStep.title}
+                </strong>
+              </div>
+            )}
           </div>
         </header>
 
@@ -303,6 +405,7 @@ export default function OnboardingOverlay({ email, onClose }) {
               {steps.map(step => {
                 const meta = stepMeta[step.code] || {}
                 const completed = done.has(step.code)
+                const isNext = !completed && step.code === nextStepCode
                 return (
                   <StepCard
                     key={step.code}
@@ -311,6 +414,7 @@ export default function OnboardingOverlay({ email, onClose }) {
                     completed={completed}
                     onMark={() => mark(step)}
                     busy={busyStep === step.code}
+                    isNext={isNext}
                   />
                 )
               })}
@@ -330,17 +434,27 @@ export default function OnboardingOverlay({ email, onClose }) {
   )
 }
 
-function StepCard({ step, meta, completed, onMark, busy }) {
+function StepCard({ step, meta, completed, onMark, busy, isNext }) {
+  const highlight = isNext && !completed
+  const borderColor = highlight
+    ? withOpacity(brand.colors.primary, 0.55)
+    : withOpacity(brand.colors.mutedText, 0.18)
+  const backgroundColor = completed
+    ? withOpacity(brand.colors.accent, 0.16)
+    : highlight
+    ? withOpacity('#ffffff', 0.95)
+    : withOpacity('#f7f5ff', 0.8)
   return (
     <li
       style={{
         padding: '18px 20px',
         borderRadius: 18,
-        border: `1px solid ${withOpacity(brand.colors.mutedText, 0.18)}`,
-        background: completed ? withOpacity(brand.colors.accent, 0.16) : withOpacity('#f7f5ff', 0.8),
+        border: `1px solid ${borderColor}`,
+        background: backgroundColor,
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
+        boxShadow: highlight ? '0 18px 34px rgba(24, 0, 64, 0.22)' : 'none',
       }}
     >
       <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
@@ -361,6 +475,21 @@ function StepCard({ step, meta, completed, onMark, busy }) {
                 }}
               >
                 {moduleLabels[meta.module] || meta.module}
+              </span>
+            )}
+            {highlight && (
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  background: withOpacity(brand.colors.primary, 0.18),
+                  color: brand.colors.primary,
+                }}
+              >
+                Volgende actie
               </span>
             )}
           </div>
