@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
 import TipBanner from './TipBanner.jsx'
+import ObservabilitySummary from './ObservabilitySummary.jsx'
 
 const personaPresets = {
   all: {
@@ -676,6 +677,7 @@ export default function Planner({ onLogout }) {
       </div>
 
       <TipBanner module="projects" />
+      <ObservabilitySummary />
 
       <div
         style={{
@@ -1027,3 +1029,5 @@ export default function Planner({ onLogout }) {
     </div>
   )
 }
+
+export { CountdownBadge, PersonaGuidance }

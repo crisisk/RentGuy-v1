@@ -7,7 +7,7 @@
 ## Samenvatting
 | Domein | Requirement (fase 2) | Status | Observaties | Actie |
 | --- | --- | --- | --- | --- |
-| Beschikbaarheid | 99.9% uptime, monitoring via externe service | ⚠️ Gedeeltelijk | Health checks aanwezig maar geen automatische uptime monitoring aangesloten op productie. | Integreren met uptime tooling en rapporteren in observability-stack. |
+| Beschikbaarheid | 99.9% uptime, monitoring via externe service | ✅ Basis ingericht | Prometheus-metrics, `/metrics` export en observability-statusendpoint leveren realtime uptime- en latencydata. Planner toont statuspaneel. | UptimeRobot koppelen aan nieuwe endpoints voor externe alerts & rapportages. |
 | Performance | 95% API-calls < 200ms, LCP < 2.5s | ⚠️ Onbekend | Geen meetdata, maar API is gestroomlijnd en UI optimalisaties verlagen interactiewachttijden. | Opzetten APM/RUM en dashboard met targets. |
 | Schaalbaarheid | Containers moeten binnen 5 min opschalen | ⚠️ Plan aanwezig | Docker-compose strategie beschreven, maar geen automatische scaling-test uitgevoerd. | Uitvoeren load test met autoscale scenario en documenteren resultaten. |
 | Beveiliging | 100% HTTPS, 0 kritieke kwetsbaarheden | ⚠️ Bij te sturen | Secret management gedefinieerd, maar geautomatiseerde SAST/DAST in pipeline ontbreekt. | Toevoegen security scans aan CI/CD en rapportage delen. |
@@ -17,6 +17,7 @@
 ## Detailobservaties
 ### Architectuur & services
 - De SOA-richtlijnen worden gevolgd: projectroutes leveren nu consequent verrijkte `ProjectOut` payloads voor zowel lijst-, detail- als update-endpoints.
+- Prometheus-middleware registreert uptime, latency en foutpercentages; het nieuwe observability-dashboard in de planner geeft operations direct inzicht.
 - Persona-gedreven UI-aanpassingen blijven client-side; geen extra cross-service koppelingen nodig.
 - De oude Flask-demo modules (`app.py`, `http.py`, `logging.py`) zijn verwijderd zodat standaardbibliotheken niet langer worden overschaduwd en backend-tests weer kunnen worden opgestart via `TestClient`.
 

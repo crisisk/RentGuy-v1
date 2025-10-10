@@ -12,7 +12,7 @@ _Doel:_ voortbouwen op de derde geavanceerde UAT-run door resterende risico's ve
 ## 2. Prioriteiten & acties
 | Prioriteit | Thema | Acties | Eigenaar | Gereed |
 | --- | --- | --- | --- | --- |
-| P1 | Observability & SLA's | Implementeren van uptime monitor (bijv. UptimeRobot) gekoppeld aan alerts in het observability-dashboard. Documenteren SLA-rapportages. | Platform team | Week 42 |
+| P1 | Observability & SLA's | Prometheus-metrics + `/metrics` endpoint + cockpitstatuspaneel live; volgende stap is UptimeRobot koppelen voor externe alerts en rapportage. | Platform team | Week 42 |
 | P1 | Testdekking | Schrijven van componenttests voor countdown/guidance en API-contracttests voor `PUT /projects/{id}/dates`. Integreren in CI. | QA + Frontend | Week 42 |
 | P1 | Security | Toevoegen van SAST (Bandit) en dependency scanning aan de pipeline; documenteer zero-critical policy. | Security | Week 43 |
 | P2 | Performance | Introduceren van code-splitting/lazy loading voor zware plannerpanelen en instellen van bundelmonitoring. | Frontend | Week 43 |
