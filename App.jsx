@@ -3,7 +3,7 @@ import Login from './Login.jsx'
 import OnboardingOverlay from './OnboardingOverlay.jsx'
 import Planner from './Planner.jsx'
 import { api } from './api.js'
-import { brand } from './branding.js'
+import { brand, brandFontStack } from './branding.js'
 import {
   clearOnboardingState,
   getLocalStorageItem,
@@ -48,18 +48,29 @@ export default function App() {
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
+      const linkId = 'sevensa-montserrat-font'
+      if (!document.getElementById(linkId)) {
+        const link = document.createElement('link')
+        link.id = linkId
+        link.rel = 'stylesheet'
+        link.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap'
+        document.head.appendChild(link)
+      }
       const previousStyles = {
         background: document.body.style.background,
         color: document.body.style.color,
         fontFamily: document.body.style.fontFamily,
+        margin: document.body.style.margin,
       }
-      document.body.style.background = `${brand.colors.surface}`
+      document.body.style.background = brand.colors.surface
       document.body.style.color = brand.colors.text
-      document.body.style.fontFamily = 'system-ui'
+      document.body.style.fontFamily = brandFontStack
+      document.body.style.margin = '0'
       return () => {
         document.body.style.background = previousStyles.background
         document.body.style.color = previousStyles.color
         document.body.style.fontFamily = previousStyles.fontFamily
+        document.body.style.margin = previousStyles.margin
       }
     }
   }, [])
