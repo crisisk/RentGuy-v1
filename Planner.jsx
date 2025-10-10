@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
+import { brand, brandFontStack, withOpacity } from './branding.js'
 
 const personaPresets = {
   all: {
@@ -7,86 +8,50 @@ const personaPresets = {
     description: 'Toont de volledige planning zonder filters, ideaal voor gezamenlijke UAT-sessies.',
     timeFilter: 'all',
   },
-  bart: {
-    label: 'Bart de Manager',
-    statusFilter: 'active',
-    riskFilter: 'warning',
-    sortKey: 'start',
-    sortDir: 'asc',
-    description: 'Focus op lopende projecten en voorraadwaarschuwingen zodat hij direct kan bijsturen.',
-    timeFilter: 'today',
+  admin: {
+    label: 'Admin command suite',
+    description: 'Executive overzicht met focus op kritieke risico’s, cashflow en documentatieplicht.',
+    statusFilter: 'all',
+    riskFilter: 'all',
+    sortKey: 'risk',
+    sortDir: 'desc',
+    timeFilter: 'all',
   },
-  anna: {
-    label: 'Anna de Planner',
+  finance: {
+    label: 'Finance cockpit',
+    description: 'Filtert afgeronde en risicovolle projecten om cashflow, facturatie en compliance te versnellen.',
+    statusFilter: 'completed',
+    riskFilter: 'all',
+    sortKey: 'end',
+    sortDir: 'desc',
+    timeFilter: 'past30',
+  },
+  planner: {
+    label: 'Planning studio',
+    description: 'Chronologisch venster met opstarttaken, afhankelijkheden en voorraadafstemming voor planners.',
     statusFilter: 'upcoming',
+    riskFilter: 'all',
     sortKey: 'start',
     sortDir: 'asc',
-    description: 'Legt de nadruk op komende projecten in chronologische volgorde voor detailplanning.',
     timeFilter: 'next14',
   },
-  tom: {
-    label: 'Tom de Technicus',
+  crew: {
+    label: 'Crew operations',
+    description: 'Realtime zicht op vandaag lopende opdrachten, briefingnotities en urgente voorraadalerts.',
     statusFilter: 'active',
     riskFilter: 'ok',
     sortKey: 'start',
     sortDir: 'asc',
-    description: 'Toont enkel actuele opdrachten zodat hij weet waar hij vandaag moet zijn.',
     timeFilter: 'today',
   },
-  carla: {
-    label: 'Carla de Klant',
-    statusFilter: 'upcoming',
-    sortKey: 'client',
-    sortDir: 'asc',
-    description: 'Sorteert op klantnaam zodat front-office teams snel klantvragen kunnen beantwoorden.',
-    timeFilter: 'next30',
-  },
-  frank: {
-    label: 'Frank de Financieel Medewerker',
-    statusFilter: 'completed',
-    sortKey: 'end',
-    sortDir: 'desc',
-    description: 'Laat afgeronde projecten zien, handig voor facturatie en BTW-controle.',
-    timeFilter: 'past30',
-  },
-  sven: {
-    label: 'Sven de Systeembeheerder',
-    riskFilter: 'critical',
-    sortKey: 'risk',
-    sortDir: 'desc',
-    description: 'Filtert op kritieke voorraadrisico’s om escalaties te voorkomen.',
-    timeFilter: 'today',
-  },
-  isabelle: {
-    label: 'Isabelle de International',
-    statusFilter: 'upcoming',
-    sortKey: 'start',
-    sortDir: 'asc',
-    description: 'Toont internationale events ruim op tijd zodat vertalingen en valuta geregeld zijn.',
-    timeFilter: 'next30',
-  },
-  peter: {
-    label: 'Peter de Power-User',
+  viewer: {
+    label: 'Stakeholder viewer',
+    description: 'Geconsolideerde highlights voor stakeholders met focus op impact en statusupdates.',
+    statusFilter: 'all',
     riskFilter: 'warning',
     sortKey: 'status',
     sortDir: 'asc',
-    description: 'Highlight projecten met voorraadspanning voor API-automatiseringen.',
-    timeFilter: 'next7',
-  },
-  nadia: {
-    label: 'Nadia de Nieuweling',
-    statusFilter: 'upcoming',
-    sortKey: 'start',
-    sortDir: 'asc',
-    description: 'Behoudt enkel eenvoudige komende taken voor een zachte onboarding.',
-    timeFilter: 'next14',
-  },
-  david: {
-    label: 'David de Developer',
-    sortKey: 'status',
-    sortDir: 'asc',
-    description: 'Combineert alle statussen zodat API-extensies getest kunnen worden.',
-    timeFilter: 'all',
+    timeFilter: 'next30',
   },
 }
 
@@ -124,10 +89,26 @@ const riskPalette = {
 }
 
 const cardPalette = {
-  neutral: '#f3f4f6',
-  success: '#dcfce7',
-  warning: '#fef3c7',
-  danger: '#fee2e2',
+  neutral: {
+    background: 'linear-gradient(135deg, #f8f9fb 0%, #eef1f8 100%)',
+    border: withOpacity('#4b5563', 0.08),
+    color: brand.colors.secondary,
+  },
+  success: {
+    background: 'linear-gradient(135deg, #d9f7ee 0%, #bdf0da 100%)',
+    border: withOpacity('#0f766e', 0.14),
+    color: '#065f46',
+  },
+  warning: {
+    background: 'linear-gradient(135deg, #fff4d6 0%, #ffe6b3 100%)',
+    border: withOpacity('#b45309', 0.18),
+    color: '#92400e',
+  },
+  danger: {
+    background: 'linear-gradient(135deg, #ffe4e6 0%, #fbc2d5 100%)',
+    border: withOpacity('#be123c', 0.18),
+    color: '#9f1239',
+  },
 }
 
 const impactPalette = {
@@ -177,46 +158,30 @@ const timeFilterOptions = {
 }
 
 const personaQuickActions = {
-  bart: [
-    { key: 'focusRisk', label: 'Focus op risicoprojecten' },
-    { key: 'resetPersona', label: 'Herstel Bart-voorkeuren' },
+  admin: [
+    { key: 'showExecutivePulse', label: 'Toon executive pulse' },
+    { key: 'focusCritical', label: 'Highlight kritieke risico’s' },
+    { key: 'resetPersona', label: 'Herstel admin-voorkeuren' },
   ],
-  anna: [
-    { key: 'showNextWeek', label: 'Plan komende week' },
-    { key: 'resetPersona', label: 'Herstel Anna-voorkeuren' },
+  finance: [
+    { key: 'showReadyToBill', label: 'Facturatie klaar' },
+    { key: 'focusCashflow', label: 'Cashflowvenster' },
+    { key: 'resetPersona', label: 'Herstel finance-voorkeuren' },
   ],
-  tom: [
-    { key: 'focusTodayCrew', label: 'Toon opdrachten van vandaag' },
-    { key: 'resetPersona', label: 'Herstel Tom-voorkeuren' },
+  planner: [
+    { key: 'showPlannerHorizon', label: 'Bekijk 14-daagse horizon' },
+    { key: 'highlightDependencies', label: 'Toon risicovolle ketens' },
+    { key: 'resetPersona', label: 'Herstel planner-voorkeuren' },
   ],
-  carla: [
-    { key: 'sortByClient', label: 'Sorteer op klantnaam' },
-    { key: 'resetPersona', label: 'Herstel Carla-voorkeuren' },
+  crew: [
+    { key: 'crewToday', label: 'Shift van vandaag' },
+    { key: 'crewDocs', label: 'Toon briefings zonder notities' },
+    { key: 'resetPersona', label: 'Herstel crew-voorkeuren' },
   ],
-  frank: [
-    { key: 'showCompletedMonth', label: 'Afgerond deze maand' },
-    { key: 'focusCashflow', label: 'Toon facturatiepipeline' },
-    { key: 'resetPersona', label: 'Herstel Frank-voorkeuren' },
-  ],
-  sven: [
-    { key: 'showCriticalRisk', label: 'Alle kritieke risico’s' },
-    { key: 'resetPersona', label: 'Herstel Sven-voorkeuren' },
-  ],
-  isabelle: [
-    { key: 'showNextMonth', label: 'Bekijk internationale maand' },
-    { key: 'resetPersona', label: 'Herstel Isabelle-voorkeuren' },
-  ],
-  peter: [
-    { key: 'focusAutomation', label: 'API-test weergave' },
-    { key: 'resetPersona', label: 'Herstel Peter-voorkeuren' },
-  ],
-  nadia: [
-    { key: 'showGuidedView', label: 'Toon eenvoudige planning' },
-    { key: 'resetPersona', label: 'Herstel Nadia-voorkeuren' },
-  ],
-  david: [
-    { key: 'devOverview', label: 'API status overzicht' },
-    { key: 'resetPersona', label: 'Herstel David-voorkeuren' },
+  viewer: [
+    { key: 'viewerHighlights', label: 'Impact highlights' },
+    { key: 'viewerCalm', label: 'Minimaliseer ruis' },
+    { key: 'resetPersona', label: 'Herstel viewer-voorkeuren' },
   ],
 }
 
@@ -387,48 +352,30 @@ function buildPersonaPlaybook(personaKey, events, signals) {
   }
 
   switch (personaKey) {
-    case 'bart':
-      addSection('Omzet beschermen', opportunities.riskMitigation, `${riskCount} projecten onder druk`)
-      addSection('Voorraadactiepunten', opportunities.inventoryAlerts, `${inventoryCount} voorraadalerts`)
+    case 'admin':
+      addSection('Executive escalaties', opportunities.riskMitigation, `${riskCount} projecten met risico`)
+      addSection('Documentatieplicht', opportunities.documentation, `${docCount} dossiers aanvullen`)
       addSection('Cashflow versnellen', opportunities.readyToBill, `${readyCount} facturen klaar`)
       break
-    case 'anna':
+    case 'finance':
+      addSection('Facturatie direct verzenden', opportunities.readyToBill, `${readyCount} facturen klaar`)
+      addSection('Cashflow bewaken', opportunities.riskMitigation, `${riskCount} projecten met impact`)
+      addSection('Compliance afronden', opportunities.documentation, `${docCount} dossiers missen notities`)
+      break
+    case 'planner':
       addSection('Planning komende 14 dagen', opportunities.upcomingWindow, `${upcomingCount} projecten binnen 14 dagen`)
-      addSection('Context aanvullen', opportunities.documentation, `${docCount} projecten missen notities`)
+      addSection('Afhankelijkheden onder controle', opportunities.riskMitigation, `${riskCount} ketens monitoren`)
       addSection('Voorraadcoördinatie', opportunities.inventoryAlerts, `${inventoryCount} voorraadalerts`)
       break
-    case 'tom':
-      addSection('Vandaag en komende dagen', opportunities.upcomingWindow, `${upcomingCount} opdrachten snel opstarten`)
-      addSection('Risico op locatie', opportunities.riskMitigation, `${riskCount} projecten vereisen check`)
+    case 'crew':
+      addSection('Shiftvoorbereiding', opportunities.upcomingWindow, `${upcomingCount} opdrachten starten snel`)
+      addSection('Briefings aanvullen', opportunities.documentation, `${docCount} projecten missen notities`)
+      addSection('Materiaalalerts', opportunities.inventoryAlerts, `${inventoryCount} urgente meldingen`)
       break
-    case 'carla':
-      addSection('Voorbereiden klantupdates', opportunities.upcomingWindow, `${upcomingCount} klanten wachten op bevestiging`)
-      addSection('Voorraadstatus delen', opportunities.inventoryAlerts, `${inventoryCount} alerts relevant voor klant`) 
-      break
-    case 'frank':
-      addSection('Facturatie direct verzenden', opportunities.readyToBill, `${readyCount} facturen klaar`)
-      addSection('Omzetrisico mitigeren', opportunities.riskMitigation, `${riskCount} projecten met impact`)
-      addSection('Documentatie compleet maken', opportunities.documentation, `${docCount} projecten missen notities`)
-      break
-    case 'sven':
-      addSection('Kritieke voorraadissues', opportunities.inventoryAlerts, `${inventoryCount} alerts prioriteit`)
-      addSection('Operationele risico’s', opportunities.riskMitigation, `${riskCount} projecten onder druk`)
-      break
-    case 'isabelle':
-      addSection('Internationale coördinatie', opportunities.upcomingWindow, `${upcomingCount} internationale voorbereidingen`)
-      addSection('Documentatie en compliance', opportunities.documentation, `${docCount} dossiers aanvullen`)
-      break
-    case 'peter':
-      addSection('Automatiseringskansen', opportunities.inventoryAlerts, `${inventoryCount} triggers voor API-workflows`)
-      addSection('Data aanvullen', opportunities.documentation, `${docCount} projecten missen context`)
-      break
-    case 'nadia':
-      addSection('Eerste prioriteiten', opportunities.upcomingWindow, `${upcomingCount} eenvoudige taken klaar`)
-      addSection('Leer met praktijkvoorbeelden', opportunities.readyToBill, `${readyCount} afgeronde projecten ter referentie`)
-      break
-    case 'david':
-      addSection('API-validatie', opportunities.riskMitigation, `${riskCount} statusovergangen controleren`)
-      addSection('Documentatie synchroniseren', opportunities.documentation, `${docCount} projecten missen notities`)
+    case 'viewer':
+      addSection('Hoogtepunten', opportunities.readyToBill, `${readyCount} successen gereed`)
+      addSection('Focus op risico’s', opportunities.riskMitigation, `${riskCount} projecten om te bespreken`)
+      addSection('Binnenkort live', opportunities.upcomingWindow, `${upcomingCount} start binnen 30 dagen`)
       break
     default:
       addSection('Planning focus', opportunities.upcomingWindow, `${upcomingCount} projecten binnen 14 dagen`)
@@ -460,123 +407,108 @@ function deriveImpact(event) {
 }
 
 const personaInsightsGenerators = {
-  bart(events, summary, financialSignals) {
-    const atRiskProjects = events.filter(event => event.status === 'at_risk' || event.risk === 'critical')
-    const revenueAtRisk = financialSignals?.revenueAtRisk ?? atRiskProjects.length
+  admin(events, summary, financialSignals) {
+    const critical = events.filter(event => event.status === 'at_risk' || event.risk === 'critical')
+    const docsMissing = financialSignals?.docsMissing ?? 0
+    const billingReady = financialSignals?.billingReady ?? events.filter(event => event.status === 'completed').length
+    const highlight = critical.length ? critical : events.filter(event => event.status === 'active')
     return {
-      headline: atRiskProjects.length ? 'Actie vereist' : 'Alles onder controle',
-      summary: atRiskProjects.length
-        ? `Er staan ${atRiskProjects.length} projecten onder druk. Prioriteer voorraadcontrole om vertragingen te voorkomen. (${revenueAtRisk} mogelijke omzetimpact.)`
-        : 'Er zijn momenteel geen kritieke voorraadissues. Blijf de planning monitoren voor nieuwe waarschuwingen.',
-      bullets: atRiskProjects.slice(0, 3).map(event => `${event.name} – ${timelineLabel(event)}`),
+      headline: critical.length ? 'Directe escalaties' : 'Executive overzicht',
+      summary: critical.length
+        ? `Er staan ${critical.length} projecten onder druk. Plan een escalatie en herverdeel capaciteit.`
+        : 'Geen kritieke incidenten gemeld. Monitor actief de voorraad- en cashflowindicatoren.',
+      bullets: highlight.slice(0, 3).map(event => `${event.name} – ${timelineLabel(event)}`),
+      emphasis:
+        docsMissing > 0
+          ? `${docsMissing} projecten missen documentatie. Markeer als prioriteit voor kwaliteitsborging.`
+          : billingReady > 0
+          ? `${billingReady} projecten zijn factureerbaar en versterken de cashpositie.`
+          : null,
     }
   },
-  anna(events) {
-    const upcoming = events
-      .filter(event => event.status === 'upcoming')
-      .sort((a, b) => getDateValue(a.start) - getDateValue(b.start))
-    return {
-      headline: upcoming.length ? 'Komende projecten' : 'Geen nieuwe projecten',
-      summary: upcoming.length
-        ? `Plan nu de logistiek voor de eerstvolgende ${Math.min(upcoming.length, 3)} projecten.`
-        : 'Er staan geen nieuwe projecten ingepland. Controleer of offertes moeten worden omgezet naar opdrachten.',
-      bullets: upcoming.slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
-    }
-  },
-  tom(events) {
-    const active = events.filter(event => event.status === 'active')
-    return {
-      headline: active.length ? 'Vandaag in het veld' : 'Geen actieve opdrachten',
-      summary: active.length
-        ? `Zorg dat je crew up-to-date pakbonnen heeft voor ${active.length === 1 ? 'deze opdracht' : 'deze opdrachten'}.`
-        : 'Er zijn momenteel geen actieve opdrachten. Controleer later of er nieuwe taken zijn.',
-      bullets: active.slice(0, 3).map(event => `${event.name} – eindigt ${formatDate(event.end)}`),
-    }
-  },
-  carla(events) {
-    const upcomingClients = events
-      .filter(event => event.status === 'upcoming')
-      .sort((a, b) => a.client.localeCompare(b.client, 'nl'))
-    return {
-      headline: 'Klantcommunicatie',
-      summary: upcomingClients.length
-        ? 'Bel of mail de volgende klanten om bevestigingen en betalingen te finaliseren.'
-        : 'Geen openstaande klantvragen voor komende events.',
-      bullets: upcomingClients.slice(0, 3).map(event => `${event.client} – ${event.name}`),
-    }
-  },
-  frank(events, summary, financialSignals) {
+  finance(events, summary, financialSignals) {
     const completed = events.filter(event => event.status === 'completed')
     const readyShare = financialSignals?.total
       ? Math.round((financialSignals.billingReady / financialSignals.total) * 100)
       : null
+    const revenueAtRisk = financialSignals?.revenueAtRisk ?? summary.atRisk
     const docsMissing = financialSignals?.docsMissing ?? 0
     return {
-      headline: 'Facturatie klaarzetten',
+      headline: completed.length ? 'Facturatie klaarzetten' : 'Nog geen facturen gereed',
       summary: completed.length
         ? `Er zijn ${completed.length} afgeronde projecten. ${
             readyShare !== null
-              ? `${readyShare}% van de portfolio is factureerbaar.`
-              : 'Start met facturatie voor een gezonde cashflow.'
+              ? `${readyShare}% van de selectie is factureerbaar.`
+              : 'Start met facturatie om cashflow te borgen.'
           }`
-        : 'Nog geen projecten afgerond in de geselecteerde periode. Controleer of alles tijdig wordt afgesloten.',
+        : 'Nog geen afgeronde projecten in dit venster. Controleer of planning tijdig afsluit.',
       bullets: completed.slice(0, 3).map(event => `${event.name} – afgerond op ${formatDate(event.end)}`),
       emphasis:
-        docsMissing > 0
-          ? `${docsMissing} afgeronde/actieve projecten missen notities. Vul context aan om vertraging in facturatie te voorkomen.`
-          : summary.warning
-          ? 'Let op: er zijn nog openstaande voorraadwaarschuwingen die facturen kunnen vertragen.'
+        revenueAtRisk > 0
+          ? `${revenueAtRisk} projecten kennen omzetrisico. Stem af met planning voor versnelling.`
+          : docsMissing > 0
+          ? `${docsMissing} projecten missen notities voor compliance.`
           : null,
     }
   },
-  sven(events) {
-    const critical = events.filter(event => event.risk === 'critical')
-    return {
-      headline: critical.length ? 'Escalaties voorkomen' : 'Geen kritieke waarschuwingen',
-      summary: critical.length
-        ? `Plan direct een check-in met het magazijn voor ${critical.length} kritieke projecten.`
-        : 'Alle systemen draaien zonder kritieke meldingen. Monitor logging voor nieuwe signalen.',
-      bullets: critical.slice(0, 3).map(event => `${event.name} – ${timelineLabel(event)}`),
-    }
-  },
-  isabelle(events) {
-    const international = events.filter(event => /intl|international|global/i.test(`${event.name} ${event.notes}`))
-    return {
-      headline: international.length ? 'Internationale voorbereiding' : 'Geen internationale events gevonden',
-      summary: international.length
-        ? 'Controleer vertalingen, valuta en transportdocumenten voor onderstaande events.'
-        : 'Geen projecten met internationale kenmerken in deze selectie.',
-      bullets: international.slice(0, 3).map(event => `${event.name} – ${formatDate(event.start)}`),
-    }
-  },
-  peter(events) {
-    const risky = events.filter(event => event.risk === 'warning')
-    return {
-      headline: 'Automatisering kansen',
-      summary: risky.length
-        ? 'Koppel API-triggers aan voorraadwaarschuwingen om het magazijn proactief te sturen.'
-        : 'Geen nieuwe waarschuwingen voor automatisering. Controleer API logs voor consistentie.',
-      bullets: risky.slice(0, 3).map(event => `${event.name} – ${riskLabels[event.risk] || 'Onbekend'}`),
-    }
-  },
-  nadia(events) {
-    const simpleTasks = events
+  planner(events) {
+    const upcoming = events
       .filter(event => event.status === 'upcoming')
-      .slice(0, 3)
+      .sort((a, b) => getDateValue(a.start) - getDateValue(b.start))
+    const riskyUpcoming = upcoming.filter(event => event.risk !== 'ok')
     return {
-      headline: 'Stap-voor-stap starten',
-      summary: simpleTasks.length
-        ? 'Volg de checklist: klant controleren, datum bevestigen, materiaal reserveren.'
-        : 'Geen eenvoudige taken gevonden. Vraag een collega om een geschikte opdracht toe te wijzen.',
-      bullets: simpleTasks.map(event => `${event.name} – ${timelineLabel(event)}`),
+      headline: upcoming.length ? 'Volgende startmomenten' : 'Geen geplande projecten',
+      summary: upcoming.length
+        ? `Bereid de eerstvolgende ${Math.min(upcoming.length, 3)} projecten voor en bevestig resources.`
+        : 'Er zijn geen nieuwe projecten gepland binnen dit venster. Synchroniseer met sales voor instroom.',
+      bullets: upcoming.slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
+      emphasis:
+        riskyUpcoming.length > 0
+          ? `${riskyUpcoming.length} aankomende projecten hebben voorraad- of risicoalerts.`
+          : null,
     }
   },
-  david(events) {
-    const allStatuses = Array.from(new Set(events.map(event => statusLabels[event.status] || event.status)))
+  crew(events) {
+    const active = events.filter(event => event.status === 'active')
+    const docsMissing = events.filter(
+      event => (event.status === 'active' || event.status === 'completed') && !event.notes?.trim()
+    )
     return {
-      headline: 'API validatie',
-      summary: 'Controleer of alle statusovergangen correct worden teruggegeven door de API responses.',
-      bullets: allStatuses.slice(0, 3).map(status => `Status beschikbaar: ${status}`),
+      headline: active.length ? 'Vandaag in uitvoering' : 'Geen actieve opdrachten',
+      summary: active.length
+        ? `Zorg dat crew en materiaal klaarstaan voor ${active.length === 1 ? 'deze opdracht' : 'deze opdrachten'}.`
+        : 'Er zijn momenteel geen actieve opdrachten. Check straks opnieuw voor nieuwe shifts.',
+      bullets: active.slice(0, 3).map(event => `${event.name} – eindigt ${formatDate(event.end)}`),
+      emphasis:
+        docsMissing.length > 0
+          ? `${docsMissing.length} opdrachten missen briefingnotities. Vul deze aan voor de start.`
+          : null,
+    }
+  },
+  viewer(events, summary, financialSignals) {
+    const highlights = events
+      .filter(event => event.status === 'completed' || event.status === 'active')
+      .slice(0, 3)
+    const upcoming = events
+      .filter(event => event.status === 'upcoming')
+      .sort((a, b) => getDateValue(a.start) - getDateValue(b.start))
+    const revenueAtRisk = financialSignals?.revenueAtRisk ?? summary.atRisk
+    return {
+      headline: 'Portfolio highlights',
+      summary:
+        highlights.length > 0
+          ? 'Belangrijkste resultaten en lopende projecten op een rij voor stakeholders.'
+          : 'Geen highlights beschikbaar. Pas filters aan om bredere context te tonen.',
+      bullets:
+        highlights.length > 0
+          ? highlights.map(event => `${event.name} – ${statusLabels[event.status] || event.status}`)
+          : upcoming.slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
+      emphasis:
+        revenueAtRisk > 0
+          ? `${revenueAtRisk} projecten hebben aandacht nodig om omzetverlies te voorkomen.`
+          : upcoming.length > 0
+          ? `${upcoming.length} projecten starten binnenkort.`
+          : null,
     }
   },
 }
@@ -602,31 +534,34 @@ function PersonaSpotlight({
   return (
     <section
       style={{
-        border: '1px solid #e5e7eb',
-        borderRadius: '16px',
-        padding: '16px',
-        background: '#ffffff',
+        border: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+        borderRadius: '20px',
+        padding: '20px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f5f0ff 100%)',
         display: 'grid',
-        gap: '12px',
+        gap: '16px',
+        boxShadow: '0 28px 60px rgba(21, 14, 40, 0.12)',
       }}
       aria-live="polite"
     >
       <header style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '8px' }}>
         <div>
-          <h3 style={{ margin: 0 }}>{personaLabel}</h3>
-          <p style={{ margin: 0, color: '#4b5563', fontSize: '0.9rem' }}>{description}</p>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: brand.colors.secondary }}>{personaLabel}</h3>
+          <p style={{ margin: 0, color: brand.colors.mutedText, fontSize: '0.95rem' }}>{description}</p>
         </div>
-        <div style={{ fontSize: '0.8rem', color: '#6b7280', textAlign: 'right' }}>
+        <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText, textAlign: 'right' }}>
           {timeFilterOptions[timeFilter]?.label}
         </div>
       </header>
       {insights && (
         <div style={{ display: 'grid', gap: '8px' }}>
-          <strong>{insights.headline}</strong>
-          <p style={{ margin: 0, color: '#374151' }}>{insights.summary}</p>
-          {insights.emphasis && <p style={{ margin: 0, color: '#b45309' }}>{insights.emphasis}</p>}
+          <strong style={{ fontSize: '1rem', color: brand.colors.secondary }}>{insights.headline}</strong>
+          <p style={{ margin: 0, color: brand.colors.mutedText }}>{insights.summary}</p>
+          {insights.emphasis && (
+            <p style={{ margin: 0, color: '#b45309', fontWeight: 600 }}>{insights.emphasis}</p>
+          )}
           {insights.bullets?.length > 0 && (
-            <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563' }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: brand.colors.secondary }}>
               {insights.bullets.map((bullet, index) => (
                 <li key={index}>{bullet}</li>
               ))}
@@ -643,10 +578,14 @@ function PersonaSpotlight({
               onClick={() => onQuickAction(action.key)}
               style={{
                 borderRadius: '999px',
-                padding: '6px 14px',
-                border: '1px solid #d1d5db',
-                background: '#f9fafb',
+                padding: '8px 18px',
+                border: `1px solid ${withOpacity(brand.colors.primary, 0.4)}`,
+                background: withOpacity(brand.colors.primary, 0.08),
+                color: brand.colors.primaryDark,
                 cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                boxShadow: '0 12px 24px rgba(255, 45, 146, 0.18)',
               }}
             >
               {action.label}
@@ -656,26 +595,30 @@ function PersonaSpotlight({
       )}
       {playbookSections && (
         <div style={{ display: 'grid', gap: '8px' }}>
-          <div style={{ fontWeight: 600 }}>Waardeplaybook</div>
+          <div style={{ fontWeight: 600, fontSize: '0.95rem', color: brand.colors.secondary }}>
+            Rolgebaseerde kansen
+          </div>
           {playbookSections.length > 0 ? (
             <div style={{ display: 'grid', gap: '12px' }}>
               {playbookSections.map(section => (
                 <div
                   key={section.title}
                   style={{
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    background: '#f9fafb',
+                    border: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                    borderRadius: '16px',
+                    padding: '16px',
+                    background: 'rgba(255, 255, 255, 0.82)',
                     display: 'grid',
-                    gap: '8px',
+                    gap: '10px',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'baseline' }}>
                     <span style={{ fontWeight: 600 }}>{section.title}</span>
-                    {section.caption && <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{section.caption}</span>}
+                    {section.caption && (
+                      <span style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>{section.caption}</span>
+                    )}
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: '18px', color: '#374151', display: 'grid', gap: '4px' }}>
+                  <ul style={{ margin: 0, paddingLeft: '18px', color: brand.colors.secondary, display: 'grid', gap: '6px' }}>
                     {section.items.map(item => (
                       <li key={item.key}>{item.text}</li>
                     ))}
@@ -684,7 +627,7 @@ function PersonaSpotlight({
               ))}
             </div>
           ) : (
-            <p style={{ margin: 0, color: '#6b7280' }}>
+            <p style={{ margin: 0, color: brand.colors.mutedText }}>
               Geen directe cashflow- of risicosignalen in deze selectie. Houd de filters in de gaten voor nieuwe kansen.
             </p>
           )}
@@ -804,20 +747,24 @@ function ImpactBadge({ impact }) {
 }
 
 function SummaryMetric({ label, value, tone = 'neutral', helpText }) {
+  const palette = cardPalette[tone] || cardPalette.neutral
   return (
     <div
       style={{
-        background: cardPalette[tone] || cardPalette.neutral,
+        background: palette.background,
+        border: `1px solid ${palette.border}`,
         padding: '12px 16px',
         borderRadius: '12px',
         display: 'grid',
         gap: '4px',
         minWidth: '150px',
+        color: palette.color,
+        boxShadow: '0 16px 32px rgba(15, 23, 42, 0.08)',
       }}
     >
-      <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>{label}</div>
+      <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{label}</div>
       <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{value}</div>
-      {helpText && <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{helpText}</div>}
+      {helpText && <div style={{ fontSize: '0.8rem', opacity: 0.85 }}>{helpText}</div>}
     </div>
   )
 }
@@ -830,20 +777,23 @@ function FinancialPulsePanel({ cards, focusCards = [], focusLabel }) {
       aria-label="Financiële impact samenvatting"
       style={{
         display: 'grid',
-        gap: '8px',
-        padding: '16px',
-        border: '1px solid #e5e7eb',
-        borderRadius: '16px',
-        backgroundColor: '#ffffff',
+        gap: '12px',
+        padding: '20px',
+        border: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+        borderRadius: '20px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f7f5ff 100%)',
+        boxShadow: '0 32px 60px rgba(15, 23, 42, 0.08)',
       }}
     >
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-        <h3 style={{ margin: 0, fontSize: '1rem' }}>Financiële puls</h3>
-        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Realtime cashflow-impact per persona</span>
+        <h3 style={{ margin: 0, fontSize: '1.1rem', color: brand.colors.secondary }}>Financiële puls</h3>
+        <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>
+          Realtime cashflow-impact per rol
+        </span>
       </header>
       {cards.length > 0 && (
         <div style={{ display: 'grid', gap: '8px' }}>
-          <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>Portfolio totaal</div>
+          <div style={{ fontSize: '0.9rem', color: brand.colors.secondary, opacity: 0.78 }}>Portfolio totaal</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {cards.map(card => (
               <SummaryMetric
@@ -859,7 +809,9 @@ function FinancialPulsePanel({ cards, focusCards = [], focusLabel }) {
       )}
       {focusCards.length > 0 && focusLabel && (
         <div style={{ display: 'grid', gap: '8px' }}>
-          <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>Focus: {focusLabel}</div>
+          <div style={{ fontSize: '0.9rem', color: brand.colors.secondary, opacity: 0.78 }}>
+            Focus: {focusLabel}
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {focusCards.map(card => (
               <SummaryMetric
@@ -1103,40 +1055,28 @@ export default function Planner({ onLogout }) {
 
   function handlePersonaQuickAction(actionKey) {
     switch (actionKey) {
-      case 'focusRisk':
-        setStatusFilter('active')
-        setRiskFilter('warning')
+      case 'showExecutivePulse':
+        setStatusFilter('all')
+        setRiskFilter('all')
+        setSortKey('risk')
+        setSortDir('desc')
+        setTimeFilter('all')
+        setSearchTerm('')
+        break
+      case 'focusCritical':
+        setStatusFilter('all')
+        setRiskFilter('critical')
         setSortKey('risk')
         setSortDir('desc')
         setTimeFilter('today')
         break
-      case 'showNextWeek':
-        setStatusFilter('upcoming')
-        setRiskFilter('all')
-        setSortKey('start')
-        setSortDir('asc')
-        setTimeFilter('next7')
-        break
-      case 'focusTodayCrew':
-        setStatusFilter('active')
-        setRiskFilter('all')
-        setTimeFilter('today')
-        setSortKey('start')
-        setSortDir('asc')
-        break
-      case 'sortByClient':
-        setStatusFilter('upcoming')
-        setRiskFilter('all')
-        setSortKey('client')
-        setSortDir('asc')
-        setTimeFilter('next30')
-        break
-      case 'showCompletedMonth':
+      case 'showReadyToBill':
         setStatusFilter('completed')
         setRiskFilter('all')
         setSortKey('end')
         setSortDir('desc')
         setTimeFilter('past30')
+        setSearchTerm('')
         break
       case 'focusCashflow':
         setStatusFilter('completed')
@@ -1146,28 +1086,7 @@ export default function Planner({ onLogout }) {
         setTimeFilter('past30')
         setSearchTerm('')
         break
-      case 'showCriticalRisk':
-        setStatusFilter('all')
-        setRiskFilter('critical')
-        setSortKey('risk')
-        setSortDir('desc')
-        setTimeFilter('today')
-        break
-      case 'showNextMonth':
-        setStatusFilter('upcoming')
-        setRiskFilter('all')
-        setSortKey('start')
-        setSortDir('asc')
-        setTimeFilter('next30')
-        break
-      case 'focusAutomation':
-        setRiskFilter('warning')
-        setStatusFilter('all')
-        setSortKey('status')
-        setSortDir('asc')
-        setTimeFilter('next7')
-        break
-      case 'showGuidedView':
+      case 'showPlannerHorizon':
         setStatusFilter('upcoming')
         setRiskFilter('all')
         setSortKey('start')
@@ -1175,17 +1094,52 @@ export default function Planner({ onLogout }) {
         setTimeFilter('next14')
         setSearchTerm('')
         break
-      case 'devOverview':
-        setStatusFilter('all')
+      case 'highlightDependencies':
+        setStatusFilter('at_risk')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next7')
+        break
+      case 'crewToday':
+        setStatusFilter('active')
+        setRiskFilter('all')
+        setTimeFilter('today')
+        setSortKey('start')
+        setSortDir('asc')
+        break
+      case 'crewDocs':
+        setStatusFilter('active')
         setRiskFilter('all')
         setSortKey('status')
         setSortDir('asc')
-        setTimeFilter('all')
+        setTimeFilter('next7')
+        break
+      case 'viewerHighlights':
+        setStatusFilter('all')
+        setRiskFilter('warning')
+        setSortKey('status')
+        setSortDir('asc')
+        setTimeFilter('next30')
+        setSearchTerm('')
+        break
+      case 'viewerCalm':
+        setStatusFilter('active')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next14')
+        setSearchTerm('')
         break
       case 'resetPersona':
         applyPersonaPreset(personaPreset)
         break
       default:
+        setStatusFilter('all')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('all')
         break
     }
   }
@@ -1199,29 +1153,63 @@ export default function Planner({ onLogout }) {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', padding: '12px', maxWidth: '1120px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Projectplanner</h2>
-          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-            Verbeterde UAT cockpit met persona-presets, voorraadbewaking en inline herplanning.
+    <div
+      style={{
+        fontFamily: brandFontStack,
+        padding: '24px 24px 80px',
+        maxWidth: '1240px',
+        margin: '0 auto',
+        color: brand.colors.secondary,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+          gap: '16px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'grid', gap: '6px' }}>
+          <span style={{ fontSize: '0.85rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: brand.colors.mutedText }}>
+            RentGuy Enterprise
+          </span>
+          <h2 style={{ margin: 0, fontSize: '2rem' }}>Rolgestuurde projectplanner</h2>
+          <p style={{ margin: 0, color: brand.colors.mutedText, maxWidth: 560 }}>
+            Combineer executive inzicht, financiële signalen en dagoperatie in één luxueuze cockpit per rol.
           </p>
         </div>
-        <button onClick={onLogout}>Uitloggen</button>
+        <button
+          onClick={onLogout}
+          style={{
+            borderRadius: 999,
+            padding: '10px 20px',
+            border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+            background: withOpacity('#ffffff', 0.85),
+            color: brand.colors.secondary,
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 12px 30px rgba(31, 29, 43, 0.12)',
+          }}
+        >
+          Uitloggen
+        </button>
       </div>
 
       <div
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '20px',
+          gap: '16px',
+          marginBottom: '28px',
         }}
         aria-live="polite"
       >
         <SummaryMetric label="Actief" value={summary.active} tone="success" helpText="Inclusief risicoprojecten" />
-        <SummaryMetric label="Komend" value={summary.upcoming} />
-        <SummaryMetric label="Afgerond" value={summary.completed} />
+        <SummaryMetric label="Komende start" value={summary.upcoming} helpText="Binnen gekozen tijdvenster" />
+        <SummaryMetric label="Afgerond" value={summary.completed} helpText="Gereed voor overdracht" />
         <SummaryMetric
           label="Voorraadrisico"
           value={`${summary.critical} kritisch / ${summary.warning} waarschuwing`}
@@ -1229,7 +1217,7 @@ export default function Planner({ onLogout }) {
         />
       </div>
 
-      <div style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
+      <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
         <FinancialPulsePanel
           cards={financialCards}
           focusCards={focusFinancialCards}
@@ -1248,13 +1236,19 @@ export default function Planner({ onLogout }) {
           />
         )}
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
-            Persona preset
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.9rem', color: brand.colors.mutedText }}>
+            Rolselectie
             <select
               value={personaPreset}
               onChange={event => applyPersonaPreset(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                background: withOpacity('#ffffff', 0.9),
+                fontSize: '0.95rem',
+              }}
             >
               {Object.entries(personaPresets).map(([key, value]) => (
                 <option key={key} value={key}>
@@ -1264,12 +1258,18 @@ export default function Planner({ onLogout }) {
             </select>
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.9rem', color: brand.colors.mutedText }}>
             Statusfilter
             <select
               value={statusFilter}
               onChange={event => setStatusFilter(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                background: withOpacity('#ffffff', 0.9),
+                fontSize: '0.95rem',
+              }}
             >
               <option value="all">Alle</option>
               <option value="active">Actief</option>
@@ -1279,12 +1279,18 @@ export default function Planner({ onLogout }) {
             </select>
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.9rem', color: brand.colors.mutedText }}>
             Voorraadrisico
             <select
               value={riskFilter}
               onChange={event => setRiskFilter(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                background: withOpacity('#ffffff', 0.9),
+                fontSize: '0.95rem',
+              }}
             >
               <option value="all">Alle</option>
               <option value="ok">Op schema</option>
@@ -1293,12 +1299,18 @@ export default function Planner({ onLogout }) {
             </select>
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.9rem', color: brand.colors.mutedText }}>
             Tijdvenster
             <select
               value={timeFilter}
               onChange={event => setTimeFilter(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                background: withOpacity('#ffffff', 0.9),
+                fontSize: '0.95rem',
+              }}
             >
               {Object.entries(timeFilterOptions).map(([value, option]) => (
                 <option key={value} value={value}>
@@ -1308,14 +1320,28 @@ export default function Planner({ onLogout }) {
             </select>
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563', flex: '1 1 200px' }}>
+          <label
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              fontSize: '0.9rem',
+              color: brand.colors.mutedText,
+              flex: '1 1 220px',
+            }}
+          >
             Zoeken
             <input
               type="search"
               placeholder="Zoek op project, klant of notitie"
               value={searchTerm}
               onChange={event => setSearchTerm(event.target.value)}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                background: withOpacity('#ffffff', 0.9),
+                fontSize: '0.95rem',
+              }}
             />
           </label>
 
@@ -1330,62 +1356,182 @@ export default function Planner({ onLogout }) {
               setSearchTerm('')
               setTimeFilter('all')
             }}
-            style={{ alignSelf: 'flex-end', padding: '8px 12px' }}
+            style={{
+              alignSelf: 'flex-end',
+              padding: '10px 18px',
+              borderRadius: 999,
+              border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+              background: withOpacity(brand.colors.accent, 0.16),
+              color: brand.colors.secondary,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
           >
             Reset filters
           </button>
         </div>
-        {personaHint && <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>{personaHint}</div>}
+        {personaHint && <div style={{ fontSize: '0.9rem', color: brand.colors.mutedText }}>{personaHint}</div>}
       </div>
 
       {feedback && (
         <div
           role="alert"
           style={{
-            padding: '10px 16px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            backgroundColor: feedback.type === 'success' ? '#d1fae5' : '#fee2e2',
-            color: feedback.type === 'success' ? '#065f46' : '#991b1b',
+            padding: '12px 18px',
+            borderRadius: '14px',
+            marginBottom: '20px',
+            backgroundColor:
+              feedback.type === 'success'
+                ? withOpacity('#22c55e', 0.12)
+                : withOpacity('#ef4444', 0.12),
+            color: feedback.type === 'success' ? '#0f5132' : '#9f1239',
+            border:
+              feedback.type === 'success'
+                ? `1px solid ${withOpacity('#22c55e', 0.28)}`
+                : `1px solid ${withOpacity('#ef4444', 0.28)}`,
           }}
         >
           {feedback.message}
         </div>
       )}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div
+        style={{
+          overflowX: 'auto',
+          borderRadius: '18px',
+          border: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+          background: 'rgba(255, 255, 255, 0.92)',
+          boxShadow: '0 28px 60px rgba(15, 23, 42, 0.08)',
+        }}
+      >
+        <table style={{ width: '100%', borderCollapse: 'collapse', borderRadius: '18px', overflow: 'hidden' }}>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Project</th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Klant</th>
               <th
-                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                Project
+              </th>
+              <th
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                Klant
+              </th>
+              <th
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
                 onClick={() => toggleSort('status')}
               >
                 Status
               </th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Planning</th>
               <th
-                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                Planning
+              </th>
+              <th
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
                 onClick={() => toggleSort('risk')}
               >
                 Voorraad
               </th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Impact</th>
               <th
-                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                Impact
+              </th>
+              <th
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
                 onClick={() => toggleSort('start')}
               >
                 Start
               </th>
               <th
-                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
                 onClick={() => toggleSort('end')}
               >
                 Einde
               </th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>Acties</th>
+              <th
+                style={{
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
+                  padding: '14px 16px',
+                  fontSize: '0.85rem',
+                  color: brand.colors.mutedText,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                Acties
+              </th>
             </tr>
           </thead>
           {loading ? (
@@ -1406,47 +1552,147 @@ export default function Planner({ onLogout }) {
                 return (
                   <React.Fragment key={event.id}>
                     <tr
-                      style={{ backgroundColor: isExpanded ? '#f9fafb' : 'transparent' }}
+                      style={{
+                        backgroundColor: isExpanded ? withOpacity(brand.colors.accent, 0.12) : 'transparent',
+                        transition: 'background-color 0.2s ease',
+                      }}
                       onDoubleClick={() => openEditor(event)}
                     >
-                      <td style={{ padding: '12px 8px', fontWeight: 600 }}>{event.name}</td>
-                      <td style={{ padding: '12px 8px' }}>{event.client}</td>
-                      <td style={{ padding: '12px 8px' }}>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          fontWeight: 600,
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                        }}
+                      >
+                        {event.name}
+                      </td>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                          color: brand.colors.mutedText,
+                        }}
+                      >
+                        {event.client}
+                      </td>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                        }}
+                      >
                         <StatusBadge status={event.status} />
                       </td>
-                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{timelineLabel(event)}</td>
-                      <td style={{ padding: '12px 8px' }}>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                          color: brand.colors.mutedText,
+                        }}
+                      >
+                        {timelineLabel(event)}
+                      </td>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                        }}
+                      >
                         <RiskBadge risk={event.risk} />
                       </td>
-                      <td style={{ padding: '12px 8px' }}>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                        }}
+                      >
                         <ImpactBadge impact={impact} />
                       </td>
-                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{formatDate(event.start)}</td>
-                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{formatDate(event.end)}</td>
-                      <td style={{ padding: '12px 8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button type="button" onClick={() => setExpandedRow(isExpanded ? null : event.id)}>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                          color: brand.colors.mutedText,
+                        }}
+                      >
+                        {formatDate(event.start)}
+                      </td>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                          color: brand.colors.mutedText,
+                        }}
+                      >
+                        {formatDate(event.end)}
+                      </td>
+                      <td
+                        style={{
+                          padding: '14px 16px',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                          display: 'flex',
+                          gap: '10px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setExpandedRow(isExpanded ? null : event.id)}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: 999,
+                            border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                            background: withOpacity('#ffffff', 0.9),
+                            color: brand.colors.secondary,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
                           {isExpanded ? 'Sluit details' : 'Details'}
                         </button>
-                        <button type="button" onClick={() => openEditor(event)}>
+                        <button
+                          type="button"
+                          onClick={() => openEditor(event)}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: 999,
+                            border: 'none',
+                            background: brand.colors.primary,
+                            color: '#fff',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            boxShadow: '0 12px 24px rgba(255, 45, 146, 0.25)',
+                          }}
+                        >
                           Herplan
                         </button>
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={9} style={{ padding: '16px 24px', backgroundColor: '#f9fafb' }}>
+                        <td
+                          colSpan={9}
+                          style={{
+                            padding: '20px 28px',
+                            backgroundColor: withOpacity('#f5f0ff', 0.8),
+                            borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.06)}`,
+                          }}
+                        >
                           <div style={{ display: 'grid', gap: '12px' }}>
-                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: '#4b5563' }}>
+                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: brand.colors.mutedText }}>
                               <span><strong>Doorlooptijd:</strong> {event.durationDays ? `${event.durationDays} dagen` : 'Onbekend'}</span>
                               <span><strong>Eindigt op:</strong> {formatDate(event.end)}</span>
                             </div>
-                            <div style={{ color: '#111827', fontWeight: 600 }}>Projectnotities</div>
-                            <div style={{ color: '#4b5563', whiteSpace: 'pre-wrap' }}>
+                            <div style={{ color: brand.colors.secondary, fontWeight: 600 }}>Projectnotities</div>
+                            <div style={{ color: brand.colors.mutedText, whiteSpace: 'pre-wrap' }}>
                               {event.notes ? event.notes : 'Geen notities toegevoegd.'}
                             </div>
                             {event.alerts.length > 0 ? (
                               <div>
-                                <div style={{ color: '#111827', fontWeight: 600, marginBottom: '6px' }}>Voorraaddetails</div>
+                                <div style={{ color: brand.colors.secondary, fontWeight: 600, marginBottom: '6px' }}>
+                                  Voorraaddetails
+                                </div>
                                 <ul style={{ margin: 0, paddingLeft: '20px', color: '#b91c1c' }}>
                                   {event.alerts.map((alert, index) => (
                                     <li key={index}>{alert}</li>
