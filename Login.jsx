@@ -69,7 +69,7 @@ export default function Login({ onLogin }) {
             {brand.shortName} Onboarding
           </span>
           <h1 style={{margin: 0, fontSize: '2.4rem', color: brand.colors.secondary, lineHeight: 1.1}}>
-            Welkom bij de {brand.name}
+            Welkom bij de MR-DJ cockpit
           </h1>
           <p style={{margin: 0, color: brand.colors.mutedText, fontSize: '1.05rem', maxWidth: 420}}>
             Meld je aan om de volledige MR-DJ workflow te activeren: planner, crew, warehouse en billing.

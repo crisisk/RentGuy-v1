@@ -7,7 +7,7 @@ const fallbackSteps = [
   {
     code: 'welcome',
     title: 'Welkom bij MR-DJ Enterprise',
-    description: 'Doorloop de checklist om de planner, crew en warehouse modules te activeren.',
+    description: 'Doorloop de checklist om planner, crew, warehouse en billing te activeren.',
   },
   {
     code: 'project',
@@ -326,12 +326,12 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
             )}
           </div>
           <span style={{textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.8rem'}}>MR-DJ Launchpad</span>
-          <h2 style={{margin: 0, fontSize: '2.1rem'}}>Onboarding cockpit</h2>
-          <p style={{margin: 0, maxWidth: 520, lineHeight: 1.5}}>
-            {allComplete
-              ? 'Fantastisch! Alle modules zijn geactiveerd. Gebruik de tips hieronder om je workflow te verfijnen.'
-              : 'Volg de stappen om alle MR-DJ modules te activeren. We tonen contextuele tips per module zodat jouw team direct aan de slag kan.'}
-          </p>
+            <h2 style={{margin: 0, fontSize: '2.1rem'}}>Persona onboarding</h2>
+            <p style={{margin: 0, maxWidth: 520, lineHeight: 1.5}}>
+              {allComplete
+                ? 'Fantastisch! Alle MR-DJ modules staan klaar. Gebruik de tips hieronder om iedere persona verder te finetunen.'
+                : 'Volg de stappen om planner, crew, warehouse, transport en billing flows te activeren. De tips lichten toe hoe Bart, Anna, Tom, Carla, Frank en de rest meteen waarde halen.'}
+            </p>
           <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem', flexWrap: 'wrap', gap: 8}}>
               <span>{progress}% voltooid</span>
@@ -421,7 +421,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
             </ol>
           </section>
           <aside style={{display: 'flex', flexDirection: 'column', gap: 16}}>
-            <h3 style={{margin: 0, fontSize: '1.2rem', color: brand.colors.secondary}}>MR-DJ tips</h3>
+            <h3 style={{margin: 0, fontSize: '1.2rem', color: brand.colors.secondary}}>Rolgebaseerde tips</h3>
             <div style={{display: 'grid', gap: 14}}>
               {tips.map(tip => (
                 <TipCard key={tip.id} tip={tip} />
