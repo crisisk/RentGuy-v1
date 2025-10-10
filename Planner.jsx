@@ -661,7 +661,10 @@ const personaInsightsGenerators = {
         ? `Begin met ${safe.length ? safe.length : upcoming.length} laag-risico taken om de tooling te leren.`
         : 'Geen taken in zicht. Vraag een collega om samen de planner te doorlopen.',
       bullets: (safe.length ? safe : upcoming).slice(0, 3).map(event => `${event.name} – start ${formatDate(event.start)}`),
-      emphasis: safe.length === 0 && upcoming.length > 0 ? 'Let op: alle zichtbare taken bevatten risico’s. Vraag ondersteuning.' : null,
+      emphasis:
+        safe.length === 0 && upcoming.length > 0
+          ? 'Let op: alle zichtbare taken bevatten risico’s. Vraag ondersteuning.'
+          : null,
     }
   },
   david(events, summary) {
