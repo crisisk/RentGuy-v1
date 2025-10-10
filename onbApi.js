@@ -15,6 +15,8 @@ export async function completeStep(email, step_code) {
 }
 
 export async function getTips(module) {
-  const { data } = await api.get('/api/v1/onboarding/tips', { params: { module } })
+  const params = {}
+  if (module) params.module = module
+  const { data } = await api.get('/api/v1/onboarding/tips', { params })
   return data
 }

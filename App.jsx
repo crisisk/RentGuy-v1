@@ -3,10 +3,17 @@ import Login from './Login.jsx'
 import OnboardingOverlay from './OnboardingOverlay.jsx'
 import Planner from './Planner.jsx'
 import { api } from './api.js'
+import { brand } from './branding.js'
+import {
+  clearOnboardingState,
+  getLocalStorageItem,
+  removeLocalStorageItem,
+  setLocalStorageItem,
+} from './storage.js'
 
 export default function App() {
-  const [token, setToken] = useState(localStorage.getItem('token') || '')
-  const [userEmail, setUserEmail] = useState('')
+  const [token, setToken] = useState(() => getLocalStorageItem('token', ''))
+  const [userEmail, setUserEmail] = useState(() => getLocalStorageItem('user_email', ''))
 
   useEffect(() => {
     if (token) {
@@ -17,7 +24,7 @@ export default function App() {
           setUserEmail(response.data.email)
         } catch (error) {
           // Fallback to stored email or default
-          const storedEmail = localStorage.getItem('user_email') || 'bart@rentguy.demo'
+          const storedEmail = getLocalStorageItem('user_email', 'bart@rentguy.demo')
           setUserEmail(storedEmail)
         }
       }
@@ -25,9 +32,27 @@ export default function App() {
     }
   }, [token])
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const previousStyles = {
+        background: document.body.style.background,
+        color: document.body.style.color,
+        fontFamily: document.body.style.fontFamily,
+      }
+      document.body.style.background = `${brand.colors.surface}`
+      document.body.style.color = brand.colors.text
+      document.body.style.fontFamily = 'system-ui'
+      return () => {
+        document.body.style.background = previousStyles.background
+        document.body.style.color = previousStyles.color
+        document.body.style.fontFamily = previousStyles.fontFamily
+      }
+    }
+  }, [])
+
   const handleLogin = (t, email) => {
-    localStorage.setItem('token', t)
-    localStorage.setItem('user_email', email || 'bart@rentguy.demo')
+    setLocalStorageItem('token', t)
+    setLocalStorageItem('user_email', email || 'bart@rentguy.demo')
     setToken(t)
     setUserEmail(email || 'bart@rentguy.demo')
   }
@@ -37,19 +62,23 @@ export default function App() {
   }
   
   return <>
-    <Planner onLogout={()=>{ 
-      localStorage.removeItem('token')
-      localStorage.removeItem('user_email')
-      localStorage.removeItem('onb_seen')
-      location.reload() 
+    <Planner onLogout={()=>{
+      removeLocalStorageItem('token')
+      removeLocalStorageItem('user_email')
+      clearOnboardingState()
+      if (typeof window !== 'undefined') {
+        window.location.reload()
+      }
     }} />
-    {(!localStorage.getItem('onb_seen')) && userEmail && 
-      <OnboardingOverlay 
-        email={userEmail} 
+    {(!getLocalStorageItem('onb_seen')) && userEmail &&
+      <OnboardingOverlay
+        email={userEmail}
         onClose={()=>{
-          localStorage.setItem('onb_seen','1')
-          location.reload()
-        }} 
+          setLocalStorageItem('onb_seen','1')
+          if (typeof window !== 'undefined') {
+            window.location.reload()
+          }
+        }}
       />
     }
   </>

@@ -31,7 +31,11 @@ def tips(module: str = "", db: Session = Depends(get_db), user=Depends(require_r
 
 @router.post("/onboarding/send-welcome", response_model=dict)
 def send_welcome(to_email: str, db: Session = Depends(get_db), user=Depends(require_role("admin","planner"))):
-    subj = "Welkom bij Rentguy – jouw backstage assistent"
-    body = "Welkom! Start met je eerste project en boek direct je crew. Veel succes!"
+    subj = "Welkom bij MR-DJ Enterprise – jouw backstage assistent"
+    body = (
+        "Welkom bij MR-DJ Enterprise Suite!\n\n"
+        "Volg de onboarding checklist om je eerste show te plannen, crew uit te nodigen en je templates te activeren. "
+        "Hulp nodig? Antwoord op deze mail en ons team helpt je direct verder."
+    )
     ok = send_email(to_email, subj, body)
     return {"ok": bool(ok)}
