@@ -1,0 +1,146 @@
+Subject: fix(onboarding): align checklist with personas and expose API status
+
+diff --git a/OnboardingOverlay.jsx b/OnboardingOverlay.jsx
+index 1111111..2222222 100644
+--- a/OnboardingOverlay.jsx
++++ b/OnboardingOverlay.jsx
+@@
+-const fallbackSteps = [
+-  {
+-    code: 'welcome',
+-    title: 'Welkom bij Sevensa',
+-    description: 'Doorloop de checklist om alle AI-modules te activeren en dashboards te vullen.',
+-  },
+-  {
+-    code: 'project',
+-    title: 'Start je eerste Sevensa workspace',
+-    description: 'Maak een project aan, definieer doelen en koppel klant- en datastructuren.',
+-  },
+-  {
+-    code: 'crew',
+-    title: 'Nodig collega’s uit',
+-    description: 'Activeer samenwerking door operations, finance en data teams toegang te geven.',
+-  },
+-  {
+-    code: 'booking',
+-    title: 'Configureer resourceplanning',
+-    description: 'Koppel teams, skills en beschikbaarheid aan het project voor realtime inzicht.',
+-  },
+-  {
+-    code: 'scan',
+-    title: 'Verbind databronnen',
+-    description: 'Activeer integraties met ERP/CRM zodat AI-modellen direct gevoed worden.',
+-  },
+-  {
+-    code: 'transport',
+-    title: 'Stel automatiseringen in',
+-    description: 'Configureer workflows voor alerts, approvals en operationele escalaties.',
+-  },
+-  {
+-    code: 'invoice',
+-    title: 'Activeer finance insights',
+-    description: 'Synchroniseer facturatie en forecasting zodat ROI-rapportages live gaan.',
+-  },
+-  {
+-    code: 'templates',
+-    title: 'Personaliseer communicatie',
+-    description: 'Pas rapportages en stakeholder updates aan in jullie Sevensa tone of voice.',
+-  },
+-]
++const personaStepTemplates = {
++  cfo: [
++    { code: 'welcome', title: 'Welkom bij Sevensa', description: 'Start met finance-ready dashboards.' },
++    { code: 'invoice', title: 'Activeer finance insights', description: 'Koppel facturatie en cashflow KPI’s.' },
++    { code: 'audit', title: 'Configureer audit logging', description: 'Zorg voor export van journaallijnen.' },
++  ],
++  compliance: [
++    { code: 'psra-briefing', title: 'PSRA veiligheidsdossier', description: 'Upload vergunningen en risico-analyses.' },
++    { code: 'access', title: 'Controleer rechten', description: 'Bevestig dat kritieke rollen MFA gebruiken.' },
++  ],
++}
++
++const fallbackSteps = [
++  { code: 'welcome', title: 'Welkom bij Sevensa', description: 'Doorloop de checklist om alle AI-modules te activeren en dashboards te vullen.' },
++  { code: 'project', title: 'Start je eerste Sevensa workspace', description: 'Maak een project aan, definieer doelen en koppel klant- en datastructuren.' },
++  { code: 'crew', title: 'Nodig collega’s uit', description: 'Activeer samenwerking door operations, finance en data teams toegang te geven.' },
++  { code: 'booking', title: 'Configureer resourceplanning', description: 'Koppel teams, skills en beschikbaarheid aan het project voor realtime inzicht.' },
++  { code: 'scan', title: 'Verbind databronnen', description: 'Activeer integraties met ERP/CRM zodat AI-modellen direct gevoed worden.' },
++  { code: 'transport', title: 'Stel automatiseringen in', description: 'Configureer workflows voor alerts, approvals en operationele escalaties.' },
++  { code: 'invoice', title: 'Activeer finance insights', description: 'Synchroniseer facturatie en forecasting zodat ROI-rapportages live gaan.' },
++  { code: 'templates', title: 'Personaliseer communicatie', description: 'Pas rapportages en stakeholder updates aan in jullie Sevensa tone of voice.' },
++]
+@@
+-export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
+-  const [steps, setSteps] = useState(() => normalizeSteps(fallbackSteps))
++export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
++  const [persona, setPersona] = useState('general')
++  const [steps, setSteps] = useState(() => normalizeSteps(fallbackSteps))
+@@
+-  useEffect(() => {
++  useEffect(() => {
++    if (!email) return
++    const userKey = email.split('@')[0]?.toLowerCase() || ''
++    if (userKey.includes('finance') || userKey.includes('rentguy')) {
++      setPersona('cfo')
++    } else if (userKey.includes('psra') || userKey.includes('compliance')) {
++      setPersona('compliance')
++    } else {
++      setPersona('general')
++    }
++  }, [email])
++
++  useEffect(() => {
+     let ignore = false
+     const controller = new AbortController()
+@@
+-        const resolvedSteps =
+-          stepsResult.status === 'fulfilled' && stepsResult.value.length
+-            ? normalizeSteps(stepsResult.value)
+-            : normalizeSteps(fallbackSteps)
++        const personaFallback = personaStepTemplates[persona]
++        const resolvedSteps = normalizeSteps(
++          stepsResult.status === 'fulfilled' && stepsResult.value.length
++            ? stepsResult.value
++            : personaFallback && personaFallback.length
++              ? personaFallback
++              : fallbackSteps
++        )
+@@
+-        if (usedFallbackSteps || usedFallbackTips || usedFallbackProgress) {
+-          setErrorMessage(
+-            'We tonen de Sevensa standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
+-          )
+-        }
++        if (usedFallbackSteps || usedFallbackTips || usedFallbackProgress) {
++          setErrorMessage(
++            'Live onboardingdata is tijdelijk niet beschikbaar. Controleer je dashboards voordat je live gaat en probeer het opnieuw.'
++          )
++        }
+@@
+-          setErrorMessage(
+-            'We tonen de Sevensa standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
+-          )
++          setErrorMessage(
++            'Onboarding data kan niet geladen worden. Probeer het later opnieuw of contacteer Sevensa support.'
++          )
+         }
+@@
+-        {errorMessage && (
+-          <div
+-            style={{
++        {errorMessage && (
++          <div
++            role="alert"
++            aria-live="assertive"
++            style={{
+               background: withOpacity(brand.colors.danger, 0.12),
+               border: `1px solid ${withOpacity(brand.colors.danger, 0.35)}`,
+               borderRadius: 18,
+               padding: '16px 20px',
+               color: brand.colors.secondary,
+               fontSize: '0.95rem',
+             }}
+           >
+             {errorMessage}
+           </div>
+         )}

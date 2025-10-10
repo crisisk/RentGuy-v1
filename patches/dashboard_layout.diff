@@ -1,0 +1,243 @@
+Subject: feat(dashboard): introduce persona-based presets and empty states
+
+diff --git a/Planner.jsx b/Planner.jsx
+index 3333333..4444444 100644
+--- a/Planner.jsx
++++ b/Planner.jsx
+@@
+-const personaPresets = {
+-  all: {
+-    label: 'Alle rollen',
+-    description: 'Toont de volledige planning zonder filters, ideaal voor gezamenlijke UAT-sessies.',
+-    timeFilter: 'all',
+-  },
+-  bart: {
+-    label: 'Bart de Manager',
+-    description: 'Focus op lopende en risicovolle producties zodat Bart direct kan bijsturen.',
+-    statusFilter: 'active',
+-    riskFilter: 'warning',
+-    sortKey: 'start',
+-    sortDir: 'asc',
+-    timeFilter: 'next7',
+-  },
+-  anna: {
+-    label: 'Anna de Planner',
+-    description: 'Chronologisch overzicht van komende shows met afhankelijkheden en voorraadmatch.',
+-    statusFilter: 'upcoming',
+-    riskFilter: 'all',
+-    sortKey: 'start',
+-    sortDir: 'asc',
+-    timeFilter: 'next14',
+-  },
+-  tom: {
+-    label: 'Tom de Technicus',
+-    description: 'Realtime zicht op vandaag lopende opdrachten inclusief briefingnotities.',
+-    statusFilter: 'active',
+-    riskFilter: 'ok',
+-    sortKey: 'start',
+-    sortDir: 'asc',
+-    timeFilter: 'today',
+-  },
+-  carla: {
+-    label: 'Carla van Front-Office',
+-    description: 'Upcoming shows gegroepeerd per klant om vragen snel te beantwoorden.',
+-    statusFilter: 'upcoming',
+-    riskFilter: 'all',
+-    sortKey: 'client',
+-    sortDir: 'asc',
+-    timeFilter: 'next30',
+-  },
+-  frank: {
+-    label: 'Frank de Financieel Specialist',
+-    description: 'Afgeronde projecten en documentatie om facturatie te versnellen.',
+-    statusFilter: 'completed',
+-    riskFilter: 'all',
+-    sortKey: 'end',
+-    sortDir: 'desc',
+-    timeFilter: 'past30',
+-  },
+-  sven: {
+-    label: 'Sven de Systeembeheerder',
+-    description: 'Filtert kritieke risico’s en voorraadalerts voor escalatiebeheer.',
+-    statusFilter: 'all',
+-    riskFilter: 'critical',
+-    sortKey: 'risk',
+-    sortDir: 'desc',
+-    timeFilter: 'all',
+-  },
+-  isabelle: {
+-    label: 'Isabelle de International',
+-    description: 'Kijkt weken vooruit om internationale producties tijdig te synchroniseren.',
+-    statusFilter: 'upcoming',
+-    riskFilter: 'all',
+-    sortKey: 'start',
+-    sortDir: 'asc',
+-    timeFilter: 'next30',
+-  },
+-  peter: {
+-    label: 'Peter de Power-User',
+-    description: 'Combineert status- en risicoviews voor API-automatiseringen en alerts.',
+-    statusFilter: 'all',
+-    riskFilter: 'warning',
+-    sortKey: 'status',
+-    sortDir: 'asc',
+-    timeFilter: 'all',
+-  },
+-  nadia: {
+-    label: 'Nadia de Nieuweling',
+-    description: 'Behoudt een rustige kijk op de eerstvolgende simpele taken voor onboarding.',
+-    statusFilter: 'upcoming',
+-    riskFilter: 'ok',
+-    sortKey: 'start',
+-    sortDir: 'asc',
+-    timeFilter: 'next7',
+-  },
+-  david: {
+-    label: 'David de Developer',
+-    description: 'Ziet alle statussen tegelijk om integraties en automatiseringen te testen.',
+-    statusFilter: 'all',
+-    riskFilter: 'all',
+-    sortKey: 'status',
+-    sortDir: 'asc',
+-    timeFilter: 'all',
+-  },
+-}
++const personaPresets = {
++  cfo: {
++    label: 'CFO / Finance',
++    description: 'Focus op cashflow, openstaande facturen en forecast variaties.',
++    statusFilter: 'completed',
++    riskFilter: 'all',
++    sortKey: 'end',
++    sortDir: 'desc',
++    timeFilter: 'past30',
++    kpis: ['Omzet (30d)', 'Openstaande facturen', 'Cashflow forecast'],
++  },
++  compliance: {
++    label: 'Compliance / PSRA',
++    description: 'Controleer vergunningen, audit logging en risicoscores.',
++    statusFilter: 'all',
++    riskFilter: 'warning',
++    sortKey: 'risk',
++    sortDir: 'desc',
++    timeFilter: 'all',
++    kpis: ['Vergunning status', 'Audit log downloads'],
++  },
++  sales: {
++    label: 'Sales / BD',
++    description: 'Bekijk pipeline-voortgang en winstkans per klant.',
++    statusFilter: 'upcoming',
++    riskFilter: 'all',
++    sortKey: 'client',
++    sortDir: 'asc',
++    timeFilter: 'next30',
++    kpis: ['Pipeline waarde', 'Winrate'],
++  },
++  support: {
++    label: 'Support',
++    description: 'Monitor open tickets, SLA’s en escalaties.',
++    statusFilter: 'active',
++    riskFilter: 'warning',
++    sortKey: 'status',
++    sortDir: 'asc',
++    timeFilter: 'today',
++    kpis: ['Tickets open', 'SLA naleving'],
++  },
++  devops: {
++    label: 'Developer / DevOps',
++    description: 'Trace deployments, integraties en foutmeldingen.',
++    statusFilter: 'all',
++    riskFilter: 'critical',
++    sortKey: 'risk',
++    sortDir: 'desc',
++    timeFilter: 'all',
++    kpis: ['Integratie health', 'Incidenten laatste 7d'],
++  },
++}
+@@
+-  return (
+-    <span
+-      style={{
+-        display: 'inline-flex',
+-        alignItems: 'center',
+-        gap: '6px',
+-        backgroundColor: withOpacity(riskPalette[risk] || brand.colors.mutedText, 0.16),
+-        color: riskPalette[risk] || '#4b5563',
+-        padding: '2px 8px',
+-        borderRadius: 999,
+-        fontSize: '0.75rem',
+-        textTransform: 'uppercase',
+-        letterSpacing: '0.08em',
+-      }}
+-    >
+-      <span
+-        style={{
+-          width: 6,
+-          height: 6,
+-          borderRadius: '50%',
+-          backgroundColor: riskPalette[risk] || brand.colors.mutedText,
+-        }}
+-      />
+-      {riskLabels[risk] || '—'}
+-    </span>
+-  )
++  return (
++    <span
++      style={{
++        display: 'inline-flex',
++        alignItems: 'center',
++        gap: '6px',
++        backgroundColor: withOpacity(riskPalette[risk] || brand.colors.mutedText, 0.16),
++        color: riskPalette[risk] || '#4b5563',
++        padding: '2px 8px',
++        borderRadius: 999,
++        fontSize: '0.75rem',
++        textTransform: 'uppercase',
++        letterSpacing: '0.08em',
++      }}
++    >
++      <span
++        style={{
++          width: 6,
++          height: 6,
++          borderRadius: '50%',
++          backgroundColor: riskPalette[risk] || brand.colors.mutedText,
++        }}
++      />
++      {riskLabels[risk] || '—'}
++    </span>
++  )
+@@
+-            <ol style={{listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14}}>
+-              {steps.map(step => {
++            <ol style={{listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14}}>
++              {!steps.length && (
++                <li
++                  style={{
++                    padding: '18px 20px',
++                    borderRadius: 18,
++                    border: `1px dashed ${withOpacity(brand.colors.secondary, 0.32)}`,
++                    background: withOpacity('#ffffff', 0.85),
++                  }}
++                >
++                  <p style={{ margin: 0, color: brand.colors.secondary }}>
++                    Geen events gevonden voor deze preset. Importeer gegevens of wijzig de filters om activiteit te tonen.
++                  </p>
++                  <button
++                    type="button"
++                    style={{
++                      marginTop: 12,
++                      border: 'none',
++                      borderRadius: 999,
++                      padding: '8px 18px',
++                      backgroundImage: brand.colors.gradient,
++                      color: '#fff',
++                      fontWeight: 600,
++                      cursor: 'pointer',
++                    }}
++                  >
++                    Data importeren
++                  </button>
++                </li>
++              )}
++              {steps.map(step => {
