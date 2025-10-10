@@ -33,5 +33,10 @@
     "module": "templates",
     "message": "Werk met de MR-DJ branding kit voor offertes, crewbriefings en QR-check-ins.",
     "cta": "Open templatebeheer"
+  },
+  {
+    "module": "automation",
+    "message": "Gebruik automatiseringen om repetitieve taken te elimineren zodra onboarding mijlpalen zijn bereikt.",
+    "cta": "Open automation studio"
   }
 ]
