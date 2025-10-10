@@ -6,77 +6,97 @@ const personaPresets = {
   all: {
     label: 'Alle rollen',
     description: 'Toont de volledige planning zonder filters, ideaal voor gezamenlijke UAT-sessies.',
+    timeFilter: 'all',
   },
   bart: {
     label: 'Bart de Manager',
+    description: 'Focus op lopende en risicovolle producties zodat Bart direct kan bijsturen.',
     statusFilter: 'active',
     riskFilter: 'warning',
     sortKey: 'start',
     sortDir: 'asc',
-    description: 'Focus op lopende projecten en voorraadwaarschuwingen zodat hij direct kan bijsturen.',
+    timeFilter: 'next7',
   },
   anna: {
     label: 'Anna de Planner',
+    description: 'Chronologisch overzicht van komende shows met afhankelijkheden en voorraadmatch.',
     statusFilter: 'upcoming',
+    riskFilter: 'all',
     sortKey: 'start',
     sortDir: 'asc',
-    description: 'Legt de nadruk op komende projecten in chronologische volgorde voor detailplanning.',
+    timeFilter: 'next14',
   },
   tom: {
     label: 'Tom de Technicus',
+    description: 'Realtime zicht op vandaag lopende opdrachten inclusief briefingnotities.',
     statusFilter: 'active',
     riskFilter: 'ok',
     sortKey: 'start',
     sortDir: 'asc',
-    description: 'Toont enkel actuele opdrachten zodat hij weet waar hij vandaag moet zijn.',
+    timeFilter: 'today',
   },
   carla: {
-    label: 'Carla de Klant',
+    label: 'Carla van Front-Office',
+    description: 'Upcoming shows gegroepeerd per klant om vragen snel te beantwoorden.',
     statusFilter: 'upcoming',
+    riskFilter: 'all',
     sortKey: 'client',
     sortDir: 'asc',
-    description: 'Sorteert op klantnaam zodat front-office teams snel klantvragen kunnen beantwoorden.',
+    timeFilter: 'next30',
   },
   frank: {
-    label: 'Frank de Financieel Medewerker',
+    label: 'Frank de Financieel Specialist',
+    description: 'Afgeronde projecten en documentatie om facturatie te versnellen.',
     statusFilter: 'completed',
+    riskFilter: 'all',
     sortKey: 'end',
     sortDir: 'desc',
-    description: 'Laat afgeronde projecten zien, handig voor facturatie en BTW-controle.',
+    timeFilter: 'past30',
   },
   sven: {
     label: 'Sven de Systeembeheerder',
+    description: 'Filtert kritieke risico’s en voorraadalerts voor escalatiebeheer.',
+    statusFilter: 'all',
     riskFilter: 'critical',
     sortKey: 'risk',
     sortDir: 'desc',
-    description: 'Filtert op kritieke voorraadrisico’s om escalaties te voorkomen.',
+    timeFilter: 'all',
   },
   isabelle: {
     label: 'Isabelle de International',
+    description: 'Kijkt weken vooruit om internationale producties tijdig te synchroniseren.',
     statusFilter: 'upcoming',
+    riskFilter: 'all',
     sortKey: 'start',
     sortDir: 'asc',
-    description: 'Toont internationale events ruim op tijd zodat vertalingen en valuta geregeld zijn.',
+    timeFilter: 'next30',
   },
   peter: {
     label: 'Peter de Power-User',
+    description: 'Combineert status- en risicoviews voor API-automatiseringen en alerts.',
+    statusFilter: 'all',
     riskFilter: 'warning',
     sortKey: 'status',
     sortDir: 'asc',
-    description: 'Highlight projecten met voorraadspanning voor API-automatiseringen.',
+    timeFilter: 'all',
   },
   nadia: {
     label: 'Nadia de Nieuweling',
+    description: 'Behoudt een rustige kijk op de eerstvolgende simpele taken voor onboarding.',
     statusFilter: 'upcoming',
+    riskFilter: 'ok',
     sortKey: 'start',
     sortDir: 'asc',
-    description: 'Behoudt enkel eenvoudige komende taken voor een zachte onboarding.',
+    timeFilter: 'next7',
   },
   david: {
     label: 'David de Developer',
+    description: 'Ziet alle statussen tegelijk om integraties en automatiseringen te testen.',
+    statusFilter: 'all',
+    riskFilter: 'all',
     sortKey: 'status',
     sortDir: 'asc',
-    description: 'Combineert alle statussen zodat API-extensies getest kunnen worden.',
+    timeFilter: 'all',
   },
 }
 
@@ -207,6 +227,28 @@ function StatusBadge({ status }) {
   )
 }
 
+function ImpactBadge({ impact }) {
+  const palette = impactPalette[impact.tone] || impactPalette.neutral
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        backgroundColor: palette.background,
+        color: palette.color,
+        padding: '2px 10px',
+        borderRadius: '999px',
+        fontSize: '0.8rem',
+        fontWeight: 600,
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: palette.color }} />
+      {impact.label}
+    </span>
+  )
+}
+
 function SummaryMetric({ label, value, tone = 'neutral', helpText }) {
   const accent =
     tone === 'success'
@@ -249,12 +291,72 @@ function SummaryMetric({ label, value, tone = 'neutral', helpText }) {
   )
 }
 
+function FinancialPulsePanel({ cards, focusCards = [], focusLabel }) {
+  if (!cards.length && !focusCards.length) return null
+
+  return (
+    <section
+      aria-label="Financiële impact samenvatting"
+      style={{
+        display: 'grid',
+        gap: '12px',
+        padding: '20px',
+        border: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+        borderRadius: '20px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f7f5ff 100%)',
+        boxShadow: '0 32px 60px rgba(15, 23, 42, 0.08)',
+      }}
+    >
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+        <h3 style={{ margin: 0, fontSize: '1.1rem', color: brand.colors.secondary }}>Financiële puls</h3>
+        <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>
+          Realtime cashflow-impact per persona
+        </span>
+      </header>
+      {cards.length > 0 && (
+        <div style={{ display: 'grid', gap: '8px' }}>
+          <div style={{ fontSize: '0.9rem', color: brand.colors.secondary, opacity: 0.78 }}>Portfolio totaal</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+            {cards.map(card => (
+              <SummaryMetric
+                key={card.key}
+                label={card.title}
+                value={card.value}
+                tone={card.tone}
+                helpText={card.helpText}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {focusCards.length > 0 && focusLabel && (
+        <div style={{ display: 'grid', gap: '8px' }}>
+          <div style={{ fontSize: '0.9rem', color: brand.colors.secondary, opacity: 0.78 }}>
+            Focus: {focusLabel}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+            {focusCards.map(card => (
+              <SummaryMetric
+                key={`${card.key}-focus`}
+                label={card.title}
+                value={card.value}
+                tone={card.tone}
+                helpText={card.helpText}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
 function LoadingRows() {
   return (
     <tbody>
       {[...Array(3)].map((_, idx) => (
         <tr key={idx}>
-          {[...Array(8)].map((__, cellIdx) => (
+          {[...Array(9)].map((__, cellIdx) => (
             <td key={cellIdx} style={{ padding: '12px 8px' }}>
               <div
                 style={{
@@ -350,6 +452,7 @@ export default function Planner({ onLogout }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortKey, setSortKey] = useState('start')
   const [sortDir, setSortDir] = useState('asc')
+  const [timeFilter, setTimeFilter] = useState('all')
   const [formState, setFormState] = useState({ name: '', client: '', start: '', end: '', notes: '' })
 
   async function loadProjects() {
@@ -409,6 +512,7 @@ export default function Planner({ onLogout }) {
     setRiskFilter(preset.riskFilter || 'all')
     setSortKey(preset.sortKey || 'start')
     setSortDir(preset.sortDir || 'asc')
+    setTimeFilter(preset.timeFilter || 'all')
     if (preset.searchTerm !== undefined) {
       setSearchTerm(preset.searchTerm)
     }
@@ -448,6 +552,7 @@ export default function Planner({ onLogout }) {
     return events
       .filter(event => statusMatches(statusFilter, event.status))
       .filter(event => (riskFilter === 'all' ? true : event.risk === riskFilter))
+      .filter(event => matchesTimeFilter(event, timeFilter))
       .filter(event => {
         if (!term) return true
         return (
@@ -486,7 +591,7 @@ export default function Planner({ onLogout }) {
         }
         return 0
       })
-  }, [events, statusFilter, riskFilter, searchTerm, sortKey, sortDir])
+  }, [events, statusFilter, riskFilter, searchTerm, sortKey, sortDir, timeFilter])
 
   const summary = useMemo(() => {
     return events.reduce(
@@ -504,7 +609,158 @@ export default function Planner({ onLogout }) {
     )
   }, [events])
 
+  const financialSignals = useMemo(() => computeFinancialSignals(events), [events])
+  const financialCards = useMemo(() => buildFinancialCards(financialSignals), [financialSignals])
+  const filteredFinancialSignals = useMemo(() => computeFinancialSignals(filteredEvents), [filteredEvents])
+  const focusFinancialCards = useMemo(() => buildFinancialCards(filteredFinancialSignals), [filteredFinancialSignals])
+
   const personaHint = personaPresets[personaPreset]?.description
+
+  const personaInsights = useMemo(
+    () => buildPersonaInsights(personaPreset, events, summary, financialSignals),
+    [personaPreset, events, summary, financialSignals]
+  )
+
+  const personaPlaybook = useMemo(
+    () => buildPersonaPlaybook(personaPreset, filteredEvents, filteredFinancialSignals),
+    [personaPreset, filteredEvents, filteredFinancialSignals]
+  )
+
+  function handlePersonaQuickAction(actionKey) {
+    switch (actionKey) {
+      case 'showExecutivePulse':
+        setStatusFilter('all')
+        setRiskFilter('all')
+        setSortKey('risk')
+        setSortDir('desc')
+        setTimeFilter('all')
+        setSearchTerm('')
+        break
+      case 'focusCritical':
+        setStatusFilter('all')
+        setRiskFilter('critical')
+        setSortKey('risk')
+        setSortDir('desc')
+        setTimeFilter('today')
+        break
+      case 'showReadyToBill':
+        setStatusFilter('completed')
+        setRiskFilter('all')
+        setSortKey('end')
+        setSortDir('desc')
+        setTimeFilter('past30')
+        setSearchTerm('')
+        break
+      case 'focusCashflow':
+        setStatusFilter('completed')
+        setRiskFilter('all')
+        setSortKey('end')
+        setSortDir('desc')
+        setTimeFilter('past30')
+        setSearchTerm('')
+        break
+      case 'showPlannerHorizon':
+        setStatusFilter('upcoming')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next14')
+        setSearchTerm('')
+        break
+      case 'highlightDependencies':
+        setStatusFilter('at_risk')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next7')
+        break
+      case 'crewToday':
+        setStatusFilter('active')
+        setRiskFilter('all')
+        setTimeFilter('today')
+        setSortKey('start')
+        setSortDir('asc')
+        break
+      case 'crewDocs':
+        setStatusFilter('active')
+        setRiskFilter('all')
+        setSortKey('status')
+        setSortDir('asc')
+        setTimeFilter('next7')
+        break
+      case 'viewerHighlights':
+        setStatusFilter('all')
+        setRiskFilter('warning')
+        setSortKey('status')
+        setSortDir('asc')
+        setTimeFilter('next30')
+        setSearchTerm('')
+        break
+      case 'viewerCalm':
+        setStatusFilter('active')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next14')
+        setSearchTerm('')
+        break
+      case 'carlaClients':
+        setStatusFilter('upcoming')
+        setRiskFilter('all')
+        setSortKey('client')
+        setSortDir('asc')
+        setTimeFilter('next30')
+        setSearchTerm('')
+        break
+      case 'svenSystems':
+        setStatusFilter('all')
+        setRiskFilter('critical')
+        setSortKey('risk')
+        setSortDir('desc')
+        setTimeFilter('all')
+        break
+      case 'isabelleWindow':
+        setStatusFilter('upcoming')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next30')
+        setSearchTerm('')
+        break
+      case 'peterAutomation':
+        setStatusFilter('all')
+        setRiskFilter('warning')
+        setSortKey('status')
+        setSortDir('asc')
+        setTimeFilter('all')
+        break
+      case 'nadiaCalm':
+        setStatusFilter('upcoming')
+        setRiskFilter('ok')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('next7')
+        setSearchTerm('')
+        break
+      case 'davidAudit':
+        setStatusFilter('all')
+        setRiskFilter('all')
+        setSortKey('status')
+        setSortDir('asc')
+        setTimeFilter('all')
+        break
+      case 'resetPersona':
+        applyPersonaPreset(personaPreset)
+        break
+      default:
+        setStatusFilter('all')
+        setRiskFilter('all')
+        setSortKey('start')
+        setSortDir('asc')
+        setTimeFilter('all')
+        break
+    }
+  }
 
   function shiftRange(delta) {
     setFormState(prev => ({
