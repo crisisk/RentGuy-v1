@@ -1,0 +1,47 @@
+[
+  {
+    "id": "DAS-001",
+    "area": "dashboard",
+    "severity": "high",
+    "location": "Planner.jsx:5-101",
+    "persona": "CFO",
+    "description": "Dashboard presets richten zich op fictieve interne namen en missen KPI’s voor zakelijke persona’s.",
+    "evidence": "const personaPresets = { bart: { label: 'Bart de Manager', ... }, anna: {...} }",
+    "impact": "Besluitvormers vinden geen relevante KPI’s waardoor adoptie stokt.",
+    "fix": "Vervang presets door persona gebaseerde configuratie (CFO, Compliance, Sales, etc.).",
+    "acceptance": [
+      "Preset keys komen overeen met kernpersona’s",
+      "Elke preset bevat minimaal één relevante KPI-kaart"
+    ]
+  },
+  {
+    "id": "DAS-002",
+    "area": "dashboard",
+    "severity": "medium",
+    "location": "Planner.jsx:162-200",
+    "persona": "Support Agent",
+    "description": "Kaarten tonen geen lege of fout-staten; gebruikers zien blanco scherm bij lege data.",
+    "evidence": "return timelineLabel(event) ... zonder fallback of melding",
+    "impact": "Support kan niet onderscheiden tussen 'geen data' en laadfout, vertraagt escalaties.",
+    "fix": "Voeg skeleton + lege-state componenten met CTA toe.",
+    "acceptance": [
+      "Lege dataset toont boodschap en knop om data te importeren",
+      "Error responses tonen banner met retry"
+    ]
+  },
+  {
+    "id": "DAS-003",
+    "area": "dashboard",
+    "severity": "medium",
+    "location": "Planner.jsx:191-200",
+    "persona": "Analyst",
+    "description": "Event kaarten bieden geen drill-down of link naar detailpagina’s.",
+    "evidence": "<span style={{ ... }}>{step.description}</span> zonder interactie",
+    "impact": "Analisten moeten buiten het systeem zoeken naar detailinfo, verlaagt productiviteit.",
+    "fix": "Voeg klikbare CTA of contextmenu toe dat naar detailview navigeert.",
+    "acceptance": [
+      "Elk event bevat link naar detailroute",
+      "Keyboard gebruikers kunnen CTA bereiken"
+    ]
+  }
+]

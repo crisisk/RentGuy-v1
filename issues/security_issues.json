@@ -1,0 +1,47 @@
+[
+  {
+    "id": "SEC-001",
+    "area": "security",
+    "severity": "critical",
+    "location": "api.js:10-43",
+    "persona": "System Admin",
+    "description": "API base URL hardcoded naar productie en tokens worden onbeveiligd in localStorage opgeslagen.",
+    "evidence": "const API_BASE_URL = 'https://g8h3ilc3k6q1.manus.space'\n...\nsetLocalStorageItem('token', token)",
+    "impact": "Maakt ongeautoriseerde toegang tot productie mogelijk vanaf demo build en vergroot risico op token diefstal.",
+    "fix": "Lees base URL uit `VITE_API_BASE_URL`, gebruik `sessionStorage`/Secure cookies en implementeer token refresh.",
+    "acceptance": [
+      "API base URL komt uit omgeving en fallback is localhost",
+      "Tokens verlopen automatisch en worden niet in localStorage bewaard"
+    ]
+  },
+  {
+    "id": "SEC-002",
+    "area": "security",
+    "severity": "high",
+    "location": "Login.jsx:6-37",
+    "persona": "Auditor",
+    "description": "Demo credentials hardcoded zonder MFA of rate limiting.",
+    "evidence": "const [user, setUser] = useState('bart') ... form.append('password', password)",
+    "impact": "Aanvallers kunnen brute-force pogingen doen en demo-accounts misbruiken voor toegang.",
+    "fix": "Implementeer Keycloak/OIDC flow met MFA en server-side rate limiting.",
+    "acceptance": [
+      "Login ondersteunt OIDC redirect",
+      "Mislukte pogingen worden gelogd en gelimiteerd"
+    ]
+  },
+  {
+    "id": "SEC-003",
+    "area": "security",
+    "severity": "medium",
+    "location": "OnboardingOverlay.jsx:149-237",
+    "persona": "Compliance",
+    "description": "Fouten in onboarding API worden geslikt; gebruikers denken dat data is geladen.",
+    "evidence": "catch { ... setErrorMessage('We tonen de Sevensa standaard onboarding ...') }",
+    "impact": "Compliance risico omdat incomplete configuratie niet wordt ontdekt en auditing mislukt.",
+    "fix": "Log fouten server-side, toon status in UI en blokkeer afronding tot data geladen is.",
+    "acceptance": [
+      "Overlay blokkeert afronding bij ontbrekende progress data",
+      "Errorbanner bevat support-contact en log ID"
+    ]
+  }
+]
