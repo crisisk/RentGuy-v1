@@ -48,12 +48,13 @@ export default function App() {
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const linkId = 'sevensa-montserrat-font'
+      const linkId = 'sevensa-rentguy-fonts'
       if (!document.getElementById(linkId)) {
         const link = document.createElement('link')
         link.id = linkId
         link.rel = 'stylesheet'
-        link.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap'
+        link.href =
+          'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap'
         document.head.appendChild(link)
       }
       const previousStyles = {
@@ -62,7 +63,7 @@ export default function App() {
         fontFamily: document.body.style.fontFamily,
         margin: document.body.style.margin,
       }
-      document.body.style.background = brand.colors.surface
+      document.body.style.background = brand.colors.appBackground
       document.body.style.color = brand.colors.text
       document.body.style.fontFamily = brandFontStack
       document.body.style.margin = '0'
@@ -72,6 +73,12 @@ export default function App() {
         document.body.style.fontFamily = previousStyles.fontFamily
         document.body.style.margin = previousStyles.margin
       }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.title = `${brand.shortName} × ${brand.tenant.name}`
     }
   }, [])
 

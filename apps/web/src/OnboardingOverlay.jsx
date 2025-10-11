@@ -1,35 +1,136 @@
 import React, { useEffect, useId, useRef } from 'react'
 import { STATUS, useOnboardingProgress } from './useOnboardingProgress.js'
+import { brand, brandFontStack, withOpacity } from './theme.js'
 
 const styles = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', color: '#111', zIndex: 9999 },
-  panel: { maxWidth: 720, margin: '60px auto', background: '#fff', borderRadius: 12, padding: 24, fontFamily: 'system-ui', boxShadow: '0 20px 40px rgba(15,23,42,0.18)' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 },
-  closeButton: { border: '1px solid #cbd5f5', background: '#f8fafc', padding: '6px 12px', borderRadius: 8, cursor: 'pointer' },
-  bodyText: { marginTop: 12 },
-  progressTrack: { margin: '16px 0 8px', background: '#e2e8f0', borderRadius: 8, overflow: 'hidden' },
-  progressBar: { minHeight: 12, background: '#4ade80', transition: 'width 160ms ease-out' },
-  progressLabel: { marginTop: 0 },
-  statusCopy: { color: '#334155', marginBottom: 16 },
-  alert: { background: '#fee2e2', border: '1px solid #fecaca', color: '#b91c1c', padding: 12, borderRadius: 8, marginBottom: 16 },
-  alertButton: { border: 'none', background: '#b91c1c', color: '#fff', padding: '6px 12px', borderRadius: 6, cursor: 'pointer' },
-  empty: { color: '#334155', marginBottom: 16 },
-  list: { listStyle: 'decimal inside', padding: 0, margin: 0 },
-  listItemBase: { margin: '8px 0', padding: 12, border: '1px solid #e2e8f0', borderRadius: 10, display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' },
-  listTitle: { display: 'block', marginBottom: 4 },
-  listDesc: { color: '#475569' },
-  doneTag: { color: '#16a34a', fontWeight: 600 },
-  actionButton: { border: 'none', background: '#2563eb', color: '#fff', padding: '6px 14px', borderRadius: 8 },
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    background: withOpacity('#0D3B66', 0.72),
+    color: brand.colors.text,
+    zIndex: 9999,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    padding: '48px 16px',
+    fontFamily: brandFontStack,
+    overflowY: 'auto',
+  },
+  panel: {
+    maxWidth: 860,
+    width: '100%',
+    background: '#ffffff',
+    borderRadius: 28,
+    padding: '36px 44px',
+    boxShadow: brand.colors.shadow,
+    border: `1px solid ${withOpacity(brand.colors.primary, 0.2)}`,
+    display: 'grid',
+    gap: 24,
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+  },
+  closeButton: {
+    border: `1px solid ${withOpacity(brand.colors.primary, 0.35)}`,
+    background: withOpacity(brand.colors.surfaceMuted, 0.8),
+    color: brand.colors.secondary,
+    padding: '8px 16px',
+    borderRadius: 999,
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  progressTrack: {
+    background: withOpacity(brand.colors.surfaceMuted, 0.9),
+    borderRadius: 999,
+    overflow: 'hidden',
+    height: 12,
+  },
+  progressBar: {
+    minHeight: 12,
+    background: brand.colors.gradient,
+    transition: 'width 180ms ease-out',
+  },
+  list: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'grid',
+    gap: 12,
+  },
+  listItemBase: {
+    borderRadius: 18,
+    padding: '18px 20px',
+    border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+    display: 'grid',
+    gap: 12,
+    alignItems: 'flex-start',
+    background: withOpacity('#ffffff', 0.95),
+  },
+  alert: {
+    background: withOpacity(brand.colors.danger, 0.12),
+    border: `1px solid ${withOpacity(brand.colors.danger, 0.28)}`,
+    color: '#B71C1C',
+    padding: '16px 18px',
+    borderRadius: 18,
+    display: 'grid',
+    gap: 12,
+  },
+  alertButton: {
+    border: 'none',
+    background: brand.colors.danger,
+    color: '#fff',
+    padding: '8px 16px',
+    borderRadius: 999,
+    fontWeight: 600,
+    cursor: 'pointer',
+    justifySelf: 'flex-start',
+  },
+  footer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  actionPrimary: {
+    border: 'none',
+    background: brand.colors.gradient,
+    color: '#fff',
+    padding: '12px 18px',
+    borderRadius: 999,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  actionSecondary: {
+    border: 'none',
+    background: withOpacity(brand.colors.primary, 0.12),
+    color: brand.colors.primaryDark,
+    padding: '12px 18px',
+    borderRadius: 999,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
 }
 
 const StepItem = ({ step, isDone, isMarking, onMark }) => (
-  <li style={{ ...styles.listItemBase, background: isDone ? '#f0fdf4' : '#fff' }}>
-    <div style={{ flex: '1 1 240px' }}>
-      <b style={styles.listTitle}>{step.title}</b>
-      <div style={styles.listDesc}>{step.description}</div>
+  <li
+    style={{
+      ...styles.listItemBase,
+      background: isDone ? withOpacity(brand.colors.success, 0.12) : styles.listItemBase.background,
+      border: isDone
+        ? `1px solid ${withOpacity(brand.colors.success, 0.35)}`
+        : styles.listItemBase.border,
+    }}
+  >
+    <div style={{ display: 'grid', gap: 6 }}>
+      <b style={{ fontSize: '1.05rem', color: brand.colors.secondary }}>{step.title}</b>
+      <div style={{ color: brand.colors.mutedText }}>{step.description}</div>
     </div>
     {isDone ? (
-      <span aria-label="Stap afgerond" style={styles.doneTag}>
+      <span aria-label="Stap afgerond" style={{ color: brand.colors.success, fontWeight: 600 }}>
         ✅ Gereed
       </span>
     ) : (
@@ -37,7 +138,16 @@ const StepItem = ({ step, isDone, isMarking, onMark }) => (
         type="button"
         onClick={() => onMark(step)}
         disabled={isMarking}
-        style={{ ...styles.actionButton, cursor: isMarking ? 'wait' : 'pointer', opacity: isMarking ? 0.7 : 1 }}
+        style={{
+          border: 'none',
+          background: brand.colors.gradient,
+          color: '#fff',
+          padding: '10px 16px',
+          borderRadius: 999,
+          fontWeight: 600,
+          cursor: isMarking ? 'wait' : 'pointer',
+          opacity: isMarking ? 0.75 : 1,
+        }}
       >
         {isMarking ? 'Bijwerken…' : 'Markeer gereed'}
       </button>
@@ -45,7 +155,7 @@ const StepItem = ({ step, isDone, isMarking, onMark }) => (
   </li>
 )
 
-export default function OnboardingOverlay({ email, onClose = () => {} }) {
+export default function OnboardingOverlay({ email, onClose = () => {}, onSnooze, onFinish }) {
   const { steps, done, status, errorMessage, marking, progress, mark, retry } = useOnboardingProgress(email)
   const closeButtonRef = useRef(null)
   const headingId = useId()
@@ -54,6 +164,7 @@ export default function OnboardingOverlay({ email, onClose = () => {} }) {
   useEffect(() => {
     closeButtonRef.current?.focus()
   }, [])
+
   useEffect(() => {
     function handleKey(event) {
       if (event.key === 'Escape') {
@@ -65,48 +176,76 @@ export default function OnboardingOverlay({ email, onClose = () => {} }) {
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
+  const handleSnooze = () => {
+    if (typeof onSnooze === 'function') {
+      onSnooze()
+    } else {
+      onClose()
+    }
+  }
+
+  const handleFinish = () => {
+    if (typeof onFinish === 'function') {
+      onFinish()
+    } else {
+      onClose()
+    }
+  }
+
   return (
     <div role="dialog" aria-modal="true" aria-labelledby={headingId} aria-describedby={descriptionId} style={styles.overlay}>
       <div style={styles.panel}>
-        <div style={styles.header}>
-          <h2 id={headingId} style={{ margin: 0 }}>
-            Welkom bij Rentguy ✨
-          </h2>
+        <header style={styles.header}>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <h2 id={headingId} style={{ margin: 0, color: brand.colors.secondary }}>
+              Welkom bij {brand.shortName}
+            </h2>
+            <p id={descriptionId} style={{ margin: 0, color: brand.colors.mutedText }}>
+              Doorloop de belangrijkste activatiestappen zodat ieder teamlid direct waarde ziet.
+            </p>
+          </div>
           <button type="button" onClick={onClose} ref={closeButtonRef} style={styles.closeButton}>
             Sluiten
           </button>
-        </div>
-        <p id={descriptionId} style={styles.bodyText}>
-          Loop de stappen door voor een vliegende start. Markeer als voltooid zodra je klaar bent.
-        </p>
-        <div style={styles.progressTrack}>
-          <div
-            role="progressbar"
-            aria-label="Onboarding voortgang"
-            aria-valuenow={progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            style={{ ...styles.progressBar, width: `${progress}%` }}
-          />
-        </div>
-        <p aria-live="polite" style={styles.progressLabel}>
-          Voortgang: {progress}% ({done.size}/{steps.length || 0} stappen)
-        </p>
-        {status === STATUS.LOADING && <p style={styles.statusCopy}>Onboarding wordt geladen…</p>}
-        {status === STATUS.ERROR && (
-          <div role="alert" style={styles.alert}>
-            <p style={{ margin: '0 0 8px' }}>{errorMessage || 'De onboarding kon niet geladen worden.'}</p>
-            <button type="button" onClick={retry} style={styles.alertButton}>
-              Probeer opnieuw
-            </button>
+        </header>
+
+        <section style={{ display: 'grid', gap: 12 }}>
+          <div style={styles.progressTrack}>
+            <div
+              role="progressbar"
+              aria-label="Onboarding voortgang"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              style={{ ...styles.progressBar, width: `${progress}%` }}
+            />
           </div>
-        )}
-        {status === STATUS.EMPTY && <p style={styles.empty}>Er zijn nog geen onboarding-stappen beschikbaar voor dit account.</p>}
-        {errorMessage && status === STATUS.READY && (
-          <p role="status" style={styles.statusCopy}>
-            {errorMessage}
+          <p aria-live="polite" style={{ margin: 0, color: brand.colors.secondary }}>
+            Voortgang: {progress}% ({done.size}/{steps.length || 0} stappen)
           </p>
-        )}
+          {status === STATUS.LOADING && (
+            <p style={{ margin: 0, color: brand.colors.mutedText }}>Onboarding wordt geladen…</p>
+          )}
+          {status === STATUS.ERROR && (
+            <div role="alert" style={styles.alert}>
+              <p style={{ margin: 0 }}>{errorMessage || 'De onboarding kon niet geladen worden.'}</p>
+              <button type="button" onClick={retry} style={styles.alertButton}>
+                Probeer opnieuw
+              </button>
+            </div>
+          )}
+          {status === STATUS.EMPTY && (
+            <p style={{ margin: 0, color: brand.colors.mutedText }}>
+              Er zijn nog geen onboarding-stappen beschikbaar voor dit account.
+            </p>
+          )}
+          {errorMessage && status === STATUS.READY && (
+            <p role="status" style={{ margin: 0, color: brand.colors.warning }}>
+              {errorMessage}
+            </p>
+          )}
+        </section>
+
         <ol aria-busy={status === STATUS.LOADING} style={styles.list}>
           {steps.map(step => (
             <StepItem
@@ -118,6 +257,20 @@ export default function OnboardingOverlay({ email, onClose = () => {} }) {
             />
           ))}
         </ol>
+
+        <footer style={styles.footer}>
+          <div style={{ color: brand.colors.mutedText }}>
+            Klaar met de checklist? Markeer als voltooid zodat we je dashboard schoon houden.
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <button type="button" onClick={handleSnooze} style={styles.actionSecondary}>
+              Later herinneren
+            </button>
+            <button type="button" onClick={handleFinish} style={styles.actionPrimary}>
+              Onboarding afgerond
+            </button>
+          </div>
+        </footer>
       </div>
     </div>
   )
