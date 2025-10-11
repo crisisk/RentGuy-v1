@@ -1,62 +1,28 @@
-export const sevensaBrand = {
-  name: 'Sevensa',
-  url: 'https://sevensa.ai',
-  tagline: 'Enterprise AI copilots voor operations.',
-}
-
-export const misterDjBrand = {
-  name: 'Mister DJ',
-  url: 'https://www.mr-dj.nl',
-  tagline: '100% Dansgarantie',
-  colors: {
-    primary: '#6C2BD9',
-    primaryDark: '#4C1D95',
-    secondary: '#1F1A4A',
-    accent: '#F5B400',
-    gradient: 'linear-gradient(135deg, #1F1A4A 0%, #6C2BD9 42%, #FF6EC7 100%)',
-  },
-}
-
-export const rentGuyBrand = {
-  name: 'Sevensa RentGuy Enterprise',
-  shortName: 'Sevensa × Mister DJ',
-  tagline: `${misterDjBrand.tagline} · Powered by Sevensa`,
-  url: 'https://sevensa.ai/rentguy',
-}
-
 export const brand = {
-  ...rentGuyBrand,
-  provider: sevensaBrand,
-  tenant: misterDjBrand,
-  partnerTagline: `${misterDjBrand.tagline} · Powered by Sevensa`,
+  name: 'Mister DJ - Sevensa Intelligence Platform',
+  shortName: 'Mr. DJ',
+  url: 'https://sevensa.ai',
+  tagline: 'AI-powered solutions for enterprises.',
   colors: {
-    primary: misterDjBrand.colors.primary,
-    primaryDark: misterDjBrand.colors.primaryDark,
-    secondary: '#0B1026',
-    accent: misterDjBrand.colors.accent,
-    surface: '#F4F6FF',
-    surfaceMuted: '#E3E7FF',
-    surfaceInverse: '#111827',
-    text: '#0F172A',
-    mutedText: '#475569',
-    gradient: misterDjBrand.colors.gradient,
-    gradientSoft:
-      'linear-gradient(155deg, rgba(108, 43, 217, 0.18) 0%, rgba(255, 110, 199, 0.18) 48%, rgba(37, 99, 235, 0.18) 100%)',
-    appBackground:
-      'radial-gradient(circle at 10% 12%, rgba(245, 180, 0, 0.18) 0%, rgba(15, 23, 42, 0) 46%), radial-gradient(circle at 88% 16%, rgba(255, 110, 199, 0.16) 0%, rgba(15, 23, 42, 0) 52%), linear-gradient(135deg, #0F172A 0%, #1F1A4A 58%, #312E81 100%)',
-    outline: 'rgba(108, 43, 217, 0.28)',
-    shadow: '0 32px 72px rgba(15, 23, 42, 0.28)',
-    success: '#22C55E',
-    danger: '#EF4444',
+    primary: '#00A896',
+    primaryDark: '#04706C',
+    secondary: '#1F2A32',
+    accent: '#4FD1C5',
+    surface: '#F5FAF9',
+    surfaceMuted: '#E0F2EF',
+    text: '#1F2A32',
+    mutedText: '#4A5A65',
+    gradient: 'linear-gradient(135deg, #0BC5EA 0%, #00A896 45%, #0D3B66 100%)',
+    outline: 'rgba(4, 112, 108, 0.18)',
+    shadow: '0 28px 60px rgba(13, 59, 102, 0.12)',
+    success: '#1ABC9C',
+    danger: '#F44336',
     warning: '#F59E0B',
-    info: '#2563EB',
-    overlay: 'rgba(15, 23, 42, 0.72)',
-    softHighlight: 'rgba(255, 110, 199, 0.2)',
+    info: '#0D3B66',
   },
 }
 
-export const brandFontStack = `'Poppins', 'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
-export const headingFontStack = `'Montserrat', 'Poppins', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
+export const brandFontStack = `'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
 
 export function withOpacity(hex, alpha = 1) {
   if (!hex || hex[0] !== '#' || (hex.length !== 4 && hex.length !== 7)) {
