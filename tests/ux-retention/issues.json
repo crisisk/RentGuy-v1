@@ -1,0 +1,57 @@
+{
+  "schema": "ux-retention-issues@1",
+  "items": [
+    {
+      "id": "RG-UX-001",
+      "persona": "Renske",
+      "flow": "Inventory → Quote",
+      "severity": "high",
+      "symptom": "Inventory search lacks stable data-testid hooks, blocking automation and delaying quote generation.",
+      "root_cause": "Backoffice components omit semantic test identifiers across search and quote panels.",
+      "evidence": {
+        "screenshot": null,
+        "video": null,
+        "trace": "tests/e2e/suites/renske/inventory-to-quote.spec.ts"
+      },
+      "kpi_impact": {
+        "ttv_delta_sec": 45,
+        "success_rate_delta_pct": 12
+      },
+      "fix": {
+        "type": "copy",
+        "summary": "Introduce descriptive data-testid hooks and inline status text for quote-ready states.",
+        "files": [
+          "tests/e2e/suites/renske/inventory-to-quote.spec.ts",
+          "tests/ux-retention/tools/detect_frontend_routes.py"
+        ]
+      },
+      "status": "open"
+    },
+    {
+      "id": "RG-UX-002",
+      "persona": "Lisa",
+      "flow": "Checkout",
+      "severity": "blocker",
+      "symptom": "Customer portal missing from repository, preventing checkout automation and KPI tracking.",
+      "root_cause": "No portal frontend implementation detected by route scanner.",
+      "evidence": {
+        "screenshot": null,
+        "video": null,
+        "trace": "tests/ux-retention/reports/frontend_map.md"
+      },
+      "kpi_impact": {
+        "ttv_delta_sec": 120,
+        "success_rate_delta_pct": 25
+      },
+      "fix": {
+        "type": "layout",
+        "summary": "Prioritise portal MVP with booking CTA and payment status surface; wire telemetry events for drop-off.",
+        "files": [
+          "tests/e2e/suites/lisa/checkout-and-payment.spec.ts",
+          "tests/ux-retention/reports/frontend_map.md"
+        ]
+      },
+      "status": "open"
+    }
+  ]
+}

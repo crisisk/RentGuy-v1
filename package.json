@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.ts"
   },
   "dependencies": {
     "@zxing/browser": "^0.1.5",
@@ -15,7 +16,11 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.9.2",
+    "@playwright/test": "^1.47.2",
     "@vitejs/plugin-react": "^4.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3",
     "vite": "^5.4.8"
   }
 }
