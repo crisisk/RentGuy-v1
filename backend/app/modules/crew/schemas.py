@@ -4,7 +4,7 @@ from datetime import datetime
 import re
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 _EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
@@ -34,8 +34,7 @@ class CrewMemberOut(BaseModel):
     email: Optional[str] = None
     active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BookingIn(BaseModel):
@@ -55,5 +54,4 @@ class BookingOut(BaseModel):
     role: str
     status: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

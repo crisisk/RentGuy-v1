@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import List
+from __future__ import annotations
+
 from datetime import date, datetime
+
+from pydantic import BaseModel, ConfigDict
 
 class InvoiceIn(BaseModel):
     project_id: int
@@ -18,4 +20,5 @@ class InvoiceOut(BaseModel):
     status: str
     issued_at: date
     due_at: date
-    class Config: from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)

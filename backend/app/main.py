@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from contextlib import asynccontextmanager
 from typing import Callable
 
 from fastapi import FastAPI, Request
@@ -11,9 +12,18 @@ from app.core.errors import AppError, app_error_handler
 from app.core.logging import setup_logging
 from app.core.metrics import MetricsTracker
 
-
 setup_logging()
-app = FastAPI(title="Rentguyapp API", version="0.1")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize and tear down application level resources."""
+    app.state.start_time = time.time()
+    app.state.metrics_tracker = MetricsTracker()
+    yield
+
+
+app = FastAPI(title="Rentguyapp API", version="0.1", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,12 +34,6 @@ app.add_middleware(
 )
 
 app.add_exception_handler(AppError, app_error_handler)
-
-
-@app.on_event("startup")
-async def _init_metrics() -> None:
-    app.state.start_time = time.time()
-    app.state.metrics_tracker = MetricsTracker()
 
 
 @app.middleware("http")
@@ -46,7 +50,8 @@ async def metrics_middleware(request: Request, call_next: Callable):
         response = await call_next(request)
     except Exception:
         duration = time.perf_counter() - start
-        tracker: MetricsTracker = request.app.state.metrics_tracker
+        tracker: MetricsTracker = getattr(request.app.state, "metrics_tracker", MetricsTracker())
+        request.app.state.metrics_tracker = tracker
         availability = tracker.record(
             method=method,
             path=path_template,
@@ -57,7 +62,8 @@ async def metrics_middleware(request: Request, call_next: Callable):
         raise
 
     duration = time.perf_counter() - start
-    tracker: MetricsTracker = request.app.state.metrics_tracker
+    tracker: MetricsTracker = getattr(request.app.state, "metrics_tracker", MetricsTracker())
+    request.app.state.metrics_tracker = tracker
     availability = tracker.record(
         method=method,
         path=path_template,
@@ -82,7 +88,8 @@ def readyz():
 
 @app.get("/metrics")
 def metrics() -> PlainTextResponse:
-    tracker: MetricsTracker = app.state.metrics_tracker
+    tracker: MetricsTracker = getattr(app.state, "metrics_tracker", MetricsTracker())
+    app.state.metrics_tracker = tracker
     payload = tracker.prometheus_payload()
     return PlainTextResponse(payload, media_type="text/plain; version=0.0.4")
 

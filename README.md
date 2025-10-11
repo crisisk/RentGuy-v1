@@ -1,47 +1,88 @@
 # RentGuy Enterprise Platform
 
-## Overview
-Welcome to the RentGuy Enterprise Platform, a comprehensive solution designed for modern rental management. This platform is built to provide a robust, scalable, and feature-rich environment for property owners, managers, tenants, and various stakeholders. It encompasses advanced functionalities from payment processing and CRM to microservices architecture, analytics, and enterprise-grade security.
+RentGuy Enterprise Platform is a full-stack solution for professional rental operations. The platform combines a FastAPI backend with a React-based operations console and barcode scanner experience. Together they cover authentication, onboarding, inventory management, crew scheduling, transport planning, billing, warehouse scanning, and reporting workflows that rental teams rely on every day.
 
-## Key Features
-- **Payment Adapters**: Integrated Stripe and Mollie for secure and efficient payment processing with webhook support.
-- **Unified Authentication**: Single Sign-On (SSO) integration with AzureAD and Google Workspace, coupled with a robust Crew ↔ Auth system for single user identity and role-based access control.
-- **Warehouse & Transport Management**: RFID/NFC integration for inventory tracking, and Google Maps API-driven route optimization for efficient logistics.
-- **Analytics & Business Intelligence**: Dashboards for margin, revenue, and cost analysis, alongside OTLP tracing and Grafana dashboards for comprehensive observability.
-- **Microservices Architecture**: Migration from monolithic to microservices architecture with NATS/Redpanda event broker for inter-service communication, enabling high scalability and resilience.
-- **CRM & Integrations**: Native RentGuy CRM with Invoice Ninja integration, replacing external CRM systems. Includes Twinfield integration for advanced accounting.
-- **Multi-Tenant Support**: Enterprise-grade multi-tenancy with data isolation, tier management, and resource allocation.
-- **Contract Management**: Comprehensive Document Management System (DMS) integration for handling lease agreements and other contracts, including version control and template management.
-- **Security & Compliance**: Robust security hardening measures, data anonymization for GDPR compliance, and full audit logging capabilities.
-- **Optimized Infrastructure**: Performance-tuned database, application-level caching, web server optimization, and comprehensive monitoring and logging setup.
+## Architecture at a Glance
 
-## Technology Stack
-- **Backend**: Python (FastAPI), PostgreSQL, Redis
-- **Frontend**: React.js
-- **Containerization**: Docker, Docker Compose
-- **Orchestration**: Kubernetes (future-ready, implied by microservices)
-- **Event Broker**: NATS/Redpanda
-- **Monitoring**: Prometheus, Grafana, OpenTelemetry
-- **Payment Gateways**: Stripe, Mollie
-- **SSO**: AzureAD, Google Workspace
-- **Accounting**: Twinfield
-- **Invoicing**: Invoice Ninja (OSS)
-
-## Deployment
-The platform is designed for deployment on a Virtual Private Server (VPS) using Docker and Docker Compose for containerization and orchestration. Traefik is utilized as an edge router and load balancer for secure access and service discovery.
+| Area | Description |
+| ---- | ----------- |
+| Backend | `backend/` contains a FastAPI service with modular routers per domain (auth, inventory, projects, crew, transport, billing, warehouse, reporting, observability). Metrics, structured logging, and rich error handling are enabled out of the box. |
+| Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.jsx`) conditionally renders the planner UI or the scanner UI depending on `VITE_APP_MODE`. |
+| Infrastructure | Docker artefacts, Alembic migrations, seed scripts, and environment configuration helpers sit alongside documentation that captures the enterprise deployment roadmap. |
 
 ## Getting Started
-Detailed deployment instructions, environment variable configurations, and setup guides are available in the `docs/` directory (or will be provided in a separate deployment guide).
 
-## Roadmap
-Refer to `updated_36_month_roadmap.md` for the future development plans and strategic initiatives for the RentGuy Enterprise Platform.
+### Prerequisites
 
-## UAT Reports
-User Acceptance Testing (UAT) reports for various personas can be found in the `testing/` directory.
+- Python 3.11+
+- Node.js 18+
+- npm (bundled with Node.js)
+- Optional: Docker & Docker Compose if you prefer containerised workflows
+
+### Backend setup
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate  # or `.venv\\Scripts\\activate` on Windows
+pip install -r requirements.txt
+```
+
+Environment variables can be provided via a `.env` file next to `app/main.py` or exported into the shell. Key options (with defaults) are defined in [`backend/app/core/config.py`](backend/app/core/config.py).
+
+To run the API locally:
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+Run the backend test suite at any time with:
+
+```bash
+cd backend
+pytest
+```
+
+### Frontend setup
+
+```bash
+npm install
+```
+
+Configuration is handled through standard Vite environment variables:
+
+- `VITE_API_URL` &mdash; Base URL of the FastAPI service (defaults to `http://localhost:8000`).
+- `VITE_APP_MODE` &mdash; Set to `scanner` to boot directly into the barcode scanner view. Any other value renders the planner dashboard.
+
+With the dependencies installed you can start the development server:
+
+```bash
+npm run dev
+```
+
+The app listens on `http://localhost:5175` (configurable in [`vite.config.js`](vite.config.js)).
+
+## Project Highlights
+
+- **Modular domain design** keeps inventory, crew, billing, and transport concerns isolated while sharing common observability and error primitives.
+- **Modern schema definitions** use Pydantic v2 features (`ConfigDict`, `Field`) to provide strict validation, safe defaults, and ORM compatibility without deprecation warnings.
+- **Operational metrics middleware** tracks latency, availability, and Prometheus-friendly metrics for every request.
+- **Robust client state management** centralises authentication tokens and onboarding progress in `storage.js`, guaranteeing a consistent UX across planner and scanner contexts.
+
+## Quality & Maintenance
+
+- Automated tests live under [`backend/tests`](backend/tests) and cover critical authentication, scheduling, and inventory flows. Execute them before every commit.
+- ESLint/Prettier configurations are intentionally omitted to keep the repo lightweight; feel free to extend the toolchain as needed.
+- Use `.gitignore` as the canonical reference for large or sensitive artefacts that should stay out of version control.
 
 ## Contributing
-Contributions are welcome! Please refer to the `CONTRIBUTING.md` for guidelines.
+
+1. Fork the repository and create a feature branch.
+2. Ensure `pytest` and the frontend build succeed.
+3. Open a pull request describing the problem solved, testing performed, and any new environment variables introduced.
+
+We welcome improvements to documentation, developer experience, and production hardening alike.
 
 ## License
-This project is licensed under the [MIT License](LICENSE.md).
 
+This project is distributed under the MIT License. See [`LICENSE`](LICENSE) for details.

@@ -1,6 +1,9 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from __future__ import annotations
+
 from datetime import date, time, datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 class VehicleIn(BaseModel):
     name: str
@@ -11,7 +14,8 @@ class VehicleIn(BaseModel):
 
 class VehicleOut(VehicleIn):
     id: int
-    class Config: from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 class DriverIn(BaseModel):
     name: str
@@ -22,7 +26,8 @@ class DriverIn(BaseModel):
 
 class DriverOut(DriverIn):
     id: int
-    class Config: from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 class RouteStopIn(BaseModel):
     sequence: int
@@ -40,7 +45,7 @@ class RouteIn(BaseModel):
     start_time: time
     end_time: time
     status: str = "planned"
-    stops: List[RouteStopIn] = []
+    stops: list[RouteStopIn] = Field(default_factory=list)
 
 class RouteOut(BaseModel):
     id: int
@@ -51,4 +56,5 @@ class RouteOut(BaseModel):
     start_time: time
     end_time: time
     status: str
-    class Config: from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)

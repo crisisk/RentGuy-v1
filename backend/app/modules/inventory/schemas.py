@@ -1,6 +1,9 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from __future__ import annotations
+
 from datetime import date
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 class CategoryIn(BaseModel):
     name: str
@@ -8,8 +11,8 @@ class CategoryIn(BaseModel):
 class CategoryOut(BaseModel):
     id: int
     name: str
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 class ItemIn(BaseModel):
     name: str
@@ -27,8 +30,8 @@ class ItemOut(BaseModel):
     min_stock: int
     active: bool
     price_per_day: float
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 class BundleIn(BaseModel):
     name: str
@@ -42,9 +45,9 @@ class BundleOut(BaseModel):
     id: int
     name: str
     active: bool
-    items: List[BundleItemIn] = []
-    class Config:
-        from_attributes = True
+    items: list[BundleItemIn] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
 
 class MaintenanceLogIn(BaseModel):
     item_id: int
@@ -57,8 +60,8 @@ class MaintenanceLogOut(BaseModel):
     due_date: Optional[date] = None
     done: bool
     note: Optional[str] = None
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # Availability
 class AvailabilityRequest(BaseModel):
