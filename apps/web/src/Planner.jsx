@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
 import TipBanner from './TipBanner.jsx'
 import ObservabilitySummary from './ObservabilitySummary.jsx'
-import { brand, brandFontStack, withOpacity } from './theme.js'
 
 const personaPresets = {
   all: {
@@ -200,30 +199,30 @@ const statusPriority = {
 }
 
 const badgePalette = {
-  active: brand.colors.primary,
-  upcoming: brand.colors.accent,
-  completed: brand.colors.success,
-  at_risk: brand.colors.danger,
+  active: '#2563eb',
+  upcoming: '#0ea5e9',
+  completed: '#10b981',
+  at_risk: '#dc2626',
 }
 
 const riskPalette = {
-  ok: brand.colors.success,
-  warning: brand.colors.warning,
-  critical: brand.colors.danger,
+  ok: '#16a34a',
+  warning: '#d97706',
+  critical: '#b91c1c',
 }
 
 const cardPalette = {
-  neutral: withOpacity('#ffffff', 0.9),
-  success: withOpacity(brand.colors.success, 0.16),
-  warning: withOpacity(brand.colors.warning, 0.16),
-  danger: withOpacity(brand.colors.danger, 0.16),
+  neutral: '#f3f4f6',
+  success: '#dcfce7',
+  warning: '#fef3c7',
+  danger: '#fee2e2',
 }
 
 const rowPalette = {
-  at_risk: withOpacity(brand.colors.danger, 0.12),
-  active: withOpacity(brand.colors.primary, 0.12),
-  upcoming: withOpacity(brand.colors.accent, 0.12),
-  completed: withOpacity(brand.colors.success, 0.12),
+  at_risk: '#fef2f2',
+  active: '#eff6ff',
+  upcoming: '#ecfeff',
+  completed: '#f9fafb',
 }
 
 const tableColumnCount = 9
@@ -272,80 +271,40 @@ function timelineLabel(event) {
 
 function countdownInfo(event) {
   if (event.status === 'completed') {
-    return {
-      label: 'Afgerond',
-      background: withOpacity(brand.colors.mutedText, 0.16),
-      color: brand.colors.mutedText,
-    }
+    return { label: 'Afgerond', background: '#e2e8f0', color: '#475569' }
   }
   if (event.status === 'active') {
-    return {
-      label: 'Bezig',
-      background: withOpacity(brand.colors.primary, 0.2),
-      color: brand.colors.primaryDark,
-    }
+    return { label: 'Bezig', background: '#dbeafe', color: '#1d4ed8' }
   }
   if (event.status === 'at_risk') {
     if (typeof event.daysUntilStart === 'number') {
       if (event.daysUntilStart <= 0) {
-        return {
-          label: 'Controle vandaag',
-          background: withOpacity(brand.colors.danger, 0.2),
-          color: brand.colors.danger,
-        }
+        return { label: 'Controle vandaag', background: '#fee2e2', color: '#b91c1c' }
       }
       if (event.daysUntilStart <= 3) {
         return {
           label: `Controle binnen ${event.daysUntilStart} d`,
-          background: withOpacity(brand.colors.warning, 0.22),
-          color: brand.colors.warning,
+          background: '#fef3c7',
+          color: '#c2410c',
         }
       }
-      return {
-        label: `Controle in ${event.daysUntilStart} d`,
-        background: withOpacity(brand.colors.warning, 0.18),
-        color: brand.colors.warning,
-      }
+      return { label: `Controle in ${event.daysUntilStart} d`, background: '#fef9c3', color: '#c2410c' }
     }
-    return {
-      label: 'Controleer voorraad',
-      background: withOpacity(brand.colors.danger, 0.2),
-      color: brand.colors.danger,
-    }
+    return { label: 'Controleer voorraad', background: '#fee2e2', color: '#b91c1c' }
   }
   if (typeof event.daysUntilStart !== 'number') {
-    return {
-      label: 'Planning onbekend',
-      background: withOpacity(brand.colors.mutedText, 0.14),
-      color: brand.colors.mutedText,
-    }
+    return { label: 'Planning onbekend', background: '#f3f4f6', color: '#6b7280' }
   }
   if (event.daysUntilStart === 0) {
-    return {
-      label: 'Start vandaag',
-      background: withOpacity(brand.colors.accent, 0.18),
-      color: brand.colors.primaryDark,
-    }
+    return { label: 'Start vandaag', background: '#ccfbf1', color: '#0f766e' }
   }
   if (event.daysUntilStart === 1) {
-    return {
-      label: 'Start morgen',
-      background: withOpacity(brand.colors.accent, 0.18),
-      color: brand.colors.primaryDark,
-    }
+    return { label: 'Start morgen', background: '#ccfbf1', color: '#0f766e' }
   }
   if (event.daysUntilStart <= 7) {
-    return {
-      label: `Binnen ${event.daysUntilStart} d`,
-      background: withOpacity(brand.colors.primary, 0.18),
-      color: brand.colors.primaryDark,
-    }
+    return { label: `Binnen ${event.daysUntilStart} d`, background: '#dbeafe', color: '#1d4ed8' }
   }
-  return {
-    label: `Over ${event.daysUntilStart} d`,
-    background: withOpacity(brand.colors.mutedText, 0.18),
-    color: brand.colors.mutedText,
-  }
+  return { label: `Over ${event.daysUntilStart} d`, background: '#e5e7eb', color: '#475569' }
 }
 
 function CountdownBadge({ event }) {
@@ -381,8 +340,8 @@ function RiskBadge({ risk }) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '6px',
-        backgroundColor: withOpacity(riskPalette[risk] || brand.colors.mutedText, 0.16),
-        color: riskPalette[risk] || brand.colors.mutedText,
+        backgroundColor: `${riskPalette[risk] || '#4b5563'}20`,
+        color: riskPalette[risk] || '#4b5563',
         padding: '2px 8px',
         borderRadius: '999px',
         fontSize: '0.85rem',
@@ -391,14 +350,7 @@ function RiskBadge({ risk }) {
         letterSpacing: '0.02em',
       }}
     >
-      <span
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          backgroundColor: riskPalette[risk] || brand.colors.mutedText,
-        }}
-      />
+      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: riskPalette[risk] || '#4b5563' }} />
       {riskLabels[risk] || 'Onbekend'}
     </span>
   )
@@ -408,8 +360,8 @@ function StatusBadge({ status }) {
   return (
     <span
       style={{
-        backgroundColor: withOpacity(badgePalette[status] || brand.colors.mutedText, 0.16),
-        color: badgePalette[status] || brand.colors.mutedText,
+        backgroundColor: `${badgePalette[status] || '#6b7280'}1a`,
+        color: badgePalette[status] || '#6b7280',
         padding: '4px 10px',
         borderRadius: '999px',
         fontWeight: 600,
@@ -425,27 +377,16 @@ function SummaryMetric({ label, value, tone = 'neutral', helpText }) {
     <div
       style={{
         background: cardPalette[tone] || cardPalette.neutral,
-        padding: '16px 18px',
-        borderRadius: '16px',
+        padding: '12px 16px',
+        borderRadius: '12px',
         display: 'grid',
         gap: '4px',
         minWidth: '150px',
-        border: `1px solid ${withOpacity(
-          tone === 'success'
-            ? brand.colors.success
-            : tone === 'warning'
-            ? brand.colors.warning
-            : tone === 'danger'
-            ? brand.colors.danger
-            : brand.colors.primary,
-          0.28,
-        )}`,
-        boxShadow: '0 16px 28px rgba(13, 59, 102, 0.12)',
       }}
     >
-      <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{label}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: brand.colors.secondary }}>{value}</div>
-      {helpText && <div style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>{helpText}</div>}
+      <div style={{ fontSize: '0.85rem', color: '#4b5563' }}>{label}</div>
+      <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{value}</div>
+      {helpText && <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{helpText}</div>}
     </div>
   )
 }
@@ -488,7 +429,7 @@ function LoadingRows() {
                 style={{
                   height: '12px',
                   borderRadius: '999px',
-                  background: withOpacity(brand.colors.surfaceMuted, 0.7),
+                  background: '#e5e7eb',
                   width: `${40 + cellIdx * 10}%`,
                 }}
               />
@@ -503,37 +444,8 @@ function LoadingRows() {
 const emptyMessageStyles = {
   padding: '32px',
   textAlign: 'center',
-  color: brand.colors.mutedText,
+  color: '#4b5563',
   fontStyle: 'italic',
-}
-
-const filterLabelStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-  fontSize: '0.85rem',
-  color: brand.colors.mutedText,
-}
-
-const filterControlStyle = {
-  padding: '10px 14px',
-  borderRadius: 12,
-  border: `1px solid ${withOpacity(brand.colors.primary, 0.25)}`,
-  background: withOpacity('#ffffff', 0.9),
-  color: brand.colors.secondary,
-  fontSize: '0.95rem',
-  minWidth: 180,
-  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
-}
-
-const tableHeaderStyle = {
-  textAlign: 'left',
-  borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.1)}`,
-  padding: '12px 10px',
-  fontSize: '0.85rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  color: brand.colors.mutedText,
 }
 
 function shiftDate(dateString, delta) {
@@ -753,46 +665,15 @@ export default function Planner({ onLogout }) {
   }
 
   return (
-    <div
-      style={{
-        fontFamily: brandFontStack,
-        padding: '24px',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        color: brand.colors.secondary,
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '24px',
-          gap: 16,
-        }}
-      >
-        <div style={{ display: 'grid', gap: 6 }}>
-          <h2 style={{ margin: 0, fontSize: '2rem', color: brand.colors.secondary }}>Projectplanner</h2>
-          <p style={{ margin: 0, color: brand.colors.mutedText, fontSize: '0.95rem' }}>
+    <div style={{ fontFamily: 'system-ui', padding: '12px', maxWidth: '1120px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Projectplanner</h2>
+          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
             Verbeterde UAT cockpit met persona-presets, voorraadbewaking en inline herplanning.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onLogout}
-          style={{
-            padding: '10px 18px',
-            borderRadius: 999,
-            border: 'none',
-            backgroundImage: brand.colors.gradient,
-            color: '#fff',
-            fontWeight: 600,
-            cursor: 'pointer',
-            boxShadow: '0 12px 28px rgba(13, 59, 102, 0.18)',
-          }}
-        >
-          Uitloggen
-        </button>
+        <button onClick={onLogout}>Uitloggen</button>
       </div>
 
       <TipBanner module="projects" />
@@ -817,14 +698,14 @@ export default function Planner({ onLogout }) {
         />
       </div>
 
-      <div style={{ display: 'grid', gap: '16px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-          <label style={{ ...filterLabelStyle, minWidth: 200 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
             Persona preset
             <select
               value={personaPreset}
               onChange={event => applyPersonaPreset(event.target.value)}
-              style={filterControlStyle}
+              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
             >
               {Object.entries(personaPresets).map(([key, value]) => (
                 <option key={key} value={key}>
@@ -834,12 +715,12 @@ export default function Planner({ onLogout }) {
             </select>
           </label>
 
-          <label style={filterLabelStyle}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
             Statusfilter
             <select
               value={statusFilter}
               onChange={event => setStatusFilter(event.target.value)}
-              style={filterControlStyle}
+              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
             >
               <option value="all">Alle</option>
               <option value="active">Actief</option>
@@ -849,12 +730,12 @@ export default function Planner({ onLogout }) {
             </select>
           </label>
 
-          <label style={filterLabelStyle}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563' }}>
             Voorraadrisico
             <select
               value={riskFilter}
               onChange={event => setRiskFilter(event.target.value)}
-              style={filterControlStyle}
+              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
             >
               <option value="all">Alle</option>
               <option value="ok">Op schema</option>
@@ -863,14 +744,14 @@ export default function Planner({ onLogout }) {
             </select>
           </label>
 
-          <label style={{ ...filterLabelStyle, flex: '1 1 200px' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem', color: '#4b5563', flex: '1 1 200px' }}>
             Zoeken
             <input
               type="search"
               placeholder="Zoek op project, klant of notitie"
               value={searchTerm}
               onChange={event => setSearchTerm(event.target.value)}
-              style={{ ...filterControlStyle, minWidth: 'auto' }}
+              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
             />
           </label>
 
@@ -884,21 +765,12 @@ export default function Planner({ onLogout }) {
               setSortDir('asc')
               setSearchTerm('')
             }}
-            style={{
-              alignSelf: 'flex-end',
-              padding: '10px 16px',
-              borderRadius: 999,
-              border: 'none',
-              background: withOpacity(brand.colors.surfaceMuted, 0.8),
-              color: brand.colors.primaryDark,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            style={{ alignSelf: 'flex-end', padding: '8px 12px' }}
           >
             Reset filters
           </button>
         </div>
-        {personaHint && <div style={{ fontSize: '0.9rem', color: brand.colors.mutedText }}>{personaHint}</div>}
+        {personaHint && <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>{personaHint}</div>}
         <PersonaGuidance personaKey={personaPreset} summary={summary} />
       </div>
 
@@ -909,16 +781,8 @@ export default function Planner({ onLogout }) {
             padding: '10px 16px',
             borderRadius: '8px',
             marginBottom: '16px',
-            backgroundColor:
-              feedback.type === 'success'
-                ? withOpacity(brand.colors.success, 0.2)
-                : withOpacity(brand.colors.danger, 0.2),
-            color: feedback.type === 'success' ? brand.colors.success : brand.colors.danger,
-            border: `1px solid ${
-              feedback.type === 'success'
-                ? withOpacity(brand.colors.success, 0.35)
-                : withOpacity(brand.colors.danger, 0.35)
-            }`,
+            backgroundColor: feedback.type === 'success' ? '#d1fae5' : '#fee2e2',
+            color: feedback.type === 'success' ? '#065f46' : '#991b1b',
           }}
         >
           {feedback.message}
@@ -929,26 +793,26 @@ export default function Planner({ onLogout }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th scope="col" style={tableHeaderStyle}>
+              <th scope="col" style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>
                 Project
               </th>
-              <th scope="col" style={tableHeaderStyle}>
+              <th scope="col" style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>
                 Klant
               </th>
               <th
                 scope="col"
-                style={{ ...tableHeaderStyle, cursor: 'pointer' }}
+                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
                 onClick={() => toggleSort('status')}
                 aria-sort={sortKey === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Status
               </th>
-              <th scope="col" style={tableHeaderStyle}>
+              <th scope="col" style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>
                 Planning
               </th>
               <th
                 scope="col"
-                style={{ ...tableHeaderStyle, cursor: 'pointer' }}
+                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
                 onClick={() => toggleSort('start_offset')}
                 aria-sort={sortKey === 'start_offset' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
@@ -956,7 +820,7 @@ export default function Planner({ onLogout }) {
               </th>
               <th
                 scope="col"
-                style={{ ...tableHeaderStyle, cursor: 'pointer' }}
+                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
                 onClick={() => toggleSort('risk')}
                 aria-sort={sortKey === 'risk' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
@@ -964,7 +828,7 @@ export default function Planner({ onLogout }) {
               </th>
               <th
                 scope="col"
-                style={{ ...tableHeaderStyle, cursor: 'pointer' }}
+                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
                 onClick={() => toggleSort('start')}
                 aria-sort={sortKey === 'start' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
@@ -972,13 +836,13 @@ export default function Planner({ onLogout }) {
               </th>
               <th
                 scope="col"
-                style={{ ...tableHeaderStyle, cursor: 'pointer' }}
+                style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px', cursor: 'pointer' }}
                 onClick={() => toggleSort('end')}
                 aria-sort={sortKey === 'end' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 Einde
               </th>
-              <th scope="col" style={tableHeaderStyle}>
+              <th scope="col" style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '12px 8px' }}>
                 Acties
               </th>
             </tr>
@@ -1000,101 +864,55 @@ export default function Planner({ onLogout }) {
                 return (
                   <React.Fragment key={event.id}>
                     <tr
-                      style={{
-                        backgroundColor: isExpanded
-                          ? withOpacity(brand.colors.surfaceMuted, 0.45)
-                          : rowPalette[event.status] || 'transparent',
-                        transition: 'background-color 0.2s ease',
-                      }}
+                      style={{ backgroundColor: isExpanded ? '#f9fafb' : rowPalette[event.status] || 'transparent' }}
                       onDoubleClick={() => openEditor(event)}
                     >
-                      <td style={{ padding: '12px 12px', fontWeight: 600, color: brand.colors.secondary }}>
-                        {event.name}
-                      </td>
-                      <td style={{ padding: '12px 12px', color: brand.colors.secondary }}>{event.client}</td>
-                      <td style={{ padding: '12px 12px' }}>
+                      <td style={{ padding: '12px 8px', fontWeight: 600 }}>{event.name}</td>
+                      <td style={{ padding: '12px 8px' }}>{event.client}</td>
+                      <td style={{ padding: '12px 8px' }}>
                         <StatusBadge status={event.status} />
                       </td>
-                      <td style={{ padding: '12px 12px', color: brand.colors.mutedText }}>
-                        {timelineLabel(event)}
-                      </td>
-                      <td style={{ padding: '12px 12px' }}>
+                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{timelineLabel(event)}</td>
+                      <td style={{ padding: '12px 8px' }}>
                         <CountdownBadge event={event} />
                       </td>
-                      <td style={{ padding: '12px 12px' }}>
+                      <td style={{ padding: '12px 8px' }}>
                         <RiskBadge risk={event.risk} />
                       </td>
-                      <td style={{ padding: '12px 12px', color: brand.colors.mutedText }}>
-                        {formatDate(event.start)}
-                      </td>
-                      <td style={{ padding: '12px 12px', color: brand.colors.mutedText }}>
-                        {formatDate(event.end)}
-                      </td>
-                      <td style={{ padding: '12px 12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => setExpandedRow(isExpanded ? null : event.id)}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: 999,
-                            border: 'none',
-                            background: withOpacity(brand.colors.primary, 0.16),
-                            color: brand.colors.primaryDark,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
+                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{formatDate(event.start)}</td>
+                      <td style={{ padding: '12px 8px', color: '#4b5563' }}>{formatDate(event.end)}</td>
+                      <td style={{ padding: '12px 8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button type="button" onClick={() => setExpandedRow(isExpanded ? null : event.id)}>
                           {isExpanded ? 'Sluit details' : 'Details'}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => openEditor(event)}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: 999,
-                            border: 'none',
-                            backgroundImage: brand.colors.gradient,
-                            color: '#fff',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
+                        <button type="button" onClick={() => openEditor(event)}>
                           Herplan
                         </button>
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td
-                          colSpan={tableColumnCount}
-                          style={{
-                            padding: '20px 28px',
-                            backgroundColor: withOpacity('#ffffff', 0.9),
-                            borderTop: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
-                          }}
-                        >
-                          <div style={{ display: 'grid', gap: '12px', color: brand.colors.mutedText }}>
-                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        <td colSpan={tableColumnCount} style={{ padding: '16px 24px', backgroundColor: '#f9fafb' }}>
+                          <div style={{ display: 'grid', gap: '12px' }}>
+                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: '#4b5563' }}>
                               <span><strong>Doorlooptijd:</strong> {event.durationDays ? `${event.durationDays} dagen` : 'Onbekend'}</span>
                               <span><strong>Eindigt op:</strong> {formatDate(event.end)}</span>
                             </div>
-                            <div style={{ color: brand.colors.secondary, fontWeight: 600 }}>Projectnotities</div>
-                            <div style={{ color: brand.colors.mutedText, whiteSpace: 'pre-wrap' }}>
+                            <div style={{ color: '#111827', fontWeight: 600 }}>Projectnotities</div>
+                            <div style={{ color: '#4b5563', whiteSpace: 'pre-wrap' }}>
                               {event.notes ? event.notes : 'Geen notities toegevoegd.'}
                             </div>
                             {event.alerts.length > 0 ? (
                               <div>
-                                <div style={{ color: brand.colors.secondary, fontWeight: 600, marginBottom: '6px' }}>
-                                  Voorraaddetails
-                                </div>
-                                <ul style={{ margin: 0, paddingLeft: '20px', color: brand.colors.danger }}>
+                                <div style={{ color: '#111827', fontWeight: 600, marginBottom: '6px' }}>Voorraaddetails</div>
+                                <ul style={{ margin: 0, paddingLeft: '20px', color: '#b91c1c' }}>
                                   {event.alerts.map((alert, index) => (
                                     <li key={index}>{alert}</li>
                                   ))}
                                 </ul>
                               </div>
                             ) : (
-                              <div style={{ color: brand.colors.success }}>Geen voorraadissues voor dit project.</div>
+                              <div style={{ color: '#059669' }}>Geen voorraadissues voor dit project.</div>
                             )}
                           </div>
                         </td>
@@ -1114,192 +932,96 @@ export default function Planner({ onLogout }) {
           style={{
             marginTop: '32px',
             display: 'grid',
-            gap: '16px',
-            maxWidth: '560px',
-            padding: '24px 28px',
-            border: `1px solid ${withOpacity(brand.colors.primary, 0.24)}`,
-            borderRadius: '20px',
-            backgroundColor: withOpacity('#ffffff', 0.96),
-            boxShadow: '0 24px 48px rgba(13, 59, 102, 0.12)',
+            gap: '12px',
+            maxWidth: '520px',
+            padding: '20px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            backgroundColor: '#ffffff',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, color: brand.colors.secondary }}>Project herplannen</h3>
-            <button
-              type="button"
-              onClick={closeEditor}
-              style={{
-                border: 'none',
-                background: withOpacity(brand.colors.surfaceMuted, 0.8),
-                color: brand.colors.primaryDark,
-                padding: '6px 12px',
-                borderRadius: 999,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
+            <h3 style={{ margin: 0 }}>Project herplannen</h3>
+            <button type="button" onClick={closeEditor}>
               Sluiten
             </button>
           </div>
-          <p style={{ margin: 0, color: brand.colors.mutedText, fontSize: '0.95rem' }}>
+          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
             Pas data en notities aan. Quick actions helpen om datumreeksen met één klik te verschuiven.
           </p>
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', color: brand.colors.secondary }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             Projectnaam
             <input
               type="text"
               value={formState.name}
               onChange={event => setFormState(current => ({ ...current, name: event.target.value }))}
               required
-              style={filterControlStyle}
             />
           </label>
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', color: brand.colors.secondary }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             Klant
             <input
               type="text"
               value={formState.client}
               onChange={event => setFormState(current => ({ ...current, client: event.target.value }))}
               required
-              style={filterControlStyle}
             />
           </label>
 
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 200px', color: brand.colors.secondary }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 200px' }}>
               Startdatum
               <input
                 type="date"
                 value={formState.start}
                 onChange={event => setFormState(current => ({ ...current, start: event.target.value }))}
                 required
-                style={filterControlStyle}
               />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: '1 1 200px', color: brand.colors.secondary }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 200px' }}>
               Einddatum
               <input
                 type="date"
                 value={formState.end}
                 onChange={event => setFormState(current => ({ ...current, end: event.target.value }))}
                 required
-                style={filterControlStyle}
               />
             </label>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-            <button
-              type="button"
-              onClick={() => shiftRange(-1)}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 999,
-                border: 'none',
-                background: withOpacity(brand.colors.primary, 0.16),
-                color: brand.colors.primaryDark,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Verschuif 1 dag terug
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <button type="button" onClick={() => shiftRange(-1)}>
+              Vervroeg beide data 1 dag
             </button>
-            <button
-              type="button"
-              onClick={() => shiftRange(1)}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 999,
-                border: 'none',
-                background: withOpacity(brand.colors.primary, 0.16),
-                color: brand.colors.primaryDark,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Verschuif 1 dag vooruit
+            <button type="button" onClick={() => shiftRange(1)}>
+              Verleng beide data 1 dag
             </button>
-            <button
-              type="button"
-              onClick={() => shiftRange(7)}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 999,
-                border: 'none',
-                background: withOpacity(brand.colors.accent, 0.2),
-                color: brand.colors.primaryDark,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Verschuif 1 week vooruit
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setFormState({
-                  name: editing.name,
-                  client: editing.client,
-                  start: editing.start,
-                  end: editing.end,
-                  notes: editing.notes,
-                })
-              }
-              style={{
-                padding: '8px 14px',
-                borderRadius: 999,
-                border: 'none',
-                background: withOpacity(brand.colors.surfaceMuted, 0.8),
-                color: brand.colors.primaryDark,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Herstel originele waarden
+            <button type="button" onClick={() => setFormState({
+              name: editing.name,
+              client: editing.client,
+              start: editing.start,
+              end: editing.end,
+              notes: editing.notes,
+            })}>
+              Herstel oorspronkelijke waarden
             </button>
           </div>
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', color: brand.colors.secondary }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             Notities voor crew & finance
             <textarea
               value={formState.notes}
               onChange={event => setFormState(current => ({ ...current, notes: event.target.value }))}
-              rows={4}
-              style={{ ...filterControlStyle, resize: 'vertical' }}
+              rows={3}
             />
           </label>
 
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={closeEditor}
-              style={{
-                padding: '10px 16px',
-                borderRadius: 999,
-                border: 'none',
-                background: withOpacity(brand.colors.surfaceMuted, 0.8),
-                color: brand.colors.primaryDark,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button type="submit">Opslaan</button>
+            <button type="button" onClick={closeEditor}>
               Annuleren
-            </button>
-            <button
-              type="submit"
-              style={{
-                padding: '10px 20px',
-                borderRadius: 999,
-                border: 'none',
-                backgroundImage: brand.colors.gradient,
-                color: '#fff',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Wijzigingen opslaan
             </button>
           </div>
         </form>

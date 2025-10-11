@@ -1,60 +1,27 @@
-export const sevensaBrand = {
-  name: 'Sevensa',
+export const brand = {
+  name: 'Sevensa Intelligence Platform',
+  shortName: 'Sevensa',
   url: 'https://sevensa.ai',
   tagline: 'AI-powered solutions for businesses.',
-  primaryColor: '#00A896',
-  darkColor: '#0F172A',
-}
-
-export const mrDjBrand = {
-  name: 'Mister DJ',
-  url: 'https://www.mr-dj.nl',
-  tagline: '100% Dansgarantie',
   colors: {
-    primary: '#6B46C1',
-    secondary: '#1E1B4B',
-    accent: '#F5B400',
-    gradient: 'linear-gradient(135deg, #1E1B4B 0%, #6B46C1 45%, #2563EB 100%)',
-  },
-}
-
-export const rentGuyBrand = {
-  name: 'Sevensa RentGuy Enterprise',
-  shortName: 'RentGuy',
-  tagline: 'Enterprise equipment rental co-piloted by Sevensa.',
-  url: 'https://sevensa.ai/rentguy',
-}
-
-export const brand = {
-  ...rentGuyBrand,
-  provider: sevensaBrand,
-  tenant: mrDjBrand,
-  partnerTagline: `${mrDjBrand.tagline} · Powered by Sevensa`,
-  colors: {
-    primary: mrDjBrand.colors.primary,
-    primaryDark: '#4C1D95',
-    secondary: '#0B1026',
-    accent: mrDjBrand.colors.accent,
-    surface: '#F5F7FF',
-    surfaceMuted: '#E3E8FF',
-    text: '#0F172A',
-    mutedText: '#3B4C7A',
-    gradient: mrDjBrand.colors.gradient,
-    appBackground:
-      'radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.18) 0%, rgba(15, 23, 42, 0.06) 45%), linear-gradient(135deg, #0F172A 0%, #1E1B4B 60%, #312E81 100%)',
-    outline: 'rgba(79, 70, 229, 0.25)',
-    shadow: '0 32px 72px rgba(15, 23, 42, 0.32)',
-    success: '#10B981',
-    danger: '#EF4444',
+    primary: '#00A896',
+    primaryDark: '#04706C',
+    secondary: '#2D3A45',
+    accent: '#4FD1C5',
+    surface: '#F5FAF9',
+    surfaceMuted: '#E0F2EF',
+    text: '#1F2A32',
+    mutedText: '#4A5A65',
+    gradient: 'linear-gradient(135deg, #0BC5EA 0%, #00A896 45%, #0D3B66 100%)',
+    outline: 'rgba(4, 112, 108, 0.18)',
+    shadow: '0 28px 60px rgba(13, 59, 102, 0.22)',
+    success: '#4CAF50',
+    danger: '#F44336',
     warning: '#F59E0B',
-    overlay: 'rgba(15, 23, 42, 0.65)',
-    softHighlight: 'rgba(245, 180, 0, 0.12)',
   },
 }
 
-export const brandFontStack = `'Poppins', 'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
-
-export const headingFontStack = `'Montserrat', 'Poppins', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
+export const brandFontStack = `'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
 
 export function withOpacity(hex, alpha = 1) {
   if (!hex || hex[0] !== '#' || (hex.length !== 4 && hex.length !== 7)) {

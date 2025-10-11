@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { getTips } from './onbApi.js'
-import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
+import { brand, brandFontStack, withOpacity } from './branding.js'
 
 export default function TipBanner({ module }){
   const [tip, setTip] = useState(null)
@@ -14,61 +14,52 @@ export default function TipBanner({ module }){
   return (
     <div
       style={{
-        padding: '18px 22px',
-        background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(107, 70, 193, 0.16) 100%)',
-        border: `1px solid ${withOpacity(brand.colors.primary, 0.32)}`,
-        borderRadius: 20,
+        padding: '14px 18px',
+        background: withOpacity(brand.colors.surfaceMuted, 0.8),
+        border: `1px solid ${brand.colors.outline}`,
+        borderRadius: 16,
         margin: '12px 0',
         fontFamily: brandFontStack,
         display: 'flex',
         alignItems: 'center',
-        gap: 18,
-        boxShadow: '0 16px 34px rgba(49, 46, 129, 0.14)',
+        gap: 12,
       }}
     >
-      <div
+      <span
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          minWidth: 140,
+          width: 34,
+          height: 34,
+          borderRadius: '12px',
+          background: brand.colors.primary,
+          color: '#fff',
+          display: 'grid',
+          placeItems: 'center',
+          fontWeight: 700,
         }}
+        aria-hidden
       >
-        <span
-          style={{
-            textTransform: 'uppercase',
-            letterSpacing: '0.16em',
-            fontSize: '0.7rem',
-            color: brand.colors.secondary,
-          }}
-        >
-          {brand.tenant.name}
-        </span>
-        <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>
-          UAT tip
-        </strong>
-      </div>
-      <div style={{ display: 'grid', gap: 6 }}>
-        <span style={{ color: brand.colors.secondary, fontSize: '0.95rem' }}>{tip.message}</span>
+        ℹ️
+      </span>
+      <div style={{ display: 'grid', gap: 4 }}>
+        <strong style={{ color: brand.colors.secondary, fontSize: '0.9rem', letterSpacing: '0.04em' }}>Tip</strong>
+        <span style={{ color: brand.colors.mutedText }}>{tip.message}</span>
         {tip.cta && (
           <button
             style={{
-              marginTop: 2,
+              marginTop: 4,
               alignSelf: 'flex-start',
-              padding: '6px 14px',
+              padding: '6px 12px',
               borderRadius: 999,
               border: 'none',
               backgroundImage: brand.colors.gradient,
               color: '#fff',
               fontWeight: 600,
               cursor: 'pointer',
-              boxShadow: '0 12px 22px rgba(79, 70, 229, 0.25)',
             }}
           >
             {tip.cta}
           </button>
         )}
-        <span style={{ color: brand.colors.mutedText, fontSize: '0.8rem' }}>{brand.partnerTagline}</span>
       </div>
     </div>
   )
