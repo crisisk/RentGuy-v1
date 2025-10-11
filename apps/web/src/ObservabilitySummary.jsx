@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
+import { brand, brandFontStack, headingFontStack, withOpacity } from './theme.js'
 
 function formatAvailability(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) return '—'
@@ -61,14 +62,17 @@ export default function ObservabilitySummary({ refreshInterval }) {
       <section
         aria-live="polite"
         style={{
-          border: '1px solid #e5e7eb',
-          borderRadius: '12px',
-          padding: '16px',
-          backgroundColor: '#ffffff',
+          border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+          borderRadius: 18,
+          padding: '18px 20px',
+          background: withOpacity('#ffffff', 0.96),
+          fontFamily: brandFontStack,
         }}
       >
-        <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1rem' }}>Service status</h3>
-        <p style={{ margin: 0, color: '#6b7280' }}>Service status laden…</p>
+        <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1rem', color: brand.colors.secondary }}>
+          Service status
+        </h3>
+        <p style={{ margin: 0, color: brand.colors.mutedText }}>Service status laden…</p>
       </section>
     )
   }
@@ -78,14 +82,17 @@ export default function ObservabilitySummary({ refreshInterval }) {
       <section
         aria-live="polite"
         style={{
-          border: '1px solid #fecaca',
-          borderRadius: '12px',
-          padding: '16px',
-          backgroundColor: '#fef2f2',
+          border: `1px solid ${withOpacity(brand.colors.danger, 0.32)}`,
+          borderRadius: 18,
+          padding: '18px 20px',
+          backgroundColor: withOpacity(brand.colors.danger, 0.14),
+          fontFamily: brandFontStack,
         }}
       >
-        <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1rem' }}>Service status</h3>
-        <p style={{ margin: 0, color: '#991b1b' }}>{error}</p>
+        <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1rem', color: brand.colors.secondary }}>
+          Service status
+        </h3>
+        <p style={{ margin: 0, color: '#B91C1C' }}>{error}</p>
       </section>
     )
   }
@@ -100,17 +107,21 @@ export default function ObservabilitySummary({ refreshInterval }) {
     <section
       aria-live="polite"
       style={{
-        border: '1px solid #d1d5db',
-        borderRadius: '12px',
-        padding: '16px',
-        backgroundColor: '#f9fafb',
+        border: `1px solid ${brand.colors.outline}`,
+        borderRadius: 22,
+        padding: '20px 22px',
+        background: withOpacity('#ffffff', 0.96),
         display: 'grid',
-        gap: '12px',
+        gap: '16px',
+        boxShadow: '0 22px 52px rgba(15, 23, 42, 0.16)',
+        fontFamily: brandFontStack,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h3 style={{ margin: 0, fontSize: '1rem' }}>Service status</h3>
-        <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+        <h3 style={{ margin: 0, fontSize: '1.05rem', color: brand.colors.secondary, fontFamily: headingFontStack }}>
+          Service status
+        </h3>
+        <span style={{ fontSize: '0.78rem', color: brand.colors.mutedText }}>
           Laatste update: {status?.generated_at ? new Date(status.generated_at).toLocaleTimeString('nl-NL') : '—'}
         </span>
       </div>
@@ -121,8 +132,10 @@ export default function ObservabilitySummary({ refreshInterval }) {
       </div>
       {recent.length > 0 && (
         <div>
-          <div style={{ fontSize: '0.85rem', color: '#4b5563', marginBottom: '6px' }}>Laatste requests</div>
-          <ul style={{ margin: 0, paddingLeft: '18px', color: '#4b5563', fontSize: '0.85rem' }}>
+          <div style={{ fontSize: '0.9rem', color: brand.colors.secondary, marginBottom: '6px', fontWeight: 600 }}>
+            Laatste requests
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '18px', color: brand.colors.mutedText, fontSize: '0.85rem' }}>
             {recent.map((entry, index) => (
               <li key={`${entry.method}-${entry.path}-${index}`}>
                 <span style={{ fontWeight: 600 }}>{entry.method}</span> {entry.path} · {entry.status_code} ·{' '}
@@ -133,7 +146,7 @@ export default function ObservabilitySummary({ refreshInterval }) {
         </div>
       )}
       {error && status && (
-        <div style={{ fontSize: '0.8rem', color: '#b91c1c' }}>{error}</div>
+        <div style={{ fontSize: '0.82rem', color: '#B91C1C' }}>{error}</div>
       )}
     </section>
   )
@@ -143,18 +156,19 @@ function MetricTile({ label, value, helper }) {
   return (
     <div
       style={{
-        borderRadius: '10px',
-        background: '#ffffff',
-        border: '1px solid #e5e7eb',
-        padding: '12px 16px',
-        minWidth: '150px',
+        borderRadius: 18,
+        background: withOpacity(brand.colors.surface, 0.92),
+        border: `1px solid ${withOpacity(brand.colors.primary, 0.16)}`,
+        padding: '14px 18px',
+        minWidth: 180,
         display: 'grid',
-        gap: '4px',
+        gap: '6px',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
       }}
     >
-      <span style={{ fontSize: '0.85rem', color: '#4b5563' }}>{label}</span>
-      <span style={{ fontSize: '1.3rem', fontWeight: 700 }}>{value}</span>
-      {helper && <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{helper}</span>}
+      <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{label}</span>
+      <span style={{ fontSize: '1.35rem', fontWeight: 700, color: brand.colors.secondary }}>{value}</span>
+      {helper && <span style={{ fontSize: '0.78rem', color: brand.colors.mutedText }}>{helper}</span>}
     </div>
   )
 }
