@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
-import { brand, brandFontStack, withOpacity } from './branding.js'
+import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
 
 const personaPresets = {
   all: {
@@ -134,10 +134,10 @@ const riskPalette = {
 }
 
 const cardPalette = {
-  neutral: withOpacity('#ffffff', 0.92),
-  success: withOpacity(brand.colors.success, 0.15),
-  warning: withOpacity(brand.colors.warning, 0.16),
-  danger: withOpacity(brand.colors.danger, 0.16),
+  neutral: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(227, 232, 255, 0.82) 100%)',
+  success: 'linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(255,255,255,0.9) 100%)',
+  warning: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(255,255,255,0.9) 100%)',
+  danger: 'linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(255,255,255,0.9) 100%)',
 }
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
@@ -267,8 +267,8 @@ function SummaryMetric({ label, value, tone = 'neutral', helpText }) {
         display: 'grid',
         gap: '6px',
         minWidth: '160px',
-        border: `1px solid ${withOpacity(accent, 0.35)}`,
-        boxShadow: '0 16px 28px rgba(13, 59, 102, 0.12)',
+        border: `1px solid ${withOpacity(accent, 0.28)}`,
+        boxShadow: '0 18px 40px rgba(49, 46, 129, 0.18)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -773,7 +773,7 @@ export default function Planner({ onLogout }) {
   return (
     <div
       style={{
-        background: brand.colors.surface,
+        background: brand.colors.appBackground,
         minHeight: '100vh',
         fontFamily: brandFontStack,
         padding: '32px 20px',
@@ -785,20 +785,36 @@ export default function Planner({ onLogout }) {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: '#fff',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(227, 232, 255, 0.82) 100%)',
             borderRadius: 28,
             padding: '28px 32px',
-            boxShadow: '0 24px 60px rgba(13, 59, 102, 0.16)',
-            border: `1px solid ${brand.colors.outline}`,
+            boxShadow: brand.colors.shadow,
+            border: `1px solid ${withOpacity(brand.colors.primary, 0.28)}`,
           }}
         >
           <div style={{ display: 'grid', gap: 8 }}>
-            <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.22em', color: brand.colors.mutedText }}>
-              Sevensa Operations
+            <span
+              style={{
+                textTransform: 'uppercase',
+                fontSize: '0.75rem',
+                letterSpacing: '0.22em',
+                color: brand.colors.mutedText,
+              }}
+            >
+              {brand.shortName} · {brand.tenant.name}
             </span>
-            <h2 style={{ margin: 0, fontSize: '2rem', color: brand.colors.secondary }}>Projectplanner</h2>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: '2rem',
+                color: brand.colors.secondary,
+                fontFamily: headingFontStack,
+              }}
+            >
+              Mister DJ projectplanner
+            </h2>
             <p style={{ margin: 0, color: brand.colors.mutedText, maxWidth: 520 }}>
-              Persona presets, voorraadbewaking en inline herplanning in één AI-gestuurde cockpit.
+              Persona-presets, voorraadbewaking en corporate audittrail. {brand.partnerTagline} maakt elke flow herkenbaar voor Bart.
             </p>
           </div>
           <button
@@ -811,7 +827,7 @@ export default function Planner({ onLogout }) {
               color: '#fff',
               fontWeight: 600,
               cursor: 'pointer',
-              boxShadow: '0 18px 34px rgba(11, 197, 234, 0.24)',
+              boxShadow: '0 18px 40px rgba(79, 70, 229, 0.28)',
             }}
           >
             Uitloggen
@@ -838,11 +854,11 @@ export default function Planner({ onLogout }) {
 
         <div
           style={{
-            background: '#fff',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(227, 232, 255, 0.82) 100%)',
             borderRadius: 24,
             padding: '24px 28px',
-            border: `1px solid ${brand.colors.outline}`,
-            boxShadow: '0 18px 44px rgba(13, 59, 102, 0.12)',
+            border: `1px solid ${withOpacity(brand.colors.primary, 0.24)}`,
+            boxShadow: brand.colors.shadow,
             display: 'grid',
             gap: 18,
           }}
@@ -965,10 +981,10 @@ export default function Planner({ onLogout }) {
         <div
           style={{
             overflowX: 'auto',
-            background: '#fff',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.8) 100%)',
             borderRadius: 28,
-            border: `1px solid ${brand.colors.outline}`,
-            boxShadow: '0 20px 48px rgba(13, 59, 102, 0.16)',
+            border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
+            boxShadow: brand.colors.shadow,
             padding: '12px',
           }}
         >
@@ -1020,7 +1036,9 @@ export default function Planner({ onLogout }) {
                     <React.Fragment key={event.id}>
                       <tr
                         style={{
-                          backgroundColor: isExpanded ? withOpacity(brand.colors.surfaceMuted, 0.45) : 'transparent',
+                          backgroundColor: isExpanded
+                            ? withOpacity(brand.colors.primary, 0.12)
+                            : 'transparent',
                           transition: 'background-color 0.2s ease',
                         }}
                         onDoubleClick={() => openEditor(event)}
@@ -1094,10 +1112,10 @@ export default function Planner({ onLogout }) {
               gap: 16,
               maxWidth: 560,
               padding: '28px 32px',
-              border: `1px solid ${brand.colors.outline}`,
+              border: `1px solid ${withOpacity(brand.colors.primary, 0.24)}`,
               borderRadius: 24,
-              background: '#fff',
-              boxShadow: '0 18px 44px rgba(13, 59, 102, 0.14)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
+              boxShadow: brand.colors.shadow,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>

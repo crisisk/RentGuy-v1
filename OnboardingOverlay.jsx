@@ -1,48 +1,48 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { getSteps, getProgress, completeStep, getTips } from './onbApi.js'
 import onboardingTips from './onboarding_tips.json'
-import { brand, brandFontStack, withOpacity } from './branding.js'
+import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
 
 const fallbackSteps = [
   {
-    code: 'welcome',
-    title: 'Welkom bij Sevensa',
-    description: 'Doorloop de checklist om alle AI-modules te activeren en dashboards te vullen.',
+    code: 'kickoff',
+    title: 'Kick-off met Mister DJ',
+    description: 'Controleer tenantgegevens, hoofdcontacten en eventkalender voor het komende seizoen.',
   },
   {
-    code: 'project',
-    title: 'Start je eerste Sevensa workspace',
-    description: 'Maak een project aan, definieer doelen en koppel klant- en datastructuren.',
+    code: 'branding',
+    title: 'Branding & tone-of-voice',
+    description: 'Upload het paars-blauwe gradient, logo’s en stel de 100% Dansgarantie tagline in.',
+  },
+  {
+    code: 'packages',
+    title: 'Pakketstructuur valideren',
+    description: 'Bevestig Silver, Gold, Diamond en Platinum shows inclusief add-ons en kortingen.',
+  },
+  {
+    code: 'inventory',
+    title: 'Gear & voorraad importeren',
+    description: 'Importeer Pioneer decks, moving heads en microfoons als MR-DJ kits voor scanning.',
   },
   {
     code: 'crew',
-    title: 'Nodig collega’s uit',
-    description: 'Activeer samenwerking door operations, finance en data teams toegang te geven.',
-  },
-  {
-    code: 'booking',
-    title: 'Configureer resourceplanning',
-    description: 'Koppel teams, skills en beschikbaarheid aan het project voor realtime inzicht.',
-  },
-  {
-    code: 'scan',
-    title: 'Verbind databronnen',
-    description: 'Activeer integraties met ERP/CRM zodat AI-modellen direct gevoed worden.',
+    title: 'Crew en draaiboeken koppelen',
+    description: 'Nodig Bart’s team uit en activeer automatische briefings per shift.',
   },
   {
     code: 'transport',
-    title: 'Stel automatiseringen in',
-    description: 'Configureer workflows voor alerts, approvals en operationele escalaties.',
+    title: 'Logistiek en routes plannen',
+    description: 'Plan ritten, chauffeurs en bufferuren voor op- en afbouw inclusief QR-check-ins.',
   },
   {
-    code: 'invoice',
-    title: 'Activeer finance insights',
-    description: 'Synchroniseer facturatie en forecasting zodat ROI-rapportages live gaan.',
+    code: 'billing',
+    title: 'Facturatie & Mollie koppelen',
+    description: 'Link Invoice Ninja, voorschotten en Mollie betalingen aan RentGuy milestones.',
   },
   {
-    code: 'templates',
-    title: 'Personaliseer communicatie',
-    description: 'Pas rapportages en stakeholder updates aan in jullie Sevensa tone of voice.',
+    code: 'automation',
+    title: 'Automatiseringen activeren',
+    description: 'Trigger WhatsApp-updates, voorraadalerts en dashboards na elke mijlpaal.',
   },
 ]
 
@@ -52,14 +52,14 @@ const fallbackTips = onboardingTips.map((tip, index) => ({
 }))
 
 const stepMeta = {
-  welcome: { module: 'projects', icon: '🚀' },
-  project: { module: 'projects', icon: '🎛️' },
+  kickoff: { module: 'projects', icon: '🚀' },
+  branding: { module: 'templates', icon: '🎨' },
+  packages: { module: 'inventory', icon: '🎛️' },
+  inventory: { module: 'warehouse', icon: '📦' },
   crew: { module: 'crew', icon: '🎤' },
-  booking: { module: 'crew', icon: '📅' },
-  scan: { module: 'warehouse', icon: '📲' },
   transport: { module: 'transport', icon: '🚚' },
-  invoice: { module: 'billing', icon: '💸' },
-  templates: { module: 'templates', icon: '🧾' },
+  billing: { module: 'billing', icon: '💸' },
+  automation: { module: 'automation', icon: '⚙️' },
 }
 
 const moduleLabels = {
@@ -85,14 +85,46 @@ const moduleIcons = {
 }
 
 const stepActions = {
-  welcome: { href: '/onboarding/company', label: 'Bedrijfsprofiel openen', description: 'Controleer bedrijfsgegevens en contactinformatie vóórdat je teams uitnodigt.' },
-  project: { href: '/jobs/new', label: 'Start job wizard', description: 'Begin met het aanmaken van het eerste evenement inclusief datum en locatie.' },
-  crew: { href: '/crew', label: 'Crewplanning bekijken', description: 'Controleer beschikbaarheid en wijs direct de juiste rollen toe.' },
-  booking: { href: '/inventory/import', label: 'Importeer inventory CSV', description: 'Upload de voorraadlijst zodat conflicten automatisch bewaakt worden.' },
-  scan: { href: '/warehouse/scanner', label: 'Open scanmodule', description: 'Activeer de magazijnscanner om picklijsten en retouren te registreren.' },
-  transport: { href: '/transport/routes', label: 'Routeplanning instellen', description: 'Plan logistiek, buffertijden en chauffeurs vanuit transportdashboard.' },
-  invoice: { href: '/billing/invoices/new', label: 'Genereer factuur', description: 'Controleer voorschotten en zet de eerste factuur klaar voor verzending.' },
-  templates: { href: '/communications/templates', label: 'Communicatie templates aanpassen', description: 'Personaliseer klantmails en statusupdates voor jullie tone of voice.' },
+  kickoff: {
+    href: '/onboarding/company',
+    label: 'Tenantprofiel openen',
+    description: 'Verifieer contactpersonen, SLA’s en branding-afspraken met Mister DJ.',
+  },
+  branding: {
+    href: '/design/theme',
+    label: 'Branding instellingen',
+    description: 'Upload logo’s, stel het paars-blauwe gradient in en check fonts en tagline.',
+  },
+  packages: {
+    href: '/catalog/packages',
+    label: 'Pakketten beheren',
+    description: 'Zorg dat Silver/Gold/Diamond/Platinum showprofielen correct staan.',
+  },
+  inventory: {
+    href: '/inventory/import',
+    label: 'Importeer gear CSV',
+    description: 'Gebruik de voorbereide sjabloon zodat kits en voorraad direct beschikbaar zijn.',
+  },
+  crew: {
+    href: '/crew',
+    label: 'Crew uitnodigen',
+    description: 'Koppel rollen, shifts en briefingtemplates voor technici en chauffeurs.',
+  },
+  transport: {
+    href: '/transport/routes',
+    label: 'Routes plannen',
+    description: 'Leg ritten vast met buffer en verstuur QR-check-ins naar chauffeurs.',
+  },
+  billing: {
+    href: '/billing/invoices/new',
+    label: 'Facturatie activeren',
+    description: 'Activeer Invoice Ninja + Mollie en genereer een voorschotfactuur.',
+  },
+  automation: {
+    href: '/automation/studio',
+    label: 'Automatiseringen openen',
+    description: 'Automatiseer WhatsApp-updates en voorraadalerts na elke showfase.',
+  },
 }
 
 const COMPLETION_RATE_LIMIT_MS = 1500
@@ -195,7 +227,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
 
         if (usedFallbackSteps || usedFallbackTips || usedFallbackProgress) {
           setErrorMessage(
-            'We tonen de Sevensa standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
+            'We tonen de Mister DJ standaard onboarding (cached) omdat live data tijdelijk niet beschikbaar is.'
           )
           emitOnboardingEvent('data_fallback', {
             email,
@@ -212,7 +244,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
           setTips(normalizeTips(fallbackTips))
           setDone(new Set())
           setErrorMessage(
-            'We tonen de Sevensa standaard onboarding omdat live data tijdelijk niet beschikbaar is.'
+            'We tonen de Mister DJ standaard onboarding (cached) omdat live data tijdelijk niet beschikbaar is.'
           )
           emitOnboardingEvent('data_error', { email, message: error?.message })
         }
@@ -275,7 +307,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Kon voortgang niet verversen', error)
-      setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer Sevensa support.')
+      setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.')
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
@@ -305,7 +337,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Stap kon niet worden bijgewerkt', error)
-      setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer Sevensa support.')
+      setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.')
       emitOnboardingEvent('step_error', { email, step: step.code, message: error?.message })
     } finally {
       controllersRef.current.delete(controller)
@@ -364,10 +396,10 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
         style={{
           maxWidth: 960,
           margin: '0 auto',
-          background: brand.colors.surface,
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
           borderRadius: 32,
           padding: '36px 40px',
-          boxShadow: '0 34px 80px rgba(13, 59, 102, 0.32)',
+          boxShadow: brand.colors.shadow,
           display: 'flex',
           flexDirection: 'column',
           gap: 28,
@@ -432,16 +464,26 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
               </button>
             )}
           </div>
-          <span style={{ textTransform: 'uppercase', letterSpacing: '0.24em', fontSize: '0.8rem', opacity: 0.85 }}>
-            Sevensa Launchpad
+          <span
+            style={{
+              textTransform: 'uppercase',
+              letterSpacing: '0.24em',
+              fontSize: '0.8rem',
+              opacity: 0.85,
+            }}
+          >
+            {brand.shortName} × {brand.tenant.name} launchpad
           </span>
-          <h2 id={headingId} style={{ margin: 0, fontSize: '2.2rem' }}>
+          <h2
+            id={headingId}
+            style={{ margin: 0, fontSize: '2.2rem', fontFamily: headingFontStack }}
+          >
             Onboarding cockpit
           </h2>
           <p id={descriptionId} style={{ margin: 0, maxWidth: 540, lineHeight: 1.5 }}>
             {allComplete
-              ? 'Fantastisch! Alle Sevensa modules draaien. Gebruik de tips hieronder om jullie AI-workflows verder te optimaliseren.'
-              : 'Volg de stappen om elke Sevensa module te activeren. We geven contextuele tips zodat elk teamlid precies weet wat de volgende stap is.'}
+              ? 'Fantastisch! Alle Mister DJ modules zijn geactiveerd binnen Sevensa RentGuy. Gebruik de tips hieronder om de UAT-scenario’s te verfijnen.'
+              : 'Volg de stappen om branding, pakketten, crew en finance voor Mister DJ te activeren. We koppelen elke stap aan Sevensa governance en realtime tips.'}
           </p>
           <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem', flexWrap: 'wrap', gap: 8}}>
@@ -454,12 +496,12 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
                   style={{
                     border: 'none',
                     borderRadius: 999,
-                    background: withOpacity('#ffffff', refreshingProgress || loading ? 0.22 : 0.35),
-                    color: '#0B2B40',
+                    background: withOpacity('#FFFFFF', refreshingProgress || loading ? 0.18 : 0.32),
+                    color: brand.colors.secondary,
                     padding: '6px 18px',
                     fontWeight: 600,
                     cursor: refreshingProgress || loading ? 'wait' : 'pointer',
-                    boxShadow: refreshingProgress || loading ? 'none' : '0 16px 30px rgba(12, 198, 234, 0.22)',
+                    boxShadow: refreshingProgress || loading ? 'none' : '0 16px 32px rgba(79, 70, 229, 0.25)',
                   }}
                 >
                   {refreshingProgress ? 'Verversen…' : 'Voortgang verversen'}
@@ -472,7 +514,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
                   width: `${progress}%`,
                   height: '100%',
                   borderRadius: 999,
-                  background: 'linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.75) 100%)',
+                  background: 'linear-gradient(90deg, rgba(245, 180, 0, 0.65) 0%, rgba(255, 255, 255, 0.85) 100%)',
                   transition: 'width 0.3s ease',
                 }}
               ></div>
@@ -542,7 +584,9 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
             </ol>
           </section>
           <aside style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h3 style={{ margin: 0, fontSize: '1.2rem', color: brand.colors.secondary }}>Sevensa tips</h3>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', color: brand.colors.secondary }}>
+              Tenant tips & UAT call-outs
+            </h3>
             <div style={{display: 'grid', gap: 14}}>
               {tips.map(tip => (
                 <TipCard key={tip.id} tip={tip} />
@@ -558,24 +602,26 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
 function StepCard({ step, meta, completed, onMark, busy, isNext, action, onAction, actionBusy }) {
   const highlight = isNext && !completed
   const borderColor = highlight
-    ? withOpacity(brand.colors.primary, 0.48)
-    : withOpacity(brand.colors.secondary, 0.12)
-  const backgroundColor = completed
-    ? withOpacity(brand.colors.accent, 0.22)
+    ? withOpacity(brand.colors.primary, 0.5)
+    : completed
+    ? withOpacity(brand.colors.accent, 0.35)
+    : withOpacity(brand.colors.secondary, 0.14)
+  const background = completed
+    ? 'linear-gradient(135deg, rgba(107, 70, 193, 0.14) 0%, rgba(16, 185, 129, 0.12) 100%)'
     : highlight
-    ? withOpacity('#ffffff', 0.96)
-    : withOpacity(brand.colors.surfaceMuted, 0.75)
+    ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(107, 70, 193, 0.18) 100%)'
+    : withOpacity('#FFFFFF', 0.86)
   return (
     <li
       style={{
         padding: '18px 20px',
         borderRadius: 18,
         border: `1px solid ${borderColor}`,
-        background: backgroundColor,
+        background,
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
-        boxShadow: highlight ? '0 20px 38px rgba(13, 59, 102, 0.22)' : 'none',
+        boxShadow: highlight ? '0 24px 46px rgba(49, 46, 129, 0.24)' : 'none',
       }}
     >
       <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
@@ -629,16 +675,16 @@ function StepCard({ step, meta, completed, onMark, busy, isNext, action, onActio
             disabled={actionBusy}
             style={{
               alignSelf: 'flex-start',
-              border: '1px solid rgba(9, 91, 133, 0.24)',
+              border: `1px solid ${withOpacity(brand.colors.primary, 0.38)}`,
               padding: '8px 16px',
               borderRadius: 12,
               background: actionBusy
-                ? withOpacity(brand.colors.primary, 0.15)
-                : withOpacity('#ffffff', 0.95),
+                ? withOpacity(brand.colors.primary, 0.2)
+                : withOpacity('#FFFFFF', 0.92),
               color: brand.colors.secondary,
               fontWeight: 600,
               cursor: actionBusy ? 'wait' : 'pointer',
-              boxShadow: actionBusy ? 'none' : '0 14px 28px rgba(13, 59, 102, 0.18)',
+              boxShadow: actionBusy ? 'none' : '0 18px 34px rgba(37, 99, 235, 0.18)',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease',
             }}
           >
@@ -648,7 +694,7 @@ function StepCard({ step, meta, completed, onMark, busy, isNext, action, onActio
       </div>
       <div>
         {completed ? (
-          <span style={{display: 'inline-flex', alignItems: 'center', gap: 6, color: '#0f5132', fontWeight: 600}}>
+          <span style={{display: 'inline-flex', alignItems: 'center', gap: 6, color: brand.colors.success, fontWeight: 600}}>
             ✅ Gereed
           </span>
         ) : (
@@ -664,7 +710,7 @@ function StepCard({ step, meta, completed, onMark, busy, isNext, action, onActio
               color: '#fff',
               fontWeight: 600,
               cursor: busy ? 'wait' : 'pointer',
-              boxShadow: busy ? 'none' : '0 16px 30px rgba(11, 197, 234, 0.26)',
+              boxShadow: busy ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.24)',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               opacity: busy ? 0.75 : 1,
             }}
@@ -686,12 +732,12 @@ function TipCard({ tip }) {
       style={{
         padding: '18px 20px',
         borderRadius: 18,
-        border: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`,
-        background: withOpacity('#ffffff', 0.9),
+        border: `1px solid ${withOpacity(brand.colors.primary, 0.26)}`,
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.82) 100%)',
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
-        boxShadow: '0 16px 32px rgba(13, 59, 102, 0.16)',
+        boxShadow: '0 18px 40px rgba(49, 46, 129, 0.16)',
       }}
     >
       <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
