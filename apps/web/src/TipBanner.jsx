@@ -54,8 +54,8 @@ export default function TipBanner({ module }) {
         role="status"
         style={{
           padding: '14px 18px',
-          background: withOpacity(brand.colors.danger, 0.12),
-          border: `1px solid ${withOpacity(brand.colors.danger, 0.35)}`,
+          background: withOpacity(brand.colors.danger, 0.16),
+          border: `1px solid ${withOpacity(brand.colors.danger, 0.32)}`,
           borderRadius: 16,
           margin: '12px 0',
           fontFamily: brandFontStack,
@@ -79,8 +79,8 @@ export default function TipBanner({ module }) {
         aria-live="polite"
         style={{
           padding: '14px 18px',
-          background: withOpacity(brand.colors.surfaceMuted, 0.6),
-          border: `1px solid ${withOpacity(brand.colors.primary, 0.2)}`,
+          background: withOpacity(brand.colors.surfaceMuted, 0.75),
+          border: `1px solid ${withOpacity(brand.colors.primary, 0.28)}`,
           borderRadius: 16,
           margin: '12px 0',
           fontFamily: brandFontStack,
@@ -99,22 +99,23 @@ export default function TipBanner({ module }) {
     <div
       style={{
         padding: '14px 18px',
-        background: withOpacity(brand.colors.surfaceMuted, 0.8),
+        background: withOpacity('#ffffff', 0.94),
         border: `1px solid ${brand.colors.outline}`,
-        borderRadius: 16,
+        borderRadius: 18,
         margin: '12px 0',
         fontFamily: brandFontStack,
         display: 'flex',
         alignItems: 'center',
         gap: 12,
+        boxShadow: '0 18px 42px rgba(15, 23, 42, 0.12)',
       }}
     >
       <span aria-hidden style={iconStyle}>
-        ℹ️
+        🎧
       </span>
       <div style={{ display: 'grid', gap: 4 }}>
         <strong style={{ color: brand.colors.secondary, fontSize: '0.9rem', letterSpacing: '0.04em' }}>
-          Tip voor {module || 'jou'}
+          Backstage tip voor {module || 'jou'}
         </strong>
         <span style={{ color: brand.colors.mutedText }}>{tip.message}</span>
         {tip.cta && (
@@ -144,7 +145,7 @@ const iconStyle = {
   width: 34,
   height: 34,
   borderRadius: '12px',
-  background: brand.colors.primary,
+  background: brand.colors.gradient,
   color: '#fff',
   display: 'grid',
   placeItems: 'center',

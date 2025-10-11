@@ -1,12 +1,12 @@
 import React, { useEffect, useId, useRef } from 'react'
 import { STATUS, useOnboardingProgress } from './useOnboardingProgress.js'
-import { brand, brandFontStack, withOpacity } from './theme.js'
+import { brand, brandFontStack, headingFontStack, withOpacity } from './theme.js'
 
 const styles = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: withOpacity('#0D3B66', 0.72),
+    background: brand.colors.overlay,
     color: brand.colors.text,
     zIndex: 9999,
     display: 'flex',
@@ -19,11 +19,11 @@ const styles = {
   panel: {
     maxWidth: 860,
     width: '100%',
-    background: '#ffffff',
+    background: withOpacity('#ffffff', 0.96),
     borderRadius: 28,
     padding: '36px 44px',
     boxShadow: brand.colors.shadow,
-    border: `1px solid ${withOpacity(brand.colors.primary, 0.2)}`,
+    border: `1px solid ${withOpacity(brand.colors.primary, 0.24)}`,
     display: 'grid',
     gap: 24,
   },
@@ -34,8 +34,8 @@ const styles = {
     gap: 16,
   },
   closeButton: {
-    border: `1px solid ${withOpacity(brand.colors.primary, 0.35)}`,
-    background: withOpacity(brand.colors.surfaceMuted, 0.8),
+    border: `1px solid ${withOpacity(brand.colors.primary, 0.4)}`,
+    background: withOpacity(brand.colors.surfaceMuted, 0.85),
     color: brand.colors.secondary,
     padding: '8px 16px',
     borderRadius: 999,
@@ -43,7 +43,7 @@ const styles = {
     fontWeight: 600,
   },
   progressTrack: {
-    background: withOpacity(brand.colors.surfaceMuted, 0.9),
+    background: withOpacity(brand.colors.surfaceMuted, 0.85),
     borderRadius: 999,
     overflow: 'hidden',
     height: 12,
@@ -63,16 +63,16 @@ const styles = {
   listItemBase: {
     borderRadius: 18,
     padding: '18px 20px',
-    border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+    border: `1px solid ${withOpacity(brand.colors.primary, 0.24)}`,
     display: 'grid',
     gap: 12,
     alignItems: 'flex-start',
-    background: withOpacity('#ffffff', 0.95),
+    background: withOpacity('#ffffff', 0.94),
   },
   alert: {
-    background: withOpacity(brand.colors.danger, 0.12),
-    border: `1px solid ${withOpacity(brand.colors.danger, 0.28)}`,
-    color: '#B71C1C',
+    background: withOpacity(brand.colors.danger, 0.14),
+    border: `1px solid ${withOpacity(brand.colors.danger, 0.32)}`,
+    color: '#B91C1C',
     padding: '16px 18px',
     borderRadius: 18,
     display: 'grid',
@@ -106,7 +106,7 @@ const styles = {
   },
   actionSecondary: {
     border: 'none',
-    background: withOpacity(brand.colors.primary, 0.12),
+    background: withOpacity(brand.colors.primary, 0.15),
     color: brand.colors.primaryDark,
     padding: '12px 18px',
     borderRadius: 999,
@@ -131,7 +131,7 @@ const StepItem = ({ step, isDone, isMarking, onMark }) => (
     </div>
     {isDone ? (
       <span aria-label="Stap afgerond" style={{ color: brand.colors.success, fontWeight: 600 }}>
-        ✅ Gereed
+        🎉 Gereed
       </span>
     ) : (
       <button
@@ -197,11 +197,14 @@ export default function OnboardingOverlay({ email, onClose = () => {}, onSnooze,
       <div style={styles.panel}>
         <header style={styles.header}>
           <div style={{ display: 'grid', gap: 6 }}>
-            <h2 id={headingId} style={{ margin: 0, color: brand.colors.secondary }}>
-              Welkom bij {brand.shortName}
+            <h2
+              id={headingId}
+              style={{ margin: 0, color: brand.colors.secondary, fontFamily: headingFontStack, fontWeight: 600 }}
+            >
+              Kickstart Mister DJ in RentGuy
             </h2>
             <p id={descriptionId} style={{ margin: 0, color: brand.colors.mutedText }}>
-              Doorloop de belangrijkste activatiestappen zodat ieder teamlid direct waarde ziet.
+              Volg de stappen zodat Bart en team direct shows kunnen voorbereiden zonder de groove te verliezen.
             </p>
           </div>
           <button type="button" onClick={onClose} ref={closeButtonRef} style={styles.closeButton}>
@@ -260,7 +263,7 @@ export default function OnboardingOverlay({ email, onClose = () => {}, onSnooze,
 
         <footer style={styles.footer}>
           <div style={{ color: brand.colors.mutedText }}>
-            Klaar met de checklist? Markeer als voltooid zodat we je dashboard schoon houden.
+            Alles afgevinkt? Markeer als voltooid zodat iedereen ziet dat de events klaar staan.
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <button type="button" onClick={handleSnooze} style={styles.actionSecondary}>

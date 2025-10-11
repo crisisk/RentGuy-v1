@@ -33,7 +33,24 @@ export default function App() {
   const [userEmail, setUserEmail] = useState(() => getStoredEmail())
   const [showOnboarding, setShowOnboarding] = useState(() => computeShouldShowOnboarding(token))
 
-  useEffect(() => applyBrandSurface(), [])
+  useEffect(() => {
+    const cleanup = applyBrandSurface()
+    return cleanup
+  }, [])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined
+    const linkId = 'sevensa-mrdj-fonts'
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link')
+      link.id = linkId
+      link.rel = 'stylesheet'
+      link.href =
+        'https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Poppins:wght@400;500;600;700&display=swap'
+      document.head.appendChild(link)
+    }
+    return undefined
+  }, [])
 
   useEffect(() => {
     if (!token) {
@@ -76,7 +93,7 @@ export default function App() {
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.title = `${brand.shortName} Operations Cockpit`
+      document.title = `${brand.shortName} · Operations Cockpit`
     }
   }, [])
 

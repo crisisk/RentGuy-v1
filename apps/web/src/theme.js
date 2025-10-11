@@ -1,6 +1,6 @@
 export const brand = {
-  name: 'Sevensa Intelligence Platform',
-  shortName: 'Sevensa',
+  name: 'Mister DJ - Sevensa Intelligence Platform',
+  shortName: 'Mr. DJ',
   url: 'https://sevensa.ai',
   tagline: 'AI-powered solutions for enterprises.',
   colors: {
@@ -48,7 +48,7 @@ export function applyBrandSurface() {
     fontFamily: document.body.style.fontFamily,
   }
 
-  document.body.style.background = brand.colors.surface
+  document.body.style.background = brand.colors.appBackground
   document.body.style.color = brand.colors.text
   document.body.style.fontFamily = brandFontStack
 
