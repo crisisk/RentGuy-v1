@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/lighthouserc.json",
+  "ci": {
+    "collect": {
+      "url": [
+        "https://staging.rentguy.sevensa.nl/app",
+        "https://staging.rentguy.sevensa.nl/portal",
+        "https://staging.rentguy.sevensa.nl/crew"
+      ],
+      "settings": {
+        "emulatedFormFactor": "desktop",
+        "throttlingMethod": "simulate"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["error", { "minScore": 0.8 }],
+        "categories:accessibility": ["warn", { "minScore": 0.9 }],
+        "categories:seo": ["warn", { "minScore": 0.9 }]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": "tests/ux-retention/reports/lighthouse"
+    }
+  }
+}
