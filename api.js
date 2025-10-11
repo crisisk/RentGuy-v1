@@ -7,8 +7,11 @@ import {
   storageAvailable,
 } from './storage.js'
 
-// Use deployed backend URL
-const API_BASE_URL = 'https://g8h3ilc3k6q1.manus.space'
+// Backend endpoint can be configured through Vite env files or process envs.
+const API_BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
+  process.env?.VITE_API_URL ||
+  'http://localhost:8000'
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

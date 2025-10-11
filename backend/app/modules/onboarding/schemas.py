@@ -4,7 +4,7 @@ from datetime import datetime
 import re
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 _EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
@@ -14,8 +14,7 @@ class StepOut(BaseModel):
     title: str
     description: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class _EmailPayload(BaseModel):
@@ -34,8 +33,7 @@ class ProgressOut(_EmailPayload):
     status: str
     completed_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CompleteIn(_EmailPayload):
@@ -48,5 +46,4 @@ class TipOut(BaseModel):
     message: str
     cta: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,5 +1,8 @@
-from pydantic import BaseModel
+from __future__ import annotations
+
 from typing import Literal
+
+from pydantic import BaseModel, ConfigDict
 
 class ScanIn(BaseModel):
     tag_value: str
@@ -14,4 +17,5 @@ class MovementOut(BaseModel):
     quantity: int
     direction: str
     method: str
-    class Config: from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
