@@ -11,6 +11,7 @@ from starlette.responses import PlainTextResponse
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import setup_logging
 from app.core.metrics import MetricsTracker
+from app.core.observability import configure_tracing
 
 setup_logging()
 
@@ -18,6 +19,7 @@ setup_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize and tear down application level resources."""
+    configure_tracing(app)
     app.state.start_time = time.time()
     app.state.metrics_tracker = MetricsTracker()
     yield

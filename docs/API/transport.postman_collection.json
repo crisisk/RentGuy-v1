@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "RentGuy Transport API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "CRUD regressietests voor voertuigen, routes, stops en PDF export"
+  },
+  "item": [
+    {
+      "name": "List vehicles",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/transport/vehicles",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "transport", "vehicles"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create route",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"project_id\": 45,\n  \"vehicle_id\": 3,\n  \"driver_id\": 7,\n  \"date\": \"2024-04-08\",\n  \"start_time\": \"07:15\",\n  \"end_time\": \"15:30\",\n  \"status\": \"planned\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/transport/routes",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "transport", "routes"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add route stop",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"route_id\": {{routeId}},\n  \"sequence\": 1,\n  \"address\": \"Rigakade 10, Amsterdam\",\n  \"contact_name\": \"Eva Janssen\",\n  \"contact_phone\": \"+31 20 123 4567\",\n  \"eta\": \"2024-04-08T07:45:00+02:00\",\n  \"etd\": \"2024-04-08T08:15:00+02:00\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/transport/routes/{{routeId}}/stops",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "transport", "routes", "{{routeId}}", "stops"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Download transport brief",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/transport/routes/{{routeId}}/pdf",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "transport", "routes", "{{routeId}}", "pdf"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "token", "value": "" },
+    { "key": "routeId", "value": "1001" }
+  ]
+}

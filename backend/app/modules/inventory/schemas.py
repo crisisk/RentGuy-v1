@@ -21,6 +21,7 @@ class ItemIn(BaseModel):
     min_stock: int = 0
     active: bool = True
     price_per_day: float = 0
+    cost_per_day: float = 0
 
 class ItemOut(BaseModel):
     id: int
@@ -30,6 +31,7 @@ class ItemOut(BaseModel):
     min_stock: int
     active: bool
     price_per_day: float
+    cost_per_day: float
 
     model_config = ConfigDict(from_attributes=True)
 
