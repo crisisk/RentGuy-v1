@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import Login from './Login.jsx'
 import OnboardingOverlay from './OnboardingOverlay.jsx'
 import Planner from './Planner.jsx'
+import RoleSelection from './RoleSelection.jsx'
 import { api } from './api.js'
 import { brand, brandFontStack } from './branding.js'
 import {
@@ -27,7 +28,11 @@ function computeShouldShowOnboarding() {
 export default function App() {
   const [token, setToken] = useState(() => getLocalStorageItem('token', ''))
   const [userEmail, setUserEmail] = useState(() => getLocalStorageItem('user_email', ''))
+  const [user, setUser] = useState(null)
   const [showOnboarding, setShowOnboarding] = useState(computeShouldShowOnboarding)
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+  const [isSavingRole, setIsSavingRole] = useState(false)
+  const [roleError, setRoleError] = useState('')
 
   useEffect(() => {
     if (token) {
@@ -35,11 +40,14 @@ export default function App() {
       const getUserInfo = async () => {
         try {
           const response = await api.get('/api/v1/auth/me')
+          setUser(response.data)
           setUserEmail(response.data.email)
+          setLocalStorageItem('user_role', response.data.role || '')
         } catch (error) {
           // Fallback to stored email or default
           const storedEmail = getLocalStorageItem('user_email', 'bart@rentguy.demo')
           setUserEmail(storedEmail)
+          setUser(null)
         }
       }
       getUserInfo()
@@ -85,8 +93,10 @@ export default function App() {
   const handleLogin = (t, email) => {
     setLocalStorageItem('token', t)
     setLocalStorageItem('user_email', email || 'bart@rentguy.demo')
+    removeLocalStorageItem('user_role')
     setToken(t)
     setUserEmail(email || 'bart@rentguy.demo')
+    setUser(null)
     setShowOnboarding(computeShouldShowOnboarding())
   }
 
@@ -95,8 +105,19 @@ export default function App() {
       setShowOnboarding(computeShouldShowOnboarding())
     } else {
       setShowOnboarding(false)
+      setUser(null)
+      setIsRoleModalOpen(false)
+      setRoleError('')
     }
   }, [token])
+
+  useEffect(() => {
+    if (user?.role === 'pending' && token) {
+      setIsRoleModalOpen(true)
+    } else {
+      setIsRoleModalOpen(false)
+    }
+  }, [user, token])
 
   const handleLogout = useCallback(() => {
     removeLocalStorageItem('token')
@@ -104,7 +125,11 @@ export default function App() {
     clearOnboardingState()
     setToken('')
     setUserEmail('')
+    setUser(null)
     setShowOnboarding(false)
+    setIsRoleModalOpen(false)
+    setRoleError('')
+    removeLocalStorageItem('user_role')
     if (typeof window !== 'undefined') {
       window.location.reload()
     }
@@ -122,13 +147,44 @@ export default function App() {
     setShowOnboarding(false)
   }, [])
 
+  const handleRoleConfirm = useCallback(
+    async role => {
+      if (!role) return
+      setRoleError('')
+      setIsSavingRole(true)
+      try {
+        const { data } = await api.post('/api/v1/auth/role', { role })
+        setUser(data)
+        setUserEmail(data.email || userEmail)
+        setLocalStorageItem('user_role', data.role)
+        setIsRoleModalOpen(false)
+        setShowOnboarding(computeShouldShowOnboarding())
+      } catch (error) {
+        const detail = error?.response?.data?.detail
+        setRoleError(typeof detail === 'string' ? detail : 'Opslaan van rol is mislukt. Probeer het opnieuw.')
+      } finally {
+        setIsSavingRole(false)
+      }
+    },
+    [userEmail]
+  )
+
   if (!token) {
     return <Login onLogin={handleLogin} />
   }
 
   return <>
     <Planner onLogout={handleLogout} />
-    {showOnboarding && userEmail &&
+    {isRoleModalOpen && (
+      <RoleSelection
+        email={userEmail}
+        onConfirm={handleRoleConfirm}
+        onLogout={handleLogout}
+        isSubmitting={isSavingRole}
+        errorMessage={roleError}
+      />
+    )}
+    {!isRoleModalOpen && showOnboarding && userEmail &&
       <OnboardingOverlay
         email={userEmail}
         onSnooze={handleSnoozeOnboarding}
