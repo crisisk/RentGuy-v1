@@ -17,3 +17,16 @@ class BillingRepo:
 
     def add_payment(self, p: Payment) -> Payment:
         self.db.add(p); self.db.flush(); return p
+
+    def list_payments_for_invoice(self, invoice_id: int) -> list[Payment]:
+        return self.db.execute(select(Payment).where(Payment.invoice_id==invoice_id)).scalars().all()
+
+    def get_payment_by_external(self, provider: str, external_id: str) -> Payment | None:
+        stmt = select(Payment).where(Payment.provider==provider, Payment.external_id==external_id)
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def touch_invoice(self, invoice: Invoice) -> Invoice:
+        self.db.add(invoice); self.db.flush(); return invoice
+
+    def touch_payment(self, payment: Payment) -> Payment:
+        self.db.add(payment); self.db.flush(); return payment

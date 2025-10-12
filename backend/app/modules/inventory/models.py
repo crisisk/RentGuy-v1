@@ -16,6 +16,7 @@ class Item(Base):
     min_stock: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     price_per_day: Mapped[float] = mapped_column(Numeric(10,2), default=0)
+    cost_per_day: Mapped[float] = mapped_column(Numeric(10,2), default=0)
     category = relationship("Category", lazy="joined")
 
 class Bundle(Base):
