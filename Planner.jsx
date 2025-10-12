@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { api } from './api.js'
 import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
 
+const PERSONA_STORAGE_KEY = 'rentguy:plannerPersona'
+
 const personaPresets = {
   all: {
     label: 'Alle rollen',
@@ -504,7 +506,7 @@ export default function Planner({ onLogout }) {
     setFormState({ name: '', client: '', start: '', end: '', notes: '' })
   }
 
-  function applyPersonaPreset(value) {
+  function applyPersonaPreset(value, { persist = true } = {}) {
     setPersonaPreset(value)
     const preset = personaPresets[value]
     if (!preset) return
@@ -513,10 +515,37 @@ export default function Planner({ onLogout }) {
     setSortKey(preset.sortKey || 'start')
     setSortDir(preset.sortDir || 'asc')
     setTimeFilter(preset.timeFilter || 'all')
-    if (preset.searchTerm !== undefined) {
-      setSearchTerm(preset.searchTerm)
+    setSearchTerm(preset.searchTerm ?? '')
+
+    if (!persist) return
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(PERSONA_STORAGE_KEY, value)
+      } catch (error) {
+        console.warn('Kon persona-voorkeur niet opslaan', error)
+      }
     }
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      applyPersonaPreset('all', { persist: false })
+      return
+    }
+
+    try {
+      const storedValue = window.localStorage.getItem(PERSONA_STORAGE_KEY)
+      if (storedValue && personaPresets[storedValue]) {
+        applyPersonaPreset(storedValue, { persist: false })
+        return
+      }
+    } catch (error) {
+      console.warn('Kon persona-voorkeur niet laden', error)
+    }
+
+    applyPersonaPreset('all', { persist: false })
+  }, [])
 
   async function submitUpdate(e) {
     e.preventDefault()
@@ -931,12 +960,7 @@ export default function Planner({ onLogout }) {
             <button
               type="button"
               onClick={() => {
-                setPersonaPreset('all')
-                setStatusFilter('all')
-                setRiskFilter('all')
-                setSortKey('start')
-                setSortDir('asc')
-                setSearchTerm('')
+                applyPersonaPreset('all')
               }}
               style={{
                 alignSelf: 'flex-end',
