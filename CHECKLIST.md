@@ -8,6 +8,7 @@
 - [x] Issues JSON for CI ingestion.
 - [x] Accessibility patch applied to onboarding overlay.
 - [x] QA directory scaffolded for Lighthouse.
+- [ ] 2024-06-14: Execution loop kick-off & backlog captured in `docs/RentGuy-v1-Execution-Report.md`.
 # Release Readiness Checklist
 
 ## Persona acceptance
