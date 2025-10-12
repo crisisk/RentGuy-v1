@@ -1,11 +1,14 @@
-"""Pydantic schemas for authentication endpoints."""
+from __future__ import annotations
 
 import re
+from typing import Literal
 
 from pydantic import BaseModel, field_validator
 
-
 _EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+UserRole = Literal["pending", "planner", "crew", "warehouse", "finance", "viewer", "admin"]
+SelectableRole = Literal["planner", "crew", "warehouse", "finance", "viewer", "admin"]
 
 
 class _EmailBase(BaseModel):
@@ -23,7 +26,7 @@ class _EmailBase(BaseModel):
 
 class UserCreate(_EmailBase):
     password: str
-    role: str = "admin"
+    role: UserRole = "pending"
 
 
 class UserLogin(_EmailBase):
@@ -32,8 +35,13 @@ class UserLogin(_EmailBase):
 
 class UserOut(_EmailBase):
     id: int
-    role: str
+    role: UserRole
+
 
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class UserRoleUpdate(BaseModel):
+    role: SelectableRole
