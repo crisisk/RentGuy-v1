@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  # Traefik service (assuming it's running separately and connected to a 'web' network)
+  # This service definition is for the application itself, not Traefik.
+
+  # Frontend Service (React/TypeScript)
+  frontend:
+    build:
+      context: ./rentguy/frontend # Assuming the frontend source is here
+      dockerfile: Dockerfile
+    image: rentguy-frontend:latest
+    container_name: rentguy-frontend
+    labels:
+      # Enable Traefik for this service
+      - "traefik.enable=true"
+      # Define the router for the service
+      - "traefik.http.routers.rentguy-frontend.rule=Host(`vps.ip.address`) && PathPrefix(`/`)" # Placeholder for actual domain/IP
+      - "traefik.http.routers.rentguy-frontend.entrypoints=websecure" # Assuming HTTPS entrypoint
+      # Define the service port (internal port of the container, e.g., 80 for Nginx)
+      - "traefik.http.services.rentguy-frontend.loadbalancer.server.port=80"
+      # Middleware to redirect to port 8721 if needed, but Traefik handles the entrypoint
+      # The user wants the application accessible on port 8721. This means Traefik needs an entrypoint on 8721.
+      # Since I cannot configure Traefik itself, I will assume the user has a Traefik entrypoint named 'rentguy-8721' on port 8721.
+      - "traefik.http.routers.rentguy-frontend.entrypoints=rentguy-8721"
+      - "traefik.http.routers.rentguy-frontend.rule=HostRegexp(`{host:.+}`)" # Match any host for IP access
+      - "traefik.http.routers.rentguy-frontend.service=rentguy-frontend"
+    networks:
+      - web
+
+  # Backend Service (Python/FastAPI)
+  backend:
+    build:
+      context: ./rentguy/backend # Assuming the backend source is here
+      dockerfile: Dockerfile
+    image: rentguy-backend:latest
+    container_name: rentguy-backend
+    env_file:
+      - ./env/.env # Assuming environment variables are here
+    labels:
+      # Enable Traefik for the backend API (optional, but good practice)
+      - "traefik.enable=true"
+      - "traefik.http.routers.rentguy-backend.rule=HostRegexp(`{host:.+}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.rentguy-backend.entrypoints=rentguy-8721"
+      - "traefik.http.services.rentguy-backend.loadbalancer.server.port=8000" # Internal FastAPI port
+    networks:
+      - web
+
+  # Database Service (PostgreSQL)
+  db:
+    image: postgres:16
+    container_name: rentguy-db
+    environment:
+      POSTGRES_DB: rentguy
+      POSTGRES_USER: rentguy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rentguy -d rentguy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - web
+
+volumes:
+  dbdata:
+
+networks:
+  web:
+    external: true # Assumes a shared 'web' network for Traefik to connect to
+
