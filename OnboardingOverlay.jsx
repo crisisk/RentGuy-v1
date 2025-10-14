@@ -1,12 +1,32 @@
+/**
+ * @ts-check
+ */
 import { forwardRef } from 'react'
-import OverlayComponent from './src/ui/OnboardingOverlay.jsx'
+import OverlayComponent from '@ui/OnboardingOverlay.jsx'
 
-export * from './src/ui/OnboardingOverlay.jsx'
+export * from '@ui/OnboardingOverlay.jsx'
 
-const OnboardingOverlayProxy = forwardRef(function OnboardingOverlayProxy(props, ref) {
-  return <OverlayComponent ref={ref} {...props} />
-})
+/**
+ * @typedef {{
+ *   email?: string | null
+ *   onClose?: () => void
+ *   onSnooze?: () => void
+ *   onFinish?: () => void
+ * }} OnboardingOverlayProps
+ */
 
-OnboardingOverlayProxy.displayName = OverlayComponent.displayName ?? 'OnboardingOverlay'
+const OverlayComponentUnsafe = /** @type {any} */ (OverlayComponent)
+
+/**
+ * @param {OnboardingOverlayProps} props
+ * @param {import('react').RefObject<HTMLDivElement> | ((node: HTMLDivElement | null) => void) | null} ref
+ */
+function OnboardingOverlayProxyComponent(props, ref) {
+  return <OverlayComponentUnsafe ref={ref} {...props} />
+}
+
+const OnboardingOverlayProxy = forwardRef(OnboardingOverlayProxyComponent)
+
+OnboardingOverlayProxy.displayName = OverlayComponentUnsafe.displayName ?? 'OnboardingOverlay'
 
 export default OnboardingOverlayProxy

@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "generatedAt": "2025-10-14T19:09:39.969Z",
+  "generatedAt": "2025-10-14T19:23:22.852Z",
   "metrics": {
     "typeSafety": {
-      "score": 32.98,
+      "score": 32.71,
       "details": {
         "tsFiles": 12,
         "jsFiles": 3,
         "tsLines": 1169,
-        "jsLines": 2376,
-        "ratio": 0.3298
+        "jsLines": 2405,
+        "ratio": 0.3271
       },
       "evidence": [
         "TypeScript LOC: 1169",
-        "JavaScript LOC: 2376",
-        "TypeScript coverage ratio: 32.98%"
+        "JavaScript LOC: 2405",
+        "TypeScript coverage ratio: 32.71%"
       ]
     },
     "errorHandling": {
@@ -81,7 +81,7 @@
       ]
     }
   },
-  "overallQualityIndex": 51.77,
+  "overallQualityIndex": 51.71,
   "gates": {
     "typeSafety": 95,
     "errorHandling": 95,

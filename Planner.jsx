@@ -1,12 +1,29 @@
+/**
+ * @ts-check
+ */
 import { forwardRef } from 'react'
-import PlannerComponent from './src/ui/Planner.jsx'
+import PlannerComponent from '@ui/Planner.jsx'
 
-export * from './src/ui/Planner.jsx'
+export * from '@ui/Planner.jsx'
 
-const PlannerProxy = forwardRef(function PlannerProxy(props, ref) {
-  return <PlannerComponent ref={ref} {...props} />
-})
+/**
+ * @typedef {{
+ *   onLogout?: () => void
+ * }} PlannerProps
+ */
 
-PlannerProxy.displayName = PlannerComponent.displayName ?? 'Planner'
+const PlannerComponentUnsafe = /** @type {any} */ (PlannerComponent)
+
+/**
+ * @param {PlannerProps} props
+ * @param {import('react').RefObject<HTMLDivElement> | ((node: HTMLDivElement | null) => void) | null} ref
+ */
+function PlannerProxyComponent(props, ref) {
+  return <PlannerComponentUnsafe ref={ref} {...props} />
+}
+
+const PlannerProxy = forwardRef(PlannerProxyComponent)
+
+PlannerProxy.displayName = PlannerComponentUnsafe.displayName ?? 'Planner'
 
 export default PlannerProxy

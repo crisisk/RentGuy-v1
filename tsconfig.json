@@ -3,7 +3,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
     "allowJs": true,
     "checkJs": true,
     "strict": true,
@@ -19,17 +23,37 @@
     "skipLibCheck": false,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
-    "typeRoots": ["./types", "./node_modules/@types"],
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
     "paths": {
-      "@application/*": ["src/application/*"],
-      "@config/*": ["src/config/*"],
-      "@core/*": ["src/core/*"],
-      "@domain/*": ["src/domain/*"],
-      "@infra/*": ["src/infrastructure/*"],
-      "@ui/*": ["src/ui/*"]
+      "@application/*": [
+        "src/application/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@core/*": [
+        "src/core/*"
+      ],
+      "@domain/*": [
+        "src/domain/*"
+      ],
+      "@infra/*": [
+        "src/infrastructure/*"
+      ],
+      "@ui/*": [
+        "src/ui/*"
+      ]
     }
   },
-  "include": ["src", "types"],
+  "include": [
+    "src",
+    "types",
+    "Planner.jsx",
+    "OnboardingOverlay.jsx"
+  ],
   "exclude": [
     "node_modules",
     "dist",
