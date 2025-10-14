@@ -21,7 +21,7 @@ export const useAuthStore = create<AuthState>()(immer((set) => ({
   login: async (email, password) => {
     try {
       set({ isLoading: true, error: null });
-      const user = await authApi.login(email, password);
+      const { user } = await authApi.login({ email, password });
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthState>()(immer((set) => ({
   checkAuth: async () => {
     try {
       set({ isLoading: true });
-      const user = await authApi.checkAuth();
+      const { user } = await authApi.checkAuth();
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false });

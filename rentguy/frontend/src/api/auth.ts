@@ -17,6 +17,7 @@ export interface AuthResponse {
 }
 
 export const login = authAPI.login;
+export const checkAuth = authAPI.checkAuth;
 export const logout = authAPI.logout;
 export const refreshToken = authAPI.refreshToken;
 export const ssoLogin = authAPI.ssoLogin;
@@ -60,6 +61,27 @@ export const authAPI = {
   },
 
   // SSO Login (AzureAD, Google Workspace)
+
+
+  checkAuth: async (): Promise<AuthResponse> => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      throw new Error('No token found');
+    }
+    // Mock response for frontend integration
+    const mockResponse: AuthResponse = {
+        access_token: token,
+        refresh_token: localStorage.getItem('refresh_token') || "",
+        user: {
+            id: "user-1",
+            email: "mock@user.com",
+            role: "admin",
+            name: "Mock User",
+        }
+    };
+    return mockResponse;
+  },
+
   ssoLogin: async (provider: 'azure' | 'google'): Promise<void> => {
     // window.location.href = `${apiClient.defaults.baseURL}/auth/sso/${provider}`;
     console.log(`Simulating SSO login for provider: ${provider}`);

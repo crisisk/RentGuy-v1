@@ -20,6 +20,16 @@ const mockMetrics: FinancialMetrics = {
     period: 'month',
 };
 
+export const getMetrics = financeAPI.getMetrics;
+export const getInvoices = financeAPI.getInvoices;
+export const createInvoice = financeAPI.createInvoice;
+export const markAsPaid = financeAPI.markAsPaid;
+export const sendReminder = financeAPI.sendReminder;
+export const exportToExactOnline = financeAPI.exportToExactOnline;
+export const getQuotes = financeAPI.getQuotes;
+export const createQuote = financeAPI.createQuote;
+export const convertToInvoice = financeAPI.convertToInvoice;
+
 export const financeAPI = {
   // Dashboard Metrics
   getMetrics: async (period: 'month' | 'quarter' | 'year'): Promise<FinancialMetrics> => {
