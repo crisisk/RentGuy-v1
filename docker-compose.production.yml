@@ -67,10 +67,11 @@ services:
       - REFRESH_TOKEN_EXPIRATION_DAYS=7
       
       # Keycloak Integration
-      - KEYCLOAK_SERVER_URL=${KEYCLOAK_URL}
-      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-rentguy}
-      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-rentguy-backend}
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      # Keycloak Integration (Temporarily Disabled)
+      - KEYCLOAK_SERVER_URL=disabled
+      - KEYCLOAK_REALM=disabled
+      - KEYCLOAK_CLIENT_ID=disabled
+      - KEYCLOAK_CLIENT_SECRET=disabled
       
       # OpenBao Integration
       - OPENBAO_ADDR=${OPENBAO_ADDR}
@@ -209,6 +210,7 @@ services:
     restart: "no"
 
   # Backup Service (Daily backups)
+  # Backup Service (Daily backups)
   rentguy-backup:
     image: prodrigestivill/postgres-backup-local:16
     container_name: rentguy-backup
@@ -254,5 +256,5 @@ networks:
     internal: false
     ipam:
       config:
-        - subnet: 172.20.0.0/24
+        - subnet: 172.28.0.0/24
 
