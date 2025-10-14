@@ -5,11 +5,16 @@ node_modules/
 .env.production
 dist/
 build/
+coverage/
+coverage-*/
+.nyc_output/
+.turbo/
 *.log
 .DS_Store
 .vscode/
 .idea/
 package-lock.json
+# quality tooling artifacts
 # Backup files
 backup_*.tar.gz
 *.tar.gz
