@@ -30,6 +30,8 @@ export const getQuotes = financeAPI.getQuotes;
 export const createQuote = financeAPI.createQuote;
 export const convertToInvoice = financeAPI.convertToInvoice;
 
+export const getPayments = financeAPI.getPayments;
+
 export const financeAPI = {
   // Dashboard Metrics
   getMetrics: async (period: 'month' | 'quarter' | 'year'): Promise<FinancialMetrics> => {

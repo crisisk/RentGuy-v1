@@ -1,4 +1,3 @@
-import apiClient from './client';
 import { Project, Task } from '../types';
 
 const mockProjects: Project[] = [

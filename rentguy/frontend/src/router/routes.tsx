@@ -3,24 +3,24 @@ import { Navigate } from 'react-router-dom';
 import type { RouteConfig } from './types';
 
 // Lazy load all page components
-const LoginPage = lazy(() => import('@/pages/LoginPage'));
-const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-const ProjectOverview = lazy(() => import('@/pages/ProjectOverview'));
-const VisualPlanner = lazy(() => import('@/pages/VisualPlanner'));
-const CrewManagement = lazy(() => import('@/pages/CrewManagement'));
-const TimeApproval = lazy(() => import('@/pages/TimeApproval'));
-const EquipmentInventory = lazy(() => import('@/pages/EquipmentInventory'));
-const FinanceDashboard = lazy(() => import('@/pages/FinanceDashboard'));
-const InvoiceOverview = lazy(() => import('@/pages/InvoiceOverview'));
-const QuoteManagement = lazy(() => import('@/pages/QuoteManagement'));
-const CRMDashboard = lazy(() => import('@/pages/CRMDashboard'));
-const CustomerDetails = lazy(() => import('@/pages/CustomerDetails'));
-const UserManagement = lazy(() => import('@/pages/UserManagement'));
-const SystemSettings = lazy(() => import('@/pages/SystemSettings'));
-const ReportsAnalytics = lazy(() => import('@/pages/ReportsAnalytics'));
-const MollieAdminDashboard = lazy(() => import('@/pages/MollieAdminDashboard'));
-const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
-const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+const LoginPage = lazy(() => import('@/pages/LoginPage').then(module => ({ default: module.LoginPage })));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(module => ({ default: module.DashboardPage })));
+const ProjectOverview = lazy(() => import('@/pages/ProjectOverview').then(module => ({ default: module.ProjectOverview })));
+const VisualPlanner = lazy(() => import('@/pages/VisualPlanner').then(module => ({ default: module.VisualPlanner })));
+const CrewManagement = lazy(() => import('@/pages/CrewManagement').then(module => ({ default: module.CrewManagement })));
+const TimeApproval = lazy(() => import('@/pages/TimeApproval').then(module => ({ default: module.TimeApproval })));
+const EquipmentInventory = lazy(() => import('@/pages/EquipmentInventory').then(module => ({ default: module.EquipmentInventory })));
+const FinanceDashboard = lazy(() => import('@/pages/FinanceDashboard').then(module => ({ default: module.FinanceDashboard })));
+const InvoiceOverview = lazy(() => import('@/pages/InvoiceOverview').then(module => ({ default: module.InvoiceOverview })));
+const QuoteManagement = lazy(() => import('@/pages/QuoteManagement').then(module => ({ default: module.QuoteManagement })));
+const CRMDashboard = lazy(() => import('@/pages/CRMDashboard').then(module => ({ default: module.CRMDashboard })));
+const CustomerDetails = lazy(() => import('@/pages/CustomerDetails').then(module => ({ default: module.CustomerDetails })));
+const UserManagement = lazy(() => import('@/pages/UserManagement').then(module => ({ default: module.UserManagement })));
+const SystemSettings = lazy(() => import('@/pages/SystemSettings').then(module => ({ default: module.SystemSettings })));
+const ReportsAnalytics = lazy(() => import('@/pages/ReportsAnalytics').then(module => ({ default: module.ReportsAnalytics })));
+const MollieAdminDashboard = lazy(() => import('@/pages/MollieAdminDashboard').then(module => ({ default: module.MollieAdminDashboard })));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage').then(module => ({ default: module.ProfilePage })));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(module => ({ default: module.NotFoundPage })));
 
 // Define all application routes
 export const appRoutes: RouteConfig[] = [
