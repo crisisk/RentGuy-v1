@@ -77,3 +77,9 @@ class AvailabilityResponse(BaseModel):
     requested: int
     available: int
     ok: bool
+
+
+# Real-time Equipment Status Update
+class ItemStatusUpdate(BaseModel):
+    status: str = Field(..., description="New status for the item: available, in_use, maintenance, damaged")
+

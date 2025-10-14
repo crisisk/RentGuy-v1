@@ -5,6 +5,7 @@ from .schemas import *
 from .models import Category, Item, Bundle, BundleItem, MaintenanceLog
 from .repo import InventoryRepo
 from .usecases import InventoryService
+from datetime import datetime
 
 router = APIRouter()
 
@@ -68,3 +69,36 @@ def log_maintenance(payload: MaintenanceLogIn, db: Session = Depends(get_db), us
 def check_availability(requests: list[AvailabilityRequest], db: Session = Depends(get_db), user=Depends(require_role("admin","planner","warehouse","viewer"))):
     svc = InventoryService(db)
     return svc.check_availability(requests)
+
+# ---- Real-time Equipment Status Update ----
+@router.patch("/items/{item_id}/status", response_model=ItemOut)
+async def update_item_status(
+    item_id: int,
+    payload: ItemStatusUpdate,
+    db: Session = Depends(get_db),
+    user=Depends(require_role("admin", "warehouse", "crew"))
+):
+    repo = InventoryRepo(db)
+    item = repo.get_item_by_id(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    # Update the status
+    item.status = payload.status
+    db.commit()
+
+    # Broadcast the update via WebSocket
+    # We need to access the global sio server from the app state
+    from app.main import app
+    sio = app.state.sio
+
+    # Broadcast to all connected clients
+    await sio.emit("equipment_status_update", {
+        "item_id": item.id,
+        "status": item.status,
+        "timestamp": datetime.now().isoformat()
+    })
+
+    return item
+    return item
+

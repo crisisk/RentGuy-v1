@@ -11,6 +11,7 @@ class Item(Base):
     __tablename__ = "inv_items"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), index=True)
+    status: Mapped[str] = mapped_column(String(50), default="available") # available, in_use, maintenance, damaged
     category_id: Mapped[int] = mapped_column(ForeignKey("inv_categories.id"))
     quantity_total: Mapped[int] = mapped_column(Integer, default=0)
     min_stock: Mapped[int] = mapped_column(Integer, default=0)
@@ -40,3 +41,4 @@ class MaintenanceLog(Base):
     done: Mapped[bool] = mapped_column(Boolean, default=False)
     note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at = mapped_column(DateTime(timezone=True), server_default=func.now())
+
