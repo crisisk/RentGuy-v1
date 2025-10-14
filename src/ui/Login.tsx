@@ -1,6 +1,7 @@
 import { FormEvent, useState, type CSSProperties, type ChangeEvent } from 'react'
+import { login, deriveLoginErrorMessage, ensureAuthEmail } from '@application/auth/api'
 import { setLocalStorageItem } from '@core/storage'
-import { api, setToken } from '@infra/http/api'
+import { setToken } from '@infra/http/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 
 export interface LoginProps {
@@ -71,24 +72,20 @@ export function Login({ onLogin }: LoginProps) {
     setError('')
     setIsSubmitting(true)
     try {
-      let email: string
-      if (user === 'bart') {
-        email = 'bart@rentguy.demo'
-      } else if (user === 'rentguy') {
-        email = 'rentguy@demo.local'
+      const email = resolveEmail(user)
+      const result = await login({ email, password })
+      if (result.ok) {
+        const { token, user: payloadUser } = result.value
+        const ensuredEmail = ensureAuthEmail(payloadUser.email ?? email)
+        setToken(token)
+        setLocalStorageItem('user_email', ensuredEmail)
+        onLogin(token, ensuredEmail)
       } else {
-        email = `${user}@demo.local`
+        console.warn('Login mislukt', result.error)
+        setError(deriveLoginErrorMessage(result.error))
       }
-
-      const form = new FormData()
-      form.append('email', email)
-      form.append('password', password)
-      const { data } = await api.post<{ access_token: string }>('/api/v1/auth/login', form)
-      setToken(data.access_token)
-      setLocalStorageItem('user_email', email)
-      onLogin(data.access_token, email)
     } catch (err) {
-      console.error('Login mislukt', err)
+      console.error('Onverwachte loginfout', err)
       setError('Login mislukt. Controleer gegevens.')
     } finally {
       setIsSubmitting(false)
@@ -308,6 +305,16 @@ export function Login({ onLogin }: LoginProps) {
       </div>
     </div>
   )
+}
+
+function resolveEmail(candidate: string): string {
+  if (candidate === 'bart') {
+    return 'bart@rentguy.demo'
+  }
+  if (candidate === 'rentguy') {
+    return 'rentguy@demo.local'
+  }
+  return `${candidate}@demo.local`
 }
 
 export default Login

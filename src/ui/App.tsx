@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from '@infra/http/api'
+import {
+  deriveRoleErrorMessage,
+  ensureAuthEmail,
+  getCurrentUser,
+  updateRole,
+  type AuthUser,
+} from '@application/auth/api'
+import { setToken as setApiToken } from '@infra/http/api'
 import { brand, brandFontStack } from '@ui/branding'
 import Login from './Login'
 import OnboardingOverlay from './OnboardingOverlay'
@@ -14,11 +21,6 @@ import {
 
 const SNOOZE_DURATION_MS = 1000 * 60 * 60 * 6
 
-interface AuthUser {
-  email?: string
-  role?: string
-}
-
 function computeShouldShowOnboarding(): boolean {
   const seen = getLocalStorageItem('onb_seen', '0') === '1'
   if (seen) return false
@@ -30,13 +32,9 @@ function computeShouldShowOnboarding(): boolean {
   return true
 }
 
-function ensureEmail(candidate?: string) {
-  return candidate && candidate.trim() ? candidate : 'bart@rentguy.demo'
-}
-
 export function App() {
   const [token, setToken] = useState(() => getLocalStorageItem('token', ''))
-  const [userEmail, setUserEmail] = useState(() => ensureEmail(getLocalStorageItem('user_email', '')))
+  const [userEmail, setUserEmail] = useState(() => ensureAuthEmail(getLocalStorageItem('user_email', '')))
   const [user, setUser] = useState<AuthUser | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => computeShouldShowOnboarding())
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
@@ -50,17 +48,25 @@ export function App() {
 
     let ignore = false
 
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+
     ;(async () => {
-      try {
-        const response = await api.get<AuthUser>('/api/v1/auth/me')
-        if (ignore) return
-        setUser(response.data)
-        setUserEmail(ensureEmail(response.data.email))
-        setLocalStorageItem('user_role', response.data.role ?? '')
-      } catch (error) {
-        console.warn('Kon gebruikersgegevens niet laden', error)
-        if (ignore) return
-        const storedEmail = ensureEmail(getLocalStorageItem('user_email', ''))
+      const result = await getCurrentUser(controller ? { signal: controller.signal } : {})
+      if (ignore || controller?.signal.aborted) {
+        return
+      }
+
+      if (result.ok) {
+        const nextUser = result.value
+        setUser(nextUser)
+        const nextEmail = ensureAuthEmail(nextUser.email)
+        setUserEmail(nextEmail)
+        setLocalStorageItem('user_role', nextUser.role ?? '')
+      } else {
+        if (result.error.code !== 'cancelled') {
+          console.warn('Kon gebruikersgegevens niet laden', result.error)
+        }
+        const storedEmail = ensureAuthEmail(getLocalStorageItem('user_email', ''))
         setUserEmail(storedEmail)
         setUser(null)
       }
@@ -68,6 +74,7 @@ export function App() {
 
     return () => {
       ignore = true
+      controller?.abort()
     }
   }, [token])
 
@@ -113,10 +120,11 @@ export function App() {
   }, [])
 
   const handleLogin = useCallback((nextToken: string, email?: string) => {
-    const normalisedEmail = ensureEmail(email)
+    const normalisedEmail = ensureAuthEmail(email)
     setLocalStorageItem('token', nextToken)
     setLocalStorageItem('user_email', normalisedEmail)
     removeLocalStorageItem('user_role')
+    setApiToken(nextToken)
     setToken(nextToken)
     setUserEmail(normalisedEmail)
     setUser(null)
@@ -147,6 +155,7 @@ export function App() {
     removeLocalStorageItem('user_email')
     removeLocalStorageItem('user_role')
     clearOnboardingState()
+    setApiToken('')
     setToken('')
     setUserEmail('')
     setUser(null)
@@ -176,14 +185,20 @@ export function App() {
       setRoleError('')
       setIsSavingRole(true)
       try {
-        const { data } = await api.post<AuthUser>('/api/v1/auth/role', { role })
-        setUser(data)
-        setUserEmail(ensureEmail(data.email ?? userEmail))
-        setLocalStorageItem('user_role', data.role ?? '')
-        setIsRoleModalOpen(false)
-      } catch (error: any) {
-        const detail = error?.response?.data?.detail
-        setRoleError(typeof detail === 'string' ? detail : 'Opslaan van rol is mislukt. Probeer het opnieuw.')
+        const result = await updateRole({ role })
+        if (result.ok) {
+          const nextUser = result.value
+          setUser(nextUser)
+          const nextEmail = ensureAuthEmail(nextUser.email ?? userEmail)
+          setUserEmail(nextEmail)
+          setLocalStorageItem('user_role', nextUser.role ?? '')
+          setIsRoleModalOpen(false)
+        } else {
+          setRoleError(deriveRoleErrorMessage(result.error))
+        }
+      } catch (error) {
+        console.error('Onverwachte fout bij het opslaan van de rol', error)
+        setRoleError('Opslaan van rol is mislukt. Probeer het opnieuw.')
       } finally {
         setIsSavingRole(false)
       }
