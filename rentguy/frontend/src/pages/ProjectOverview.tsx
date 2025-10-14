@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { projectsAPI } from '../api/projects';
+import { config } from '../config/env';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch, faEdit, faTrash, faFilter } from '@fortawesome/free-solid-svg-icons';
 
@@ -43,7 +44,7 @@ export const ProjectOverview: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    const ws = new WebSocket('wss://api.rentguy.enterprise/ws/projects');
+    const ws = new WebSocket(config.getWsUrl('/ws/projects'));
     ws.onmessage = (event) => {
       setProjects(JSON.parse(event.data));
     };

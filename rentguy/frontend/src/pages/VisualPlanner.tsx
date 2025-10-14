@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { projectsAPI } from '../api/projects';
+import { config } from '../config/env';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserHardHat, faToolbox, faWarning } from '@fortawesome/pro-solid-svg-icons';
 
@@ -38,7 +39,7 @@ const VisualPlanner: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [ws] = useState(() => new WebSocket('wss://api.rentguy.com/planner'));
+  const [ws] = useState(() => new WebSocket(config.getWsUrl('/ws/planner')));
 
   useEffect(() => {
     const loadData = async () => {
