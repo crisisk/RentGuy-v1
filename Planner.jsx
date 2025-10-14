@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { api } from './api.js'
-import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
+import { api } from './api'
+import { brand, brandFontStack, headingFontStack, withOpacity } from './branding'
 
 const PERSONA_STORAGE_KEY = 'rentguy:plannerPersona'
 

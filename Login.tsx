@@ -1,6 +1,18 @@
-import React, { useState } from 'react'
-import { api, setToken } from './api.js'
-import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
+import { FormEvent, useState, type CSSProperties } from 'react'
+import { api, setToken } from './api'
+import { brand, brandFontStack, headingFontStack, withOpacity } from './branding'
+import { setLocalStorageItem } from './storage'
+
+export interface LoginProps {
+  onLogin: (token: string, email?: string) => void
+}
+
+interface CredentialHintProps {
+  label: string
+  username: string
+  password: string
+  description: string
+}
 
 const heroHighlights = [
   {
@@ -18,22 +30,48 @@ const heroHighlights = [
     description:
       'Invoice Ninja, Mollie en crewbriefings zijn gekoppeld aan RentGuy milestones voor volledige traceerbaarheid.',
   },
-]
-import { setLocalStorageItem } from './storage.js'
+] as const
 
-export default function Login({ onLogin }) {
+const linkStyle: CSSProperties = {
+  color: withOpacity('#ffffff', 0.82),
+  textDecoration: 'none',
+  fontWeight: 600,
+}
+
+function CredentialHint({ label, username, password, description }: CredentialHintProps) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        padding: '12px 14px',
+        borderRadius: 16,
+        background: withOpacity('#000000', 0.22),
+        border: `1px solid ${withOpacity('#FFFFFF', 0.18)}`,
+      }}
+    >
+      <strong style={{ color: '#fff', fontSize: '0.9rem', letterSpacing: '0.04em' }}>{label}</strong>
+      <span style={{ color: withOpacity('#ffffff', 0.75), fontSize: '0.85rem' }}>
+        <span style={{ fontWeight: 600 }}>Gebruiker:</span> {username} · <span style={{ fontWeight: 600 }}>Wachtwoord:</span> {password}
+      </span>
+      <span style={{ color: withOpacity('#ffffff', 0.7), fontSize: '0.82rem' }}>{description}</span>
+    </div>
+  )
+}
+
+export function Login({ onLogin }: LoginProps) {
   const [user, setUser] = useState('bart')
   const [password, setPassword] = useState('mr-dj')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setError('')
     setIsSubmitting(true)
     try {
-      // Map username to email format
-      let email
+      let email: string
       if (user === 'bart') {
         email = 'bart@rentguy.demo'
       } else if (user === 'rentguy') {
@@ -45,11 +83,12 @@ export default function Login({ onLogin }) {
       const form = new FormData()
       form.append('email', email)
       form.append('password', password)
-      const { data } = await api.post('/api/v1/auth/login', form)
+      const { data } = await api.post<{ access_token: string }>('/api/v1/auth/login', form)
       setToken(data.access_token)
       setLocalStorageItem('user_email', email)
       onLogin(data.access_token, email)
     } catch (err) {
+      console.error('Login mislukt', err)
       setError('Login mislukt. Controleer gegevens.')
     } finally {
       setIsSubmitting(false)
@@ -198,136 +237,77 @@ export default function Login({ onLogin }) {
         <section
           style={{
             background: '#ffffff',
-            borderRadius: 26,
-            padding: '40px 34px',
-            border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
-            boxShadow: '0 24px 60px rgba(15, 23, 42, 0.24)',
-            display: 'grid',
-            gap: 24,
+            borderRadius: 28,
+            padding: '36px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 28,
+            boxShadow: '0 24px 64px rgba(15, 23, 42, 0.2)',
+            border: `1px solid ${withOpacity('#0F172A', 0.12)}`,
           }}
         >
-          <header style={{ display: 'grid', gap: 6 }}>
-            <span style={{ color: brand.colors.mutedText, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.18em' }}>
-              Sign-in
-            </span>
-            <h2 style={{ margin: 0, color: brand.colors.secondary, fontFamily: headingFontStack }}>
-              {brand.tenant.name} toegang
-            </h2>
-            <p style={{ margin: 0, color: brand.colors.mutedText, fontSize: '0.95rem' }}>
-              Gebruik de gedeelde demo-accounts om onboarding scenario’s en audits van Sevensa te testen.
+          <div style={{ display: 'grid', gap: 12 }}>
+            <h2 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>Demo login</h2>
+            <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity(brand.colors.secondary, 0.72) }}>
+              Gebruik de demo-accounts om flows te testen. We genereren automatisch tokens, onboardingprogressie en audit logs.
             </p>
-          </header>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <label htmlFor="username" style={{ fontWeight: 600, color: brand.colors.secondary }}>E-mailadres of gebruikersnaam</label>
+          </div>
+          <form style={{ display: 'grid', gap: 16 }} onSubmit={handleSubmit}>
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontWeight: 600, color: brand.colors.secondary }}>Gebruiker</span>
               <input
-                id="username"
                 value={user}
-                onChange={e => setUser(e.target.value)}
-                placeholder="bijv. bart"
-                style={inputStyle}
-                autoComplete="username"
+                onChange={event => setUser(event.target.value)}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                  fontSize: '0.95rem',
+                }}
               />
-            </div>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <label htmlFor="password" style={{ fontWeight: 600, color: brand.colors.secondary }}>Wachtwoord</label>
+            </label>
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontWeight: 600, color: brand.colors.secondary }}>Wachtwoord</span>
               <input
-                id="password"
                 type="password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="mr-dj"
-                style={inputStyle}
-                autoComplete="current-password"
+                onChange={event => setPassword(event.target.value)}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  border: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                  fontSize: '0.95rem',
+                }}
               />
-            </div>
+            </label>
+            {error && (
+              <p role="alert" style={{ margin: 0, color: brand.colors.danger, fontSize: '0.85rem' }}>
+                {error}
+              </p>
+            )}
             <button
               type="submit"
               disabled={isSubmitting}
               style={{
-                padding: '14px 20px',
+                marginTop: 8,
+                padding: '12px 18px',
                 borderRadius: 999,
+                border: 'none',
                 backgroundImage: brand.colors.gradient,
                 color: '#fff',
-                border: 'none',
-                fontSize: '1.05rem',
                 fontWeight: 600,
                 cursor: isSubmitting ? 'wait' : 'pointer',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease',
-                boxShadow: isSubmitting
-                  ? 'none'
-                  : '0 24px 48px rgba(79, 70, 229, 0.25)',
-                opacity: isSubmitting ? 0.7 : 1,
+                boxShadow: isSubmitting ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.24)',
+                opacity: isSubmitting ? 0.75 : 1,
               }}
             >
-              {isSubmitting ? 'Momentje…' : 'Inloggen en starten'}
+              {isSubmitting ? 'Inloggen…' : 'Inloggen'}
             </button>
-            {error && (
-              <p style={{
-                margin: 0,
-                background: withOpacity(brand.colors.danger, 0.12),
-                borderRadius: 16,
-                padding: '12px 16px',
-                color: '#B91C1C',
-                fontSize: '0.95rem',
-              }}>
-                {error}
-              </p>
-            )}
           </form>
-          <footer style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>
-            © 2025 {brand.provider.name} · {brand.tenant.name} tenant build · {brand.partnerTagline}
-          </footer>
         </section>
       </div>
     </div>
   )
 }
 
-const inputStyle = {
-  width: '100%',
-  padding: '12px 16px',
-  borderRadius: 14,
-  border: `1px solid ${withOpacity(brand.colors.primary, 0.32)}`,
-  background: withOpacity('#F8FAFF', 0.92),
-  fontSize: '1rem',
-  outline: 'none',
-  color: brand.colors.secondary,
-  boxShadow: '0 0 0 1px transparent',
-  transition: 'border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
-}
-
-function CredentialHint({ label, username, password, description }) {
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gap: 6,
-        padding: '12px 14px',
-        borderRadius: 16,
-        border: `1px solid ${withOpacity('#FFFFFF', 0.2)}`,
-        background: withOpacity('#000000', 0.18),
-      }}
-    >
-      <div style={{ fontWeight: 600, color: '#ffffff' }}>{label}</div>
-      <div
-        style={{
-          fontFamily:
-            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-          fontSize: '0.9rem',
-          color: withOpacity('#ffffff', 0.88),
-        }}
-      >
-        user: <code>{username}</code> • password: <code>{password}</code>
-      </div>
-      {description && <span style={{ fontSize: '0.85rem', color: withOpacity('#ffffff', 0.76) }}>{description}</span>}
-    </div>
-  )
-}
-
-const linkStyle = {
-  color: '#ffffff',
-  textDecoration: 'underline',
-  fontWeight: 600,
-  textUnderlineOffset: 6,
-}
+export default Login

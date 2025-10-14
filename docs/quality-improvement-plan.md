@@ -1,10 +1,10 @@
 # RentGuy Enterprise Platform – Quality Improvement Plan
 
 ## Stack & System Inventory
-- **Frontend**: React 18 single-page application served through Vite (`src/main.jsx`, `App.jsx`, `Planner.jsx`). Client code is still JavaScript with dynamic data flows and extensive localStorage usage, but TypeScript compiler is configured in `tsconfig.json` with strict flags.
+- **Frontend**: React 18 single-page application served through Vite (`src/main.tsx`, `App.tsx`, `Planner.jsx`). The entry point now boots through a validated env schema (`src/config/env.schema.ts`) and authentication shell components (`App.tsx`, `Login.tsx`, `RoleSelection.tsx`) are typed, but core feature modules such as the planner remain JavaScript with dynamic data flows and extensive localStorage usage.
 - **Barcode Scanner Mode**: Alternative entry in `scanner.jsx` toggled via `VITE_APP_MODE`, relies on `@zxing/browser`.
 - **Backend**: FastAPI service (`backend/app/main.py`) with modular routers (`app.modules.*`), SQLAlchemy 2.0 ORM, Alembic migrations, Redis/WebSocket realtime gateway, and adapters for payments, inventory, billing, and reporting.
-- **Configuration**: Environment settings managed via Pydantic (`backend/app/core/config.py`) but lacking shared schema for JavaScript consumers and runtime cross-checks.
+- **Configuration**: Environment settings managed via Pydantic (`backend/app/core/config.py`) and a new runtime-validated schema for the frontend (`src/config/env.schema.ts`), reducing drift risks between clients.
 - **Tooling**:
   - Node scripts: linting, formatting, dependency analysis, duplication detection, tests, and aggregate quality gate via `npm run quality:all` (`package.json`).
   - Python: pytest + coverage scaffolded (`backend/tests`), Ruff linting configured in `backend/pyproject.toml` but not wired into CI.
@@ -14,7 +14,7 @@
 ## Metric Baseline (Initial Observation)
 | Metric | Current Signals | Gaps Preventing ≥95% |
 | --- | --- | --- |
-| Type Safety | TS strict config exists, but core UI is JavaScript (`App.jsx`, `Planner.jsx`, `Login.jsx`). Backend lacks mypy. | No typed DTOs, no shared contracts, unchecked axios usage, missing env typing for frontend. |
+| Type Safety | TS strict config exists, but key feature views are still JavaScript (`Planner.jsx`, `OnboardingOverlay.jsx`, `scanner.jsx`). Backend lacks mypy. | No typed DTOs, no shared contracts, unchecked axios usage beyond the typed shell, missing env typing for frontend feature modules. |
 | Error Handling | Backend central `AppError` and metrics middleware exist (`backend/app/core/errors.py`, `backend/app/main.py`), but many routes raise raw exceptions; frontend lacks boundaries. | Missing standardized error mapping, structured logging, retry/backoff wrappers, client-side error surfaces. |
 | Code Reusability | Domain logic split across numerous feature-specific modules but duplicated patterns exist (`Planner.jsx` persona config, backend adapters). | No shared utilities/components folder, ad-hoc helper functions, inconsistent DTO shapes. |
 | Maintainability | ESLint/Prettier configured; backend main file orchestrates everything (160+ LOC). | Lack of dependency boundaries, mixed concerns in single files, inconsistent naming conventions, absence of architectural documentation. |
@@ -31,19 +31,19 @@
 7. **Test Coverage Expansion** → Vitest unit suites, backend pytest integration, Playwright flows, enforce ≥90–95% coverage.
 
 ## Hot Spots & Risks
-- **Front-end state & storage**: `App.jsx` orchestrates authentication, onboarding, and role management without typing or separation of concerns.【F:App.jsx†L1-L125】【F:App.jsx†L126-L202】
+- **Front-end state & storage**: `App.tsx` now types the orchestration of authentication, onboarding, and role management but still centralises multiple concerns that should migrate into dedicated hooks/modules.【F:App.tsx†L1-L196】
 - **Planner persona logic**: 200+ lines of persona presets and formatting in `Planner.jsx` with duplicated filter logic; high cyclomatic complexity and zero tests.【F:Planner.jsx†L1-L160】
 - **Backend monolith**: `backend/app/main.py` combines middleware, router registration, metrics, sockets; difficult to test in isolation.【F:backend/app/main.py†L1-L160】
-- **Configuration drift**: Pydantic settings are strong on the backend, but frontend lacks equivalent validation, risking runtime misconfigurations when switching between `App` and `Scanner` modes.【F:src/main.jsx†L1-L9】【F:backend/app/core/config.py†L1-L68】
+- **Configuration drift**: Shared validation now exists for both stacks, yet further alignment (e.g., generated typings for backend consumers) is needed to avoid divergence in future services.【F:src/config/env.schema.ts†L1-L35】【F:backend/app/core/config.py†L1-L68】
 
 ## Issue Backlog & Targeted Fixes
 | Path / Area | Issue | Proposed Fix | Metrics Impacted | Effort | Risk |
 | --- | --- | --- | --- | --- | --- |
-| `src/main.jsx`, `App.jsx`, `Login.jsx`, `Planner.jsx` | Untyped React components with implicit data contracts and direct localStorage access | Codemod to `.tsx`, introduce typed storage helpers and Zod schemas for API payloads, migrate axios usage to typed client | Type Safety, Maintainability | High | Medium |
+| `src/main.tsx`, `App.tsx`, `Login.tsx`, `Planner.jsx` | React shell components typed, but planner/onboarding flows remain implicit and share mutable state | Extend codemod to planner/onboarding modules, extract typed hooks for storage access, and share API DTO contracts | Type Safety, Maintainability | Medium | Medium |
 | `scanner.jsx` & barcode flow | Minimal error handling around camera/decoder, no retry/feedback semantics | Wrap scanner interactions in Result/AppError primitives, surface UI states, add telemetry hooks | Error Handling, Documentation (user feedback) | Medium | Medium |
 | `backend/app/main.py` | Centralized router + middleware logic, hard to test | Split into `app.bootstrap`, `app.http.middleware`, `app.routers`, wire dependency-cruiser / import boundaries | Maintainability, Reusability | High | Medium |
 | `backend/app/modules/*` | Raw exceptions/logging inconsistencies | Enforce `AppError` factories, structured logging with requestId, add integration tests for failure paths | Error Handling, Maintainability | High | Medium |
-| `backend/app/core/config.py` & frontend env usage | No shared env schema or generated typings | Create `src/config/env.schema.ts`, generate `env.d.ts`, align backend/front env docs, update `.env.example` | Type Safety, Documentation | Medium | Low |
+| `backend/app/core/config.py` & frontend env usage | Shared schemas exist but lack a single source of truth for generated typings and docs | Automate schema generation between backend `Settings`, `src/config/env.schema.ts`, and `.env.example` | Type Safety, Documentation | Medium | Low |
 | Docs (`docs/` root) | Missing up-to-date onboarding/architecture/API/runbooks | Author new docs with reproducible steps, diagrams, and quality gate instructions | Documentation, Maintainability | Medium | Low |
 | Testing suites | Sparse coverage in both stacks | Implement Vitest component + hook tests, backend pytest for key modules, add Playwright happy path, enforce coverage thresholds in scripts | Test Coverage, Type Safety | High | Medium |
 | CI / automation | Ruff, pytest, Playwright not in pipeline; quality gates partial | Expand `.github/workflows/ci.yml` to include Python lint/test, Playwright (in containers), upload coverage & QUALITY_SUMMARY.md | Maintainability, Documentation | Medium | Medium |
@@ -51,7 +51,7 @@
 
 ## Immediate Next Steps (Phase 1 Preparation)
 1. Run `npm run quality:all` and backend pytest to capture baseline metrics and update `docs/QUALITY_SUMMARY.md` with current scores.
-2. Author `.env.example` and align Node/Backend env loading to prevent drift before refactors.
+2. Automate synchronisation between `.env.example`, backend `Settings`, and the frontend schema so the documented defaults stay consistent across services.
 3. Draft codemod scripts (ts-morph or jscodeshift) for JSX→TSX migration and import alias normalization; dry-run on UI entry points.
 4. Prepare dependency-cruiser configuration enforcing `core → domain → application → infrastructure → ui` layering prior to large-scale moves.
 5. Establish measurement harness (coverage thresholds in Vitest/pytest configs) so future PRs can demonstrate ≥95% target progress.

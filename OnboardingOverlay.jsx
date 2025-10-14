@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
-import { getSteps, getProgress, completeStep, getTips } from './onbApi.js'
+import { getSteps, getProgress, completeStep, getTips } from './onbApi'
 import onboardingTips from './onboarding_tips.json'
-import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
+import { brand, brandFontStack, headingFontStack, withOpacity } from './branding'
 
 const fallbackSteps = [
   {
