@@ -5,6 +5,7 @@ declare module 'axios' {
     method?: string
     params?: Record<string, unknown>
     data?: T
+    signal?: AbortSignal
   }
 
   export interface AxiosResponse<T = any> {

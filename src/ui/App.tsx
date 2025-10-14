@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '@infra/http/api'
 import { brand, brandFontStack } from '@ui/branding'
 import Login from './Login'
-import OnboardingOverlay from './OnboardingOverlay.jsx'
+import OnboardingOverlay from './OnboardingOverlay'
 import Planner from './Planner.jsx'
 import RoleSelection from './RoleSelection'
 import {

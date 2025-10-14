@@ -36,11 +36,17 @@ declare module 'react' {
 
   export interface ChangeEvent<T = Element> extends SyntheticEvent<T> {}
   export interface FormEvent<T = Element> extends SyntheticEvent<T> {}
+  export interface KeyboardEvent<T = Element> extends SyntheticEvent<T> {
+    key: string
+  }
 
   export type Dispatch<A> = (value: A) => void
   export type SetStateAction<S> = S | ((prevState: S) => S)
   export interface RefObject<T> {
     current: T | null
+  }
+  export interface MutableRefObject<T> {
+    current: T
   }
 
   export function createElement<P>(type: any, props?: P, ...children: ReactNode[]): ReactElement<P>
@@ -50,6 +56,7 @@ declare module 'react' {
   export function useLayoutEffect(effect: () => void | (() => void), deps?: unknown[]): void
   export function useMemo<T>(factory: () => T, deps: unknown[]): T
   export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: unknown[]): T
+  export function useRef<T>(initialValue: T): MutableRefObject<T>
   export function useRef<T>(initialValue: T | null): RefObject<T>
   export function useReducer<R extends (state: any, action: any) => any, I>(
     reducer: R,

@@ -2,9 +2,9 @@
  * @ts-check
  */
 import { forwardRef } from 'react'
-import OverlayComponent from '@ui/OnboardingOverlay.jsx'
+import OverlayComponent from '@ui/OnboardingOverlay'
 
-export * from '@ui/OnboardingOverlay.jsx'
+export * from '@ui/OnboardingOverlay'
 
 /**
  * @typedef {{
