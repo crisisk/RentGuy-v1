@@ -25,3 +25,25 @@ class Booking(Base):
     external_event_id_o365: Mapped[str | None] = mapped_column(String(200), nullable=True)
     notify_email_sent_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Float
+from sqlalchemy.sql import func
+from geoalchemy2 import Geometry
+
+class Location(Base):
+    __tablename__ = "locations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    # POINT geometry with SRID 4326 (WGS 84)
+    geom = Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
+    accuracy = Column(Float, nullable=True)
+    speed = Column(Float, nullable=True)
+    heading = Column(Float, nullable=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+
+    def __repr__(self):
+        return f"<Location(user_id={self.user_id}, timestamp={self.timestamp})>"
+

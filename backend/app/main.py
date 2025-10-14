@@ -7,18 +7,14 @@ from typing import Callable
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import PlainTextResponse
-import socketio # Import socketio
 
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import setup_logging
 from app.core.metrics import MetricsTracker
 from app.core.observability import configure_tracing
+from .realtime import socket_app, sio # Import from new realtime module
 
 setup_logging()
-
-# Initialize Socket.IO server
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
-socket_app = socketio.ASGIApp(sio)
 
 
 @asynccontextmanager
@@ -145,4 +141,3 @@ app.include_router(observability_router, prefix="/api/v1", tags=["observability"
 
 # Mount the Socket.IO application
 app.mount("/ws", socket_app)
-
