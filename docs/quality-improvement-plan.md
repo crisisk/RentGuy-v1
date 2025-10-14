@@ -1,76 +1,59 @@
-# Quality Improvement Plan
+# RentGuy Enterprise Platform – Quality Improvement Plan
 
-## Stack Overview
-- **Frontend**: React 18 + Vite 5 single page app located in `src/` with additional legacy JSX entry points in the repository root. Currently implemented in plain JavaScript without type annotations.
-- **Backend**: FastAPI 0.115 service under `backend/app/` using SQLAlchemy 2.0 for data access, Alembic migrations, JWT-based auth, and extensive module surface (`auth`, `inventory`, `projects`, `calendar_sync`, etc.).
-- **Runtime & Tooling**:
-  - Node.js toolchain (Playwright E2E scaffolding, but no unit tests yet).
-  - Python 3.11 stack with Ruff for linting (configured via `pyproject.toml`) and pytest.
-  - Docker-compose manifests for multi-service deployment.
-- **Datastores & Integrations**: PostgreSQL (via SQLAlchemy + psycopg), Redis sockets (Socket.IO real-time module), external payment adapters (Stripe, Mollie), emailer, and multiple integration adapters referenced under `backend/app/modules`.
+## Stack & System Inventory
+- **Frontend**: React 18 single-page application served through Vite (`src/main.jsx`, `App.jsx`, `Planner.jsx`). Client code is still JavaScript with dynamic data flows and extensive localStorage usage, but TypeScript compiler is configured in `tsconfig.json` with strict flags.
+- **Barcode Scanner Mode**: Alternative entry in `scanner.jsx` toggled via `VITE_APP_MODE`, relies on `@zxing/browser`.
+- **Backend**: FastAPI service (`backend/app/main.py`) with modular routers (`app.modules.*`), SQLAlchemy 2.0 ORM, Alembic migrations, Redis/WebSocket realtime gateway, and adapters for payments, inventory, billing, and reporting.
+- **Configuration**: Environment settings managed via Pydantic (`backend/app/core/config.py`) but lacking shared schema for JavaScript consumers and runtime cross-checks.
+- **Tooling**:
+  - Node scripts: linting, formatting, dependency analysis, duplication detection, tests, and aggregate quality gate via `npm run quality:all` (`package.json`).
+  - Python: pytest + coverage scaffolded (`backend/tests`), Ruff linting configured in `backend/pyproject.toml` but not wired into CI.
+  - Quality artefacts already scaffolded (e.g., `scripts/quality-report.mjs`, `docs/QUALITY_SUMMARY.md`).
+- **Infrastructure**: Docker Compose manifests for multi-service deployment, Postgres primary datastore, optional Stripe/Mollie integrations.
 
-## Inventory & Current State
-### Node.js
-- **Dependencies**: `react`, `react-dom`, `axios`, `socket.io-client`, `@zxing/browser`.
-- **DevDependencies** (newly scaffolded): full ESLint + Prettier toolchain, Vitest + coverage plugin, dependency-cruiser, madge, jscpd, husky, lint-staged, ts-prune, ts-unused-exports, Playwright.
-- **Scripts**: Added `lint`, `typecheck`, `test`, `dup`, `complexity`, `dep:graph`, `quality:report`, `quality:all`, and `ci:type-sanity` in addition to Vite dev/build/preview and Playwright E2E.
-- **TypeScript**: `tsconfig.json` introduced with strict compiler flags, JS opt-in (`allowJs` + `checkJs`) to enable incremental migration.
+## Metric Baseline (Initial Observation)
+| Metric | Current Signals | Gaps Preventing ≥95% |
+| --- | --- | --- |
+| Type Safety | TS strict config exists, but core UI is JavaScript (`App.jsx`, `Planner.jsx`, `Login.jsx`). Backend lacks mypy. | No typed DTOs, no shared contracts, unchecked axios usage, missing env typing for frontend. |
+| Error Handling | Backend central `AppError` and metrics middleware exist (`backend/app/core/errors.py`, `backend/app/main.py`), but many routes raise raw exceptions; frontend lacks boundaries. | Missing standardized error mapping, structured logging, retry/backoff wrappers, client-side error surfaces. |
+| Code Reusability | Domain logic split across numerous feature-specific modules but duplicated patterns exist (`Planner.jsx` persona config, backend adapters). | No shared utilities/components folder, ad-hoc helper functions, inconsistent DTO shapes. |
+| Maintainability | ESLint/Prettier configured; backend main file orchestrates everything (160+ LOC). | Lack of dependency boundaries, mixed concerns in single files, inconsistent naming conventions, absence of architectural documentation. |
+| Documentation | Many historical reports but little actionable onboarding or runbooks for current stack. | No up-to-date getting started, architecture diagram, or API reference aligned with latest routes. |
+| Test Coverage | Vitest/Playwright scaffolding present; backend tests sparse. Coverage targets not enforced. | Few automated tests, no per-module coverage tracking, limited fixtures/mocks. |
 
-### Python Backend
-- **Requirements**: FastAPI, SQLAlchemy, Alembic, passlib, pydantic v2, psycopg, httpx, opentelemetry stack.
-- **Testing**: pytest configured but few automated tests available; coverage unknown.
-- **Linting**: Ruff config exists (`backend/pyproject.toml`) but not wired into CI.
+## Workstream DAG
+1. **Baseline Tooling Refresh** (Foundation)  → ensures scripts & CI targets are reproducible.
+2. **Type Safety Pass** → migrate critical UI files to TypeScript, introduce shared Zod schemas, env typing, ts-prune hygiene.
+3. **Error Handling & Observability Pass** → enforce `AppError`, add React error boundary, structured logging, retry/backoff.
+4. **Reusability & Architecture Pass** → carve `src/{core,domain,infrastructure,ui}` modules, codemod imports, deduplicate logic.
+5. **Maintainability & Quality Gates** → dependency-cruiser rules, cyclomatic guards, husky/commitlint, CI enhancements.
+6. **Documentation & Runbooks** → author `GETTING_STARTED`, `ARCHITECTURE`, `API_REFERENCE`, `QUALITY_GATES`, runbooks.
+7. **Test Coverage Expansion** → Vitest unit suites, backend pytest integration, Playwright flows, enforce ≥90–95% coverage.
 
-### Tooling & Automation
-- **Formatting**: `.editorconfig` and `.prettierrc.json` added to standardize whitespace and formatting across languages.
-- **Linting**: `.eslintrc.cjs` introduced with security (eslint-plugin-security), maintainability (sonarjs, unicorn) and accessibility (jsx-a11y) guards.
-- **Git Hooks**: Husky pre-commit hook running lint-staged for JS/TS formatting/linting.
-- **CI/CD**: New GitHub Actions workflow `.github/workflows/ci.yml` executing `npm run quality:all` and `npm run ci:type-sanity`, uploading the generated quality summary.
-- **Quality Reporting**: `scripts/quality-report.mjs` computes baseline heuristics for the six target metrics and writes `quality-report.json` + `docs/QUALITY_SUMMARY.md`.
+## Hot Spots & Risks
+- **Front-end state & storage**: `App.jsx` orchestrates authentication, onboarding, and role management without typing or separation of concerns.【F:App.jsx†L1-L125】【F:App.jsx†L126-L202】
+- **Planner persona logic**: 200+ lines of persona presets and formatting in `Planner.jsx` with duplicated filter logic; high cyclomatic complexity and zero tests.【F:Planner.jsx†L1-L160】
+- **Backend monolith**: `backend/app/main.py` combines middleware, router registration, metrics, sockets; difficult to test in isolation.【F:backend/app/main.py†L1-L160】
+- **Configuration drift**: Pydantic settings are strong on the backend, but frontend lacks equivalent validation, risking runtime misconfigurations when switching between `App` and `Scanner` modes.【F:src/main.jsx†L1-L9】【F:backend/app/core/config.py†L1-L68】
 
-### Hot Spots & Risks
-- **Type Safety**: Frontend entirely JavaScript (`src/main.jsx`, `App.jsx`, `scanner.jsx`) with dynamic imports; backend Python uses runtime validation but lacks mypy or typed settings. No shared DTO definitions.
-- **Error Handling**: Backend uses `AppError` but many modules still raise raw exceptions; frontend lacks centralized error boundary.
-- **Reusability**: Domain logic dispersed across numerous modules and duplicated across zipped archives; React UI components live at root rather than a structured library.
-- **Maintainability**: `backend/app/main.py` at 160+ lines orchestrates routers, metrics, middleware—candidate for decomposition. Many orphaned scripts (`scripts/*.sh`) and historical artifacts inflate repo.
-- **Documentation**: Scattered project reports exist, but developer onboarding, architecture reference, API docs, and runbooks for operations are missing or outdated.
-- **Testing**: Vitest/pytest infrastructure largely unused; no coverage reports, limited automated regression confidence.
-
-## Prioritized Backlog
-### Must Have (direct impact on reaching ≥95%)
-1. **Quality Baseline Automation** – ensure `quality:all` passes locally/CI, wire Ruff + pytest into pipeline.
-2. **Type Safety Upgrade** – migrate critical frontend modules to TypeScript, introduce shared DTO schemas (Zod) for backend+frontend contracts, add env schema validation.
-3. **Error Handling Framework** – enforce AppError usage, add React error boundary, wrap I/O with structured logging + correlation IDs.
-4. **Reusable Architecture** – establish `src/core|domain|infrastructure|ui` structure, refactor duplicated logic into shared utilities/components, enforce dependency rules with dependency-cruiser.
-5. **Documentation Refresh** – produce onboarding (`GETTING_STARTED`), architecture overview, API reference, runbooks, quality gate handbook.
-6. **Test Coverage Push** – add Vitest unit tests, backend pytest suites, integration tests with coverage thresholds ≥90%.
-
-### Should Have
-- Implement Storybook or component catalog for UI reuse.
-- Introduce backend type checking (mypy) and coverage reporting pipeline.
-- Harden CI with matrix (Node + Python) and caching for faster feedback.
-- Automate changelog (Conventional Commits + release script).
-
-### Nice to Have
-- Add contract tests against external adapters with mocked services.
-- Introduce performance budgets (Lighthouse/Gatling) and security scanning (npm audit, pip-audit, Trivy).
-- Provide visual regression automation for UI changes.
-
-## Issue Table
-| Path | Issue | Proposed Fix | Metric(s) impacted | Effort | Risk |
+## Issue Backlog & Targeted Fixes
+| Path / Area | Issue | Proposed Fix | Metrics Impacted | Effort | Risk |
 | --- | --- | --- | --- | --- | --- |
-| `src/main.jsx` & root JSX files | Untyped React entrypoints and legacy relative imports hinder type safety | Convert to TypeScript, align imports with alias (`@ui/*`), add type-safe App bootstrap | Type Safety, Maintainability | Medium | Low |
-| `backend/app/main.py` | Monolithic application setup (routing, metrics, sockets) concentrated in one file | Split into router registration module, metrics middleware module, and websocket adapter with explicit types | Maintainability, Error Handling | High | Medium |
-| `backend/app/modules/*` | Raw exceptions raised, inconsistent error mapping/logging | Standardize on `AppError` factory + structured logger with correlation IDs | Error Handling, Maintainability | High | Medium |
-| `docs/` (missing artifacts) | Lack of onboarding, architecture, API docs, runbooks | Author required documents and automate API generation | Documentation | Medium | Low |
-| Testing setup | Unit/integration tests absent; no coverage artifacts | Introduce Vitest + Testing Library suites, backend pytest coverage, configure coverage thresholds | Test Coverage, Type Safety | High | Medium |
-| Repo tooling | No dependency policy enforcement or duplication monitoring | Enforce dependency-cruiser, madge, jscpd via CI (already scaffolded) and act on findings | Maintainability, Reusability | Medium | Low |
-| Environment config | No typed config schema or `.env.example` | Add Zod-based config loader, generate env typings, document env variables | Type Safety, Documentation, Error Handling | Medium | Low |
+| `src/main.jsx`, `App.jsx`, `Login.jsx`, `Planner.jsx` | Untyped React components with implicit data contracts and direct localStorage access | Codemod to `.tsx`, introduce typed storage helpers and Zod schemas for API payloads, migrate axios usage to typed client | Type Safety, Maintainability | High | Medium |
+| `scanner.jsx` & barcode flow | Minimal error handling around camera/decoder, no retry/feedback semantics | Wrap scanner interactions in Result/AppError primitives, surface UI states, add telemetry hooks | Error Handling, Documentation (user feedback) | Medium | Medium |
+| `backend/app/main.py` | Centralized router + middleware logic, hard to test | Split into `app.bootstrap`, `app.http.middleware`, `app.routers`, wire dependency-cruiser / import boundaries | Maintainability, Reusability | High | Medium |
+| `backend/app/modules/*` | Raw exceptions/logging inconsistencies | Enforce `AppError` factories, structured logging with requestId, add integration tests for failure paths | Error Handling, Maintainability | High | Medium |
+| `backend/app/core/config.py` & frontend env usage | No shared env schema or generated typings | Create `src/config/env.schema.ts`, generate `env.d.ts`, align backend/front env docs, update `.env.example` | Type Safety, Documentation | Medium | Low |
+| Docs (`docs/` root) | Missing up-to-date onboarding/architecture/API/runbooks | Author new docs with reproducible steps, diagrams, and quality gate instructions | Documentation, Maintainability | Medium | Low |
+| Testing suites | Sparse coverage in both stacks | Implement Vitest component + hook tests, backend pytest for key modules, add Playwright happy path, enforce coverage thresholds in scripts | Test Coverage, Type Safety | High | Medium |
+| CI / automation | Ruff, pytest, Playwright not in pipeline; quality gates partial | Expand `.github/workflows/ci.yml` to include Python lint/test, Playwright (in containers), upload coverage & QUALITY_SUMMARY.md | Maintainability, Documentation | Medium | Medium |
+| Legacy archives (`*.zip`, `models(1).py`, etc.) | Historical artefacts inflate repo, risk confusion | Inventory and either remove or isolate in `archive/` folder with docs references, ensure they are excluded from tooling scopes | Maintainability | Medium | Low |
 
-## Effort/Impact Mapping
-- **High Impact / Medium Effort**: Type migration + DTO schemas, documentation refresh, error handling framework.
-- **High Impact / High Effort**: Comprehensive test coverage & backend refactor.
-- **Medium Impact / Low Effort**: Enforcing tooling (lint, dependency rules) now configured; requires adoption.
+## Immediate Next Steps (Phase 1 Preparation)
+1. Run `npm run quality:all` and backend pytest to capture baseline metrics and update `docs/QUALITY_SUMMARY.md` with current scores.
+2. Author `.env.example` and align Node/Backend env loading to prevent drift before refactors.
+3. Draft codemod scripts (ts-morph or jscodeshift) for JSX→TSX migration and import alias normalization; dry-run on UI entry points.
+4. Prepare dependency-cruiser configuration enforcing `core → domain → application → infrastructure → ui` layering prior to large-scale moves.
+5. Establish measurement harness (coverage thresholds in Vitest/pytest configs) so future PRs can demonstrate ≥95% target progress.
 
-## Metric Alignment
-Each backlog item is tagged against the six key metrics to ensure every iteration measurably improves towards ≥95% thresholds.
+This plan will be updated after completing each phase to reflect new baselines and risks.
