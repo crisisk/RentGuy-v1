@@ -13,11 +13,13 @@
     "noImplicitAny": true,
     "moduleResolution": "Node",
     "resolveJsonModule": true,
+    "jsx": "react-jsx",
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": false,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
+    "typeRoots": ["./types", "./node_modules/@types"],
     "paths": {
       "@core/*": ["src/core/*"],
       "@domain/*": ["src/domain/*"],
@@ -26,5 +28,5 @@
     }
   },
   "include": ["src", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  "exclude": ["node_modules", "dist", "build", "coverage"]
+  "exclude": ["node_modules", "dist", "build", "coverage", "apps"]
 }
