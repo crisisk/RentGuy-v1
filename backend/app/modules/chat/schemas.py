@@ -3,6 +3,7 @@ from datetime import datetime
 
 class MessageIn(BaseModel):
     project_id: int
+    user_id: int
     content: str
 
 class MessageOut(BaseModel):

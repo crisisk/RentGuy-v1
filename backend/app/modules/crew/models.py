@@ -35,14 +35,14 @@ class Location(Base):
     __tablename__ = "locations"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    user_id = Column(Integer, ForeignKey("auth_users.id"), nullable=False, unique=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     # POINT geometry with SRID 4326 (WGS 84)
     geom = Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
     accuracy = Column(Float, nullable=True)
     speed = Column(Float, nullable=True)
     heading = Column(Float, nullable=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    project_id = Column(Integer, ForeignKey("prj_projects.id"), nullable=True)
 
     def __repr__(self):
         return f"<Location(user_id={self.user_id}, timestamp={self.timestamp})>"
