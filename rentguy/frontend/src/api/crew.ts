@@ -12,6 +12,15 @@ const mockTimeEntries: TimeEntry[] = [
     { id: 't2', crewId: 'c2', projectId: 'p2', startTime: '2025-10-11T09:00:00Z', endTime: '2025-10-11T17:00:00Z', duration: 28800, status: 'approved' },
 ];
 
+export const getAll = crewAPI.getAll;
+export const getById = crewAPI.getById;
+export const updateAvailability = crewAPI.updateAvailability;
+export const getTimeEntries = crewAPI.getTimeEntries;
+export const approveTimeEntry = crewAPI.approveTimeEntry;
+export const rejectTimeEntry = crewAPI.rejectTimeEntry;
+export const bulkApprove = crewAPI.bulkApprove;
+export const exportToAFAS = crewAPI.exportToAFAS;
+
 export const crewAPI = {
   getAll: async (): Promise<TeamMember[]> => {
     // const response = await apiClient.get('/crew');

@@ -16,6 +16,11 @@ export interface AuthResponse {
   };
 }
 
+export const login = authAPI.login;
+export const logout = authAPI.logout;
+export const refreshToken = authAPI.refreshToken;
+export const ssoLogin = authAPI.ssoLogin;
+
 export const authAPI = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     // NOTE: The actual API endpoint is /auth/login, but we'll use a mock for now
