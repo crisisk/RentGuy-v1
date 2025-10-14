@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
+import os
 import sys
 import types
 
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.types import UserDefinedType
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -101,13 +103,60 @@ def _install_otel_stubs() -> None:
 
 _install_otel_stubs()
 
+# Provide light-weight stand-ins for optional geoalchemy2 dependency that is not
+# required for the current test-suite but imported by several modules.
+def _install_geoalchemy_stubs() -> None:
+    if 'geoalchemy2' in sys.modules:
+        return
+
+    geoalchemy_module = types.ModuleType('geoalchemy2')
+
+    class _Geometry(UserDefinedType):
+        def __init__(self, *args, **kwargs) -> None:  # pragma: no cover - trivial stub
+            self.args = args
+            self.kwargs = kwargs
+
+        def get_col_spec(self, **kwargs):  # pragma: no cover - trivial stub
+            return "GEOMETRY"
+
+    class _WKBElement:
+        def __init__(self, data=None, srid: int | None = None) -> None:  # pragma: no cover - trivial stub
+            self.data = data
+            self.srid = srid
+
+    geoalchemy_module.Geometry = _Geometry
+    geoalchemy_module.WKBElement = _WKBElement
+
+    elements_module = types.ModuleType('geoalchemy2.elements')
+
+    class _WKTElement(str):
+        pass
+
+    elements_module.WKTElement = _WKTElement
+
+    shape_module = types.ModuleType('geoalchemy2.shape')
+
+    def _from_shape(shape, srid=None):  # pragma: no cover - trivial stub
+        return shape
+
+    shape_module.from_shape = _from_shape
+
+    sys.modules['geoalchemy2'] = geoalchemy_module
+    sys.modules['geoalchemy2.elements'] = elements_module
+    sys.modules['geoalchemy2.shape'] = shape_module
+
+
+_install_geoalchemy_stubs()
+
+# Provide sensible defaults for configuration values expected by the settings model
+os.environ.setdefault('DATABASE_URL', 'sqlite://')
+os.environ.setdefault('JWT_SECRET', 'test-secret')
+
 # Ensure models are imported so metadata is populated before accessing the FastAPI app
 import app.modules.inventory.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
 
 from app.core.db import Base
-from app.main import app
-from app.modules.auth import deps as auth_deps
 
 
 def create_test_engine():
@@ -140,6 +189,9 @@ class DummyUser:
 
 @pytest.fixture()
 def client(db_session: Session) -> Generator[TestClient, None, None]:
+    from app.main import app
+    from app.modules.auth import deps as auth_deps
+
     def override_get_db() -> Generator[Session, None, None]:
         try:
             yield db_session

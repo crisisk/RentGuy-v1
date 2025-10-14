@@ -1,58 +1,139 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import select, func
-from typing import List, Dict
+"""Inventory data access helpers."""
+
+from __future__ import annotations
+
 from datetime import date
 
-from .models import Item, Category, Bundle, BundleItem, MaintenanceLog
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from .models import Bundle, BundleItem, Category, Item, MaintenanceLog
+
 
 class InventoryRepo:
+    """High level repository responsible for inventory related persistence."""
+
     def __init__(self, db: Session):
+        if db is None:  # pragma: no cover - defensive guard
+            raise ValueError("A database session instance is required")
         self.db = db
 
-    # Categories
+    # ---- Categories ----
     def list_categories(self) -> list[Category]:
-        return self.db.execute(select(Category).order_by(Category.name)).scalars().all()
+        """Return all inventory categories ordered alphabetically."""
+
+        return (
+            self.db.execute(select(Category).order_by(Category.name)).scalars().all()
+        )
 
     def upsert_category(self, name: str) -> Category:
-        c = self.db.execute(select(Category).where(Category.name==name)).scalar_one_or_none()
-        if c: return c
-        c = Category(name=name); self.db.add(c); self.db.flush(); return c
+        """Return the category with *name*, creating it when it does not exist."""
 
-    # Items
+        category = (
+            self.db.execute(select(Category).where(Category.name == name)).scalar_one_or_none()
+        )
+        if category:
+            return category
+
+        category = Category(name=name)
+        self.db.add(category)
+        self.db.flush()
+        return category
+
+    # ---- Items ----
     def list_items(self) -> list[Item]:
+        """Return all inventory items ordered alphabetically."""
+
         return self.db.execute(select(Item).order_by(Item.name)).scalars().all()
 
     def get_item(self, item_id: int) -> Item | None:
+        """Retrieve an inventory item by identifier."""
+
         return self.db.get(Item, item_id)
 
+    def get_item_by_id(self, item_id: int) -> Item | None:
+        """Compatibility wrapper used by older route handlers."""
+
+        return self.get_item(item_id)
+
     def add_item(self, item: Item) -> Item:
-        self.db.add(item); self.db.flush(); return item
+        """Persist *item* and ensure the primary key is populated."""
 
-    def delete_item(self, item_id: int) -> bool:
-        it = self.get_item(item_id)
-        if not it: return False
-        self.db.delete(it); return True
+        self.db.add(item)
+        self.db.flush()
+        return item
 
-    # Bundles
+    def delete_item(self, item_id: int, *, raise_if_missing: bool = False) -> bool:
+        """Delete the item with *item_id*.
+
+        When ``raise_if_missing`` is true a :class:`LookupError` is raised when the
+        item does not exist. Otherwise ``False`` is returned in that situation.
+        """
+
+        item = self.get_item(item_id)
+        if item is None:
+            if raise_if_missing:
+                raise LookupError(f"Item with id {item_id} was not found")
+            return False
+
+        self.db.delete(item)
+        self.db.flush()
+        return True
+
+    # ---- Bundles ----
     def list_bundles(self) -> list[Bundle]:
+        """Return all bundle definitions ordered alphabetically."""
+
         return self.db.execute(select(Bundle).order_by(Bundle.name)).scalars().all()
 
     def get_bundle_items(self, bundle_id: int) -> list[BundleItem]:
-        return self.db.execute(select(BundleItem).where(BundleItem.bundle_id==bundle_id)).scalars().all()
+        """Return the bundle items belonging to *bundle_id*."""
 
-    def add_bundle(self, b: Bundle) -> Bundle:
-        self.db.add(b); self.db.flush(); return b
+        return (
+            self.db.execute(select(BundleItem).where(BundleItem.bundle_id == bundle_id))
+            .scalars()
+            .all()
+        )
 
-    def add_bundle_item(self, bi: BundleItem) -> BundleItem:
-        self.db.add(bi); self.db.flush(); return bi
+    def add_bundle(self, bundle: Bundle) -> Bundle:
+        """Persist a bundle definition."""
 
-    # Maintenance
-    def log_maintenance(self, m: MaintenanceLog) -> MaintenanceLog:
-        self.db.add(m); self.db.flush(); return m
+        self.db.add(bundle)
+        self.db.flush()
+        return bundle
 
-    # Availability (simple placeholder; will subtract reservations once projects module exists)
-    def calc_available(self, item_id: int, start: date, end: date) -> int:
-        it = self.get_item(item_id)
-        if not it: return 0
+    def add_bundle_item(self, bundle_item: BundleItem) -> BundleItem:
+        """Persist a link between a bundle and an item."""
+
+        self.db.add(bundle_item)
+        self.db.flush()
+        return bundle_item
+
+    # ---- Maintenance ----
+    def log_maintenance(self, log_entry: MaintenanceLog) -> MaintenanceLog:
+        """Store a maintenance log entry."""
+
+        self.db.add(log_entry)
+        self.db.flush()
+        return log_entry
+
+    # ---- Availability ----
+    def calc_available(self, item_id: int, start: date, end: date, *, strict: bool = False) -> int:
+        """Return the number of available units for *item_id* in the given window.
+
+        The current implementation only validates the time window and returns the
+        total quantity on record. When ``strict`` is true a missing item results in a
+        :class:`LookupError` instead of silently returning zero.
+        """
+
+        if start > end:
+            raise ValueError("The start date must be before or equal to the end date")
+
+        item = self.get_item(item_id)
+        if item is None:
+            if strict:
+                raise LookupError(f"Item with id {item_id} was not found")
+            return 0
+
         # TODO: subtract overlapping reservations when projects module is active
-        return it.quantity_total
+        return max(item.quantity_total, 0)
