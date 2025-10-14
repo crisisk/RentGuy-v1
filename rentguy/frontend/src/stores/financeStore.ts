@@ -12,7 +12,7 @@ interface FinanceState {
   fetchPayments: () => Promise<void>;
 }
 
-export const createFinanceStore = create<FinanceState>()(immer((set) => ({
+export const useFinanceStore = create<FinanceState>()(immer((set) => ({
   invoices: [],
   payments: [],
   isLoading: false,

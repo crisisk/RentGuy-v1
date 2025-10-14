@@ -20,7 +20,7 @@ export const useCrewStore = create<CrewState>()(immer((set) => ({
   fetchTeamMembers: async () => {
     try {
       set({ isLoading: true });
-      const teamMembers = await crewApi.getTeamMembers();
+      const teamMembers = await crewApi.getAll();
       set({ teamMembers, isLoading: false });
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
@@ -29,7 +29,7 @@ export const useCrewStore = create<CrewState>()(immer((set) => ({
   fetchSchedules: async (date) => {
     try {
       set({ isLoading: true });
-      const schedules = await crewApi.getSchedules(date);
+      const schedules = await crewApi.getTimeEntries({ startDate: date.toISOString() });
       set({ schedules, isLoading: false });
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
