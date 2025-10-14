@@ -1,30 +1,33 @@
-import axios from 'axios'
+import axios, {
+  type AxiosInstance,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios'
 import {
   clearOnboardingState,
   getLocalStorageItem,
   removeLocalStorageItem,
   setLocalStorageItem,
   storageAvailable,
-} from './storage.js'
+} from '@core/storage'
+import { env } from '@config/env'
+import { mapUnknownToAppError } from '@core/errors'
 
-// Backend endpoint can be configured through Vite env files or process envs.
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-  process.env?.VITE_API_URL ||
-  'http://localhost:8000'
+const API_BASE_URL = env.apiUrl
 
-export const api = axios.create({
+export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     Accept: 'application/json',
   },
 })
 
-api.interceptors.request.use(config => {
-  const isFormData =
-    typeof FormData !== 'undefined' && config.data instanceof FormData
-  if (!isFormData && config.method && config.method !== 'get') {
-    config.headers = config.headers || {}
+type MaybeFormData = BodyInit | undefined
+
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const isFormData = typeof FormData !== 'undefined' && (config.data as MaybeFormData) instanceof FormData
+  if (!isFormData && config.method && config.method.toLowerCase() !== 'get') {
+    config.headers = config.headers ?? {}
     if (!config.headers['Content-Type'] && !config.headers['content-type']) {
       config.headers['Content-Type'] = 'application/json'
     }
@@ -34,7 +37,7 @@ api.interceptors.request.use(config => {
 
 let token = getLocalStorageItem('token', '')
 
-export function setToken(newToken) {
+export function setToken(newToken: string) {
   token = newToken
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`
@@ -49,16 +52,15 @@ export function setToken(newToken) {
   }
 }
 
-// Set initial token if exists
 if (token) {
   setToken(token)
 }
 
-// Add response interceptor for token expiration
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+  (response: AxiosResponse) => response,
+  (error: unknown) => {
+    const appError = mapUnknownToAppError(error)
+    if (appError.code === 'unauthorized') {
       removeLocalStorageItem('token')
       removeLocalStorageItem('user_email')
       clearOnboardingState()
@@ -66,6 +68,6 @@ api.interceptors.response.use(
         window.location.reload()
       }
     }
-    return Promise.reject(error)
+    return Promise.reject(appError)
   }
 )

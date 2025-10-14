@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { api } from './api.js'
+import { api } from './api'
 import TipBanner from './TipBanner.jsx'
 import ObservabilitySummary from './ObservabilitySummary.jsx'
 import { brand, brandFontStack, withOpacity } from './theme.js'

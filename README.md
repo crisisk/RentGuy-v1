@@ -7,7 +7,7 @@ RentGuy Enterprise Platform is a full-stack solution for professional rental ope
 | Area | Description |
 | ---- | ----------- |
 | Backend | `backend/` contains a FastAPI service with modular routers per domain (auth, inventory, projects, crew, transport, billing, warehouse, reporting, observability). Metrics, structured logging, and rich error handling are enabled out of the box. |
-| Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.jsx`) conditionally renders the planner UI or the scanner UI depending on `VITE_APP_MODE`. |
+| Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.tsx`) conditionally renders the planner UI or the scanner UI depending on `VITE_APP_MODE`, validated through a shared runtime schema. |
 | Infrastructure | Docker artefacts, Alembic migrations, seed scripts, and environment configuration helpers sit alongside documentation that captures the enterprise deployment roadmap. |
 
 ## Getting Started

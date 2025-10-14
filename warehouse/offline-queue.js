@@ -1,3 +1,4 @@
+// @ts-nocheck
 const DB_NAME = 'rentguy-scanner'
 const STORE_NAME = 'queued-scans'
 const DB_VERSION = 1
