@@ -55,7 +55,7 @@ _Scope:_ Web projectplanner, voorraadbewaking en project-API binnen RentGuy Ente
 ## 7. Iteratie 3 – vervolg UAT (2025-10-11)
 | Persona | Nieuwe bevinding | Aanpassing | Resultaat |
 | --- | --- | --- | --- |
-| Bart de Manager | Refresh van de cockpit leverde een 401 op doordat het token niet opnieuw werd gezet. | `App.jsx` hydrateert de autorisatieheader en haalt het actuele e-mailadres via `/auth/me` op voordat de planner laadt. | ✅ Bart kan de cockpit herladen zonder opnieuw in te loggen. |
+| Bart de Manager | Refresh van de cockpit leverde een 401 op doordat het token niet opnieuw werd gezet. | `App.tsx` hydrateert de autorisatieheader en haalt het actuele e-mailadres via `/auth/me` op voordat de planner laadt. | ✅ Bart kan de cockpit herladen zonder opnieuw in te loggen. |
 | Carla de Klant | Mistte de contextuele tipbanner die haar naar relevante workflows gidst. | Planner toont opnieuw de `TipBanner` voor de projectmodule. | ✅ Front-office krijgt weer directe tips bij het openen van de planning. |
 | Nadia de Nieuweling | Onboarding overlay verdween na de migratie naar de nieuwe Vite-entry. | Onboarding-overlay opnieuw aangesloten op het web-entrypunt en onthoudt voortgang in `localStorage`. | ✅ Nieuwe gebruikers zien opnieuw de begeleide onboarding. |
 | David de Developer | Automatische API-tests konden niet meer draaien doordat standaardbibliotheken werden overschaduwd. | Verwijderd de oude demo-modules `app.py`, `http.py` en `logging.py` die namespace-conflicten veroorzaakten. | ✅ TestClient-sessies starten weer zonder importfouten. |
