@@ -1,4 +1,4 @@
-import { api } from './api.js'
+import { api } from '@core/api/client'
 
 export async function getSteps(config = {}) {
   const { data } = await api.get('/api/v1/onboarding/steps', config)

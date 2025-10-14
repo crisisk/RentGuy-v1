@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2025-10-14T15:33:24.704Z",
+  "metrics": {
+    "typeSafety": {
+      "score": 7.46,
+      "details": {
+        "tsFiles": 7,
+        "jsFiles": 0,
+        "tsLines": 221,
+        "jsLines": 2740
+      }
+    },
+    "errorHandling": {
+      "score": 79.85,
+      "details": {
+        "filesAnalysed": 127,
+        "riskEvents": 134,
+        "handledEvents": 107
+      }
+    },
+    "codeReusability": {
+      "score": 94.4,
+      "details": {
+        "reusableFiles": 118,
+        "totalFiles": 125
+      }
+    },
+    "maintainability": {
+      "score": 100,
+      "details": {
+        "filesAnalysed": 125,
+        "averageLines": 46.98,
+        "maxLines": 298,
+        "totalLines": 5873
+      }
+    },
+    "documentation": {
+      "score": 33.33,
+      "details": {
+        "available": 2,
+        "expected": 6,
+        "missing": [
+          "docs/GETTING_STARTED.md",
+          "docs/ARCHITECTURE.md",
+          "docs/QUALITY_GATES.md",
+          "docs/RUNBOOKS/README.md"
+        ]
+      }
+    },
+    "testCoverage": {
+      "score": 0,
+      "details": {
+        "message": "No coverage report found"
+      }
+    }
+  },
+  "overallQualityIndex": 52.51
+}

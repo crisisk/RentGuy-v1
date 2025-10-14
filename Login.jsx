@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
-import { api, setToken } from './api.js'
+import { api, setToken } from '@core/api/client'
+import { setLocalStorageItem } from '@core/storage/localStorage'
+
 import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
 
 const heroHighlights = [
@@ -19,7 +21,6 @@ const heroHighlights = [
       'Invoice Ninja, Mollie en crewbriefings zijn gekoppeld aan RentGuy milestones voor volledige traceerbaarheid.',
   },
 ]
-import { setLocalStorageItem } from './storage.js'
 
 export default function Login({ onLogin }) {
   const [user, setUser] = useState('bart')

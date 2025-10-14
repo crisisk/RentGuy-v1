@@ -3,14 +3,15 @@ import Login from './Login.jsx'
 import OnboardingOverlay from './OnboardingOverlay.jsx'
 import Planner from './Planner.jsx'
 import RoleSelection from './RoleSelection.jsx'
-import { api } from './api.js'
+import { api } from '@core/api/client'
+
 import { brand, brandFontStack } from './branding.js'
 import {
   clearOnboardingState,
   getLocalStorageItem,
   removeLocalStorageItem,
   setLocalStorageItem,
-} from './storage.js'
+} from '@core/storage/localStorage'
 
 const SNOOZE_DURATION_MS = 1000 * 60 * 60 * 6 // 6 uur
 
