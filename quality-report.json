@@ -1,38 +1,57 @@
 {
-  "generatedAt": "2025-10-14T14:49:39.769Z",
+  "version": 1,
+  "generatedAt": "2025-10-14T20:36:32.380Z",
   "metrics": {
     "typeSafety": {
-      "score": 0,
+      "score": 59.99,
       "details": {
-        "tsFiles": 0,
-        "jsFiles": 1,
-        "tsLines": 0,
-        "jsLines": 2747
-      }
+        "tsFiles": 17,
+        "jsFiles": 2,
+        "tsLines": 2469,
+        "jsLines": 1647,
+        "ratio": 0.5999
+      },
+      "evidence": [
+        "TypeScript LOC: 2469",
+        "JavaScript LOC: 1647",
+        "TypeScript coverage ratio: 59.99%"
+      ]
     },
     "errorHandling": {
-      "score": 82.03,
-      "details": {
-        "filesAnalysed": 121,
-        "riskEvents": 128,
-        "handledEvents": 105
-      }
-    },
-    "codeReusability": {
-      "score": 97.48,
-      "details": {
-        "reusableFiles": 116,
-        "totalFiles": 119
-      }
-    },
-    "maintainability": {
       "score": 100,
       "details": {
-        "filesAnalysed": 119,
-        "averageLines": 47.55,
-        "maxLines": 298,
-        "totalLines": 5659
-      }
+        "filesAnalysed": 137,
+        "riskEvents": 135,
+        "handledEvents": 208
+      },
+      "evidence": [
+        "Potential risk events identified: 135",
+        "Handling constructs detected: 208"
+      ]
+    },
+    "codeReusability": {
+      "score": 94.16,
+      "details": {
+        "reusableFiles": 129,
+        "totalFiles": 137
+      },
+      "evidence": [
+        "Reusable files analysed: 129",
+        "Total code files: 137"
+      ]
+    },
+    "maintainability": {
+      "score": 0,
+      "details": {
+        "filesAnalysed": 137,
+        "averageLines": 70.96,
+        "maxLines": 1327,
+        "totalLines": 9721
+      },
+      "evidence": [
+        "Average LOC per file: 70.96",
+        "Max LOC single file: 1327"
+      ]
     },
     "documentation": {
       "score": 33.33,
@@ -45,14 +64,35 @@
           "docs/QUALITY_GATES.md",
           "docs/RUNBOOKS/README.md"
         ]
-      }
+      },
+      "evidence": [
+        "Documentation artifacts present: 2/6",
+        "Missing: docs/GETTING_STARTED.md, docs/ARCHITECTURE.md, docs/QUALITY_GATES.md, docs/RUNBOOKS/README.md"
+      ]
     },
-    "testCoverage": {
+    "coverage": {
       "score": 0,
-      "details": {
-        "message": "No coverage report found"
-      }
+      "lines": 0,
+      "functions": 0,
+      "branches": 0,
+      "statements": 0,
+      "evidence": [
+        "Coverage summary missing. Run `npm run test` to generate."
+      ]
     }
   },
-  "overallQualityIndex": 52.14
+  "overallQualityIndex": 57.5,
+  "gates": {
+    "typeSafety": 95,
+    "errorHandling": 95,
+    "codeReusability": 95,
+    "maintainability": 95,
+    "documentation": 95,
+    "coverage": {
+      "lines": 90,
+      "branches": 90,
+      "functions": 90,
+      "statements": 90
+    }
+  }
 }

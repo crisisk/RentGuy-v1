@@ -1,16 +1,46 @@
-import React, { useEffect, useState } from 'react'
-import { getTips } from './onbApi.js'
-import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
+import { useEffect, useState } from 'react'
+import { getTips, type OnboardingTip, type TipsResult } from '@application/onboarding/api'
+import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
+import { isOk } from '@core/result'
 
-export default function TipBanner({ module }){
-  const [tip, setTip] = useState(null)
-  useEffect(()=>{
-    (async()=>{
-      const tips = await getTips(module)
-      if (tips.length) setTip(tips[0])
+export interface TipBannerProps {
+  module?: string
+}
+
+export function TipBanner({ module }: TipBannerProps) {
+  const [tip, setTip] = useState<OnboardingTip | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const result: TipsResult = await getTips(module)
+        if (cancelled) {
+          return
+        }
+        if (isOk(result)) {
+          const [firstTip] = result.value
+          if (firstTip) {
+            setTip(firstTip)
+          }
+        } else {
+          console.warn('Kon onboarding tip niet laden', result.error)
+        }
+      } catch (error) {
+        console.warn('Kon onboarding tip niet laden', error)
+      }
     })()
+
+    return () => {
+      cancelled = true
+    }
   }, [module])
-  if (!tip) return null
+
+  if (!tip) {
+    return null
+  }
+
   return (
     <div
       style={{
@@ -52,6 +82,7 @@ export default function TipBanner({ module }){
         <span style={{ color: brand.colors.secondary, fontSize: '0.95rem' }}>{tip.message}</span>
         {tip.cta && (
           <button
+            type="button"
             style={{
               marginTop: 2,
               alignSelf: 'flex-start',
@@ -73,3 +104,5 @@ export default function TipBanner({ module }){
     </div>
   )
 }
+
+export default TipBanner
