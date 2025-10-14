@@ -1,113 +1,144 @@
-import socketio
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from app.core.db import get_db_session
-from app.modules.crew.models import Location
-from app.modules.auth.deps import get_current_user
-from app.modules.auth.models import User
-from geoalchemy2.elements import WKTElement
+"""Socket.IO event handlers for crew related real-time features."""
+
+from __future__ import annotations
+
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-# Assuming the sio server is stored in the app state (from app.main.py)
-# We need a way to access it, typically via the request object in a FastAPI route,
-# but for Socket.IO, we'll rely on the global sio object or a dependency injection pattern.
+from geoalchemy2.elements import WKTElement
+from socketio import AsyncServer
+from sqlalchemy.orm import Session
 
-# For simplicity, we'll use the global sio object for now, assuming it's imported
-# from app.main or passed in a more complex setup.
+from app.core.db import SessionLocal
+from app.modules.crew.models import Location
 
-# --- Socket.IO Event Handlers ---
+_sio: Optional[AsyncServer] = None
 
-@socketio.on('connect')
-async def connect(sid, environ):
-    # Authentication check can be done here using headers/cookies from environ
-    # For now, just accept the connection
+
+def register_socket_server(server: AsyncServer) -> None:
+    """Register the Socket.IO server instance used by the event handlers."""
+
+    global _sio
+    _sio = server
+
+
+def _require_server() -> AsyncServer:
+    if _sio is None:
+        raise RuntimeError("Socket server has not been initialised")
+    return _sio
+
+
+def _update_location_record(
+    db: Session,
+    *,
+    user_id: int,
+    latitude: float,
+    longitude: float,
+    project_id: Optional[int],
+    accuracy: Optional[float],
+    speed: Optional[float],
+    heading: Optional[float],
+) -> Dict[str, Any]:
+    point = WKTElement(f"POINT({longitude} {latitude})", srid=4326)
+
+    existing_location = db.query(Location).filter(Location.user_id == user_id).first()
+
+    if existing_location:
+        existing_location.geom = point
+        existing_location.timestamp = datetime.now()
+        existing_location.accuracy = accuracy
+        existing_location.speed = speed
+        existing_location.heading = heading
+        existing_location.project_id = project_id
+    else:
+        location = Location(
+            user_id=user_id,
+            geom=point,
+            accuracy=accuracy,
+            speed=speed,
+            heading=heading,
+            project_id=project_id,
+        )
+        db.add(location)
+
+    db.commit()
+
+    return {
+        "user_id": user_id,
+        "latitude": latitude,
+        "longitude": longitude,
+        "timestamp": datetime.now().isoformat(),
+        "project_id": project_id,
+        "accuracy": accuracy,
+        "speed": speed,
+        "heading": heading,
+    }
+
+
+async def connect(sid: str, environ: dict) -> None:
+    """Accept incoming socket connections."""
+
     print(f"Client connected: {sid}")
-    # Example: await sio.emit('status', {'message': 'Connected to RentGuy Realtime'}, room=sid)
 
-@socketio.on('disconnect')
-def disconnect(sid):
+
+def disconnect(sid: str) -> None:
+    """Log socket disconnections."""
+
     print(f"Client disconnected: {sid}")
 
-@socketio.on('join_project')
-async def join_project(sid, data):
-    project_id = data.get('project_id')
-    if project_id:
-        sio.enter_room(sid, f'project_{project_id}')
-        print(f"Client {sid} joined room project_{project_id}")
-        await sio.emit('status', {'message': f'Joined project {project_id}'}, room=sid)
 
-@socketio.on('leave_project')
-async def leave_project(sid, data):
-    project_id = data.get('project_id')
-    if project_id:
-        sio.leave_room(sid, f'project_{project_id}')
-        print(f"Client {sid} left room project_{project_id}")
-        await sio.emit('status', {'message': f'Left project {project_id}'}, room=sid)
+async def join_project(sid: str, data: dict) -> None:
+    project_id = data.get("project_id")
+    if not project_id:
+        return
 
-@socketio.on('update_location')
-async def update_location(sid, data, db: Session = Depends(get_db_session), user: User = Depends(get_current_user)):
-    """
-    Handles real-time location updates from a crew member.
-    Data format: {latitude: float, longitude: float, accuracy: float, project_id: int}
-    """
+    sio = _require_server()
+    sio.enter_room(sid, f"project_{project_id}")
+    await sio.emit("status", {"message": f"Joined project {project_id}"}, room=sid)
+
+
+async def leave_project(sid: str, data: dict) -> None:
+    project_id = data.get("project_id")
+    if not project_id:
+        return
+
+    sio = _require_server()
+    sio.leave_room(sid, f"project_{project_id}")
+    await sio.emit("status", {"message": f"Left project {project_id}"}, room=sid)
+
+
+async def update_location(sid: str, data: dict) -> None:
+    """Persist and broadcast crew location updates."""
+
+    sio = _require_server()
+
     try:
-        latitude = data['latitude']
-        longitude = data['longitude']
-        project_id = data.get('project_id')
-        accuracy = data.get('accuracy')
-        speed = data.get('speed')
-        heading = data.get('heading')
+        latitude = float(data["latitude"])
+        longitude = float(data["longitude"])
+        user_id = int(data["user_id"])
+    except (KeyError, TypeError, ValueError):
+        await sio.emit("error", {"message": "Invalid location payload"}, room=sid)
+        return
 
-        # 1. Create WKT (Well-Known Text) representation of the point
-        point = WKTElement(f'POINT({longitude} {latitude})', srid=4326)
+    project_id = data.get("project_id")
+    accuracy = data.get("accuracy")
+    speed = data.get("speed")
+    heading = data.get("heading")
 
-        # 2. Upsert the location data
-        # Check if a location record already exists for this user
-        existing_location = db.query(Location).filter(Location.user_id == user.id).first()
+    with SessionLocal() as db:
+        location_data = _update_location_record(
+            db,
+            user_id=user_id,
+            latitude=latitude,
+            longitude=longitude,
+            project_id=project_id,
+            accuracy=accuracy,
+            speed=speed,
+            heading=heading,
+        )
 
-        if existing_location:
-            # Update existing record
-            existing_location.geom = point
-            existing_location.timestamp = datetime.now()
-            existing_location.accuracy = accuracy
-            existing_location.speed = speed
-            existing_location.heading = heading
-            existing_location.project_id = project_id
-        else:
-            # Create new record
-            new_location = Location(
-                user_id=user.id,
-                geom=point,
-                accuracy=accuracy,
-                speed=speed,
-                heading=heading,
-                project_id=project_id
-            )
-            db.add(new_location)
+    if project_id:
+        await sio.to(f"project_{project_id}").emit("location_update", location_data)
 
-        db.commit()
-
-        # 3. Broadcast the update to all clients in the project room
-        location_data = {
-            'user_id': user.id,
-            'latitude': latitude,
-            'longitude': longitude,
-            'timestamp': datetime.now().isoformat(),
-            'project_id': project_id
-        }
-
-        if project_id:
-            await sio.to(f'project_{project_id}').emit('location_update', location_data)
-        
-        # Also broadcast to a general room for all managers
-        await sio.to('managers').emit('location_update', location_data)
-
-    except Exception as e:
-        print(f"Error processing location update for user {user.id}: {e}")
-        await sio.emit('error', {'message': 'Failed to process location update'}, room=sid)
-
-# We need to ensure the dependencies (get_db_session, get_current_user) work
-# within the Socket.IO context. This often requires custom middleware or wrappers
-# in a real-world FastAPI/Socket.IO integration. For this implementation, we'll
-# assume a simple dependency injection setup is sufficient for now.
+    await sio.to("managers").emit("location_update", location_data)
 

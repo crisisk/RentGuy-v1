@@ -7,8 +7,8 @@ class Message(Base):
     __tablename__ = "chat_messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("prj_projects.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("auth_users.id"), nullable=False)
     content = Column(String, nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
