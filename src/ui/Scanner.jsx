@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import axios from 'axios'
-import { queueScan, flushQueue, getQueueCount } from '../warehouse/offline-queue'
+import { queueScan, flushQueue, getQueueCount } from '../../warehouse/offline-queue'
 
 const API = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
