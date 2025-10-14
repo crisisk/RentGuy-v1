@@ -1,58 +1,66 @@
 {
-  "generatedAt": "2025-10-14T14:49:39.769Z",
+  "version": 1,
+  "generatedAt": "2025-10-14T17:00:45.205Z",
   "metrics": {
     "typeSafety": {
-      "score": 0,
-      "details": {
-        "tsFiles": 0,
-        "jsFiles": 1,
-        "tsLines": 0,
-        "jsLines": 2747
-      }
+      "score": 1.82,
+      "evidence": [
+        "tsFiles=3",
+        "jsFiles=1",
+        "tsLines=51",
+        "jsLines=2748"
+      ]
     },
     "errorHandling": {
-      "score": 82.03,
-      "details": {
-        "filesAnalysed": 121,
-        "riskEvents": 128,
-        "handledEvents": 105
-      }
+      "score": 80.77,
+      "evidence": [
+        "filesAnalysed=124",
+        "riskEvents=130",
+        "handledEvents=105"
+      ]
     },
-    "codeReusability": {
-      "score": 97.48,
-      "details": {
-        "reusableFiles": 116,
-        "totalFiles": 119
-      }
+    "reusability": {
+      "score": 95.08,
+      "evidence": [
+        "reusableFiles=116",
+        "totalFiles=122"
+      ]
     },
     "maintainability": {
       "score": 100,
-      "details": {
-        "filesAnalysed": 119,
-        "averageLines": 47.55,
-        "maxLines": 298,
-        "totalLines": 5659
-      }
+      "evidence": [
+        "filesAnalysed=122",
+        "averageLines=46.81",
+        "maxLines=298",
+        "totalLines=5711"
+      ]
     },
     "documentation": {
-      "score": 33.33,
-      "details": {
-        "available": 2,
-        "expected": 6,
-        "missing": [
-          "docs/GETTING_STARTED.md",
-          "docs/ARCHITECTURE.md",
-          "docs/QUALITY_GATES.md",
-          "docs/RUNBOOKS/README.md"
-        ]
-      }
+      "score": 100,
+      "evidence": [
+        "available=6/6",
+        "missing=none"
+      ]
     },
-    "testCoverage": {
-      "score": 0,
-      "details": {
-        "message": "No coverage report found"
-      }
+    "coverage": {
+      "lines": 0,
+      "branches": 0,
+      "functions": 0,
+      "statements": 0
     }
   },
-  "overallQualityIndex": 52.14
+  "overallQualityIndex": 75.53,
+  "gates": {
+    "typeSafety": 95,
+    "errorHandling": 95,
+    "reusability": 95,
+    "maintainability": 95,
+    "documentation": 95,
+    "coverage": {
+      "lines": 90,
+      "branches": 90,
+      "functions": 90,
+      "statements": 90
+    }
+  }
 }

@@ -1,29 +1,17 @@
-## Doel
-- 
+# Doel
+Korte beschrijving + business impact.
 
-## Scope
-- 
+# Scope
+Belangrijkste paden/bestanden; wat wel/niet is meegenomen.
 
-## Metrics Geraakt
-- [ ] Type Safety
-- [ ] Error Handling
-- [ ] Code Reusability
-- [ ] Maintainability
-- [ ] Documentation
-- [ ] Test Coverage
+# Metrics (voor/na)
+Type | Error | Reuse | Maintain | Docs | Coverage (L/F/B/S)
 
-## Risico
-- 
+# Tests
+Unit/Integration/E2E scenario’s + reproduceerbare stappen.
 
-## Testen
-- [ ] npm run lint
-- [ ] npm run typecheck
-- [ ] npm run test
-- [ ] npm run quality:report
-- [ ] Overige: 
+# Risks & Rollback
+Bekende risico’s + exact rollback-plan/scripts.
 
-## Rollback Plan
-- 
-
-## Bewijs (CLI/Screenshots)
-- 
+# Artifacts
+Links naar coverage, dep-graph, jscpd, QUALITY_SUMMARY.md.

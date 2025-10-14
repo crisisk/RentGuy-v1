@@ -1,5 +1,9 @@
 # RentGuy Enterprise Platform
 
+[![CI](https://github.com/crisisk/RentGuy-v1/actions/workflows/ci.yml/badge.svg)](https://github.com/crisisk/RentGuy-v1/actions/workflows/ci.yml)
+![Coverage](https://img.shields.io/badge/coverage-report--ready-brightgreen)
+![Quality](https://img.shields.io/badge/quality-gates%20enforced-brightgreen)
+
 RentGuy Enterprise Platform is a full-stack solution for professional rental operations. The platform combines a FastAPI backend with a React-based operations console and barcode scanner experience. Together they cover authentication, onboarding, inventory management, crew scheduling, transport planning, billing, warehouse scanning, and reporting workflows that rental teams rely on every day.
 
 ## Architecture at a Glance

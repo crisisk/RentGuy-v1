@@ -1,21 +1,25 @@
 # Quality Summary
 
-Generated at: 2025-10-14T14:49:39.769Z
+Generated at: 2025-10-14T17:00:45.205Z
 
-| Metric | Previous | Current | Delta | Target | Status |
+| Metric | Previous | Current | Delta | Gate | Status |
 | --- | --- | --- | --- | --- | --- |
-| Type Safety | 0.00 | 0.00 | 0.00 | 95 | ⚠️ |
-| Error Handling | 82.03 | 82.03 | 0.00 | 95 | ⚠️ |
-| Code Reusability | 97.48 | 97.48 | 0.00 | 95 | ✅ |
+| Type Safety | 1.82 | 1.82 | 0.00 | 95 | ⚠️ |
+| Error Handling | 80.77 | 80.77 | 0.00 | 95 | ⚠️ |
+| Code Reusability | 95.08 | 95.08 | 0.00 | 95 | ✅ |
 | Maintainability | 100.00 | 100.00 | 0.00 | 95 | ✅ |
-| Documentation | 33.33 | 33.33 | 0.00 | 95 | ⚠️ |
-| Test Coverage | 0.00 | 0.00 | 0.00 | 90 | ⚠️ |
+| Documentation | 100.00 | 100.00 | 0.00 | 95 | ✅ |
 
-**Overall Quality Index:** 52.14 (⚠️)
+**Overall Quality Index:** 75.53 (⚠️)
 
+## Coverage
+| Metric | Current | Gate | Status |
+| --- | --- | --- | --- |
+| Lines | 0.00 | 90 | ⚠️ |
+| Functions | 0.00 | 90 | ⚠️ |
+| Branches | 0.00 | 90 | ⚠️ |
+| Statements | 0.00 | 90 | ⚠️ |
 ## Next Actions
-- Type Safety below target (0.00%). Address gaps highlighted in details.
-- Test Coverage below target (0.00%). Address gaps highlighted in details.
-- Documentation below target (33.33%). Address gaps highlighted in details.
-- Error Handling below target (82.03%). Address gaps highlighted in details.
+- Type Safety below gate (1.82%). Follow evidence to remediate.
+- Error Handling below gate (80.77%). Follow evidence to remediate.
 

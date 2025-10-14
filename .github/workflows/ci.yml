@@ -6,8 +6,8 @@ on:
   pull_request:
 
 jobs:
-  quality:
-    name: Quality Gates
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,17 +22,116 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run quality pipeline
-        run: npm run quality:all
+      - name: Run ESLint
+        run: npm run lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run TypeScript compiler
+        run: npm run typecheck
 
       - name: Type usage audit
         run: npm run ci:type-sanity
 
-      - name: Upload quality summary
+  static-analysis:
+    name: Duplication & Dependency Guardrails
+    runs-on: ubuntu-latest
+    needs: typecheck
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run duplication scan
+        run: npm run dup
+
+      - name: Check dependency graph
+        run: npm run dep:graph
+
+      - name: Complexity audit
+        run: npm run complexity
+
+  tests:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+    needs: static-analysis
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests with coverage
+        run: npm run test
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          if-no-files-found: error
+
+  quality-report:
+    name: Quality Report
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Generate quality report
+        run: npm run quality:report
+
+      - name: Upload quality artifacts
         uses: actions/upload-artifact@v4
         with:
           name: quality-summary
           path: |
             docs/QUALITY_SUMMARY.md
             quality-report.json
-          if-no-files-found: warn
+          if-no-files-found: error
