@@ -1,109 +1,135 @@
-// FILE: rentguy/frontend/src/router/routes.tsx
 import { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 import type { RouteConfig } from './types';
 
+// Lazy load all page components
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-const AdminPage = lazy(() => import('@/pages/AdminPage'));
+const ProjectOverview = lazy(() => import('@/pages/ProjectOverview'));
+const VisualPlanner = lazy(() => import('@/pages/VisualPlanner'));
+const CrewManagement = lazy(() => import('@/pages/CrewManagement'));
+const TimeApproval = lazy(() => import('@/pages/TimeApproval'));
+const EquipmentInventory = lazy(() => import('@/pages/EquipmentInventory'));
+const FinanceDashboard = lazy(() => import('@/pages/FinanceDashboard'));
+const InvoiceOverview = lazy(() => import('@/pages/InvoiceOverview'));
+const QuoteManagement = lazy(() => import('@/pages/QuoteManagement'));
+const CRMDashboard = lazy(() => import('@/pages/CRMDashboard'));
+const CustomerDetails = lazy(() => import('@/pages/CustomerDetails'));
+const UserManagement = lazy(() => import('@/pages/UserManagement'));
+const SystemSettings = lazy(() => import('@/pages/SystemSettings'));
+const ReportsAnalytics = lazy(() => import('@/pages/ReportsAnalytics'));
+const MollieAdminDashboard = lazy(() => import('@/pages/MollieAdminDashboard'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
+// Define all application routes
 export const appRoutes: RouteConfig[] = [
-  { index: true, element: <Navigate to="/dashboard" replace /> },
-  { path: 'login', element: <LoginPage />, guard: 'public' },
+  // Redirect root to dashboard
+  { 
+    index: true, 
+    element: <Navigate to="/dashboard" replace /> 
+  },
+  
+  // Public routes
+  { 
+    path: 'login', 
+    element: <LoginPage />, 
+    guard: 'public' 
+  },
+  
+  // Protected routes
   {
     path: 'dashboard',
     element: <DashboardPage />,
-    guard: 'auth',
-    allowedRoles: ['user', 'admin']
+    guard: 'auth'
   },
   {
-    path: 'admin',
-    element: <AdminPage />,
+    path: 'projects',
+    element: <ProjectOverview />,
+    guard: 'auth'
+  },
+  {
+    path: 'planner',
+    element: <VisualPlanner />,
+    guard: 'auth'
+  },
+  {
+    path: 'crew',
+    element: <CrewManagement />,
+    guard: 'auth'
+  },
+  {
+    path: 'time-approval',
+    element: <TimeApproval />,
+    guard: 'auth'
+  },
+  {
+    path: 'equipment',
+    element: <EquipmentInventory />,
+    guard: 'auth'
+  },
+  {
+    path: 'finance',
+    element: <DashboardPage />,
+    guard: 'auth'
+  },
+  {
+    path: 'invoices',
+    element: <InvoiceOverview />,
+    guard: 'auth'
+  },
+  {
+    path: 'quotes',
+    element: <QuoteManagement />,
+    guard: 'auth'
+  },
+  {
+    path: 'crm',
+    element: <CRMDashboard />,
+    guard: 'auth'
+  },
+  {
+    path: 'customers/:id',
+    element: <CustomerDetails />,
+    guard: 'auth'
+  },
+  {
+    path: 'users',
+    element: <UserManagement />,
     guard: 'auth',
     allowedRoles: ['admin']
+  },
+  {
+    path: 'settings',
+    element: <SystemSettings />,
+    guard: 'auth',
+    allowedRoles: ['admin']
+  },
+  {
+    path: 'reports',
+    element: <ReportsAnalytics />,
+    guard: 'auth'
+  },
+  {
+    path: 'payments',
+    element: <MollieAdminDashboard />,
+    guard: 'auth',
+    allowedRoles: ['admin', 'finance']
   },
   {
     path: 'profile',
     element: <ProfilePage />,
     guard: 'auth'
   },
-  { path: 'not-found', element: <NotFoundPage /> },
-  { path: '*', element: <Navigate to="/not-found" replace /> }
+  
+  // Error pages
+  { 
+    path: 'not-found', 
+    element: <NotFoundPage /> 
+  },
+  { 
+    path: '*', 
+    element: <Navigate to="/not-found" replace /> 
+  }
 ];
 
-// FILE: rentguy/frontend/src/router/guards.tsx
-import { useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
-import { authStore } from '@/stores/auth';
-import type { ReactNode } from 'react';
-
-export const AuthGuard = ({
-  children,
-  allowedRoles
-}: {
-  children: ReactNode;
-  allowedRoles?: string[];
-}) => {
-  const { token, user, validateSession } = authStore();
-
-  useEffect(() => {
-    validateSession();
-  }, [validateSession]);
-
-  if (!token) return <Navigate to="/login" replace />;
-  if (allowedRoles && !allowedRoles.includes(user?.role)) return <Navigate to="/not-found" replace />;
-
-  return children;
-};
-
-// FILE: rentguy/frontend/src/router/index.tsx
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { AuthLayout } from '@/layouts/AuthLayout';
-import { appRoutes } from './routes';
-import { processRoutes } from './utils';
-import type { RouteObject } from 'react-router-dom';
-import type { RouteConfig } from './types';
-
-const router = createBrowserRouter([
-  {
-    element: <AuthLayout />,
-    children: processRoutes(appRoutes)
-  }
-]);
-
-export const AppRouter = () => <RouterProvider router={router} />;
-
-// FILE: rentguy/frontend/src/router/types.ts
-import type { ReactNode } from 'react';
-
-export interface RouteConfig {
-  path?: string;
-  index?: boolean;
-  element: ReactNode;
-  guard?: 'public' | 'auth';
-  allowedRoles?: string[];
-  children?: RouteConfig[];
-}
-
-// FILE: rentguy/frontend/src/router/utils.ts
-import { AuthGuard } from './guards';
-import type { RouteConfig, RouteObject } from './types';
-
-export const processRoutes = (routes: RouteConfig[]): RouteObject[] => {
-  return routes.map((route) => {
-    let element = route.element;
-
-    if (route.guard === 'auth') {
-      element = <AuthGuard allowedRoles={route.allowedRoles}>{element}</AuthGuard>;
-    }
-
-    return {
-      path: route.path,
-      index: route.index,
-      element,
-      children: route.children ? processRoutes(route.children) : undefined
-    };
-  });
-};
