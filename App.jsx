@@ -3,7 +3,7 @@ import Login from './Login.jsx'
 import OnboardingOverlay from './OnboardingOverlay.jsx'
 import Planner from './Planner.jsx'
 import RoleSelection from './RoleSelection.jsx'
-import { api } from './api.js'
+import { api } from './api'
 import { brand, brandFontStack } from './branding.js'
 import {
   clearOnboardingState,

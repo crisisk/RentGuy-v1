@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import ObservabilitySummary from '../ObservabilitySummary.jsx'
 
-vi.mock('../api.js', () => ({
+vi.mock('../api', () => ({
   api: {
     get: vi.fn(),
   },
@@ -13,7 +13,7 @@ let api
 
 describe('ObservabilitySummary', () => {
   beforeEach(async () => {
-    ;({ api } = await import('../api.js'))
+    ;({ api } = await import('../api'))
     vi.useFakeTimers({ shouldAdvanceTime: true })
   })
 

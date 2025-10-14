@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { api, setToken } from './api.js'
+import { api, setToken } from './api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
 
 const heroHighlights = [

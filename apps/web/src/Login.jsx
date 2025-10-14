@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { api, setToken } from './api.js'
+import { api, setToken } from './api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from './theme.js'
 import { setLocalStorageItem } from './storage.js'
 
