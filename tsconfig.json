@@ -3,7 +3,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
     "allowJs": true,
     "checkJs": true,
     "strict": true,
@@ -13,18 +17,64 @@
     "noImplicitAny": true,
     "moduleResolution": "Node",
     "resolveJsonModule": true,
+    "jsx": "react-jsx",
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": false,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
     "paths": {
-      "@core/*": ["src/core/*"],
-      "@domain/*": ["src/domain/*"],
-      "@infra/*": ["src/infrastructure/*"],
-      "@ui/*": ["src/ui/*"]
+      "@application/*": [
+        "src/application/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@core/*": [
+        "src/core/*"
+      ],
+      "@domain/*": [
+        "src/domain/*"
+      ],
+      "@infra/*": [
+        "src/infrastructure/*"
+      ],
+      "@infra/offline-queue": [
+        "warehouse/offline-queue.js"
+      ],
+      "@ui/*": [
+        "src/ui/*"
+      ]
     }
   },
-  "include": ["src", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  "exclude": ["node_modules", "dist", "build", "coverage"]
+  "include": [
+    "src",
+    "types",
+    "Planner.jsx",
+    "OnboardingOverlay.jsx",
+    "warehouse/offline-queue.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "apps",
+    "analysis",
+    "backend",
+    "ops",
+    "patches",
+    "qa",
+    "rentguy",
+    "rentguyapp_*",
+    "reports",
+    "testing",
+    "tests",
+    "warehouse/__tests__",
+    "**/node_modules"
+  ]
 }

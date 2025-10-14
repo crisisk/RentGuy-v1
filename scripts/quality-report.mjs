@@ -3,13 +3,20 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
-const TARGETS = {
-  typeSafety: 0.95,
-  errorHandling: 0.95,
-  codeReusability: 0.95,
-  maintainability: 0.95,
-  documentation: 0.95,
-  testCoverage: 0.9,
+const VERSION = 1
+
+const GATES = {
+  typeSafety: 95,
+  errorHandling: 95,
+  codeReusability: 95,
+  maintainability: 95,
+  documentation: 95,
+  coverage: {
+    lines: 90,
+    branches: 90,
+    functions: 90,
+    statements: 90,
+  },
 }
 
 const METRIC_LABELS = {
@@ -18,7 +25,6 @@ const METRIC_LABELS = {
   codeReusability: 'Code Reusability',
   maintainability: 'Maintainability',
   documentation: 'Documentation',
-  testCoverage: 'Test Coverage',
 }
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
@@ -133,14 +139,22 @@ const computeTypeSafety = async () => {
   const jsLines = sum(jsContents.map(({ content }) => countLines(content)))
 
   const ratio = clamp01(tsLines / Math.max(tsLines + jsLines, 1))
+  const score = Number((ratio * 100).toFixed(2))
+
   return {
-    score: Number((ratio * 100).toFixed(2)),
+    score,
     details: {
       tsFiles: tsFiles.length,
       jsFiles: jsFiles.length,
       tsLines,
       jsLines,
+      ratio: Number(ratio.toFixed(4)),
     },
+    evidence: [
+      `TypeScript LOC: ${tsLines}`,
+      `JavaScript LOC: ${jsLines}`,
+      `TypeScript coverage ratio: ${(ratio * 100).toFixed(2)}%`,
+    ],
   }
 }
 
@@ -151,7 +165,7 @@ const computeErrorHandling = async () => {
 
   const backendFiles = await collectFiles('backend/app', ['.py'])
 
-  const legacyFrontendCandidates = ['App.jsx', 'Scanner.jsx', 'scanner.jsx']
+  const legacyFrontendCandidates = ['App.jsx', 'Scanner.tsx', 'Scanner.jsx', 'scanner.jsx']
   const legacyFrontend = (
     await Promise.all(
       legacyFrontendCandidates.map(async (file) => {
@@ -180,13 +194,19 @@ const computeErrorHandling = async () => {
   }
 
   const ratio = clamp01(handledEvents / Math.max(riskEvents || handledEvents, 1))
+  const score = Number((ratio * 100).toFixed(2))
+
   return {
-    score: Number((ratio * 100).toFixed(2)),
+    score,
     details: {
       filesAnalysed: files.length,
       riskEvents,
       handledEvents,
     },
+    evidence: [
+      `Potential risk events identified: ${riskEvents}`,
+      `Handling constructs detected: ${handledEvents}`,
+    ],
   }
 }
 
@@ -205,12 +225,18 @@ const computeCodeReusability = async () => {
   ]
 
   const ratio = clamp01(reusableFiles.length / Math.max(allFiles.length, 1))
+  const score = Number((ratio * 100).toFixed(2))
+
   return {
-    score: Number((ratio * 100).toFixed(2)),
+    score,
     details: {
       reusableFiles: reusableFiles.length,
       totalFiles: allFiles.length,
     },
+    evidence: [
+      `Reusable files analysed: ${reusableFiles.length}`,
+      `Total code files: ${allFiles.length}`,
+    ],
   }
 }
 
@@ -230,14 +256,20 @@ const computeMaintainability = async () => {
   const maxPenalty = Math.max(0, (maxLines - 400) / 400)
   const ratio = clamp01(1 - clamp01((averagePenalty + maxPenalty) / 2))
 
+  const score = Number((ratio * 100).toFixed(2))
+
   return {
-    score: Number((ratio * 100).toFixed(2)),
+    score,
     details: {
       filesAnalysed: files.length,
       averageLines: Number(averageLines.toFixed(2)),
       maxLines,
       totalLines,
     },
+    evidence: [
+      `Average LOC per file: ${averageLines.toFixed(2)}`,
+      `Max LOC single file: ${maxLines}`,
+    ],
   }
 }
 
@@ -265,13 +297,19 @@ const computeDocumentation = async () => {
 
   const ratio = clamp01(available / expectedArtifacts.length)
 
+  const score = Number((ratio * 100).toFixed(2))
+
   return {
-    score: Number((ratio * 100).toFixed(2)),
+    score,
     details: {
       available,
       expected: expectedArtifacts.length,
       missing,
     },
+    evidence: [
+      `Documentation artifacts present: ${available}/${expectedArtifacts.length}`,
+      ...(missing.length ? [`Missing: ${missing.join(', ')}`] : ['All mandatory documentation present.']),
+    ],
   }
 }
 
@@ -282,27 +320,33 @@ const computeTestCoverage = async () => {
   if (!coverage) {
     return {
       score: 0,
-      details: {
-        message: 'No coverage report found',
-      },
+      lines: 0,
+      functions: 0,
+      branches: 0,
+      statements: 0,
+      evidence: ['Coverage summary missing. Run `npm run test` to generate.'],
     }
   }
 
-  const lines = coverage.total?.lines?.pct ?? 0
-  const functions = coverage.total?.functions?.pct ?? 0
-  const branches = coverage.total?.branches?.pct ?? 0
-  const statements = coverage.total?.statements?.pct ?? 0
+  const lines = Number((coverage.total?.lines?.pct ?? 0).toFixed(2))
+  const functions = Number((coverage.total?.functions?.pct ?? 0).toFixed(2))
+  const branches = Number((coverage.total?.branches?.pct ?? 0).toFixed(2))
+  const statements = Number((coverage.total?.statements?.pct ?? 0).toFixed(2))
 
   const average = (lines + functions + branches + statements) / 4 / 100
 
   return {
     score: Number((average * 100).toFixed(2)),
-    details: {
-      lines,
-      functions,
-      branches,
-      statements,
-    },
+    lines,
+    functions,
+    branches,
+    statements,
+    evidence: [
+      `Lines: ${lines.toFixed(2)}%`,
+      `Functions: ${functions.toFixed(2)}%`,
+      `Branches: ${branches.toFixed(2)}%`,
+      `Statements: ${statements.toFixed(2)}%`,
+    ],
   }
 }
 
@@ -312,40 +356,58 @@ const METRIC_COMPUTERS = {
   codeReusability: computeCodeReusability,
   maintainability: computeMaintainability,
   documentation: computeDocumentation,
-  testCoverage: computeTestCoverage,
+  coverage: computeTestCoverage,
 }
 
 const buildSummaryMarkdown = (current, previous) => {
   const header = `# Quality Summary\n\nGenerated at: ${current.generatedAt}\n\n`
 
-  const tableHeader = '| Metric | Previous | Current | Delta | Target | Status |\n| --- | --- | --- | --- | --- | --- |\n'
+  const metricKeys = ['typeSafety', 'errorHandling', 'codeReusability', 'maintainability', 'documentation']
 
-  const rows = Object.entries(current.metrics)
-    .map(([key, metric]) => {
+  const tableHeader = '| Metric | Previous | Current | Δ | Gate | Status |\n| --- | --- | --- | --- | --- | --- |\n'
+
+  const rows = metricKeys
+    .map((key) => {
+      const metric = current.metrics[key]
       const label = METRIC_LABELS[key]
-      const target = TARGETS[key] * 100
+      const gate = GATES[key]
       const previousScore = previous?.metrics?.[key]?.score ?? null
       const delta = previousScore !== null ? (metric.score - previousScore).toFixed(2) : 'n/a'
-      const status = metric.score >= target ? '✅' : '⚠️'
+      const status = metric.score >= gate ? '✅' : '⚠️'
       const previousDisplay = previousScore !== null ? previousScore.toFixed(2) : 'n/a'
-      return `| ${label} | ${previousDisplay} | ${metric.score.toFixed(2)} | ${delta} | ${target.toFixed(0)} | ${status} |`
+      return `| ${label} | ${previousDisplay} | ${metric.score.toFixed(2)} | ${delta} | ${gate} | ${status} |`
     })
     .join('\n')
+
+  const coverage = current.metrics.coverage
+  const coverageTable = `\n\n| Coverage Metric | Value | Gate | Status |\n| --- | --- | --- | --- |\n${['lines', 'functions', 'branches', 'statements']
+    .map((key) => {
+      const value = coverage[key]
+      const gate = GATES.coverage[key]
+      const status = value >= gate ? '✅' : '⚠️'
+      const label = key.charAt(0).toUpperCase() + key.slice(1)
+      return `| ${label} | ${value.toFixed(2)} | ${gate.toFixed(2)} | ${status} |`
+    })
+    .join('\n')}`
 
   const overallStatus = current.overallQualityIndex >= 95 ? '✅' : '⚠️'
   const overallSection = `\n\n**Overall Quality Index:** ${current.overallQualityIndex.toFixed(2)} (${overallStatus})\n`
 
-  const nextActions = Object.entries(current.metrics)
-    .filter(([key, metric]) => metric.score < TARGETS[key] * 100)
-    .sort((a, b) => a[1].score - b[1].score)
-    .slice(0, 5)
-    .map(([key, metric]) => `- ${METRIC_LABELS[key]} below target (${metric.score.toFixed(2)}%). Address gaps highlighted in details.`)
+  const failingMetrics = metricKeys.filter((key) => current.metrics[key].score < GATES[key])
+  const failingCoverage = ['lines', 'functions', 'branches', 'statements'].filter(
+    (key) => coverage[key] < GATES.coverage[key],
+  )
+
+  const nextActions = [
+    ...failingMetrics.map((key) => `- ${METRIC_LABELS[key]} below gate (${current.metrics[key].score.toFixed(2)}%).`),
+    ...failingCoverage.map((key) => `- Coverage ${key} below gate (${coverage[key].toFixed(2)}%).`),
+  ]
 
   const nextActionsSection = nextActions.length
     ? `\n## Next Actions\n${nextActions.join('\n')}\n`
-    : '\n## Next Actions\n- All tracked metrics meet targets. Maintain guardrails.\n'
+    : '\n## Next Actions\n- All tracked metrics meet or exceed gates. Maintain guardrails.\n'
 
-  return `${header}${tableHeader}${rows}${overallSection}${nextActionsSection}`
+  return `${header}${tableHeader}${rows}${coverageTable}${overallSection}${nextActionsSection}`
 }
 
 const main = async () => {
@@ -357,13 +419,16 @@ const main = async () => {
     metrics[key] = await calculator()
   }
 
+  const qualityMetricKeys = ['typeSafety', 'errorHandling', 'codeReusability', 'maintainability', 'documentation']
   const overallQualityIndex =
-    Object.values(metrics).reduce((total, metric) => total + metric.score, 0) / Object.keys(metrics).length
+    qualityMetricKeys.reduce((total, key) => total + metrics[key].score, 0) / qualityMetricKeys.length
 
   const report = {
+    version: VERSION,
     generatedAt: new Date().toISOString(),
     metrics,
     overallQualityIndex: Number(overallQualityIndex.toFixed(2)),
+    gates: GATES,
   }
 
   await fs.writeFile(path.join(repoRoot, 'quality-report.json'), `${JSON.stringify(report, null, 2)}\n`)
