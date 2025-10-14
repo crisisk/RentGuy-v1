@@ -1,8 +1,8 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import App from '../App'
-import Scanner from '../scanner.jsx'
-import { env } from './config/env'
+import App from '@ui/App'
+import Scanner from '@ui/Scanner.jsx'
+import { env } from '@config/env'
 
 const container = document.getElementById('root')
 
@@ -12,4 +12,8 @@ if (!container) {
 
 const RootComponent = env.isScannerMode ? Scanner : App
 
-createRoot(container).render(<RootComponent />)
+createRoot(container).render(
+  <React.StrictMode>
+    <RootComponent />
+  </React.StrictMode>
+)

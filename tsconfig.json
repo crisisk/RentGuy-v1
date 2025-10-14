@@ -21,12 +21,32 @@
     "baseUrl": ".",
     "typeRoots": ["./types", "./node_modules/@types"],
     "paths": {
+      "@application/*": ["src/application/*"],
+      "@config/*": ["src/config/*"],
       "@core/*": ["src/core/*"],
       "@domain/*": ["src/domain/*"],
       "@infra/*": ["src/infrastructure/*"],
       "@ui/*": ["src/ui/*"]
     }
   },
-  "include": ["src", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  "exclude": ["node_modules", "dist", "build", "coverage", "apps"]
+  "include": ["src", "types"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "apps",
+    "analysis",
+    "backend",
+    "ops",
+    "patches",
+    "qa",
+    "rentguy",
+    "rentguyapp_*",
+    "reports",
+    "testing",
+    "tests",
+    "warehouse",
+    "**/node_modules"
+  ]
 }

@@ -1,12 +1,13 @@
 # RentGuy Enterprise Platform – Quality Improvement Plan
 
 ## Stack & System Inventory
-- **Frontend**: React 18 single-page application served through Vite (`src/main.tsx`, `App.tsx`, `Planner.jsx`). The entry point now boots through a validated env schema (`src/config/env.schema.ts`) and authentication shell components (`App.tsx`, `Login.tsx`, `RoleSelection.tsx`) are typed, but core feature modules such as the planner remain JavaScript with dynamic data flows and extensive localStorage usage.
-- **Barcode Scanner Mode**: Alternative entry in `scanner.jsx` toggled via `VITE_APP_MODE`, relies on `@zxing/browser`.
+- **Frontend**: React 18 single-page application served through Vite (`src/main.tsx`, `src/ui/App.tsx`, `src/ui/Planner.jsx`). The entry point now boots through a validated env schema (`src/config/env.schema.ts`) and authentication shell components (`src/ui/App.tsx`, `src/ui/Login.tsx`, `src/ui/RoleSelection.tsx`) are typed, but core feature modules such as the planner remain JavaScript with dynamic data flows and extensive localStorage usage. The planner exposes both the new persona dashboard and the legacy FullCalendar drag-and-drop grid via an inline toggle to keep upstream scheduling workflows intact while we continue the TypeScript migration.
+- **Barcode Scanner Mode**: Alternative entry in `src/ui/Scanner.jsx` toggled via `VITE_APP_MODE`, relies on `@zxing/browser`.
 - **Backend**: FastAPI service (`backend/app/main.py`) with modular routers (`app.modules.*`), SQLAlchemy 2.0 ORM, Alembic migrations, Redis/WebSocket realtime gateway, and adapters for payments, inventory, billing, and reporting.
 - **Configuration**: Environment settings managed via Pydantic (`backend/app/core/config.py`) and a new runtime-validated schema for the frontend (`src/config/env.schema.ts`), reducing drift risks between clients.
 - **Tooling**:
   - Node scripts: linting, formatting, dependency analysis, duplication detection, tests, and aggregate quality gate via `npm run quality:all` (`package.json`).
+  - ESLint 9 now consumes a flat configuration (`eslint.config.mjs`) aligned with the `@application/@core/@infra/@ui` aliases so the lint pipeline runs in modern CI images without legacy `.eslintrc` fallbacks.
   - Python: pytest + coverage scaffolded (`backend/tests`), Ruff linting configured in `backend/pyproject.toml` but not wired into CI.
   - Quality artefacts already scaffolded (e.g., `scripts/quality-report.mjs`, `docs/QUALITY_SUMMARY.md`).
 - **Infrastructure**: Docker Compose manifests for multi-service deployment, Postgres primary datastore, optional Stripe/Mollie integrations.
@@ -14,7 +15,7 @@
 ## Metric Baseline (Initial Observation)
 | Metric | Current Signals | Gaps Preventing ≥95% |
 | --- | --- | --- |
-| Type Safety | TS strict config exists, but key feature views are still JavaScript (`Planner.jsx`, `OnboardingOverlay.jsx`, `scanner.jsx`). Backend lacks mypy. | No typed DTOs, no shared contracts, unchecked axios usage beyond the typed shell, missing env typing for frontend feature modules. |
+| Type Safety | TS strict config exists, but key feature views are still JavaScript (`src/ui/Planner.jsx`, `src/ui/OnboardingOverlay.jsx`, `src/ui/Scanner.jsx`). Backend lacks mypy. | No typed DTOs, no shared contracts, unchecked axios usage beyond the typed shell, missing env typing for frontend feature modules. |
 | Error Handling | Backend central `AppError` and metrics middleware exist (`backend/app/core/errors.py`, `backend/app/main.py`), but many routes raise raw exceptions; frontend lacks boundaries. | Missing standardized error mapping, structured logging, retry/backoff wrappers, client-side error surfaces. |
 | Code Reusability | Domain logic split across numerous feature-specific modules but duplicated patterns exist (`Planner.jsx` persona config, backend adapters). | No shared utilities/components folder, ad-hoc helper functions, inconsistent DTO shapes. |
 | Maintainability | ESLint/Prettier configured; backend main file orchestrates everything (160+ LOC). | Lack of dependency boundaries, mixed concerns in single files, inconsistent naming conventions, absence of architectural documentation. |
@@ -31,16 +32,16 @@
 7. **Test Coverage Expansion** → Vitest unit suites, backend pytest integration, Playwright flows, enforce ≥90–95% coverage.
 
 ## Hot Spots & Risks
-- **Front-end state & storage**: `App.tsx` now types the orchestration of authentication, onboarding, and role management but still centralises multiple concerns that should migrate into dedicated hooks/modules.【F:App.tsx†L1-L196】
-- **Planner persona logic**: 200+ lines of persona presets and formatting in `Planner.jsx` with duplicated filter logic; high cyclomatic complexity and zero tests.【F:Planner.jsx†L1-L160】
+- **Front-end state & storage**: `src/ui/App.tsx` now types the orchestration of authentication, onboarding, and role management but still centralises multiple concerns that should migrate into dedicated hooks/modules.【F:src/ui/App.tsx†L1-L196】
+- **Planner persona logic**: 200+ lines of persona presets and formatting in `src/ui/Planner.jsx` with duplicated filter logic; high cyclomatic complexity and zero tests.【F:src/ui/Planner.jsx†L1-L160】
 - **Backend monolith**: `backend/app/main.py` combines middleware, router registration, metrics, sockets; difficult to test in isolation.【F:backend/app/main.py†L1-L160】
 - **Configuration drift**: Shared validation now exists for both stacks, yet further alignment (e.g., generated typings for backend consumers) is needed to avoid divergence in future services.【F:src/config/env.schema.ts†L1-L35】【F:backend/app/core/config.py†L1-L68】
 
 ## Issue Backlog & Targeted Fixes
 | Path / Area | Issue | Proposed Fix | Metrics Impacted | Effort | Risk |
 | --- | --- | --- | --- | --- | --- |
-| `src/main.tsx`, `App.tsx`, `Login.tsx`, `Planner.jsx` | React shell components typed, but planner/onboarding flows remain implicit and share mutable state | Extend codemod to planner/onboarding modules, extract typed hooks for storage access, and share API DTO contracts | Type Safety, Maintainability | Medium | Medium |
-| `scanner.jsx` & barcode flow | Minimal error handling around camera/decoder, no retry/feedback semantics | Wrap scanner interactions in Result/AppError primitives, surface UI states, add telemetry hooks | Error Handling, Documentation (user feedback) | Medium | Medium |
+| `src/main.tsx`, `src/ui/App.tsx`, `src/ui/Login.tsx`, `src/ui/Planner.jsx` | React shell components typed, but planner/onboarding flows remain implicit and share mutable state | Extend codemod to planner/onboarding modules, extract typed hooks for storage access, and share API DTO contracts. Calendar toggle keeps legacy drag/drop behaviour active; houd forwardRef-proxies (`Planner.jsx`, `OnboardingOverlay.jsx`) in stand zodat langlopende branches zonder conflicts kunnen mergen en test de proxies via rooktests. | Type Safety, Maintainability, Test Coverage | Medium | Medium |
+| `src/ui/Scanner.jsx` & barcode flow | Minimal error handling around camera/decoder, no retry/feedback semantics | Wrap scanner interactions in Result/AppError primitives, surface UI states, add telemetry hooks | Error Handling, Documentation (user feedback) | Medium | Medium |
 | `backend/app/main.py` | Centralized router + middleware logic, hard to test | Split into `app.bootstrap`, `app.http.middleware`, `app.routers`, wire dependency-cruiser / import boundaries | Maintainability, Reusability | High | Medium |
 | `backend/app/modules/*` | Raw exceptions/logging inconsistencies | Enforce `AppError` factories, structured logging with requestId, add integration tests for failure paths | Error Handling, Maintainability | High | Medium |
 | `backend/app/core/config.py` & frontend env usage | Shared schemas exist but lack a single source of truth for generated typings and docs | Automate schema generation between backend `Settings`, `src/config/env.schema.ts`, and `.env.example` | Type Safety, Documentation | Medium | Low |
