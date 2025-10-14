@@ -1,7 +1,7 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from '@ui/App'
-import Scanner from '@ui/Scanner.jsx'
+import Scanner from '@ui/Scanner'
 import { env } from '@config/env'
 
 const container = document.getElementById('root')

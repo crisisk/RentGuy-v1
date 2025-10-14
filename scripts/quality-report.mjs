@@ -165,7 +165,7 @@ const computeErrorHandling = async () => {
 
   const backendFiles = await collectFiles('backend/app', ['.py'])
 
-  const legacyFrontendCandidates = ['App.jsx', 'Scanner.jsx', 'scanner.jsx']
+  const legacyFrontendCandidates = ['App.jsx', 'Scanner.tsx', 'Scanner.jsx', 'scanner.jsx']
   const legacyFrontend = (
     await Promise.all(
       legacyFrontendCandidates.map(async (file) => {

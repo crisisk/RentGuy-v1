@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "generatedAt": "2025-10-14T20:36:32.380Z",
+  "generatedAt": "2025-10-14T21:37:01.802Z",
   "metrics": {
     "typeSafety": {
-      "score": 59.99,
+      "score": 67.84,
       "details": {
-        "tsFiles": 17,
-        "jsFiles": 2,
-        "tsLines": 2469,
-        "jsLines": 1647,
-        "ratio": 0.5999
+        "tsFiles": 18,
+        "jsFiles": 1,
+        "tsLines": 2899,
+        "jsLines": 1374,
+        "ratio": 0.6784
       },
       "evidence": [
-        "TypeScript LOC: 2469",
-        "JavaScript LOC: 1647",
-        "TypeScript coverage ratio: 59.99%"
+        "TypeScript LOC: 2899",
+        "JavaScript LOC: 1374",
+        "TypeScript coverage ratio: 67.84%"
       ]
     },
     "errorHandling": {
@@ -22,11 +22,11 @@
       "details": {
         "filesAnalysed": 137,
         "riskEvents": 135,
-        "handledEvents": 208
+        "handledEvents": 231
       },
       "evidence": [
         "Potential risk events identified: 135",
-        "Handling constructs detected: 208"
+        "Handling constructs detected: 231"
       ]
     },
     "codeReusability": {
@@ -44,12 +44,12 @@
       "score": 0,
       "details": {
         "filesAnalysed": 137,
-        "averageLines": 70.96,
+        "averageLines": 72.1,
         "maxLines": 1327,
-        "totalLines": 9721
+        "totalLines": 9878
       },
       "evidence": [
-        "Average LOC per file: 70.96",
+        "Average LOC per file: 72.10",
         "Max LOC single file: 1327"
       ]
     },
@@ -81,7 +81,7 @@
       ]
     }
   },
-  "overallQualityIndex": 57.5,
+  "overallQualityIndex": 59.07,
   "gates": {
     "typeSafety": 95,
     "errorHandling": 95,

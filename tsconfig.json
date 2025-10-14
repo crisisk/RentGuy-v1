@@ -43,6 +43,9 @@
       "@infra/*": [
         "src/infrastructure/*"
       ],
+      "@infra/offline-queue": [
+        "warehouse/offline-queue.js"
+      ],
       "@ui/*": [
         "src/ui/*"
       ]
@@ -52,7 +55,8 @@
     "src",
     "types",
     "Planner.jsx",
-    "OnboardingOverlay.jsx"
+    "OnboardingOverlay.jsx",
+    "warehouse/offline-queue.js"
   ],
   "exclude": [
     "node_modules",
@@ -70,7 +74,7 @@
     "reports",
     "testing",
     "tests",
-    "warehouse",
+    "warehouse/__tests__",
     "**/node_modules"
   ]
 }
