@@ -1,37 +1,79 @@
 import { defineConfig, devices } from '@playwright/test';
+import type { PlaywrightTestConfig } from '@playwright/test';
 
-const APP_URL_STAGING = process.env.APP_URL_STAGING ?? 'https://staging.rentguy.sevensa.nl';
-const APP_URL_PROD = process.env.APP_URL_PROD ?? 'https://rentguy.sevensa.nl';
-const DEFAULT_BASE_URL = process.env.BASE_URL ?? APP_URL_STAGING ?? APP_URL_PROD;
-
-export default defineConfig({
-  testDir: './suites',
-  timeout: 90_000,
-  expect: {
-    timeout: 10_000,
-  },
-  retries: process.env.CI ? 1 : 0,
-  reporter: [['list'], ['html', { outputFolder: 'tests/e2e/artifacts/report' }]],
-  outputDir: 'tests/e2e/artifacts/results',
-  fullyParallel: false,
+/**
+ * Configure Playwright for end-to-end testing
+ * See https://playwright.dev/docs/test-configuration
+ */
+const config: PlaywrightTestConfig = defineConfig({
+  // Test directory
+  testDir: './tests/e2e',
+  
+  // Maximum time one test can run
+  timeout: 30 * 1000,
+  
+  // Fail build on CI if test fails
+  forbidOnly: !!process.env.CI,
+  
+  // Retry failed tests on CI
+  retries: process.env.CI ? 2 : 0,
+  
+  // Parallelize tests on CI
+  workers: process.env.CI ? 4 : undefined,
+  
+  // Reporter configuration
+  reporter: [
+    ['html', { outputFolder: 'test-results/report' }],
+    ['list'],
+    ['junit', { outputFile: 'test-results/results.xml' }]
+  ],
+  
+  // Shared settings for all projects
   use: {
-    baseURL: DEFAULT_BASE_URL,
-    trace: 'retain-on-failure',
+    // Base URL for all tests
+    baseURL: 'http://localhost:3000',
+    
+    // Collect trace on failure
+    trace: 'on-first-retry',
+    
+    // Video recording
     video: 'retain-on-failure',
-    screenshot: 'only-on-failure',
+    
+    // Default viewport
+    viewport: { width: 1280, height: 720 },
+    
+    // Bypass CSP in development
+    ignoreHTTPSErrors: true
   },
+
+  // Configure projects for different browsers
   projects: [
     {
-      name: 'chromium-desktop',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] }
     },
     {
-      name: 'firefox-desktop',
-      use: { ...devices['Desktop Firefox'] },
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] }
     },
     {
-      name: 'chromium-mobile',
-      use: { ...devices['Pixel 5'] },
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] }
     },
+    // Mobile testing
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 5'] }
+    }
   ],
+
+  // Web server for production build testing
+  webServer: {
+    command: 'npm run start',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000
+  }
 });
+
+export default config;
