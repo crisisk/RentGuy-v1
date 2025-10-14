@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { createAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../stores/authStore';
 import type { ReactNode } from 'react';
 
 export const AuthGuard = ({
@@ -10,7 +10,7 @@ export const AuthGuard = ({
   children: ReactNode;
   allowedRoles?: string[];
 }) => {
-  const { user, isAuthenticated, checkAuth } = createAuthStore();
+  const { user, isAuthenticated, checkAuth } = useAuthStore();
 
   useEffect(() => {
     checkAuth();
@@ -28,7 +28,7 @@ export const AuthGuard = ({
 };
 
 export const PublicGuard = ({ children }: { children: ReactNode }) => {
-  const { isAuthenticated } = createAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
