@@ -1,4 +1,3 @@
-import apiClient from './client';
 import { Client, Interaction } from '../types';
 
 const mockClients: Client[] = [
