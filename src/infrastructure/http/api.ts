@@ -1,4 +1,8 @@
-import axios, { type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
+import axios, {
+  type AxiosInstance,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios'
 import {
   clearOnboardingState,
   getLocalStorageItem,
@@ -7,6 +11,7 @@ import {
   storageAvailable,
 } from '@core/storage'
 import { env } from '@config/env'
+import { mapUnknownToAppError } from '@core/errors'
 
 const API_BASE_URL = env.apiUrl
 
@@ -51,16 +56,11 @@ if (token) {
   setToken(token)
 }
 
-type AxiosErrorResponse = {
-  response?: {
-    status?: number
-  }
-}
-
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  (error: AxiosErrorResponse) => {
-    if (error.response?.status === 401) {
+  (error: unknown) => {
+    const appError = mapUnknownToAppError(error)
+    if (appError.code === 'unauthorized') {
       removeLocalStorageItem('token')
       removeLocalStorageItem('user_email')
       clearOnboardingState()
@@ -68,6 +68,6 @@ api.interceptors.response.use(
         window.location.reload()
       }
     }
-    return Promise.reject(error)
+    return Promise.reject(appError)
   }
 )

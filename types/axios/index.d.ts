@@ -6,6 +6,7 @@ declare module 'axios' {
     params?: Record<string, unknown>
     data?: T
     signal?: AbortSignal
+    url?: string
   }
 
   export interface AxiosResponse<T = any> {
@@ -21,6 +22,15 @@ declare module 'axios' {
   }
 
   export interface InternalAxiosRequestConfig<T = any> extends AxiosRequestConfig<T> {}
+
+  export interface AxiosError<T = any> extends Error {
+    isAxiosError: true
+    config?: AxiosRequestConfig<T>
+    code?: string
+    request?: unknown
+    response?: AxiosResponse<T>
+    toJSON(): Record<string, unknown>
+  }
 
   export interface AxiosInstance {
     defaults: { headers: { common: Record<string, string> } }

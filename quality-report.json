@@ -1,55 +1,55 @@
 {
   "version": 1,
-  "generatedAt": "2025-10-14T19:39:24.189Z",
+  "generatedAt": "2025-10-14T19:54:29.350Z",
   "metrics": {
     "typeSafety": {
-      "score": 55.75,
+      "score": 58.65,
       "details": {
-        "tsFiles": 13,
+        "tsFiles": 16,
         "jsFiles": 2,
-        "tsLines": 2075,
+        "tsLines": 2336,
         "jsLines": 1647,
-        "ratio": 0.5575
+        "ratio": 0.5865
       },
       "evidence": [
-        "TypeScript LOC: 2075",
+        "TypeScript LOC: 2336",
         "JavaScript LOC: 1647",
-        "TypeScript coverage ratio: 55.75%"
+        "TypeScript coverage ratio: 58.65%"
       ]
     },
     "errorHandling": {
       "score": 100,
       "details": {
-        "filesAnalysed": 133,
+        "filesAnalysed": 136,
         "riskEvents": 135,
-        "handledEvents": 136
+        "handledEvents": 197
       },
       "evidence": [
         "Potential risk events identified: 135",
-        "Handling constructs detected: 136"
+        "Handling constructs detected: 197"
       ]
     },
     "codeReusability": {
-      "score": 94.74,
+      "score": 94.85,
       "details": {
-        "reusableFiles": 126,
-        "totalFiles": 133
+        "reusableFiles": 129,
+        "totalFiles": 136
       },
       "evidence": [
-        "Reusable files analysed: 126",
-        "Total code files: 133"
+        "Reusable files analysed: 129",
+        "Total code files: 136"
       ]
     },
     "maintainability": {
       "score": 0,
       "details": {
-        "filesAnalysed": 133,
-        "averageLines": 70.13,
+        "filesAnalysed": 136,
+        "averageLines": 70.5,
         "maxLines": 1327,
-        "totalLines": 9327
+        "totalLines": 9588
       },
       "evidence": [
-        "Average LOC per file: 70.13",
+        "Average LOC per file: 70.50",
         "Max LOC single file: 1327"
       ]
     },
@@ -81,7 +81,7 @@
       ]
     }
   },
-  "overallQualityIndex": 56.76,
+  "overallQualityIndex": 57.37,
   "gates": {
     "typeSafety": 95,
     "errorHandling": 95,

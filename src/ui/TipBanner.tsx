@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { getTips, type OnboardingTip } from '@application/onboarding/api'
+import { getTips, type OnboardingTip, type TipsResult } from '@application/onboarding/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
+import { isOk } from '@core/result'
 
 export interface TipBannerProps {
   module?: string
@@ -14,10 +15,17 @@ export function TipBanner({ module }: TipBannerProps) {
 
     ;(async () => {
       try {
-        const tips = await getTips(module)
-        const [firstTip] = tips
-        if (!cancelled && firstTip) {
-          setTip(firstTip)
+        const result: TipsResult = await getTips(module)
+        if (cancelled) {
+          return
+        }
+        if (isOk(result)) {
+          const [firstTip] = result.value
+          if (firstTip) {
+            setTip(firstTip)
+          }
+        } else {
+          console.warn('Kon onboarding tip niet laden', result.error)
         }
       } catch (error) {
         console.warn('Kon onboarding tip niet laden', error)

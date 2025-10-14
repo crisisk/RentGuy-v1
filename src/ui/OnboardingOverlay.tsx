@@ -16,9 +16,14 @@ import {
   type OnboardingProgressRecord,
   type OnboardingStep,
   type OnboardingTip,
+  type ProgressResult,
+  type StepsResult,
+  type TipsResult,
 } from '@application/onboarding/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 import onboardingTipsData from './onboarding_tips.json'
+import { AppError } from '@core/errors'
+import { ok } from '@core/result'
 
 type ModuleKey =
   | 'projects'
@@ -58,8 +63,6 @@ export interface OnboardingOverlayProps {
 type NormalizedOnboardingStep = OnboardingStep & { code: string }
 type NormalizedOnboardingTip = OnboardingTip & { id: string }
 
-type NullableProgress = OnboardingProgressRecord[] | null
-
 type AbortControllerSet = Set<AbortController>
 
 type WindowWithDataLayer = typeof window & {
@@ -67,6 +70,8 @@ type WindowWithDataLayer = typeof window & {
 }
 
 const COMPLETION_RATE_LIMIT_MS = 1500
+const FALLBACK_MESSAGE =
+  'We tonen de Mister DJ standaard onboarding (cached) omdat live data tijdelijk niet beschikbaar is.'
 
 const fallbackStepsSource: OnboardingStep[] = [
   {
@@ -211,7 +216,30 @@ function normalizeTips(list: OnboardingTip[] | null | undefined): NormalizedOnbo
   }))
 }
 
+function collectResultErrors(
+  stepsResult: StepsResult,
+  progressResult: ProgressResult,
+  tipsResult: TipsResult,
+  includeProgress: boolean,
+): string[] {
+  const messages: string[] = []
+  if (!stepsResult.ok) {
+    messages.push(getErrorMessage(stepsResult.error))
+  }
+  if (!tipsResult.ok) {
+    messages.push(getErrorMessage(tipsResult.error))
+  }
+  if (includeProgress && !progressResult.ok) {
+    messages.push(getErrorMessage(progressResult.error))
+  }
+  return messages
+}
+
 function getErrorMessage(error: unknown): string {
+  if (AppError.isAppError(error)) {
+    const status = error.httpStatus ? ` (${error.httpStatus})` : ''
+    return `${error.message}${status ? status : ''} [${error.code}]`
+  }
   if (error instanceof Error && error.message) {
     return error.message
   }
@@ -282,45 +310,56 @@ export default function OnboardingOverlay({
 
     const load = async () => {
       try {
-        const [stepsData, progressData, tipsData]: [
-          OnboardingStep[] | null,
-          NullableProgress,
-          OnboardingTip[] | null,
-        ] = await Promise.all([
-          getSteps({ signal: controller.signal }).catch(() => null),
-          hasEmail
-            ? getProgress(emailParam, { signal: controller.signal }).catch(() => null)
-            : Promise.resolve<NullableProgress>(null),
-          getTips(undefined, { signal: controller.signal }).catch(() => null),
-        ])
+        const progressPromise: Promise<ProgressResult> = hasEmail
+          ? getProgress(emailParam, { signal: controller.signal })
+          : Promise.resolve<ProgressResult>(ok<OnboardingProgressRecord[]>([]))
+
+        const [stepsResult, progressResult, tipsResult]: [StepsResult, ProgressResult, TipsResult] =
+          await Promise.all([
+            getSteps({ signal: controller.signal }),
+            progressPromise,
+            getTips(undefined, { signal: controller.signal }),
+          ])
 
         if (ignore || controller.signal.aborted) {
           return
         }
 
-        const resolvedSteps =
-          stepsData && stepsData.length ? normalizeSteps(stepsData) : normalizeSteps(fallbackSteps)
-        const resolvedTips =
-          tipsData && tipsData.length ? normalizeTips(tipsData) : normalizeTips(fallbackTips)
-        const resolvedProgress = Array.isArray(progressData) ? progressData : []
+        const stepsData = stepsResult.ok ? stepsResult.value : []
+        const tipsData = tipsResult.ok ? tipsResult.value : []
+        const progressData = progressResult.ok ? progressResult.value : []
+
+        const resolvedSteps = stepsData.length ? normalizeSteps(stepsData) : normalizeSteps(fallbackSteps)
+        const resolvedTips = tipsData.length ? normalizeTips(tipsData) : normalizeTips(fallbackTips)
 
         setSteps(resolvedSteps)
         setTips(resolvedTips)
-        setDone(new Set(resolvedProgress.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+        setDone(new Set(progressData.filter((item) => item.status === 'complete').map((item) => item.step_code)))
 
-        const usedFallbackSteps = !stepsData || stepsData.length === 0
-        const usedFallbackTips = !tipsData || tipsData.length === 0
-        const usedFallbackProgress = !hasEmail || !progressData
+        const usedFallbackSteps = !stepsResult.ok || stepsData.length === 0
+        const usedFallbackTips = !tipsResult.ok || tipsData.length === 0
+        const usedFallbackProgress = !hasEmail || !progressResult.ok
 
         if (usedFallbackSteps || usedFallbackTips || usedFallbackProgress) {
-          setErrorMessage(
-            'We tonen de Mister DJ standaard onboarding (cached) omdat live data tijdelijk niet beschikbaar is.',
-          )
+          setErrorMessage(FALLBACK_MESSAGE)
           emitOnboardingEvent('data_fallback', {
             email: emailContext,
             usedFallbackSteps,
             usedFallbackTips,
             usedFallbackProgress,
+            stepError: stepsResult.ok ? undefined : stepsResult.error.code,
+            tipsError: tipsResult.ok ? undefined : tipsResult.error.code,
+            progressError: progressResult.ok ? undefined : progressResult.error.code,
+          })
+        }
+
+        const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+
+        if (encounteredErrors.length > 0) {
+          console.error('Kon onboardinggegevens niet volledig laden', encounteredErrors)
+          emitOnboardingEvent('data_error', {
+            email: emailContext,
+            message: encounteredErrors.join(' | '),
           })
         }
       } catch (error) {
@@ -331,9 +370,7 @@ export default function OnboardingOverlay({
         setSteps(normalizeSteps(fallbackSteps))
         setTips(normalizeTips(fallbackTips))
         setDone(new Set())
-        setErrorMessage(
-          'We tonen de Mister DJ standaard onboarding (cached) omdat live data tijdelijk niet beschikbaar is.',
-        )
+        setErrorMessage(FALLBACK_MESSAGE)
         emitOnboardingEvent('data_error', { email: emailContext, message: getErrorMessage(error) })
       } finally {
         controllersRef.current.delete(controller)
@@ -350,7 +387,7 @@ export default function OnboardingOverlay({
       controller.abort()
       controllersRef.current.delete(controller)
     }
-  }, [emailParam])
+  }, [emailContext, emailParam, hasEmail])
 
   useEffect(() => {
     if (!containerRef.current || typeof document === 'undefined') {
@@ -394,20 +431,30 @@ export default function OnboardingOverlay({
     controllersRef.current.add(controller)
     setRefreshingProgress(true)
     try {
-      const progressData = await getProgress(emailParam, { signal: controller.signal })
+      const result = await getProgress(emailParam, { signal: controller.signal })
       if (controller.signal.aborted) return
-      setDone(new Set(progressData.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+      if (result.ok) {
+        setDone(new Set(result.value.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+      } else {
+        console.error('Kon voortgang niet verversen', result.error)
+        setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.')
+        emitOnboardingEvent('data_error', {
+          email: emailContext,
+          message: getErrorMessage(result.error),
+        })
+      }
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Kon voortgang niet verversen', error)
       setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.')
+      emitOnboardingEvent('data_error', { email: emailContext, message: getErrorMessage(error) })
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
         setRefreshingProgress(false)
       }
     }
-  }, [emailParam, hasEmail, refreshingProgress])
+  }, [emailContext, emailParam, hasEmail, refreshingProgress])
 
   const mark = useCallback(
     async (step: NormalizedOnboardingStep) => {
@@ -426,12 +473,35 @@ export default function OnboardingOverlay({
       setBusyStep(step.code)
       setErrorMessage('')
       try {
-        await completeStep(emailParam, step.code, { signal: controller.signal })
-        const progressData = await getProgress(emailParam, { signal: controller.signal })
+        const completionResult = await completeStep(emailParam, step.code, { signal: controller.signal })
         if (controller.signal.aborted) return
-        setDone(new Set(progressData.filter((item) => item.status === 'complete').map((item) => item.step_code)))
-        lastCompletionRef.current = Date.now()
-        emitOnboardingEvent('step_completed', { email: emailContext, step: step.code })
+        if (!completionResult.ok) {
+          console.error('Stap kon niet worden bijgewerkt', completionResult.error)
+          setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.')
+          emitOnboardingEvent('step_error', {
+            email: emailContext,
+            step: step.code,
+            message: getErrorMessage(completionResult.error),
+          })
+          return
+        }
+
+        const progressResult = await getProgress(emailParam, { signal: controller.signal })
+        if (controller.signal.aborted) return
+
+        if (progressResult.ok) {
+          setDone(new Set(progressResult.value.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+          lastCompletionRef.current = Date.now()
+          emitOnboardingEvent('step_completed', { email: emailContext, step: step.code })
+        } else {
+          console.error('Kon voortgang na stap niet bijwerken', progressResult.error)
+          setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.')
+          emitOnboardingEvent('step_error', {
+            email: emailContext,
+            step: step.code,
+            message: getErrorMessage(progressResult.error),
+          })
+        }
       } catch (error) {
         if (controller.signal.aborted) return
         console.error('Stap kon niet worden bijgewerkt', error)
