@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { api } from './api.js'
+import { api } from './api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from './theme.js'
 
 function formatAvailability(value) {

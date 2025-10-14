@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Login from './Login.jsx'
 import Planner from './Planner.jsx'
 import OnboardingOverlay from './OnboardingOverlay.jsx'
-import { api, setToken as applyToken } from './api.js'
+import { api, setToken as applyToken } from './api'
 import { applyBrandSurface, brand } from './theme.js'
 import {
   getLocalStorageItem,
