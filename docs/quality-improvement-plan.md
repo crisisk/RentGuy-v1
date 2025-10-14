@@ -7,6 +7,7 @@
 - **Configuration**: Environment settings managed via Pydantic (`backend/app/core/config.py`) and a new runtime-validated schema for the frontend (`src/config/env.schema.ts`), reducing drift risks between clients.
 - **Tooling**:
   - Node scripts: linting, formatting, dependency analysis, duplication detection, tests, and aggregate quality gate via `npm run quality:all` (`package.json`).
+  - ESLint 9 now consumes a flat configuration (`eslint.config.mjs`) aligned with the `@application/@core/@infra/@ui` aliases so the lint pipeline runs in modern CI images without legacy `.eslintrc` fallbacks.
   - Python: pytest + coverage scaffolded (`backend/tests`), Ruff linting configured in `backend/pyproject.toml` but not wired into CI.
   - Quality artefacts already scaffolded (e.g., `scripts/quality-report.mjs`, `docs/QUALITY_SUMMARY.md`).
 - **Infrastructure**: Docker Compose manifests for multi-service deployment, Postgres primary datastore, optional Stripe/Mollie integrations.
