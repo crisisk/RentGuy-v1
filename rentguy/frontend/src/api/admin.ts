@@ -1,4 +1,3 @@
-import apiClient from './client';
 import { User, Role } from '../types';
 
 const mockUsers: User[] = [

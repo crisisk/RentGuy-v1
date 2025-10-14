@@ -29,7 +29,13 @@ export const useCrewStore = create<CrewState>()(immer((set) => ({
   fetchSchedules: async (date) => {
     try {
       set({ isLoading: true });
-      const schedules = await crewApi.getTimeEntries({ startDate: date.toISOString() });
+      const timeEntries = await crewApi.getTimeEntries({ startDate: date.toISOString() });
+      const schedules: Schedule[] = timeEntries.map(entry => ({
+        id: entry.id,
+        teamMemberId: entry.crewId,
+        date: entry.startTime.split('T')[0],
+        shift: `${entry.startTime.split('T')[1].substring(0, 5)} - ${entry.endTime.split('T')[1].substring(0, 5)}`,
+      }));
       set({ schedules, isLoading: false });
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
