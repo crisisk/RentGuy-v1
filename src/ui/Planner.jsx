@@ -1,7 +1,12 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@infra/http/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
+import TipBanner from '@ui/TipBanner'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
 
 const PERSONA_STORAGE_KEY = 'rentguy:plannerPersona'
 
@@ -457,8 +462,11 @@ export default function Planner({ onLogout }) {
   const [sortDir, setSortDir] = useState('asc')
   const [timeFilter, setTimeFilter] = useState('all')
   const [formState, setFormState] = useState({ name: '', client: '', start: '', end: '', notes: '' })
+  const [viewMode, setViewMode] = useState('dashboard')
+  const [calendarSyncing, setCalendarSyncing] = useState(false)
+  const calendarRef = useRef(null)
 
-  async function loadProjects() {
+  const loadProjects = useCallback(async () => {
     setLoading(true)
     try {
       const { data } = await api.get('/api/v1/projects')
@@ -483,11 +491,11 @@ export default function Planner({ onLogout }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadProjects()
-  }, [])
+  }, [loadProjects])
 
   function openEditor(event) {
     setEditing(event)
@@ -622,6 +630,58 @@ export default function Planner({ onLogout }) {
         return 0
       })
   }, [events, statusFilter, riskFilter, searchTerm, sortKey, sortDir, timeFilter])
+
+  const calendarEvents = useMemo(
+    () =>
+      filteredEvents.map(event => ({
+        id: String(event.id),
+        title: `${event.name} (${event.client})`,
+        start: event.start,
+        end: event.end ? shiftDate(event.end, 1) : event.end,
+        allDay: true,
+        extendedProps: {
+          status: event.status,
+          risk: event.risk,
+        },
+      })),
+    [filteredEvents]
+  )
+
+  const handleCalendarEventDrop = useCallback(
+    async info => {
+      const id = parseInt(info.event.id, 10)
+      if (Number.isNaN(id)) {
+        info.revert()
+        return
+      }
+
+      const start = info.event.startStr.slice(0, 10)
+      const exclusiveEnd = info.event.endStr || info.event.startStr
+      const endDate = new Date(exclusiveEnd)
+      endDate.setDate(endDate.getDate() - 1)
+      const end = endDate.toISOString().slice(0, 10)
+
+      try {
+        setCalendarSyncing(true)
+        await api.put(`/api/v1/projects/${id}/dates`, {
+          name: info.event.title,
+          client_name: '',
+          start_date: start,
+          end_date: end,
+          notes: '',
+        })
+        await loadProjects()
+        setFeedback({ type: 'success', message: 'Planning bijgewerkt via kalender.' })
+      } catch (error) {
+        console.error(error)
+        setFeedback({ type: 'error', message: 'Herplannen geblokkeerd. Controleer voorraad of rechten.' })
+        info.revert()
+      } finally {
+        setCalendarSyncing(false)
+      }
+    },
+    [loadProjects]
+  )
 
   const summary = useMemo(() => {
     return events.reduce(
@@ -864,6 +924,66 @@ export default function Planner({ onLogout }) {
           </button>
         </div>
 
+        <TipBanner module="projects" />
+
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.82) 100%)',
+            borderRadius: 20,
+            padding: '16px 20px',
+            border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+            boxShadow: brand.colors.shadow,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>Weergave</span>
+            <div style={{ display: 'inline-flex', gap: 8 }}>
+              {[
+                { key: 'dashboard', label: 'Persona-dashboard' },
+                { key: 'calendar', label: 'Kalender' },
+              ].map(option => {
+                const active = viewMode === option.key
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setViewMode(option.key)}
+                    aria-pressed={active}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 999,
+                      border: active
+                        ? `1px solid ${withOpacity(brand.colors.primaryDark, 0.5)}`
+                        : `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                      background: active
+                        ? brand.colors.gradient
+                        : withOpacity(brand.colors.secondary, 0.08),
+                      color: active ? '#fff' : brand.colors.secondary,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: active ? '0 14px 30px rgba(79, 70, 229, 0.22)' : 'none',
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <span style={{ fontSize: '0.85rem', color: calendarSyncing ? brand.colors.secondary : brand.colors.mutedText }}>
+            {viewMode === 'calendar'
+              ? calendarSyncing
+                ? 'Kalender synchroniseert…'
+                : 'Sleep & verplaats events in de kalender om data direct te updaten.'
+              : 'Gebruik het dashboard voor persona-inzichten of schakel naar de kalenderweergave.'}
+          </span>
+        </div>
+
         <div
           style={{
             display: 'grid',
@@ -977,12 +1097,35 @@ export default function Planner({ onLogout }) {
               Reset filters
             </button>
           </div>
-          {personaHint && (
-            <div style={{ fontSize: '0.9rem', color: brand.colors.mutedText }}>{personaHint}</div>
-          )}
-        </div>
+            {personaHint && (
+              <div style={{ fontSize: '0.9rem', color: brand.colors.mutedText }}>{personaHint}</div>
+            )}
+          </div>
 
-        {feedback && (
+          {viewMode === 'calendar' && (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
+                borderRadius: 28,
+                padding: '12px 16px',
+                border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
+                boxShadow: brand.colors.shadow,
+              }}
+            >
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                initialView="dayGridMonth"
+                editable
+                droppable
+                events={calendarEvents}
+                eventDrop={handleCalendarEventDrop}
+                height="auto"
+              />
+            </div>
+          )}
+
+          {feedback && (
           <div
             role="alert"
             style={{
@@ -1003,17 +1146,18 @@ export default function Planner({ onLogout }) {
           </div>
         )}
 
-        <div
-          style={{
-            overflowX: 'auto',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.8) 100%)',
-            borderRadius: 28,
-            border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
-            boxShadow: brand.colors.shadow,
-            padding: '12px',
-          }}
-        >
-          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+          {viewMode !== 'calendar' && (
+            <div
+              style={{
+                overflowX: 'auto',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.8) 100%)',
+                borderRadius: 28,
+                border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
+                boxShadow: brand.colors.shadow,
+                padding: '12px',
+              }}
+            >
+              <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr>
                 {['Project', 'Klant', 'Status', 'Planning', 'Voorraad', 'Start', 'Einde', 'Acties'].map(label => {
@@ -1125,10 +1269,11 @@ export default function Planner({ onLogout }) {
                 })}
               </tbody>
             )}
-          </table>
-        </div>
+              </table>
+            </div>
+          )}
 
-        {editing && (
+        {viewMode !== 'calendar' && editing && (
           <form
             onSubmit={submitUpdate}
             style={{
@@ -1251,4 +1396,3 @@ export default function Planner({ onLogout }) {
     </div>
   )
 }
-// @ts-nocheck

@@ -12,4 +12,8 @@ if (!container) {
 
 const RootComponent = env.isScannerMode ? Scanner : App
 
-createRoot(container).render(<RootComponent />)
+createRoot(container).render(
+  <React.StrictMode>
+    <RootComponent />
+  </React.StrictMode>
+)

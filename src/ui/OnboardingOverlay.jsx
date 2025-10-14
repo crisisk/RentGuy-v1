@@ -161,7 +161,10 @@ function normalizeTips(list) {
   }))
 }
 
-export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
+export default function OnboardingOverlay(props) {
+  const { email, onClose, onSnooze, onFinish } = props || {}
+  const snoozeHandler = onSnooze ?? onClose
+  const finishHandler = onFinish ?? onClose
   const [steps, setSteps] = useState(() => normalizeSteps(fallbackSteps))
   const [done, setDone] = useState(new Set())
   const [tips, setTips] = useState(() => normalizeTips(fallbackTips))
@@ -279,10 +282,10 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
     event => {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        onSnooze?.()
+        snoozeHandler?.()
       }
     },
-    [onSnooze]
+    [snoozeHandler]
   )
 
   const progress = useMemo(() => {
@@ -430,7 +433,7 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
             }}
           >
             <button
-              onClick={() => onSnooze?.()}
+              onClick={() => snoozeHandler?.()}
               style={{
                 background: withOpacity('#ffffff', 0.2),
                 border: '1px solid rgba(255,255,255,0.45)',
@@ -443,9 +446,9 @@ export default function OnboardingOverlay({ email, onSnooze, onFinish }) {
             >
               Later doorgaan
             </button>
-            {onFinish && (
+            {finishHandler && (
               <button
-                onClick={() => allComplete && onFinish?.()}
+                onClick={() => allComplete && finishHandler?.()}
                 disabled={!allComplete}
                 style={{
                   backgroundImage: allComplete

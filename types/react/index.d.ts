@@ -17,6 +17,12 @@ declare module 'react' {
 
   export type FC<P = {}> = FunctionComponent<P>
 
+  export interface Context<T> {
+    Provider: FunctionComponent<{ value: T }>
+    Consumer: FunctionComponent<{ children: (value: T) => ReactNode }>
+    _currentValue?: T
+  }
+
   export interface CSSProperties {
     [key: string]: string | number | undefined
   }
@@ -41,6 +47,7 @@ declare module 'react' {
   export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>]
   export function useState<S = undefined>(): [S | undefined, Dispatch<SetStateAction<S | undefined>>]
   export function useEffect(effect: () => void | (() => void), deps?: unknown[]): void
+  export function useLayoutEffect(effect: () => void | (() => void), deps?: unknown[]): void
   export function useMemo<T>(factory: () => T, deps: unknown[]): T
   export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: unknown[]): T
   export function useRef<T>(initialValue: T | null): RefObject<T>
@@ -49,8 +56,23 @@ declare module 'react' {
     initialArg: I,
     init?: (arg: I) => any
   ): [ReturnType<R>, Dispatch<Parameters<R>[1]>]
+  export function useContext<T>(context: Context<T>): T
+  export function useId(): string
+  export function useSyncExternalStore<T>(subscribe: (listener: () => void) => () => void, getSnapshot: () => T): T
+
+  export function createContext<T>(defaultValue: T): Context<T>
+  export function createRef<T>(): RefObject<T>
+  export function forwardRef<T, P = {}>(render: (props: P, ref: RefObject<T> | null) => ReactElement | null): FunctionComponent<P>
+  export function memo<T>(component: FunctionComponent<T>, propsAreEqual?: (prev: T, next: T) => boolean): FunctionComponent<T>
 
   export const Fragment: unique symbol
+  export const StrictMode: FunctionComponent
+
+  export const Children: {
+    only(children: ReactNode): ReactElement
+    count(children: ReactNode): number
+    toArray(children: ReactNode): ReactElement[]
+  }
 }
 
 declare global {

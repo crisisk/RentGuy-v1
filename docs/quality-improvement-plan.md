@@ -1,7 +1,7 @@
 # RentGuy Enterprise Platform – Quality Improvement Plan
 
 ## Stack & System Inventory
-- **Frontend**: React 18 single-page application served through Vite (`src/main.tsx`, `src/ui/App.tsx`, `src/ui/Planner.jsx`). The entry point now boots through a validated env schema (`src/config/env.schema.ts`) and authentication shell components (`src/ui/App.tsx`, `src/ui/Login.tsx`, `src/ui/RoleSelection.tsx`) are typed, but core feature modules such as the planner remain JavaScript with dynamic data flows and extensive localStorage usage.
+- **Frontend**: React 18 single-page application served through Vite (`src/main.tsx`, `src/ui/App.tsx`, `src/ui/Planner.jsx`). The entry point now boots through a validated env schema (`src/config/env.schema.ts`) and authentication shell components (`src/ui/App.tsx`, `src/ui/Login.tsx`, `src/ui/RoleSelection.tsx`) are typed, but core feature modules such as the planner remain JavaScript with dynamic data flows and extensive localStorage usage. The planner exposes both the new persona dashboard and the legacy FullCalendar drag-and-drop grid via an inline toggle to keep upstream scheduling workflows intact while we continue the TypeScript migration.
 - **Barcode Scanner Mode**: Alternative entry in `src/ui/Scanner.jsx` toggled via `VITE_APP_MODE`, relies on `@zxing/browser`.
 - **Backend**: FastAPI service (`backend/app/main.py`) with modular routers (`app.modules.*`), SQLAlchemy 2.0 ORM, Alembic migrations, Redis/WebSocket realtime gateway, and adapters for payments, inventory, billing, and reporting.
 - **Configuration**: Environment settings managed via Pydantic (`backend/app/core/config.py`) and a new runtime-validated schema for the frontend (`src/config/env.schema.ts`), reducing drift risks between clients.
@@ -40,7 +40,7 @@
 ## Issue Backlog & Targeted Fixes
 | Path / Area | Issue | Proposed Fix | Metrics Impacted | Effort | Risk |
 | --- | --- | --- | --- | --- | --- |
-| `src/main.tsx`, `src/ui/App.tsx`, `src/ui/Login.tsx`, `src/ui/Planner.jsx` | React shell components typed, but planner/onboarding flows remain implicit and share mutable state | Extend codemod to planner/onboarding modules, extract typed hooks for storage access, and share API DTO contracts | Type Safety, Maintainability | Medium | Medium |
+| `src/main.tsx`, `src/ui/App.tsx`, `src/ui/Login.tsx`, `src/ui/Planner.jsx` | React shell components typed, but planner/onboarding flows remain implicit and share mutable state | Extend codemod to planner/onboarding modules, extract typed hooks for storage access, and share API DTO contracts. Calendar toggle keeps legacy drag/drop behaviour active; add Vitest coverage for event-sync logic. | Type Safety, Maintainability, Test Coverage | Medium | Medium |
 | `src/ui/Scanner.jsx` & barcode flow | Minimal error handling around camera/decoder, no retry/feedback semantics | Wrap scanner interactions in Result/AppError primitives, surface UI states, add telemetry hooks | Error Handling, Documentation (user feedback) | Medium | Medium |
 | `backend/app/main.py` | Centralized router + middleware logic, hard to test | Split into `app.bootstrap`, `app.http.middleware`, `app.routers`, wire dependency-cruiser / import boundaries | Maintainability, Reusability | High | Medium |
 | `backend/app/modules/*` | Raw exceptions/logging inconsistencies | Enforce `AppError` factories, structured logging with requestId, add integration tests for failure paths | Error Handling, Maintainability | High | Medium |
