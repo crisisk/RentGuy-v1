@@ -15,7 +15,7 @@ export interface Project {
   };
 }
 
-export interface CrewMember {
+export interface TeamMember {
   id: string;
   name: string;
   email: string;
@@ -54,6 +54,38 @@ export interface MaintenanceRecord {
 }
 
 export interface Invoice {
+  // Assuming Payment is a simple type or an alias for a type that is not yet defined.
+  // Adding a placeholder for Payment and Schedule/Task/Role for now.
+}
+
+export interface Payment {
+  id: string;
+  invoiceId: string;
+  amount: number;
+  date: string;
+  method: string;
+}
+
+export interface Schedule {
+  id: string;
+  teamMemberId: string;
+  date: string;
+  shift: string;
+}
+
+export interface Task {
+  id: string;
+  projectId: string;
+  name: string;
+  status: 'todo' | 'in_progress' | 'done';
+}
+
+export interface Role {
+  id: string;
+  name: string;
+}
+
+export interface Invoice {
   id: string;
   customerId: string;
   amount: number;
@@ -75,14 +107,14 @@ export interface FinancialMetrics {
   period: string;
 }
 
-export interface Customer {
+export interface Client {
   id: string;
   name: string;
   email: string;
   segment: 'vip' | 'regular' | 'new';
 }
 
-export interface Activity {
+export interface Interaction {
   id: string;
   type: 'call' | 'email' | 'meeting' | 'note';
   timestamp: string;

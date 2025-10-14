@@ -1,8 +1,8 @@
 import apiClient from './client';
-import { CrewMember, TimeEntry } from '../types';
+import { TeamMember, TimeEntry } from '../types';
 
 // Mock data for initial integration
-const mockCrew: CrewMember[] = [
+const mockCrew: TeamMember[] = [
     { id: 'c1', name: 'John Doe', email: 'john@rg.com', role: 'crew', skills: ['Audio', 'Lighting'], location: { address: 'Amsterdam', latitude: 52.37, longitude: 4.89 } },
     { id: 'c2', name: 'Jane Smith', email: 'jane@rg.com', role: 'manager', skills: ['Video', 'Project Management'], location: { address: 'Utrecht', latitude: 52.09, longitude: 5.12 } },
 ];
@@ -13,13 +13,13 @@ const mockTimeEntries: TimeEntry[] = [
 ];
 
 export const crewAPI = {
-  getAll: async (): Promise<CrewMember[]> => {
+  getAll: async (): Promise<TeamMember[]> => {
     // const response = await apiClient.get('/crew');
     // return response.data;
     return mockCrew;
   },
 
-  getById: async (id: string): Promise<CrewMember> => {
+  getById: async (id: string): Promise<TeamMember> => {
     // const response = await apiClient.get(`/crew/${id}`);
     // return response.data;
     const member = mockCrew.find(c => c.id === id);
