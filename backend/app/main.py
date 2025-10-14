@@ -139,5 +139,10 @@ from app.modules.platform.observability.routes import router as observability_ro
 
 app.include_router(observability_router, prefix="/api/v1", tags=["observability"])
 
+from app.modules.chat.routes import router as chat_router
+
+app.include_router(chat_router, prefix="/api/v1", tags=["chat"])
+
 # Mount the Socket.IO application
 app.mount("/ws", socket_app)
+
