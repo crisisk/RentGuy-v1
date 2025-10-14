@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import time
 from contextlib import asynccontextmanager
-from typing import Callable
+from typing import Callable, Sequence
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import PlainTextResponse
+from sqlalchemy import text
 
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import setup_logging
 from app.core.metrics import MetricsTracker
 from app.core.observability import configure_tracing
-from .realtime import socket_app, sio # Import from new realtime module
+from app.core.config import settings
+from app.core.db import SessionLocal, database_ready
+from app.core.middleware import SecurityHeadersMiddleware
+from .realtime import socket_app, sio  # Import from new realtime module
 
 setup_logging()
 
@@ -23,7 +27,7 @@ async def lifespan(app: FastAPI):
     configure_tracing(app)
     app.state.start_time = time.time()
     app.state.metrics_tracker = MetricsTracker()
-    app.state.sio = sio # Store sio server in app state
+    app.state.sio = sio  # Store sio server in app state
     yield
 
 
@@ -31,11 +35,12 @@ app = FastAPI(title="Rentguyapp API", version="0.1", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
+app.add_middleware(SecurityHeadersMiddleware, hsts_enabled=settings.ENV == "prod")
 
 app.add_exception_handler(AppError, app_error_handler)
 
@@ -87,6 +92,13 @@ def healthz():
 
 @app.get("/readyz")
 def readyz():
+    if not database_ready():
+        raise HTTPException(status_code=503, detail="database not available")
+    with SessionLocal() as session:
+        try:
+            session.execute(text("SELECT 1"))
+        except Exception as exc:  # pragma: no cover - defensive
+            raise HTTPException(status_code=503, detail="database not available") from exc
     return {"status": "ready"}
 
 
@@ -98,46 +110,35 @@ def metrics() -> PlainTextResponse:
     return PlainTextResponse(payload, media_type="text/plain; version=0.0.4")
 
 
-# Mount module routers
-from app.modules.auth.routes import router as auth_router
+ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
+    ("app.modules.auth.routes", "router", "/api/v1/auth", ["auth"]),
+    ("app.modules.inventory.routes", "router", "/api/v1/inventory", ["inventory"]),
+    ("app.modules.projects.routes", "router", "/api/v1", ["projects"]),
+    ("app.modules.calendar_sync.routes", "router", "/api/v1", ["calendar"]),
+    ("app.modules.crew.routes", "router", "/api/v1", ["crew"]),
+    ("app.modules.transport.routes", "router", "/api/v1", ["transport"]),
+    ("app.modules.billing.routes", "router", "/api/v1", ["billing"]),
+    ("app.modules.warehouse.routes", "router", "/api/v1", ["warehouse"]),
+    ("app.modules.reporting.routes", "router", "/api/v1", ["reporting"]),
+    (
+        "app.modules.platform.observability.routes",
+        "router",
+        "/api/v1",
+        ["observability"],
+    ),
+)
 
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 
-from app.modules.inventory.routes import router as inventory_router
+def _register_routers() -> None:
+    from importlib import import_module
 
-app.include_router(inventory_router, prefix="/api/v1/inventory", tags=["inventory"])
+    for module_path, attr, prefix, tags in ROUTERS:
+        module = import_module(module_path)
+        router = getattr(module, attr)
+        app.include_router(router, prefix=prefix, tags=tags)
 
-from app.modules.projects.routes import router as projects_router
 
-app.include_router(projects_router, prefix="/api/v1", tags=["projects"])
-
-from app.modules.calendar_sync.routes import router as calendar_router
-
-app.include_router(calendar_router, prefix="/api/v1", tags=["calendar"])
-
-from app.modules.crew.routes import router as crew_router
-
-app.include_router(crew_router, prefix="/api/v1", tags=["crew"])
-
-from app.modules.transport.routes import router as transport_router
-
-app.include_router(transport_router, prefix="/api/v1", tags=["transport"])
-
-from app.modules.billing.routes import router as billing_router
-
-app.include_router(billing_router, prefix="/api/v1", tags=["billing"])
-
-from app.modules.warehouse.routes import router as warehouse_router
-
-app.include_router(warehouse_router, prefix="/api/v1", tags=["warehouse"])
-
-from app.modules.reporting.routes import router as reporting_router
-
-app.include_router(reporting_router, prefix="/api/v1", tags=["reporting"])
-
-from app.modules.platform.observability.routes import router as observability_router
-
-app.include_router(observability_router, prefix="/api/v1", tags=["observability"])
+_register_routers()
 
 from app.modules.chat.routes import router as chat_router
 
