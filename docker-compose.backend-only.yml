@@ -1,0 +1,177 @@
+version: '3.8'
+
+# RentGuy Enterprise Platform - Backend-Only Deployment
+# This is a temporary deployment file to deploy only the backend while frontend is being fixed
+
+services:
+  # Backend Service (FastAPI)
+  rentguy-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=production
+    image: rentguy-backend:${VERSION:-latest}
+    container_name: rentguy-backend-prod
+    restart: unless-stopped
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@rentguy-db:5432/${POSTGRES_DB}
+      - DB_POOL_SIZE=20
+      - DB_MAX_OVERFLOW=10
+      
+      # Redis (for caching and sessions)
+      - REDIS_URL=redis://rentguy-redis:6379/0
+      
+      # JWT & Security
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_MINUTES=60
+      - REFRESH_TOKEN_EXPIRATION_DAYS=7
+      
+      # Keycloak Integration
+      - KEYCLOAK_SERVER_URL=${KEYCLOAK_URL}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-rentguy}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-rentguy-backend}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      
+      # OpenBao Integration
+      - OPENBAO_ADDR=${OPENBAO_ADDR}
+      - OPENBAO_TOKEN=${OPENBAO_TOKEN}
+      - OPENBAO_NAMESPACE=${OPENBAO_NAMESPACE:-rentguy}
+      
+      # Email (for notifications)
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@rentguy.nl}
+      
+      # Customer Portal
+      - CUSTOMER_PORTAL_BASE_URL=https://${DOMAIN:-rentguy.sevensa.nl}/portal
+      
+      # Recurring Invoices
+      - INVOICE_SCHEDULER_ENABLED=true
+      - INVOICE_EMAIL_FROM=invoices@rentguy.nl
+      
+      # Online Booking
+      - BOOKING_THEMES_ENABLED=true
+      - BOOKING_PAYMENT_PROVIDER=mollie
+      - MOLLIE_API_KEY=${MOLLIE_API_KEY}
+      
+      # Sub-Renting
+      - SUBRENTING_API_KEY=${SUBRENTING_API_KEY}
+      - SUBRENTING_WEBHOOK_SECRET=${SUBRENTING_WEBHOOK_SECRET}
+      
+      # Monitoring
+      - SENTRY_DSN=${SENTRY_DSN}
+      - LOG_LEVEL=INFO
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rentguy-backend.rule=Host(`${DOMAIN:-rentguy.sevensa.nl}`)"
+      - "traefik.http.routers.rentguy-backend.entrypoints=rentguy-8721"
+      - "traefik.http.routers.rentguy-backend.tls=true"
+      - "traefik.http.routers.rentguy-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.rentguy-backend.loadbalancer.server.port=8000"
+    networks:
+      - web
+      - rentguy-internal
+    depends_on:
+      rentguy-db:
+        condition: service_healthy
+      rentguy-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Database Service (PostgreSQL with PostGIS)
+  rentguy-db:
+    image: postgis/postgis:16-3.4
+    container_name: rentguy-db-prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-rentguy_production}
+      - POSTGRES_USER=${POSTGRES_USER:-rentguy}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - rentguy-db-data:/var/lib/postgresql/data
+      - ./backend/alembic/init_postgis.sql:/docker-entrypoint-initdb.d/01_init_postgis.sql:ro
+    networks:
+      - rentguy-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rentguy} -d ${POSTGRES_DB:-rentguy_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: 
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+
+  # Redis Service (Caching & Sessions)
+  rentguy-redis:
+    image: redis:7-alpine
+    container_name: rentguy-redis-prod
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - rentguy-redis-data:/data
+    networks:
+      - rentguy-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Migration Service (Run once on deployment)
+  rentguy-migrations:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: rentguy-backend:${VERSION:-latest}
+    container_name: rentguy-migrations
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@rentguy-db:5432/${POSTGRES_DB}
+    command: alembic upgrade head
+    networks:
+      - rentguy-internal
+    depends_on:
+      rentguy-db:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  rentguy-db-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /root/rentguy/data/postgres
+  
+  rentguy-redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /root/rentguy/data/redis
+
+networks:
+  web:
+    external: true
+  
+  rentguy-internal:
+    driver: bridge
+    internal: false
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+

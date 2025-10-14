@@ -1,40 +1,109 @@
-import { createBrowserRouter } from 'react-router-dom';
-import { routes } from './routes';
+// FILE: rentguy/frontend/src/router/routes.tsx
+import { lazy } from 'react';
+import { Navigate } from 'react-router-dom';
+import type { RouteConfig } from './types';
 
-/**
- * Configured application router with React Router v6
- * Integrates with Zustand store and TypeScript typings
- */
-export const router = createBrowserRouter(routes, {
-  future: {
-    v7_normalizeFormMethod: true,
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const AdminPage = lazy(() => import('@/pages/AdminPage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+
+export const appRoutes: RouteConfig[] = [
+  { index: true, element: <Navigate to="/dashboard" replace /> },
+  { path: 'login', element: <LoginPage />, guard: 'public' },
+  {
+    path: 'dashboard',
+    element: <DashboardPage />,
+    guard: 'auth',
+    allowedRoles: ['user', 'admin']
   },
-});
+  {
+    path: 'admin',
+    element: <AdminPage />,
+    guard: 'auth',
+    allowedRoles: ['admin']
+  },
+  {
+    path: 'profile',
+    element: <ProfilePage />,
+    guard: 'auth'
+  },
+  { path: 'not-found', element: <NotFoundPage /> },
+  { path: '*', element: <Navigate to="/not-found" replace /> }
+];
 
-/**
- * TEST SCENARIOS:
- * 
- * 1. Navigation Test:
- * - Verify all 14 routes resolve correctly
- * - Check parameterized route (/aanbod/:id) with different IDs
- * 
- * 2. Error Handling Test:
- * - Throw error in page component to test ErrorBoundary
- * - Test 404 handling for unknown routes
- * 
- * 3. Performance Test:
- * - Verify code splitting works via Network tab
- * - Check loading spinner appears during lazy loading
- * 
- * 4. Accessibility Test:
- * - Validate ARIA labels in loading/error states
- * - Test keyboard navigation and screen reader compatibility
- * 
- * 5. Mobile Responsiveness:
- * - Test all pages on different screen sizes
- * - Verify Tailwind breakpoints work correctly
- * 
- * 6. Security Test:
- * - Validate authenticated route protection
- * - Test navigation guards (implemented in Zustand)
- */
+// FILE: rentguy/frontend/src/router/guards.tsx
+import { useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
+import { authStore } from '@/stores/auth';
+import type { ReactNode } from 'react';
+
+export const AuthGuard = ({
+  children,
+  allowedRoles
+}: {
+  children: ReactNode;
+  allowedRoles?: string[];
+}) => {
+  const { token, user, validateSession } = authStore();
+
+  useEffect(() => {
+    validateSession();
+  }, [validateSession]);
+
+  if (!token) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(user?.role)) return <Navigate to="/not-found" replace />;
+
+  return children;
+};
+
+// FILE: rentguy/frontend/src/router/index.tsx
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { AuthLayout } from '@/layouts/AuthLayout';
+import { appRoutes } from './routes';
+import { processRoutes } from './utils';
+import type { RouteObject } from 'react-router-dom';
+import type { RouteConfig } from './types';
+
+const router = createBrowserRouter([
+  {
+    element: <AuthLayout />,
+    children: processRoutes(appRoutes)
+  }
+]);
+
+export const AppRouter = () => <RouterProvider router={router} />;
+
+// FILE: rentguy/frontend/src/router/types.ts
+import type { ReactNode } from 'react';
+
+export interface RouteConfig {
+  path?: string;
+  index?: boolean;
+  element: ReactNode;
+  guard?: 'public' | 'auth';
+  allowedRoles?: string[];
+  children?: RouteConfig[];
+}
+
+// FILE: rentguy/frontend/src/router/utils.ts
+import { AuthGuard } from './guards';
+import type { RouteConfig, RouteObject } from './types';
+
+export const processRoutes = (routes: RouteConfig[]): RouteObject[] => {
+  return routes.map((route) => {
+    let element = route.element;
+
+    if (route.guard === 'auth') {
+      element = <AuthGuard allowedRoles={route.allowedRoles}>{element}</AuthGuard>;
+    }
+
+    return {
+      path: route.path,
+      index: route.index,
+      element,
+      children: route.children ? processRoutes(route.children) : undefined
+    };
+  });
+};

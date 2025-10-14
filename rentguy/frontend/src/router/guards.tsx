@@ -1,126 +1,109 @@
+// FILE: rentguy/frontend/src/router/routes.tsx
+import { lazy } from 'react';
+import { Navigate } from 'react-router-dom';
+import type { RouteConfig } from './types';
+
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const AdminPage = lazy(() => import('@/pages/AdminPage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+
+export const appRoutes: RouteConfig[] = [
+  { index: true, element: <Navigate to="/dashboard" replace /> },
+  { path: 'login', element: <LoginPage />, guard: 'public' },
+  {
+    path: 'dashboard',
+    element: <DashboardPage />,
+    guard: 'auth',
+    allowedRoles: ['user', 'admin']
+  },
+  {
+    path: 'admin',
+    element: <AdminPage />,
+    guard: 'auth',
+    allowedRoles: ['admin']
+  },
+  {
+    path: 'profile',
+    element: <ProfilePage />,
+    guard: 'auth'
+  },
+  { path: 'not-found', element: <NotFoundPage /> },
+  { path: '*', element: <Navigate to="/not-found" replace /> }
+];
+
+// FILE: rentguy/frontend/src/router/guards.tsx
 import { useEffect } from 'react';
-import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
+import { Navigate } from 'react-router-dom';
+import { authStore } from '@/stores/auth';
+import type { ReactNode } from 'react';
 
-type UserRole = 'admin' | 'user' | 'guest';
-
-interface AuthState {
-  token: string | null;
-  role: UserRole;
-  isLoading: boolean;
-  error: string | null;
-  login: (token: string, role: UserRole) => void;
-  logout: () => void;
-  checkAuthStatus: () => Promise<void>;
-  validateRole: (requiredRole: UserRole) => boolean;
-}
-
-/**
- * Zustand store voor authenticatiebeheer
- */
-export const useAuthStore = create<AuthState>()(
-  immer((set, get) => ({
-    token: localStorage.getItem('rentguy_token'),
-    role: (localStorage.getItem('rentguy_role') as UserRole) || 'guest',
-    isLoading: false,
-    error: null,
-
-    login: (token: string, role: UserRole) => {
-      localStorage.setItem('rentguy_token', token);
-      localStorage.setItem('rentguy_role', role);
-      set({ token, role, error: null });
-    },
-
-    logout: () => {
-      localStorage.removeItem('rentguy_token');
-      localStorage.removeItem('rentguy_role');
-      set({ token: null, role: 'guest', error: null });
-    },
-
-    checkAuthStatus: async () => {
-      set({ isLoading: true, error: null });
-      try {
-        // Simuleer API call voor token validatie
-        const token = get().token;
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        if (!token || token !== localStorage.getItem('rentguy_token')) {
-          get().logout();
-        }
-      } catch (error) {
-        set({ error: 'Fout bij authenticatiecontrole' });
-        get().logout();
-      } finally {
-        set({ isLoading: false });
-      }
-    },
-
-    validateRole: (requiredRole: UserRole) => {
-      const currentRole = get().role;
-      return currentRole === requiredRole || currentRole === 'admin';
-    }
-  }))
-);
-
-/**
- * Hook voor routebeveiliging
- * @param requiredRole Benodigde rol voor toegang
- * @returns Object met toegangsstatus en laadstatus
- */
-export const useAuthGuard = (requiredRole?: UserRole) => {
-  const { token, role, isLoading, error, checkAuthStatus, validateRole } = useAuthStore();
+export const AuthGuard = ({
+  children,
+  allowedRoles
+}: {
+  children: ReactNode;
+  allowedRoles?: string[];
+}) => {
+  const { token, user, validateSession } = authStore();
 
   useEffect(() => {
-    if (token && !error) {
-      checkAuthStatus();
-    }
-  }, []);
+    validateSession();
+  }, [validateSession]);
 
-  const isAuthenticated = !!token && !error;
-  const isAuthorized = requiredRole ? validateRole(requiredRole) : true;
+  if (!token) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(user?.role)) return <Navigate to="/not-found" replace />;
 
-  return {
-    allowed: isAuthenticated && isAuthorized,
-    isLoading: isLoading || (!error && !!token),
-    error,
-    role,
-    requiredRole
-  };
+  return children;
 };
 
-/**
- * Laadspinner component met toegankelijke markup
- */
-export const AuthSpinner = () => (
-  <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
-    <span className="sr-only">Beveiligingscontrole...</span>
-  </div>
-);
+// FILE: rentguy/frontend/src/router/index.tsx
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { AuthLayout } from '@/layouts/AuthLayout';
+import { appRoutes } from './routes';
+import { processRoutes } from './utils';
+import type { RouteObject } from 'react-router-dom';
+import type { RouteConfig } from './types';
 
-/**
- * Toegangsgeweigerd component
- */
-export const AccessDenied = ({ requiredRole }: { requiredRole?: UserRole }) => (
-  <div className="p-8 text-center" role="alert" aria-live="assertive">
-    <h1 className="text-2xl font-bold mb-4">Toegang geweigerd</h1>
-    <p className="text-gray-600">
-      {requiredRole 
-        ? `U heeft geen rechten voor deze pagina (Benodigde rol: ${requiredRole})`
-        : 'U moet ingelogd zijn om deze pagina te bekijken'}
-    </p>
-  </div>
-);
+const router = createBrowserRouter([
+  {
+    element: <AuthLayout />,
+    children: processRoutes(appRoutes)
+  }
+]);
 
-/* Testscenario's:
-1. Niet ingelogde gebruiker toegang tot beschermde route:
-   - Moet redirecten naar login
-2. Ingelogde gebruiker met onvoldoende rechten:
-   - Toont toegang geweigerd
-3. Admin gebruiker toegang tot admin route:
-   - Toegang verleend
-4. Token vervalt tijdens sessie:
-   - Automatische logout en redirect
-5. Netwerkfout tijdens auth check:
-   - Toont foutmelding en logout
-*/
+export const AppRouter = () => <RouterProvider router={router} />;
+
+// FILE: rentguy/frontend/src/router/types.ts
+import type { ReactNode } from 'react';
+
+export interface RouteConfig {
+  path?: string;
+  index?: boolean;
+  element: ReactNode;
+  guard?: 'public' | 'auth';
+  allowedRoles?: string[];
+  children?: RouteConfig[];
+}
+
+// FILE: rentguy/frontend/src/router/utils.ts
+import { AuthGuard } from './guards';
+import type { RouteConfig, RouteObject } from './types';
+
+export const processRoutes = (routes: RouteConfig[]): RouteObject[] => {
+  return routes.map((route) => {
+    let element = route.element;
+
+    if (route.guard === 'auth') {
+      element = <AuthGuard allowedRoles={route.allowedRoles}>{element}</AuthGuard>;
+    }
+
+    return {
+      path: route.path,
+      index: route.index,
+      element,
+      children: route.children ? processRoutes(route.children) : undefined
+    };
+  });
+};
