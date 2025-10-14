@@ -1,7 +1,22 @@
-import React, { useState } from 'react'
-import { brand, brandFontStack, headingFontStack, withOpacity } from './branding.js'
+import { useState } from 'react'
+import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 
-const ROLE_OPTIONS = [
+export interface RoleSelectionProps {
+  email: string
+  onConfirm: (role: string) => Promise<void> | void
+  onLogout: () => void
+  isSubmitting: boolean
+  errorMessage?: string
+}
+
+interface RoleOption {
+  value: string
+  title: string
+  description: string
+  focus: string
+}
+
+const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'planner',
     title: 'Operations planner',
@@ -46,8 +61,15 @@ const ROLE_OPTIONS = [
   },
 ]
 
-export default function RoleSelection({ email, onConfirm, onLogout, isSubmitting, errorMessage }) {
+export function RoleSelection({ email, onConfirm, onLogout, isSubmitting, errorMessage }: RoleSelectionProps) {
   const [selectedRole, setSelectedRole] = useState('')
+
+  const handleConfirm = () => {
+    if (!selectedRole || isSubmitting) {
+      return
+    }
+    void onConfirm(selectedRole)
+  }
 
   return (
     <div
@@ -198,22 +220,22 @@ export default function RoleSelection({ email, onConfirm, onLogout, isSubmitting
             </button>
             <button
               type="button"
-              onClick={() => selectedRole && onConfirm(selectedRole)}
+              onClick={handleConfirm}
               disabled={!selectedRole || isSubmitting}
               style={{
                 padding: '12px 24px',
                 borderRadius: 999,
                 border: 'none',
-                background: brand.colors.accent,
-                color: brand.colors.secondary,
+                backgroundImage: brand.colors.gradient,
+                color: '#0F172A',
                 fontWeight: 700,
-                fontSize: '1rem',
-                cursor: selectedRole && !isSubmitting ? 'pointer' : 'not-allowed',
-                opacity: !selectedRole || isSubmitting ? 0.6 : 1,
-                transition: 'opacity 0.2s ease',
+                cursor: !selectedRole || isSubmitting ? 'wait' : 'pointer',
+                opacity: !selectedRole || isSubmitting ? 0.7 : 1,
+                boxShadow: !selectedRole || isSubmitting ? 'none' : '0 24px 48px rgba(79, 70, 229, 0.32)',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               }}
             >
-              {isSubmitting ? 'Rol wordt opgeslagen…' : 'Start met deze rol'}
+              {isSubmitting ? 'Opslaan…' : 'Bevestig rol'}
             </button>
           </div>
         </footer>
@@ -221,3 +243,5 @@ export default function RoleSelection({ email, onConfirm, onLogout, isSubmitting
     </div>
   )
 }
+
+export default RoleSelection

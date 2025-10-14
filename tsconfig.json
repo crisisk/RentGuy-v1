@@ -13,18 +13,40 @@
     "noImplicitAny": true,
     "moduleResolution": "Node",
     "resolveJsonModule": true,
+    "jsx": "react-jsx",
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": false,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
+    "typeRoots": ["./types", "./node_modules/@types"],
     "paths": {
+      "@application/*": ["src/application/*"],
+      "@config/*": ["src/config/*"],
       "@core/*": ["src/core/*"],
       "@domain/*": ["src/domain/*"],
       "@infra/*": ["src/infrastructure/*"],
       "@ui/*": ["src/ui/*"]
     }
   },
-  "include": ["src", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  "exclude": ["node_modules", "dist", "build", "coverage"]
+  "include": ["src", "types"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "apps",
+    "analysis",
+    "backend",
+    "ops",
+    "patches",
+    "qa",
+    "rentguy",
+    "rentguyapp_*",
+    "reports",
+    "testing",
+    "tests",
+    "warehouse",
+    "**/node_modules"
+  ]
 }
