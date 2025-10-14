@@ -1,38 +1,57 @@
 {
-  "generatedAt": "2025-10-14T14:49:39.769Z",
+  "version": 1,
+  "generatedAt": "2025-10-14T19:23:22.852Z",
   "metrics": {
     "typeSafety": {
-      "score": 0,
+      "score": 32.71,
       "details": {
-        "tsFiles": 0,
-        "jsFiles": 1,
-        "tsLines": 0,
-        "jsLines": 2747
-      }
+        "tsFiles": 12,
+        "jsFiles": 3,
+        "tsLines": 1169,
+        "jsLines": 2405,
+        "ratio": 0.3271
+      },
+      "evidence": [
+        "TypeScript LOC: 1169",
+        "JavaScript LOC: 2405",
+        "TypeScript coverage ratio: 32.71%"
+      ]
     },
     "errorHandling": {
-      "score": 82.03,
+      "score": 97.78,
       "details": {
-        "filesAnalysed": 121,
-        "riskEvents": 128,
-        "handledEvents": 105
-      }
+        "filesAnalysed": 133,
+        "riskEvents": 135,
+        "handledEvents": 132
+      },
+      "evidence": [
+        "Potential risk events identified: 135",
+        "Handling constructs detected: 132"
+      ]
     },
     "codeReusability": {
-      "score": 97.48,
+      "score": 94.74,
       "details": {
-        "reusableFiles": 116,
-        "totalFiles": 119
-      }
+        "reusableFiles": 126,
+        "totalFiles": 133
+      },
+      "evidence": [
+        "Reusable files analysed: 126",
+        "Total code files: 133"
+      ]
     },
     "maintainability": {
-      "score": 100,
+      "score": 0,
       "details": {
-        "filesAnalysed": 119,
-        "averageLines": 47.55,
-        "maxLines": 298,
-        "totalLines": 5659
-      }
+        "filesAnalysed": 133,
+        "averageLines": 69.03,
+        "maxLines": 1327,
+        "totalLines": 9181
+      },
+      "evidence": [
+        "Average LOC per file: 69.03",
+        "Max LOC single file: 1327"
+      ]
     },
     "documentation": {
       "score": 33.33,
@@ -45,14 +64,35 @@
           "docs/QUALITY_GATES.md",
           "docs/RUNBOOKS/README.md"
         ]
-      }
+      },
+      "evidence": [
+        "Documentation artifacts present: 2/6",
+        "Missing: docs/GETTING_STARTED.md, docs/ARCHITECTURE.md, docs/QUALITY_GATES.md, docs/RUNBOOKS/README.md"
+      ]
     },
-    "testCoverage": {
+    "coverage": {
       "score": 0,
-      "details": {
-        "message": "No coverage report found"
-      }
+      "lines": 0,
+      "functions": 0,
+      "branches": 0,
+      "statements": 0,
+      "evidence": [
+        "Coverage summary missing. Run `npm run test` to generate."
+      ]
     }
   },
-  "overallQualityIndex": 52.14
+  "overallQualityIndex": 51.71,
+  "gates": {
+    "typeSafety": 95,
+    "errorHandling": 95,
+    "codeReusability": 95,
+    "maintainability": 95,
+    "documentation": 95,
+    "coverage": {
+      "lines": 90,
+      "branches": 90,
+      "functions": 90,
+      "statements": 90
+    }
+  }
 }
