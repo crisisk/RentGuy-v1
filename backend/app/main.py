@@ -7,6 +7,7 @@ from typing import Callable
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import PlainTextResponse
+import socketio # Import socketio
 
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import setup_logging
@@ -15,6 +16,10 @@ from app.core.observability import configure_tracing
 
 setup_logging()
 
+# Initialize Socket.IO server
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+socket_app = socketio.ASGIApp(sio)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,6 +27,7 @@ async def lifespan(app: FastAPI):
     configure_tracing(app)
     app.state.start_time = time.time()
     app.state.metrics_tracker = MetricsTracker()
+    app.state.sio = sio # Store sio server in app state
     yield
 
 
@@ -136,3 +142,7 @@ app.include_router(reporting_router, prefix="/api/v1", tags=["reporting"])
 from app.modules.platform.observability.routes import router as observability_router
 
 app.include_router(observability_router, prefix="/api/v1", tags=["observability"])
+
+# Mount the Socket.IO application
+app.mount("/ws", socket_app)
+
