@@ -1,0 +1,79 @@
+[
+  {
+    "phase": "lint",
+    "error": "> rentguy-pwa-scanner@0.0.1 lint\n> eslint . --ext .ts,.tsx,.js,.jsx\n\n\nnpm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\n\nOops! Something went wrong! :(\n\nESLint: 9.34.0\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package 'typescript-eslint' imported from /workspace/RentGuy-v1/eslint.config.mjs\n    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:266:9)\n    at packageResolve (node:internal/modules/esm/resolve:767:81)\n    at moduleResolve (node:internal/modules/esm/resolve:853:18)\n    at defaultResolve (node:internal/modules/esm/resolve:983:11)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:717:20)\n    at ModuleLoader.resolve (node:internal/modules/esm/loader:694:38)\n    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:308:38)\n    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)\n",
+    "stack": null,
+    "file": null,
+    "line": null,
+    "fingerprint": "lint:2",
+    "suspected_cause": "Pending triage",
+    "repro_steps": "npm run lint",
+    "logFile": "artifacts/debug/logs/lint.log"
+  },
+  {
+    "phase": "typecheck",
+    "error": "\n> rentguy-pwa-scanner@0.0.1 typecheck\n> tsc -p tsconfig.json --noEmit\n\nsrc/ui/OnboardingOverlay.tsx(984,3): error TS1109: Expression expected.\n\nnpm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\n",
+    "stack": null,
+    "file": null,
+    "line": null,
+    "fingerprint": "typecheck:2",
+    "suspected_cause": "Pending triage",
+    "repro_steps": "npm run typecheck",
+    "logFile": "artifacts/debug/logs/typecheck.log"
+  },
+  {
+    "phase": "build",
+    "error": "\n> rentguy-pwa-scanner@0.0.1 build\n> vite build\n\n\nnpm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\nsh: 1: vite: not found\n",
+    "stack": null,
+    "file": null,
+    "line": null,
+    "fingerprint": "build:127",
+    "suspected_cause": "Pending triage",
+    "repro_steps": "npm run build",
+    "logFile": "artifacts/debug/logs/build.log"
+  },
+  {
+    "phase": "start:dev",
+    "error": "\n> rentguy-pwa-scanner@0.0.1 start:dev\n> vite\n\n\nnpm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\nsh: 1: vite: not found\n",
+    "stack": null,
+    "file": null,
+    "line": null,
+    "fingerprint": "start:dev:127",
+    "suspected_cause": "Pending triage",
+    "repro_steps": "npm run start:dev",
+    "logFile": "artifacts/debug/logs/start:dev.log"
+  },
+  {
+    "phase": "smoke",
+    "error": "\n> rentguy-pwa-scanner@0.0.1 smoke\n> node scripts/smoke.mjs\n\n\nnpm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\nSmoke checks failed: healthz:TypeError: fetch failed, readyz:TypeError: fetch failed, livez:TypeError: fetch failed, app-root:TypeError: fetch failed\n",
+    "stack": null,
+    "file": null,
+    "line": null,
+    "fingerprint": "smoke:1",
+    "suspected_cause": "Pending triage",
+    "repro_steps": "npm run smoke",
+    "logFile": "artifacts/debug/logs/smoke.log"
+  },
+  {
+    "phase": "test",
+    "error": "\n> rentguy-pwa-scanner@0.0.1 test\n> vitest run --coverage --passWithNoTests\n\n\nnpm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\nsh: 1: vitest: not found\n",
+    "stack": null,
+    "file": null,
+    "line": null,
+    "fingerprint": "test:127",
+    "suspected_cause": "Pending triage",
+    "repro_steps": "npm run test",
+    "logFile": "artifacts/debug/logs/test.log"
+  },
+  {
+    "phase": "e2e",
+    "error": "\n> rentguy-pwa-scanner@0.0.1 e2e\n> npm run test:e2e\n\n\n> rentguy-pwa-scanner@0.0.1 test:e2e\n> playwright test -c tests/e2e/playwright.config.ts\n\n\nnpm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\nnpm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\nsh: 1: playwright: not found\n",
+    "stack": null,
+    "file": null,
+    "line": null,
+    "fingerprint": "e2e:127",
+    "suspected_cause": "Pending triage",
+    "repro_steps": "npm run e2e",
+    "logFile": "artifacts/debug/logs/e2e.log"
+  }
+]
