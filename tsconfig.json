@@ -40,6 +40,12 @@
       "@domain/*": [
         "src/domain/*"
       ],
+      "@hooks": [
+        "src/hooks/index.ts"
+      ],
+      "@hooks/*": [
+        "src/hooks/*"
+      ],
       "@infra/*": [
         "src/infrastructure/*"
       ],
@@ -63,6 +69,15 @@
       ],
       "@ui/*": [
         "src/ui/*"
+      ],
+      "react-router-dom": [
+        "src/vendor/react-router-dom.tsx"
+      ],
+      "zustand": [
+        "src/vendor/zustand.ts"
+      ],
+      "zustand/middleware/immer": [
+        "src/vendor/zustand-immer.ts"
       ]
     }
   },

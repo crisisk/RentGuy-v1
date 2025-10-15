@@ -1,15 +1,19 @@
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
 import type { AuthUser } from '@application/auth/api'
 import { getStoredToken } from '@core/auth-token-storage'
-import { createStore } from './storeFactory'
 
 export type AuthStatus = 'idle' | 'checking' | 'authenticated' | 'error'
 
-export interface AuthStoreState {
+interface AuthBaseState {
   user: AuthUser | null
   token: string | null
   status: AuthStatus
   error: string | null
   lastCheckedAt: string | null
+}
+
+export interface AuthStoreState extends AuthBaseState {
   setCredentials(token: string, user: AuthUser | null): void
   clear(): void
   markChecking(): void
@@ -21,63 +25,80 @@ function getTimestamp(): string {
   return new Date().toISOString()
 }
 
-const initialToken = getStoredToken().trim()
+function createInitialState(): AuthBaseState {
+  const initialToken = getStoredToken().trim()
+  return {
+    user: null,
+    token: initialToken ? initialToken : null,
+    status: initialToken ? 'checking' : 'idle',
+    error: null,
+    lastCheckedAt: null,
+  }
+}
 
-export const authStore = createStore<AuthStoreState>((set) => ({
-  user: null,
-  token: initialToken ? initialToken : null,
-  status: initialToken ? 'checking' : 'idle',
-  error: null,
-  lastCheckedAt: null,
-  setCredentials: (token, user) => {
-    set((draft) => {
-      draft.token = token.trim() || null
-      draft.user = user
-      draft.status = 'authenticated'
-      draft.error = null
-      draft.lastCheckedAt = getTimestamp()
-    })
-  },
-  clear: () => {
-    set((draft) => {
-      draft.user = null
-      draft.token = null
-      draft.status = 'idle'
-      draft.error = null
-      draft.lastCheckedAt = null
-    })
-  },
-  markChecking: () => {
-    set((draft) => {
-      draft.status = 'checking'
-      draft.error = null
-      draft.lastCheckedAt = getTimestamp()
-    })
-  },
-  markError: (message) => {
-    set((draft) => {
-      draft.status = 'error'
-      draft.error = message
-      draft.lastCheckedAt = getTimestamp()
-    })
-  },
-  syncToken: (token) => {
-    set((draft) => {
-      const trimmed = typeof token === 'string' ? token.trim() : ''
-      if (trimmed) {
-        draft.token = trimmed
-        draft.status = 'checking'
+export const useAuthStore = create<AuthStoreState>(
+  immer((set) => ({
+    ...createInitialState(),
+    setCredentials: (token, user) => {
+      const normalisedToken = token.trim()
+      set((draft) => {
+        draft.token = normalisedToken || null
+        draft.user = user
+        draft.status = 'authenticated'
         draft.error = null
         draft.lastCheckedAt = getTimestamp()
-      } else {
-        draft.token = null
+      })
+    },
+    clear: () => {
+      set((draft) => {
         draft.user = null
+        draft.token = null
         draft.status = 'idle'
         draft.error = null
         draft.lastCheckedAt = null
-      }
-    })
-  },
-}))
+      })
+    },
+    markChecking: () => {
+      set((draft) => {
+        draft.status = 'checking'
+        draft.error = null
+        draft.lastCheckedAt = getTimestamp()
+      })
+    },
+    markError: (message) => {
+      set((draft) => {
+        draft.status = 'error'
+        draft.error = message
+        draft.lastCheckedAt = getTimestamp()
+      })
+    },
+    syncToken: (token) => {
+      set((draft) => {
+        const trimmed = typeof token === 'string' ? token.trim() : ''
+        if (trimmed) {
+          draft.token = trimmed
+          draft.status = 'checking'
+          draft.error = null
+          draft.lastCheckedAt = getTimestamp()
+        } else {
+          draft.user = null
+          draft.token = null
+          draft.status = 'idle'
+          draft.error = null
+          draft.lastCheckedAt = null
+        }
+      })
+    },
+  })),
+)
 
-export const useAuthStore = authStore.useStore
+export function resetAuthStore(): void {
+  const base = createInitialState()
+  useAuthStore.setState((draft) => {
+    draft.user = base.user
+    draft.token = base.token
+    draft.status = base.status
+    draft.error = base.error
+    draft.lastCheckedAt = base.lastCheckedAt
+  })
+}

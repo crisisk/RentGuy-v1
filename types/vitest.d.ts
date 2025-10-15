@@ -1,6 +1,7 @@
 declare module 'vitest' {
   export function describe(name: string, fn: () => void): void
   export function it(name: string, fn: () => void): void
+  export function beforeEach(fn: () => void): void
   export function expect<T>(actual: T): {
     not: {
       toHaveBeenCalled(): void
@@ -8,6 +9,7 @@ declare module 'vitest' {
     }
     toEqual(expected: unknown): void
     toBe(expected: unknown): void
+    toBeNull(): void
     toHaveBeenCalled(): void
     toHaveBeenCalledTimes(times: number): void
   }

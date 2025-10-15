@@ -8,10 +8,10 @@ import {
 } from '@application/auth/api'
 import { setToken as setApiToken } from '@infra/http/api'
 import { brand, brandFontStack } from '@ui/branding'
+import { useBrandingChrome, useDocumentTitle, useOnboardingPreferences } from '@hooks'
 import OnboardingOverlay from './OnboardingOverlay'
 import RoleSelection from './RoleSelection'
 import {
-  clearOnboardingState,
   getLocalStorageItem,
   removeLocalStorageItem,
   setLocalStorageItem,
@@ -21,17 +21,16 @@ import { useAuthStore } from '@stores/authStore'
 import AppRouter from '@router/index'
 
 const SNOOZE_DURATION_MS = 1000 * 60 * 60 * 6
-
-function computeShouldShowOnboarding(): boolean {
-  const seen = getLocalStorageItem('onb_seen', '0') === '1'
-  if (seen) return false
-  const snoozeRaw = getLocalStorageItem('onb_snooze_until', '')
-  const snoozeUntil = Number.parseInt(snoozeRaw, 10)
-  if (Number.isFinite(snoozeUntil) && snoozeUntil > Date.now()) {
-    return false
-  }
-  return true
-}
+const BRAND_FONT_LINK_ID = 'sevensa-rentguy-fonts'
+const BRAND_FONT_HREF =
+  'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap'
+const BRANDING_CHROME_OPTIONS = {
+  background: brand.colors.appBackground,
+  textColor: brand.colors.text,
+  fontFamily: brandFontStack,
+  fontHref: BRAND_FONT_HREF,
+  fontLinkId: BRAND_FONT_LINK_ID,
+} as const
 
 export function App() {
   const token = useAuthStore(state => state.token)
@@ -41,8 +40,16 @@ export function App() {
   const markAuthChecking = useAuthStore(state => state.markChecking)
   const markAuthError = useAuthStore(state => state.markError)
   const syncAuthToken = useAuthStore(state => state.syncToken)
+  const {
+    shouldShow,
+    refresh: refreshOnboarding,
+    snooze: snoozeOnboarding,
+    markSeen: markOnboardingSeen,
+    reset: resetOnboarding,
+  } = useOnboardingPreferences(SNOOZE_DURATION_MS)
+  useBrandingChrome(BRANDING_CHROME_OPTIONS)
+  useDocumentTitle(`${brand.shortName} × ${brand.tenant.name}`)
   const [userEmail, setUserEmail] = useState(() => ensureAuthEmail(getLocalStorageItem('user_email', '')))
-  const [showOnboarding, setShowOnboarding] = useState(() => computeShouldShowOnboarding())
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
   const [isSavingRole, setIsSavingRole] = useState(false)
   const [roleError, setRoleError] = useState('')
@@ -91,64 +98,23 @@ export function App() {
   }, [markAuthChecking, markAuthError, setAuthCredentials, token, userEmail])
 
   useEffect(() => {
-    if (typeof document === 'undefined') {
-      return
-    }
-
-    const linkId = 'sevensa-rentguy-fonts'
-    if (!document.getElementById(linkId)) {
-      const link = document.createElement('link')
-      link.id = linkId
-      link.rel = 'stylesheet'
-      link.href =
-        'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap'
-      document.head.appendChild(link)
-    }
-
-    const previousStyles = {
-      background: document.body.style.background,
-      color: document.body.style.color,
-      fontFamily: document.body.style.fontFamily,
-      margin: document.body.style.margin,
-    }
-
-    document.body.style.background = brand.colors.appBackground
-    document.body.style.color = brand.colors.text
-    document.body.style.fontFamily = brandFontStack
-    document.body.style.margin = '0'
-
-    return () => {
-      document.body.style.background = previousStyles.background
-      document.body.style.color = previousStyles.color
-      document.body.style.fontFamily = previousStyles.fontFamily
-      document.body.style.margin = previousStyles.margin
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      document.title = `${brand.shortName} × ${brand.tenant.name}`
-    }
-  }, [])
-
-  useEffect(() => {
     const unsubscribe = subscribeToTokenChanges(nextToken => {
       const trimmed = nextToken.trim()
       if (trimmed) {
         syncAuthToken(trimmed)
         const storedEmail = ensureAuthEmail(getLocalStorageItem('user_email', ''))
         setUserEmail(storedEmail)
-        setShowOnboarding(computeShouldShowOnboarding())
+        refreshOnboarding()
       } else {
         clearAuth()
         setUserEmail('')
-        setShowOnboarding(false)
         setIsRoleModalOpen(false)
         setRoleError('')
+        refreshOnboarding()
       }
     })
     return unsubscribe
-  }, [clearAuth, syncAuthToken])
+  }, [clearAuth, refreshOnboarding, syncAuthToken])
 
   const handleLogin = useCallback(
     (nextToken: string, authenticatedUser: AuthUser) => {
@@ -162,22 +128,21 @@ export function App() {
       }
       setAuthCredentials(nextToken, normalizedUser)
       setUserEmail(normalisedEmail)
-      setShowOnboarding(computeShouldShowOnboarding())
+      refreshOnboarding()
       setIsRoleModalOpen(false)
       setRoleError('')
     },
-    [setAuthCredentials],
+    [refreshOnboarding, setAuthCredentials],
   )
 
   useEffect(() => {
     if (token) {
-      setShowOnboarding(computeShouldShowOnboarding())
+      refreshOnboarding()
     } else {
-      setShowOnboarding(false)
       setIsRoleModalOpen(false)
       setRoleError('')
     }
-  }, [token])
+  }, [refreshOnboarding, token])
 
   useEffect(() => {
     if (user?.role === 'pending' && token) {
@@ -190,26 +155,21 @@ export function App() {
   const handleLogout = useCallback(() => {
     removeLocalStorageItem('user_email')
     removeLocalStorageItem('user_role')
-    clearOnboardingState()
     setApiToken('')
     clearAuth()
     setUserEmail('')
-    setShowOnboarding(false)
+    resetOnboarding()
     setIsRoleModalOpen(false)
     setRoleError('')
-  }, [clearAuth])
+  }, [clearAuth, resetOnboarding])
 
   const handleSnoozeOnboarding = useCallback(() => {
-    const snoozeUntil = Date.now() + SNOOZE_DURATION_MS
-    setLocalStorageItem('onb_snooze_until', String(snoozeUntil))
-    setShowOnboarding(false)
-  }, [])
+    snoozeOnboarding(SNOOZE_DURATION_MS)
+  }, [snoozeOnboarding])
 
   const handleFinishOnboarding = useCallback(() => {
-    setLocalStorageItem('onb_seen', '1')
-    removeLocalStorageItem('onb_snooze_until')
-    setShowOnboarding(false)
-  }, [])
+    markOnboardingSeen()
+  }, [markOnboardingSeen])
 
   const handleRoleConfirm = useCallback(
     async (role: string) => {
@@ -258,7 +218,7 @@ export function App() {
           errorMessage={roleError}
         />
       )}
-      {!isRoleModalOpen && showOnboarding && userEmail && token && (
+      {!isRoleModalOpen && shouldShow && userEmail && token && (
         <OnboardingOverlay
           email={userEmail}
           role={resolvedUserRole}

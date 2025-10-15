@@ -1,3 +1,5 @@
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
 import type {
   PersonaKey,
   PersonaPreset,
@@ -7,11 +9,10 @@ import type {
   ProjectStatus,
   RiskLevel,
 } from '@rg-types/projectTypes'
-import { createStore } from './storeFactory'
 
 export type ProjectStoreStatus = 'idle' | 'loading' | 'ready' | 'error'
 
-export interface ProjectStoreState {
+interface ProjectBaseState {
   status: ProjectStoreStatus
   error: string | null
   persona: PersonaKey
@@ -20,6 +21,9 @@ export interface ProjectStoreState {
   projects: PlannerProjectDto[]
   events: PlannerEvent[]
   lastSyncedAt: string | null
+}
+
+export interface ProjectStoreState extends ProjectBaseState {
   hydrate(payload: Partial<Omit<ProjectStoreState, 'hydrate' | 'setLoading' | 'setError' | 'setPersona' | 'updateFilters'>>): void
   setPersona(persona: PersonaKey): void
   updateFilters(filters: Partial<PlannerFilters>): void
@@ -164,71 +168,91 @@ function toEvent(dto: PlannerProjectDto): PlannerEvent {
   }
 }
 
-export const projectStore = createStore<ProjectStoreState>((set) => ({
-  status: 'idle',
-  error: null,
-  persona: 'all',
-  presets: defaultProjectPresets,
-  filters: defaultProjectFilters,
-  projects: [],
-  events: [],
-  lastSyncedAt: null,
-  hydrate: (payload) => {
-    set((draft) => {
-      draft.status = payload.status ?? 'ready'
-      if (payload.projects) {
-        draft.projects = payload.projects
-        draft.events = payload.projects.map(toEvent)
-      }
-      if (payload.events) {
-        draft.events = payload.events
-      }
-      if (payload.filters) {
-        draft.filters = { ...draft.filters, ...payload.filters }
-      }
-      if (payload.persona) {
-        draft.persona = payload.persona
-      }
-      if (payload.presets) {
-        draft.presets = payload.presets
-      }
-      draft.lastSyncedAt = payload.lastSyncedAt ?? new Date().toISOString()
-      if (payload.error !== undefined) {
-        draft.error = payload.error
-      }
-    })
-  },
-  setPersona: (persona) => {
-    set((draft) => {
-      draft.persona = persona
-      const preset = draft.presets[persona]
-      if (preset) {
-        draft.filters.status = preset.statusFilter ?? draft.filters.status
-        draft.filters.risk = preset.riskFilter ?? draft.filters.risk
-        draft.filters.sortKey = preset.sortKey ?? draft.filters.sortKey
-        draft.filters.sortDir = preset.sortDir ?? draft.filters.sortDir
-        draft.filters.time = preset.timeFilter ?? draft.filters.time
-        draft.filters.searchTerm = preset.searchTerm ?? ''
-      }
-    })
-  },
-  updateFilters: (filters) => {
-    set((draft) => {
-      draft.filters = { ...draft.filters, ...filters }
-    })
-  },
-  setLoading: () => {
-    set((draft) => {
-      draft.status = 'loading'
-      draft.error = null
-    })
-  },
-  setError: (message) => {
-    set((draft) => {
-      draft.status = 'error'
-      draft.error = message
-    })
-  },
-}))
+function createInitialState(): ProjectBaseState {
+  return {
+    status: 'idle',
+    error: null,
+    persona: 'all',
+    presets: defaultProjectPresets,
+    filters: defaultProjectFilters,
+    projects: [],
+    events: [],
+    lastSyncedAt: null,
+  }
+}
 
-export const useProjectStore = projectStore.useStore
+export const useProjectStore = create<ProjectStoreState>(
+  immer((set) => ({
+    ...createInitialState(),
+    hydrate: (payload) => {
+      set((draft) => {
+        draft.status = payload.status ?? 'ready'
+        if (payload.projects) {
+          draft.projects = payload.projects
+          draft.events = payload.projects.map(toEvent)
+        }
+        if (payload.events) {
+          draft.events = payload.events
+        }
+        if (payload.filters) {
+          draft.filters = { ...draft.filters, ...payload.filters }
+        }
+        if (payload.persona) {
+          draft.persona = payload.persona
+        }
+        if (payload.presets) {
+          draft.presets = payload.presets
+        }
+        draft.lastSyncedAt = payload.lastSyncedAt ?? new Date().toISOString()
+        if (payload.error !== undefined) {
+          draft.error = payload.error
+        }
+      })
+    },
+    setPersona: (persona) => {
+      set((draft) => {
+        draft.persona = persona
+        const preset = draft.presets[persona]
+        if (preset) {
+          draft.filters.status = preset.statusFilter ?? draft.filters.status
+          draft.filters.risk = preset.riskFilter ?? draft.filters.risk
+          draft.filters.sortKey = preset.sortKey ?? draft.filters.sortKey
+          draft.filters.sortDir = preset.sortDir ?? draft.filters.sortDir
+          draft.filters.time = preset.timeFilter ?? draft.filters.time
+          draft.filters.searchTerm = preset.searchTerm ?? ''
+        }
+      })
+    },
+    updateFilters: (filters) => {
+      set((draft) => {
+        draft.filters = { ...draft.filters, ...filters }
+      })
+    },
+    setLoading: () => {
+      set((draft) => {
+        draft.status = 'loading'
+        draft.error = null
+      })
+    },
+    setError: (message) => {
+      set((draft) => {
+        draft.status = 'error'
+        draft.error = message
+      })
+    },
+  })),
+)
+
+export function resetProjectStore(): void {
+  const base = createInitialState()
+  useProjectStore.setState((draft) => {
+    draft.status = base.status
+    draft.error = base.error
+    draft.persona = base.persona
+    draft.presets = base.presets
+    draft.filters = base.filters
+    draft.projects = base.projects
+    draft.events = base.events
+    draft.lastSyncedAt = base.lastSyncedAt
+  })
+}

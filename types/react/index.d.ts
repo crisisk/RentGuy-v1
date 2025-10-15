@@ -36,6 +36,7 @@ declare module 'react' {
 
   export interface ChangeEvent<T = Element> extends SyntheticEvent<T> {}
   export interface FormEvent<T = Element> extends SyntheticEvent<T> {}
+  export interface MouseEvent<T = Element> extends SyntheticEvent<T> {}
   export interface KeyboardEvent<T = Element> extends SyntheticEvent<T> {
     key: string
   }

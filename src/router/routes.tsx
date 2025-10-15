@@ -1,78 +1,16 @@
 import { useCallback, useEffect } from 'react'
-import type { AuthUser } from '@application/auth/api'
+import type { RouteObject } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import Login from '@ui/Login'
 import Planner from '@ui/Planner'
+import type { AuthUser } from '@application/auth/api'
 import { AccessDenied, AuthSpinner, useAuthGuard } from './guards'
+import { useAppRouterContext } from './index'
 
-export interface NavigateOptions {
-  readonly replace?: boolean
-}
+function LoginRoute(): JSX.Element {
+  const navigate = useNavigate()
+  const { isAuthenticated, onLogin } = useAppRouterContext()
 
-export type NavigateFunction = (path: string, options?: NavigateOptions) => void
-
-export interface RouteContext {
-  readonly currentPath: string
-  readonly navigate: NavigateFunction
-  readonly isAuthenticated: boolean
-  readonly onLogin: (token: string, user: AuthUser) => void
-  readonly onLogout: () => void
-}
-
-export interface RouteDefinition {
-  readonly path: string
-  readonly render: (context: RouteContext) => JSX.Element
-  readonly match?: (path: string) => boolean
-}
-
-function normalisePath(path: string): string {
-  if (!path) {
-    return '/'
-  }
-  const trimmed = path.trim()
-  if (!trimmed.startsWith('/')) {
-    return `/${trimmed}`
-  }
-  if (trimmed.length > 1 && trimmed.endsWith('/')) {
-    return trimmed.slice(0, -1)
-  }
-  return trimmed
-}
-
-const baseRoutes: RouteDefinition[] = [
-  {
-    path: '/login',
-    render: (context) => <LoginRoute {...context} />,
-  },
-  {
-    path: '/planner',
-    render: (context) => <PlannerRoute {...context} />,
-  },
-  {
-    path: '/',
-    render: (context) => <RootRoute {...context} />,
-  },
-  {
-    path: '*',
-    match: () => true,
-    render: (context) => <NotFoundRoute {...context} />,
-  },
-]
-
-export interface AppRoutesProps extends RouteContext {}
-
-export function AppRoutes(props: AppRoutesProps): JSX.Element {
-  const candidate = baseRoutes.find((route) => {
-    if (route.match) {
-      return route.match(props.currentPath)
-    }
-    return normalisePath(props.currentPath) === route.path
-  })
-
-  const activeRoute = candidate ?? baseRoutes[baseRoutes.length - 1]!
-  return activeRoute.render(props)
-}
-
-function LoginRoute({ isAuthenticated, navigate, onLogin }: RouteContext) {
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/planner', { replace: true })
@@ -90,7 +28,9 @@ function LoginRoute({ isAuthenticated, navigate, onLogin }: RouteContext) {
   return <Login onLogin={handleLogin} />
 }
 
-function PlannerRoute({ navigate, onLogout }: RouteContext) {
+function PlannerRoute(): JSX.Element {
+  const navigate = useNavigate()
+  const { onLogout } = useAppRouterContext()
   const guard = useAuthGuard({ requireAuth: true })
 
   useEffect(() => {
@@ -99,11 +39,7 @@ function PlannerRoute({ navigate, onLogout }: RouteContext) {
     }
   }, [guard.isAuthenticated, guard.status, navigate])
 
-  if (!guard.isAuthenticated) {
-    return <AuthSpinner message="Authenticatie controleren…" />
-  }
-
-  if (guard.status === 'checking') {
+  if (!guard.isAuthenticated || guard.status === 'checking') {
     return <AuthSpinner message="Authenticatie controleren…" />
   }
 
@@ -119,7 +55,10 @@ function PlannerRoute({ navigate, onLogout }: RouteContext) {
   return <Planner onLogout={handleLogout} />
 }
 
-function RootRoute({ isAuthenticated, navigate }: RouteContext) {
+function RootRedirect(): JSX.Element {
+  const navigate = useNavigate()
+  const { isAuthenticated } = useAppRouterContext()
+
   useEffect(() => {
     navigate(isAuthenticated ? '/planner' : '/login', { replace: true })
   }, [isAuthenticated, navigate])
@@ -127,7 +66,10 @@ function RootRoute({ isAuthenticated, navigate }: RouteContext) {
   return <AuthSpinner message="Doorsturen…" />
 }
 
-function NotFoundRoute({ navigate, isAuthenticated }: RouteContext) {
+function NotFoundRoute(): JSX.Element {
+  const navigate = useNavigate()
+  const { isAuthenticated } = useAppRouterContext()
+
   useEffect(() => {
     navigate(isAuthenticated ? '/planner' : '/login', { replace: true })
   }, [isAuthenticated, navigate])
@@ -145,4 +87,13 @@ function NotFoundRoute({ navigate, isAuthenticated }: RouteContext) {
       <p style={{ fontSize: '1rem' }}>Pagina niet gevonden. Je wordt doorgestuurd…</p>
     </div>
   )
+}
+
+export function createAppRoutes(): RouteObject[] {
+  return [
+    { path: '/', element: <RootRedirect /> },
+    { path: '/login', element: <LoginRoute /> },
+    { path: '/planner', element: <PlannerRoute /> },
+    { path: '*', element: <NotFoundRoute /> },
+  ]
 }
