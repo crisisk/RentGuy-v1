@@ -10,10 +10,10 @@ services:
   # Frontend Service (React/Vite)
   rentguy-frontend:
     build:
-      context: ./rentguy/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.frontend
       args:
-        - NODE_ENV=production
+        - NODE_VERSION=${NODE_VERSION:-20.17.1}
     image: rentguy-frontend:${VERSION:-latest}
     container_name: rentguy-frontend-prod
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
       - web
       - rentguy-internal
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3

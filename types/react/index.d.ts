@@ -36,6 +36,7 @@ declare module 'react' {
 
   export interface ChangeEvent<T = Element> extends SyntheticEvent<T> {}
   export interface FormEvent<T = Element> extends SyntheticEvent<T> {}
+  export interface MouseEvent<T = Element> extends SyntheticEvent<T> {}
   export interface KeyboardEvent<T = Element> extends SyntheticEvent<T> {
     key: string
   }
@@ -65,7 +66,11 @@ declare module 'react' {
   ): [ReturnType<R>, Dispatch<Parameters<R>[1]>]
   export function useContext<T>(context: Context<T>): T
   export function useId(): string
-  export function useSyncExternalStore<T>(subscribe: (listener: () => void) => () => void, getSnapshot: () => T): T
+  export function useSyncExternalStore<T>(
+    subscribe: (listener: () => void) => () => void,
+    getSnapshot: () => T,
+    getServerSnapshot?: () => T,
+  ): T
 
   export function createContext<T>(defaultValue: T): Context<T>
   export function createRef<T>(): RefObject<T>

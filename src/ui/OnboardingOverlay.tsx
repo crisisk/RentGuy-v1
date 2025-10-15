@@ -22,7 +22,7 @@ import {
 } from '@application/onboarding/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 import onboardingTipsData from './onboarding_tips.json'
-import { AppError } from '@core/errors'
+import { APIError } from '@errors'
 import { ok } from '@core/result'
 
 type ModuleKey =
@@ -614,7 +614,7 @@ function collectResultErrors(
 }
 
 function getErrorMessage(error: unknown): string {
-  if (AppError.isAppError(error)) {
+  if (APIError.isApiError(error)) {
     const status = error.httpStatus ? ` (${error.httpStatus})` : ''
     return `${error.message}${status ? status : ''} [${error.code}]`
   }
@@ -980,8 +980,7 @@ export default function OnboardingOverlay({
           setBusyStep('')
         }
       }
-    [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError],
-  )
+    }, [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError])
 
   const handleAction = useCallback(
     (step: NormalizedOnboardingStep) => {

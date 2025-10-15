@@ -1,7 +1,10 @@
+import { getLocalStorageItem, removeLocalStorageItem, setLocalStorageItem } from './storage'
+
 const hasWindow = typeof window !== 'undefined'
 const hasSessionStorage = hasWindow && typeof window.sessionStorage !== 'undefined'
 
 const TOKEN_STORAGE_KEY = 'rg__auth_session_v1'
+const LEGACY_TOKEN_STORAGE_KEY = 'token'
 export const DEFAULT_TOKEN_TTL_MS = 1000 * 60 * 60 // 1 hour
 
 export interface TokenPersistenceOptions {
@@ -79,6 +82,23 @@ function notifyListeners(token: string): void {
   })
 }
 
+function readLegacyToken(): string {
+  const stored = getLocalStorageItem(LEGACY_TOKEN_STORAGE_KEY, '')
+  return typeof stored === 'string' ? stored : ''
+}
+
+function persistLegacyToken(token: string): void {
+  if (!token) {
+    removeLocalStorageItem(LEGACY_TOKEN_STORAGE_KEY)
+    return
+  }
+  setLocalStorageItem(LEGACY_TOKEN_STORAGE_KEY, token)
+}
+
+function clearLegacyToken(): void {
+  removeLocalStorageItem(LEGACY_TOKEN_STORAGE_KEY)
+}
+
 function scheduleExpiry(record: TokenRecord): void {
   if (!hasWindow) {
     return
@@ -100,6 +120,7 @@ function persistRecord(record: TokenRecord): void {
     undefined,
   )
   scheduleExpiry(record)
+  persistLegacyToken(record.value)
 }
 
 function readPersistedRecord(): TokenRecord | null {
@@ -139,7 +160,11 @@ function getActiveRecord(): TokenRecord | null {
 
 export function getStoredToken(): string {
   const record = getActiveRecord()
-  return record?.value ?? ''
+  if (record?.value) {
+    return record.value
+  }
+  const legacyToken = readLegacyToken().trim()
+  return legacyToken
 }
 
 export function persistToken(token: string, options?: TokenPersistenceOptions): void {
@@ -168,6 +193,7 @@ export function clearStoredToken(): void {
     },
     undefined,
   )
+  clearLegacyToken()
   if (hadValue || lastBroadcastToken) {
     notifyListeners('')
   }
