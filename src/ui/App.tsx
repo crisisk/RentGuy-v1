@@ -10,7 +10,7 @@ import { setToken as setApiToken } from '@infra/http/api'
 import { brand, brandFontStack } from '@ui/branding'
 import Login from './Login'
 import OnboardingOverlay from './OnboardingOverlay'
-import Planner from './Planner.jsx'
+import Planner from './Planner'
 import RoleSelection from './RoleSelection'
 import {
   clearOnboardingState,

@@ -54,7 +54,6 @@
   "include": [
     "src",
     "types",
-    "Planner.jsx",
     "OnboardingOverlay.jsx",
     "warehouse/offline-queue.js"
   ],
