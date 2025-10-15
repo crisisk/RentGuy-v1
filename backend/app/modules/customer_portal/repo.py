@@ -1,247 +1,163 @@
-"""
-Repository layer for Customer Portal module
-"""
-from typing import Optional, List
-from sqlalchemy import select, update, delete, func
+"""Repository helpers for the customer portal."""
+
+from __future__ import annotations
+
+from typing import Sequence
+
+from fastapi import HTTPException, status
+from sqlalchemy import Select, delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
-from app.database import async_session
-from app.modules.auth.models import User
-from .models import UserProfile, Invoice, Order, Document
+from sqlalchemy.orm import Session
+
+from .models import Document, Invoice, Order, UserProfile
 from .schemas import (
-    UserProfileCreate,
-    UserProfileResponse,
+    DocumentCreate,
+    DocumentResponse,
     InvoiceResponse,
     OrderResponse,
-    DocumentResponse
+    UserProfileCreate,
+    UserProfileResponse,
 )
-from fastapi import HTTPException, status
+
 
 class CustomerPortalRepo:
-    """
-    Database operations for customer portal components with proper error handling
-    """
+    """Encapsulate database access for customer portal operations."""
 
-    async def get_profile(self, user_id: int) -> Optional[UserProfileResponse]:
-        """
-        Retrieve user profile by user ID
+    def __init__(self, db: Session) -> None:
+        self.db = db
 
-        Args:
-            user_id: ID of the user
+    # ------------------------------------------------------------------
+    # Profile helpers
+    def get_profile(self, user_id: int) -> UserProfileResponse:
+        profile = self.db.execute(
+            select(UserProfile).where(UserProfile.user_id == user_id)
+        ).scalar_one_or_none()
 
-        Returns:
-            UserProfileResponse: User profile data
+        if profile is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "User profile not found")
 
-        Raises:
-            HTTPException: 404 if profile not found
-        """
+        return UserProfileResponse.model_validate(profile)
+
+    def update_profile(
+        self, user_id: int, payload: UserProfileCreate
+    ) -> UserProfileResponse:
+        profile = self.db.execute(
+            select(UserProfile).where(UserProfile.user_id == user_id)
+        ).scalar_one_or_none()
+
+        if profile is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "User profile not found")
+
+        for field, value in payload.model_dump(exclude_unset=True).items():
+            setattr(profile, field, value)
+
         try:
-            async with async_session() as session:
-                result = await session.execute(
-                    select(UserProfile).where(UserProfile.user_id == user_id)
-                )
-                profile = result.scalar_one_or_none()
-                
-                if not profile:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="User profile not found"
-                    )
-                    
-                return UserProfileResponse.model_validate(profile)
-        except SQLAlchemyError as e:
+            self.db.add(profile)
+            self.db.commit()
+        except SQLAlchemyError as exc:  # pragma: no cover - defensive
+            self.db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}"
-            )
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                f"Failed to update profile: {exc}",
+            ) from exc
 
-    async def update_profile(self, user_id: int, profile_data: UserProfileCreate) -> UserProfileResponse:
-        """
-        Update user profile information
+        self.db.refresh(profile)
+        return UserProfileResponse.model_validate(profile)
 
-        Args:
-            user_id: ID of the user
-            profile_data: Profile data to update
+    # ------------------------------------------------------------------
+    # Invoice helpers
+    def list_invoices(self, user_id: int, *, limit: int, offset: int) -> Sequence[InvoiceResponse]:
+        stmt: Select[tuple[Invoice]] = (
+            select(Invoice)
+            .where(Invoice.user_id == user_id)
+            .order_by(Invoice.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        invoices = self.db.execute(stmt).scalars().all()
+        return [InvoiceResponse.model_validate(row) for row in invoices]
 
-        Returns:
-            UserProfileResponse: Updated profile data
-        """
+    def count_invoices(self, user_id: int) -> int:
+        stmt = select(func.count(Invoice.id)).where(Invoice.user_id == user_id)
+        return self.db.execute(stmt).scalar_one()
+
+    def get_invoice(self, user_id: int, invoice_id: int) -> InvoiceResponse:
+        invoice = self.db.execute(
+            select(Invoice)
+            .where(Invoice.user_id == user_id)
+            .where(Invoice.id == invoice_id)
+        ).scalar_one_or_none()
+
+        if invoice is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Invoice not found")
+
+        return InvoiceResponse.model_validate(invoice)
+
+    # ------------------------------------------------------------------
+    # Order helpers
+    def list_orders(self, user_id: int, *, limit: int, offset: int) -> Sequence[OrderResponse]:
+        stmt: Select[tuple[Order]] = (
+            select(Order)
+            .where(Order.user_id == user_id)
+            .order_by(Order.order_date.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        orders = self.db.execute(stmt).scalars().all()
+        return [OrderResponse.model_validate(row) for row in orders]
+
+    def count_orders(self, user_id: int) -> int:
+        stmt = select(func.count(Order.id)).where(Order.user_id == user_id)
+        return self.db.execute(stmt).scalar_one()
+
+    # ------------------------------------------------------------------
+    # Document helpers
+    def list_documents(
+        self, user_id: int, *, limit: int, offset: int
+    ) -> Sequence[DocumentResponse]:
+        stmt: Select[tuple[Document]] = (
+            select(Document)
+            .where(Document.user_id == user_id)
+            .order_by(Document.uploaded_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        documents = self.db.execute(stmt).scalars().all()
+        return [DocumentResponse.model_validate(row) for row in documents]
+
+    def count_documents(self, user_id: int) -> int:
+        stmt = select(func.count(Document.id)).where(Document.user_id == user_id)
+        return self.db.execute(stmt).scalar_one()
+
+    def create_document(
+        self, user_id: int, payload: DocumentCreate
+    ) -> DocumentResponse:
+        document = Document(user_id=user_id, **payload.model_dump())
         try:
-            async with async_session() as session:
-                result = await session.execute(
-                    select(UserProfile).where(UserProfile.user_id == user_id)
-                )
-                profile = result.scalar_one_or_none()
-
-                if not profile:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="User profile not found"
-                    )
-
-                for key, value in profile_data.model_dump(exclude_unset=True).items():
-                    setattr(profile, key, value)
-
-                await session.commit()
-                await session.refresh(profile)
-                return UserProfileResponse.model_validate(profile)
-        except SQLAlchemyError as e:
-            await session.rollback()
+            self.db.add(document)
+            self.db.commit()
+        except SQLAlchemyError as exc:  # pragma: no cover - defensive
+            self.db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}"
-            )
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                f"Failed to create document: {exc}",
+            ) from exc
 
-    async def get_invoices(self, user_id: int, limit: int = 10, offset: int = 0) -> List[InvoiceResponse]:
-        """
-        Retrieve paginated list of user invoices
+        self.db.refresh(document)
+        return DocumentResponse.model_validate(document)
 
-        Args:
-            user_id: ID of the user
-            limit: Number of items per page
-            offset: Pagination offset
+    def delete_document(self, user_id: int, document_id: int) -> None:
+        stmt = (
+            delete(Document)
+            .where(Document.user_id == user_id)
+            .where(Document.id == document_id)
+        )
+        result = self.db.execute(stmt)
+        if result.rowcount == 0:
+            self.db.rollback()
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
 
-        Returns:
-            List[InvoiceResponse]: List of invoices
-        """
-        try:
-            async with async_session() as session:
-                result = await session.execute(
-                    select(Invoice)
-                    .where(Invoice.user_id == user_id)
-                    .order_by(Invoice.created_at.desc())
-                    .limit(limit)
-                    .offset(offset)
-                )
-                invoices = result.scalars().all()
-                return [InvoiceResponse.model_validate(inv) for inv in invoices]
-        except SQLAlchemyError as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}"
-            )
+        self.db.commit()
 
-    async def get_invoice(self, user_id: int, invoice_id: int) -> InvoiceResponse:
-        """
-        Get single invoice by ID with ownership check
 
-        Args:
-            user_id: ID of the user
-            invoice_id: ID of the invoice
-
-        Returns:
-            InvoiceResponse: Invoice data
-
-        Raises:
-            HTTPException: 404 if invoice not found or access denied
-        """
-        try:
-            async with async_session() as session:
-                result = await session.execute(
-                    select(Invoice)
-                    .where(Invoice.id == invoice_id)
-                    .where(Invoice.user_id == user_id)
-                )
-                invoice = result.scalar_one_or_none()
-                
-                if not invoice:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Invoice not found"
-                    )
-                    
-                return InvoiceResponse.model_validate(invoice)
-        except SQLAlchemyError as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}"
-            )
-
-    async def get_orders(self, user_id: int, limit: int = 10, offset: int = 0) -> List[OrderResponse]:
-        """
-        Retrieve paginated list of user orders
-
-        Args:
-            user_id: ID of the user
-            limit: Number of items per page
-            offset: Pagination offset
-
-        Returns:
-            List[OrderResponse]: List of orders
-        """
-        try:
-            async with async_session() as session:
-                result = await session.execute(
-                    select(Order)
-                    .where(Order.user_id == user_id)
-                    .order_by(Order.order_date.desc())
-                    .limit(limit)
-                    .offset(offset)
-                )
-                orders = result.scalars().all()
-                return [OrderResponse.model_validate(order) for order in orders]
-        except SQLAlchemyError as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}"
-            )
-
-    async def get_documents(self, user_id: int, limit: int = 10, offset: int = 0) -> List[DocumentResponse]:
-        """
-        Retrieve paginated list of user documents
-
-        Args:
-            user_id: ID of the user
-            limit: Number of items per page
-            offset: Pagination offset
-
-        Returns:
-            List[DocumentResponse]: List of documents
-        """
-        try:
-            async with async_session() as session:
-                result = await session.execute(
-                    select(Document)
-                    .where(Document.user_id == user_id)
-                    .order_by(Document.uploaded_at.desc())
-                    .limit(limit)
-                    .offset(offset)
-                )
-                documents = result.scalars().all()
-                return [DocumentResponse.model_validate(doc) for doc in documents]
-        except SQLAlchemyError as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}"
-            )
-
-    async def delete_document(self, user_id: int, document_id: int) -> None:
-        """
-        Delete a user document with ownership check
-
-        Args:
-            user_id: ID of the user
-            document_id: ID of the document
-
-        Raises:
-            HTTPException: 404 if document not found or access denied
-        """
-        try:
-            async with async_session() as session:
-                result = await session.execute(
-                    delete(Document)
-                    .where(Document.id == document_id)
-                    .where(Document.user_id == user_id)
-                )
-                await session.commit()
-                
-                if result.rowcount == 0:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Document not found"
-                    )
-        except SQLAlchemyError as e:
-            await session.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}"
-            )
+__all__ = ["CustomerPortalRepo"]

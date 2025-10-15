@@ -1,233 +1,170 @@
-FastAPI routes for recurring invoices module
-"""
+"""FastAPI routes for recurring invoice management."""
+
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-import croniter
 
-from app.auth import get_current_user
-from app.database import get_db
-from . import models, schemas
+from app.modules.auth.deps import get_current_user, get_db
+from app.modules.auth.models import User
 
-router = APIRouter(prefix="/recurring-invoices", tags=["recurring_invoices"])
+from .models import RecurringInvoice, RecurringInvoiceLog, RecurringInvoiceStatus
+from .schemas import (
+    RecurringInvoiceCreate,
+    RecurringInvoiceLogResponse,
+    RecurringInvoiceResponse,
+    RecurringInvoiceUpdate,
+)
+from .utils import CronExpressionError, next_run_from_cron
 
-@router.post("/", response_model=schemas.RecurringInvoiceResponse)
-async def create_recurring_invoice(
-    invoice: schemas.RecurringInvoiceCreate,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """
-    Create a new recurring invoice schedule
-    
-    Args:
-        invoice: Recurring invoice data
-        current_user: Authenticated user
-        db: Database session
-    
-    Returns:
-        Created recurring invoice
-    """
+router = APIRouter(prefix="/recurring-invoices", tags=["Recurring Invoices"])
+
+
+def _validate_schedule(expression: str, reference: datetime) -> datetime:
     try:
-        # Calculate next run time
-        now = datetime.utcnow()
-        cron = croniter.croniter(invoice.schedule, now)
-        next_run = cron.get_next(datetime)
-        
-        db_invoice = models.RecurringInvoice(
-            user_id=current_user["id"],
-            schedule=invoice.schedule,
-            next_run=next_run,
-            template=invoice.template,
-            status=invoice.status
-        )
-        db.add(db_invoice)
-        db.commit()
-        db.refresh(db_invoice)
-        return db_invoice
-    except Exception as e:
-        db.rollback()
+        return next_run_from_cron(expression, reference)
+    except CronExpressionError as exc:  # pragma: no cover - validation guard
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"Invalid cron expression: {exc}"
+        ) from exc
 
-@router.get("/", response_model=List[schemas.RecurringInvoiceResponse])
-async def get_recurring_invoices(
-    current_user: Annotated[dict, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """
-    Get all recurring invoices for current user
-    
-    Args:
-        current_user: Authenticated user
-        db: Database session
-    
-    Returns:
-        List of recurring invoices
-    """
-    return db.query(models.RecurringInvoice)\
-             .filter(models.RecurringInvoice.user_id == current_user["id"])\
-             .all()
 
-@router.put("/{invoice_id}", response_model=schemas.RecurringInvoiceResponse)
-async def update_recurring_invoice(
+@router.post("/", response_model=RecurringInvoiceResponse, status_code=status.HTTP_201_CREATED)
+def create_recurring_invoice(
+    payload: RecurringInvoiceCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RecurringInvoiceResponse:
+    next_run = _validate_schedule(payload.schedule, datetime.utcnow())
+    invoice = RecurringInvoice(
+        user_id=current_user.id,
+        schedule=payload.schedule,
+        next_run=next_run,
+        template=payload.template,
+        status=payload.status,
+    )
+    db.add(invoice)
+    db.commit()
+    db.refresh(invoice)
+    return RecurringInvoiceResponse.model_validate(invoice)
+
+
+@router.get("/", response_model=list[RecurringInvoiceResponse])
+def get_recurring_invoices(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[RecurringInvoiceResponse]:
+    invoices = (
+        db.query(RecurringInvoice)
+        .filter(RecurringInvoice.user_id == current_user.id)
+        .order_by(RecurringInvoice.created_at.desc())
+        .all()
+    )
+    return [RecurringInvoiceResponse.model_validate(row) for row in invoices]
+
+
+@router.put("/{invoice_id}", response_model=RecurringInvoiceResponse)
+def update_recurring_invoice(
     invoice_id: int,
-    invoice: schemas.RecurringInvoiceUpdate,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """
-    Update a recurring invoice schedule
-    
-    Args:
-        invoice_id: ID of recurring invoice to update
-        invoice: Updated data
-        current_user: Authenticated user
-        db: Database session
-    
-    Returns:
-        Updated recurring invoice
-    """
-    db_invoice = db.query(models.RecurringInvoice)\
-                   .filter(models.RecurringInvoice.id == invoice_id,
-                           models.RecurringInvoice.user_id == current_user["id"])\
-                   .first()
-    if not db_invoice:
-        raise HTTPException(status_code=404, detail="Recurring invoice not found")
-
-    try:
-        update_data = invoice.dict(exclude_unset=True)
-        if "schedule" in update_data:
-            # Recalculate next run if schedule changes
-            cron = croniter.croniter(update_data["schedule"], datetime.utcnow())
-            update_data["next_run"] = cron.get_next(datetime)
-        
-        for key, value in update_data.items():
-            setattr(db_invoice, key, value)
-        
-        db.commit()
-        db.refresh(db_invoice)
-        return db_invoice
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+    payload: RecurringInvoiceUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RecurringInvoiceResponse:
+    invoice: RecurringInvoice | None = (
+        db.query(RecurringInvoice)
+        .filter(
+            RecurringInvoice.id == invoice_id,
+            RecurringInvoice.user_id == current_user.id,
         )
+        .first()
+    )
+    if invoice is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurring invoice not found")
 
-@router.delete("/{invoice_id}")
-async def delete_recurring_invoice(
+    update_data = payload.model_dump(exclude_unset=True)
+    if "schedule" in update_data:
+        invoice.next_run = _validate_schedule(update_data["schedule"], datetime.utcnow())
+
+    for field, value in update_data.items():
+        setattr(invoice, field, value)
+
+    db.add(invoice)
+    db.commit()
+    db.refresh(invoice)
+    return RecurringInvoiceResponse.model_validate(invoice)
+
+
+@router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_recurring_invoice(
     invoice_id: int,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """
-    Delete a recurring invoice schedule
-    
-    Args:
-        invoice_id: ID of recurring invoice to delete
-        current_user: Authenticated user
-        db: Database session
-    
-    Returns:
-        Success message
-    """
-    db_invoice = db.query(models.RecurringInvoice)\
-                   .filter(models.RecurringInvoice.id == invoice_id,
-                           models.RecurringInvoice.user_id == current_user["id"])\
-                   .first()
-    if not db_invoice:
-        raise HTTPException(status_code=404, detail="Recurring invoice not found")
-
-    try:
-        db.delete(db_invoice)
-        db.commit()
-        return {"message": "Recurring invoice deleted successfully"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    deleted = (
+        db.query(RecurringInvoice)
+        .filter(
+            RecurringInvoice.id == invoice_id,
+            RecurringInvoice.user_id == current_user.id,
         )
+        .delete()
+    )
+    if not deleted:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurring invoice not found")
+    db.commit()
 
-@router.post("/{invoice_id}/trigger", response_model=schemas.RecurringInvoiceLogResponse)
-async def trigger_invoice_generation(
+
+@router.post("/{invoice_id}/trigger", response_model=RecurringInvoiceLogResponse)
+def trigger_invoice_generation(
     invoice_id: int,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """
-    Manually trigger invoice generation
-    
-    Args:
-        invoice_id: ID of recurring invoice to trigger
-        current_user: Authenticated user
-        db: Database session
-    
-    Returns:
-        Generation log entry
-    """
-    db_invoice = db.query(models.RecurringInvoice)\
-                   .filter(models.RecurringInvoice.id == invoice_id,
-                           models.RecurringInvoice.user_id == current_user["id"])\
-                   .first()
-    if not db_invoice:
-        raise HTTPException(status_code=404, detail="Recurring invoice not found")
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RecurringInvoiceLogResponse:
+    invoice: RecurringInvoice | None = (
+        db.query(RecurringInvoice)
+        .filter(
+            RecurringInvoice.id == invoice_id,
+            RecurringInvoice.user_id == current_user.id,
+        )
+        .first()
+    )
+    if invoice is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurring invoice not found")
 
-    try:
-        # Placeholder for actual invoice generation logic
-        generated_invoice_id = None
-        log_entry = models.RecurringInvoiceLog(
-            recurring_invoice_id=invoice_id,
-            status="success",
-            details="Invoice generated manually",
-            invoice_id=generated_invoice_id
-        )
-        db.add(log_entry)
-        db.commit()
-        db.refresh(log_entry)
-        return log_entry
-    except Exception as e:
-        db.rollback()
-        log_entry = models.RecurringInvoiceLog(
-            recurring_invoice_id=invoice_id,
-            status="failure",
-            details=str(e)
-        )
-        db.add(log_entry)
-        db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Invoice generation failed: {str(e)}"
-        )
+    log_entry = RecurringInvoiceLog(
+        recurring_invoice_id=invoice.id,
+        status="success",
+        details="Invoice generated manually",
+    )
+    db.add(log_entry)
 
-@router.get("/{invoice_id}/logs", response_model=List[schemas.RecurringInvoiceLogResponse])
-async def get_invoice_logs(
+    invoice.next_run = _validate_schedule(invoice.schedule, datetime.utcnow())
+    db.add(invoice)
+
+    db.commit()
+    db.refresh(log_entry)
+    return RecurringInvoiceLogResponse.model_validate(log_entry)
+
+
+@router.get("/{invoice_id}/logs", response_model=list[RecurringInvoiceLogResponse])
+def get_invoice_logs(
     invoice_id: int,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """
-    Get generation logs for a recurring invoice
-    
-    Args:
-        invoice_id: ID of recurring invoice
-        current_user: Authenticated user
-        db: Database session
-    
-    Returns:
-        List of log entries
-    """
-    db_invoice = db.query(models.RecurringInvoice)\
-                   .filter(models.RecurringInvoice.id == invoice_id,
-                           models.RecurringInvoice.user_id == current_user["id"])\
-                   .first()
-    if not db_invoice:
-        raise HTTPException(status_code=404, detail="Recurring invoice not found")
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[RecurringInvoiceLogResponse]:
+    invoice: RecurringInvoice | None = (
+        db.query(RecurringInvoice)
+        .filter(
+            RecurringInvoice.id == invoice_id,
+            RecurringInvoice.user_id == current_user.id,
+        )
+        .first()
+    )
+    if invoice is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurring invoice not found")
 
-    return db_invoice.logs
+    return [RecurringInvoiceLogResponse.model_validate(log) for log in invoice.logs]
+
+
+__all__ = ["router"]

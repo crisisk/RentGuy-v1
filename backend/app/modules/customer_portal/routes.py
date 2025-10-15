@@ -1,137 +1,133 @@
-FastAPI routes for Customer Portal module
-"""
-from fastapi import APIRouter, Depends, status, Query
-from app.modules.auth.authStore import get_current_user
-from .schemas import (
-    UserProfileResponse,
-    UserProfileCreate,
-    PaginatedResponse,
-    InvoiceResponse,
-    OrderResponse,
-    DocumentResponse,
-    DocumentCreate
-)
+"""Customer portal API endpoints."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
+from app.modules.auth.deps import get_current_user, get_db
+from app.modules.auth.models import User
+
 from .repo import CustomerPortalRepo
-from typing import List, Optional
+from .schemas import (
+    DocumentCreate,
+    DocumentResponse,
+    InvoiceResponse,
+    PaginatedDocumentsResponse,
+    PaginatedInvoicesResponse,
+    PaginatedOrdersResponse,
+    UserProfileCreate,
+    UserProfileResponse,
+)
 
 router = APIRouter(prefix="/customer-portal", tags=["Customer Portal"])
 
-@router.get("/profile", response_model=UserProfileResponse, summary="Get user profile")
-async def get_profile(
-    repo: CustomerPortalRepo = Depends(),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Retrieve the authenticated user's profile
 
-    Test scenarios:
-    1. Authenticated user with profile: returns 200 with profile data
-    2. Authenticated user without profile: returns 404
-    3. Unauthenticated user: returns 401
-    """
-    return await repo.get_profile(current_user.id)
+def get_repo(db: Session = Depends(get_db)) -> CustomerPortalRepo:
+    return CustomerPortalRepo(db)
+
+
+@router.get("/profile", response_model=UserProfileResponse, summary="Get user profile")
+def get_profile(
+    repo: CustomerPortalRepo = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
+) -> UserProfileResponse:
+    return repo.get_profile(current_user.id)
+
 
 @router.put("/profile", response_model=UserProfileResponse, summary="Update user profile")
-async def update_profile(
+def update_profile(
     profile_data: UserProfileCreate,
-    repo: CustomerPortalRepo = Depends(),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Update the authenticated user's profile
+    repo: CustomerPortalRepo = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
+) -> UserProfileResponse:
+    return repo.update_profile(current_user.id, profile_data)
 
-    Test scenarios:
-    1. Valid update data: returns 200 with updated profile
-    2. Invalid phone number format: returns 422 validation error
-    3. Unauthenticated user: returns 401
-    """
-    return await repo.update_profile(current_user.id, profile_data)
 
-@router.get("/invoices", response_model=PaginatedResponse, summary="List user invoices")
-async def list_invoices(
+@router.get(
+    "/invoices",
+    response_model=PaginatedInvoicesResponse,
+    summary="List user invoices",
+)
+def list_invoices(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    repo: CustomerPortalRepo = Depends(),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get paginated list of invoices for authenticated user
+    repo: CustomerPortalRepo = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
+) -> PaginatedInvoicesResponse:
+    items = repo.list_invoices(current_user.id, limit=limit, offset=offset)
+    total = repo.count_invoices(current_user.id)
+    return PaginatedInvoicesResponse(total=total, items=items)
 
-    Test scenarios:
-    1. User with invoices: returns 200 with invoice list
-    2. Invalid pagination parameters: returns 422 validation error
-    3. Unauthenticated user: returns 401
-    """
-    invoices = await repo.get_invoices(current_user.id, limit, offset)
-    total = await repo.get_invoice_count(current_user.id)
-    return {"total": total, "items": invoices}
 
-@router.get("/invoices/{invoice_id}", response_model=InvoiceResponse, summary="Get invoice details")
-async def get_invoice(
+@router.get(
+    "/invoices/{invoice_id}",
+    response_model=InvoiceResponse,
+    summary="Get invoice details",
+)
+def get_invoice(
     invoice_id: int,
-    repo: CustomerPortalRepo = Depends(),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get details of a specific invoice
+    repo: CustomerPortalRepo = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
+) -> InvoiceResponse:
+    return repo.get_invoice(current_user.id, invoice_id)
 
-    Test scenarios:
-    1. Valid invoice ID owned by user: returns 200 with invoice data
-    2. Invoice ID not owned by user: returns 404
-    3. Non-existent invoice ID: returns 404
-    """
-    return await repo.get_invoice(current_user.id, invoice_id)
 
-@router.get("/orders", response_model=PaginatedResponse, summary="List user orders")
-async def list_orders(
+@router.get(
+    "/orders",
+    response_model=PaginatedOrdersResponse,
+    summary="List user orders",
+)
+def list_orders(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    repo: CustomerPortalRepo = Depends(),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get paginated list of orders for authenticated user
+    repo: CustomerPortalRepo = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
+) -> PaginatedOrdersResponse:
+    items = repo.list_orders(current_user.id, limit=limit, offset=offset)
+    total = repo.count_orders(current_user.id)
+    return PaginatedOrdersResponse(total=total, items=items)
 
-    Test scenarios:
-    1. User with orders: returns 200 with order list
-    2. Invalid pagination parameters: returns 422 validation error
-    3. Unauthenticated user: returns 401
-    """
-    orders = await repo.get_orders(current_user.id, limit, offset)
-    total = await repo.get_order_count(current_user.id)
-    return {"total": total, "items": orders}
 
-@router.get("/documents", response_model=PaginatedResponse, summary="List user documents")
-async def list_documents(
+@router.get(
+    "/documents",
+    response_model=PaginatedDocumentsResponse,
+    summary="List user documents",
+)
+def list_documents(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    repo: CustomerPortalRepo = Depends(),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get paginated list of documents for authenticated user
+    repo: CustomerPortalRepo = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
+) -> PaginatedDocumentsResponse:
+    items = repo.list_documents(current_user.id, limit=limit, offset=offset)
+    total = repo.count_documents(current_user.id)
+    return PaginatedDocumentsResponse(total=total, items=items)
 
-    Test scenarios:
-    1. User with documents: returns 200 with document list
-    2. Invalid pagination parameters: returns 422 validation error
-    3. Unauthenticated user: returns 401
-    """
-    documents = await repo.get_documents(current_user.id, limit, offset)
-    total = await repo.get_document_count(current_user.id)
-    return {"total": total, "items": documents}
 
-@router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete document")
-async def delete_document(
+@router.post(
+    "/documents",
+    response_model=DocumentResponse,
+    summary="Upload document metadata",
+)
+def create_document(
+    payload: DocumentCreate,
+    repo: CustomerPortalRepo = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
+) -> DocumentResponse:
+    return repo.create_document(current_user.id, payload)
+
+
+@router.delete(
+    "/documents/{document_id}",
+    summary="Delete document",
+)
+def delete_document(
     document_id: int,
-    repo: CustomerPortalRepo = Depends(),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Delete a user document
+    repo: CustomerPortalRepo = Depends(get_repo),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    repo.delete_document(current_user.id, document_id)
 
-    Test scenarios:
-    1. Valid document ID owned by user: returns 204
-    2. Document ID not owned by user: returns 404
-    3. Non-existent document ID: returns 404
-    """
-    await repo.delete_document(current_user.id, document_id)
+
+__all__ = ["router"]
