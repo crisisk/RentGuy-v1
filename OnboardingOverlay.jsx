@@ -9,6 +9,7 @@ export * from '@ui/OnboardingOverlay'
 /**
  * @typedef {{
  *   email?: string | null
+ *   role?: string | null
  *   onClose?: () => void
  *   onSnooze?: () => void
  *   onFinish?: () => void

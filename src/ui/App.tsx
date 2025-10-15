@@ -206,6 +206,8 @@ export function App() {
     [userEmail]
   )
 
+  const resolvedUserRole = user?.role ?? getLocalStorageItem('user_role', '')
+
   if (!token) {
     return <Login onLogin={handleLogin} />
   }
@@ -223,7 +225,12 @@ export function App() {
         />
       )}
       {!isRoleModalOpen && showOnboarding && userEmail && (
-        <OnboardingOverlay email={userEmail} onSnooze={handleSnoozeOnboarding} onFinish={handleFinishOnboarding} />
+        <OnboardingOverlay
+          email={userEmail}
+          role={resolvedUserRole}
+          onSnooze={handleSnoozeOnboarding}
+          onFinish={handleFinishOnboarding}
+        />
       )}
     </>
   )

@@ -34,6 +34,9 @@ type ModuleKey =
   | 'transport'
   | 'templates'
   | 'automation'
+  | 'support'
+  | 'sales'
+  | 'compliance'
 
 type OnboardingEventType =
   | 'data_fallback'
@@ -41,6 +44,7 @@ type OnboardingEventType =
   | 'step_completed'
   | 'step_error'
   | 'cta_clicked'
+  | 'retry_clicked'
 
 interface StepMetaEntry {
   module?: ModuleKey
@@ -55,6 +59,7 @@ interface StepAction {
 
 export interface OnboardingOverlayProps {
   email?: string | null
+  role?: string | null
   onClose?: () => void
   onSnooze?: () => void
   onFinish?: () => void
@@ -71,54 +76,298 @@ type WindowWithDataLayer = typeof window & {
 
 const COMPLETION_RATE_LIMIT_MS = 1500
 const FALLBACK_MESSAGE =
-  'We tonen de Mister DJ standaard onboarding (cached) omdat live data tijdelijk niet beschikbaar is.'
+  'Live onboardingdata is tijdelijk niet beschikbaar. We tonen de laatst bekende checklist voor jouw rol.'
 
-const fallbackStepsSource: OnboardingStep[] = [
+type PersonaKey =
+  | 'planner'
+  | 'admin'
+  | 'viewer'
+  | 'finance'
+  | 'warehouse'
+  | 'crew'
+  | 'support'
+  | 'sales'
+  | 'compliance'
+
+const operationsFallbackSteps: OnboardingStep[] = [
   {
     code: 'kickoff',
     title: 'Kick-off met Mister DJ',
     description: 'Controleer tenantgegevens, hoofdcontacten en eventkalender voor het komende seizoen.',
+    module: 'projects',
   },
   {
     code: 'branding',
     title: 'Branding & tone-of-voice',
     description: 'Upload het paars-blauwe gradient, logo’s en stel de 100% Dansgarantie tagline in.',
+    module: 'templates',
   },
   {
     code: 'packages',
     title: 'Pakketstructuur valideren',
     description: 'Bevestig Silver, Gold, Diamond en Platinum shows inclusief add-ons en kortingen.',
+    module: 'inventory',
   },
   {
     code: 'inventory',
     title: 'Gear & voorraad importeren',
     description: 'Importeer Pioneer decks, moving heads en microfoons als MR-DJ kits voor scanning.',
+    module: 'warehouse',
   },
   {
     code: 'crew',
     title: 'Crew en draaiboeken koppelen',
     description: 'Nodig Bart’s team uit en activeer automatische briefings per shift.',
+    module: 'crew',
   },
   {
     code: 'transport',
     title: 'Logistiek en routes plannen',
     description: 'Plan ritten, chauffeurs en bufferuren voor op- en afbouw inclusief QR-check-ins.',
+    module: 'transport',
   },
   {
     code: 'billing',
     title: 'Facturatie & Mollie koppelen',
     description: 'Link Invoice Ninja, voorschotten en Mollie betalingen aan RentGuy milestones.',
+    module: 'billing',
   },
   {
     code: 'automation',
     title: 'Automatiseringen activeren',
     description: 'Trigger WhatsApp-updates, voorraadalerts en dashboards na elke mijlpaal.',
+    module: 'automation',
   },
 ]
+
+const financeFallbackSteps: OnboardingStep[] = [
+  {
+    code: 'finance-activate',
+    title: 'Activeer finance insights',
+    description: 'Synchroniseer facturatie, voorschotten en cashflow KPI’s voordat dashboards live gaan.',
+    module: 'billing',
+  },
+  {
+    code: 'finance-controls',
+    title: 'Beveilig betalingen en grootboek',
+    description: 'Verifieer Mollie webhooks, journaalexport en toegangsrechten voor finance.',
+    module: 'billing',
+  },
+  {
+    code: 'finance-forecast',
+    title: 'Plan cashflowscenario’s',
+    description: 'Gebruik forecasting om marge en ROI te projecteren voor komende evenementen.',
+    module: 'automation',
+  },
+]
+
+const warehouseFallbackSteps: OnboardingStep[] = [
+  {
+    code: 'warehouse-scanner',
+    title: 'Kalibreer warehouse scanners',
+    description: 'Test QR/UPC scans, bundels en realtime sync met voorraad.',
+    module: 'warehouse',
+  },
+  {
+    code: 'warehouse-maintenance',
+    title: 'Plan onderhoudsronde',
+    description: 'Registreer keuringen, deadlines en blokkeer defecte items automatisch.',
+    module: 'warehouse',
+  },
+  {
+    code: 'warehouse-alerts',
+    title: 'Activeer voorraadalerts',
+    description: 'Stel drempels in voor kritieke gear en push notificaties naar planners.',
+    module: 'inventory',
+  },
+]
+
+const crewFallbackSteps: OnboardingStep[] = [
+  {
+    code: 'crew-invite',
+    title: 'Nodig crew & freelancers uit',
+    description: 'Koppel rollen, shifts en contracten met MFA-verificatie.',
+    module: 'crew',
+  },
+  {
+    code: 'crew-briefings',
+    title: 'Activeer briefingworkflows',
+    description: 'Plan automatische draaiboeken en pushnotificaties per event.',
+    module: 'crew',
+  },
+  {
+    code: 'crew-safety',
+    title: 'Bevestig safety & compliance',
+    description: 'Verzamel toolbox talks en check-ins voor risicovolle taken.',
+    module: 'compliance',
+  },
+]
+
+const supportFallbackSteps: OnboardingStep[] = [
+  {
+    code: 'support-escalations',
+    title: 'Configureer escalatieschema',
+    description: 'Synchroniseer ticketing queue en on-call routing met RentGuy.',
+    module: 'support',
+  },
+  {
+    code: 'support-status',
+    title: 'Publiceer statuspagina',
+    description: 'Koppel incident templates en realtime updates voor stakeholders.',
+    module: 'support',
+  },
+  {
+    code: 'support-feedback',
+    title: 'Automatiseer klantfeedback',
+    description: 'Activeer CSAT-metingen na afgeronde projecten.',
+    module: 'support',
+  },
+]
+
+const salesFallbackSteps: OnboardingStep[] = [
+  {
+    code: 'sales-crm',
+    title: 'Synchroniseer CRM pipeline',
+    description: 'Koppel deals, probability en marges aan projecttemplates.',
+    module: 'sales',
+  },
+  {
+    code: 'sales-offers',
+    title: 'Personaliseer offertes',
+    description: 'Gebruik AI-templates en prijslijsten per segment.',
+    module: 'templates',
+  },
+  {
+    code: 'sales-handoff',
+    title: 'Automatiseer sales-to-ops overdracht',
+    description: 'Maak checklists en triggers richting planner en warehouse.',
+    module: 'automation',
+  },
+]
+
+const complianceFallbackSteps: OnboardingStep[] = [
+  {
+    code: 'compliance-psra',
+    title: 'Upload veiligheidsdossier',
+    description: 'Plaats PSRA/LTSD-documenten en wijs verantwoordelijken toe.',
+    module: 'compliance',
+  },
+  {
+    code: 'compliance-access',
+    title: 'Controleer toegangsrechten',
+    description: 'Verifieer MFA, roltoegang en auditlogretentie.',
+    module: 'compliance',
+  },
+  {
+    code: 'compliance-audit',
+    title: 'Plan audit exports',
+    description: 'Activeer rapportage en automatische logleveringen aan auditors.',
+    module: 'compliance',
+  },
+]
+
+const personaFallbackSources = {
+  planner: operationsFallbackSteps,
+  admin: operationsFallbackSteps,
+  viewer: operationsFallbackSteps,
+  finance: financeFallbackSteps,
+  warehouse: warehouseFallbackSteps,
+  crew: crewFallbackSteps,
+  support: supportFallbackSteps,
+  sales: salesFallbackSteps,
+  compliance: complianceFallbackSteps,
+} satisfies Record<PersonaKey, OnboardingStep[]>
+
+const DEFAULT_PERSONA: PersonaKey = 'planner'
+
+const personaNarratives: Record<PersonaKey, { pending: string; complete: string }> = {
+  planner: {
+    pending: 'Volg de stappen om branding, pakketten, crew en finance voor Mister DJ te activeren.',
+    complete:
+      'Fantastisch! Alle Mister DJ modules zijn geactiveerd binnen Sevensa RentGuy. Gebruik de tips hieronder om de UAT-scenario’s te verfijnen.',
+  },
+  admin: {
+    pending: 'Volg de stappen om branding, pakketten, crew en finance voor Mister DJ te activeren.',
+    complete:
+      'Fantastisch! Alle Mister DJ modules zijn geactiveerd binnen Sevensa RentGuy. Gebruik de tips hieronder om de UAT-scenario’s te verfijnen.',
+  },
+  viewer: {
+    pending: 'Volg de stappen om branding, pakketten, crew en finance voor Mister DJ te activeren.',
+    complete:
+      'Fantastisch! Alle Mister DJ modules zijn geactiveerd binnen Sevensa RentGuy. Gebruik de tips hieronder om de UAT-scenario’s te verfijnen.',
+  },
+  finance: {
+    pending: 'Volg de stappen om facturatie, cashflow en rapportages klaar te zetten voor Mister DJ.',
+    complete:
+      'Financeflows zijn live. Gebruik de tips hieronder om controles en rapportages te automatiseren.',
+  },
+  warehouse: {
+    pending: 'Volg de stappen om scanners, onderhoud en voorraadalerts te activeren.',
+    complete: 'Warehouse-operaties draaien. Gebruik de tips hieronder om uitlevering te optimaliseren.',
+  },
+  crew: {
+    pending: 'Volg de stappen om crew onboarding, briefings en safety-afspraken af te stemmen.',
+    complete: 'Crewworkflows zijn actief. Gebruik de tips hieronder om shifts en evaluaties te verbeteren.',
+  },
+  support: {
+    pending: 'Volg de stappen om supportescalaties, statuspagina en feedbackstromen te activeren.',
+    complete: 'Supportprocessen staan klaar. Gebruik de tips hieronder om SLA-monitoring te verfijnen.',
+  },
+  sales: {
+    pending: 'Volg de stappen om CRM-sync, offertes en overdracht richting operations te activeren.',
+    complete: 'Saleshand-off loopt. Gebruik de tips hieronder om pipeline-automatisering te finetunen.',
+  },
+  compliance: {
+    pending: 'Volg de stappen om veiligheidsdossiers, toegangsrechten en audit exports klaar te zetten.',
+    complete: 'Compliance waarborgen zijn actief. Gebruik de tips hieronder om controles te automatiseren.',
+  },
+}
 
 const fallbackTipsSource: OnboardingTip[] = Array.isArray(onboardingTipsData)
   ? (onboardingTipsData as OnboardingTip[])
   : []
+
+const fallbackTips = normalizeTips(fallbackTipsSource)
+
+function isPersonaKey(value: string): value is PersonaKey {
+  return Object.prototype.hasOwnProperty.call(personaFallbackSources, value)
+}
+
+function resolveFallbackSteps(persona: PersonaKey | string | undefined | null): OnboardingStep[] {
+  if (typeof persona === 'string' && isPersonaKey(persona)) {
+    return personaFallbackSources[persona]
+  }
+  return personaFallbackSources[DEFAULT_PERSONA]
+}
+
+function derivePersonaKey(role?: string | null, email?: string | null): PersonaKey {
+  const normalizedRole = (role ?? '').trim().toLowerCase()
+  if (normalizedRole && isPersonaKey(normalizedRole)) {
+    return normalizedRole
+  }
+
+  const emailLocal = (email ?? '').split('@')[0]?.toLowerCase() ?? ''
+  if (emailLocal.includes('finance') || emailLocal.includes('cfo')) {
+    return 'finance'
+  }
+  if (emailLocal.includes('warehouse') || emailLocal.includes('magazijn') || emailLocal.includes('logistiek')) {
+    return 'warehouse'
+  }
+  if (emailLocal.includes('crew') || emailLocal.includes('technicus')) {
+    return 'crew'
+  }
+  if (emailLocal.includes('support') || emailLocal.includes('helpdesk')) {
+    return 'support'
+  }
+  if (emailLocal.includes('sales') || emailLocal.includes('crm') || emailLocal.includes('account')) {
+    return 'sales'
+  }
+  if (emailLocal.includes('psra') || emailLocal.includes('compliance') || emailLocal.includes('audit')) {
+    return 'compliance'
+  }
+
+  return DEFAULT_PERSONA
+}
 
 const stepMeta: Record<string, StepMetaEntry> = {
   kickoff: { module: 'projects', icon: '🚀' },
@@ -129,6 +378,24 @@ const stepMeta: Record<string, StepMetaEntry> = {
   transport: { module: 'transport', icon: '🚚' },
   billing: { module: 'billing', icon: '💸' },
   automation: { module: 'automation', icon: '⚙️' },
+  'finance-activate': { module: 'billing', icon: '💹' },
+  'finance-controls': { module: 'billing', icon: '🛡️' },
+  'finance-forecast': { module: 'automation', icon: '📊' },
+  'warehouse-scanner': { module: 'warehouse', icon: '📱' },
+  'warehouse-maintenance': { module: 'warehouse', icon: '🛠️' },
+  'warehouse-alerts': { module: 'inventory', icon: '🚨' },
+  'crew-invite': { module: 'crew', icon: '🤝' },
+  'crew-briefings': { module: 'crew', icon: '📋' },
+  'crew-safety': { module: 'compliance', icon: '🦺' },
+  'support-escalations': { module: 'support', icon: '📣' },
+  'support-status': { module: 'support', icon: '🛰️' },
+  'support-feedback': { module: 'support', icon: '💬' },
+  'sales-crm': { module: 'sales', icon: '🔗' },
+  'sales-offers': { module: 'templates', icon: '🧾' },
+  'sales-handoff': { module: 'automation', icon: '🔁' },
+  'compliance-psra': { module: 'compliance', icon: '📂' },
+  'compliance-access': { module: 'compliance', icon: '🔐' },
+  'compliance-audit': { module: 'compliance', icon: '📑' },
 }
 
 const moduleLabels: Record<ModuleKey, string> = {
@@ -140,6 +407,9 @@ const moduleLabels: Record<ModuleKey, string> = {
   transport: 'Transport',
   templates: 'Templates',
   automation: 'Automations',
+  support: 'Support',
+  sales: 'Sales',
+  compliance: 'Compliance',
 }
 
 const moduleIcons: Record<ModuleKey, string> = {
@@ -151,6 +421,9 @@ const moduleIcons: Record<ModuleKey, string> = {
   transport: '🚚',
   templates: '🧾',
   automation: '⚙️',
+  support: '🎧',
+  sales: '📈',
+  compliance: '🛡️',
 }
 
 const stepActions: Partial<Record<string, StepAction>> = {
@@ -194,10 +467,97 @@ const stepActions: Partial<Record<string, StepAction>> = {
     label: 'Automatiseringen openen',
     description: 'Automatiseer WhatsApp-updates en voorraadalerts na elke showfase.',
   },
+  'finance-activate': {
+    href: '/billing/insights',
+    label: 'Finance dashboards openen',
+    description: 'Controleer cashflow KPI’s en activeer realtime rapportage.',
+  },
+  'finance-controls': {
+    href: '/billing/compliance',
+    label: 'Betaalstromen beveiligen',
+    description: 'Valideer webhook-status en grootboek exports.',
+  },
+  'finance-forecast': {
+    href: '/reporting/forecasts',
+    label: 'Cashflow forecasting',
+    description: 'Plan scenario’s voor voorschotten en eindfacturen.',
+  },
+  'warehouse-scanner': {
+    href: '/warehouse/scanner/setup',
+    label: 'Scanner setup',
+    description: 'Test scanning en bundels voordat je live gaat.',
+  },
+  'warehouse-maintenance': {
+    href: '/warehouse/maintenance',
+    label: 'Onderhoudsplanning',
+    description: 'Plan keuringen en blokkeer defecte items.',
+  },
+  'warehouse-alerts': {
+    href: '/inventory/alerts',
+    label: 'Voorraadalerts instellen',
+    description: 'Configureer drempels en notificaties.',
+  },
+  'crew-invite': {
+    href: '/crew/invite',
+    label: 'Crew uitnodigingen',
+    description: 'Verstuur invites met rol- en MFA-vereisten.',
+  },
+  'crew-briefings': {
+    href: '/crew/briefings',
+    label: 'Briefings beheren',
+    description: 'Automatiseer draaiboeken per shift.',
+  },
+  'crew-safety': {
+    href: '/compliance/safety',
+    label: 'Safety & toolbox talks',
+    description: 'Registreer verplichte instructies en check-ins.',
+  },
+  'support-escalations': {
+    href: '/support/escalations',
+    label: 'Escalatieschema openen',
+    description: 'Stem on-call routing af met SLA’s.',
+  },
+  'support-status': {
+    href: '/support/status',
+    label: 'Statuspagina publiceren',
+    description: 'Beheer incident templates en updates.',
+  },
+  'support-feedback': {
+    href: '/support/feedback',
+    label: 'Feedbackflows activeren',
+    description: 'Start CSAT-metingen na oplevering.',
+  },
+  'sales-crm': {
+    href: '/sales/crm-sync',
+    label: 'CRM-koppeling openen',
+    description: 'Verbind pipelinevelden met RentGuy projects.',
+  },
+  'sales-offers': {
+    href: '/sales/offers',
+    label: 'Offerte templates',
+    description: 'Personaliseer aanbod en AI-teksten.',
+  },
+  'sales-handoff': {
+    href: '/sales/handoff',
+    label: 'Sales → ops overdracht',
+    description: 'Configureer automatische overdrachtschecklists.',
+  },
+  'compliance-psra': {
+    href: '/compliance/psra',
+    label: 'PSRA dossier uploaden',
+    description: 'Upload veiligheidsdocumenten en wijs owners toe.',
+  },
+  'compliance-access': {
+    href: '/compliance/access',
+    label: 'Toegangsrechten controleren',
+    description: 'Controleer MFA en roltoegang.',
+  },
+  'compliance-audit': {
+    href: '/compliance/audit-export',
+    label: 'Audit exports plannen',
+    description: 'Plan periodieke log- en rapportexport.',
+  },
 }
-
-const fallbackSteps = normalizeSteps(fallbackStepsSource)
-const fallbackTips = normalizeTips(fallbackTipsSource)
 
 export function normalizeSteps(list: OnboardingStep[] | null | undefined): NormalizedOnboardingStep[] {
   const seen = new Set<string>()
@@ -289,6 +649,7 @@ function emitOnboardingEvent(type: OnboardingEventType, payload: Record<string, 
 
 export default function OnboardingOverlay({
   email,
+  role,
   onClose,
   onSnooze,
   onFinish,
@@ -298,19 +659,27 @@ export default function OnboardingOverlay({
   const emailContext = hasEmail ? emailParam : undefined
   const snoozeHandler = onSnooze ?? onClose
   const finishHandler = onFinish ?? onClose
-  const [steps, setSteps] = useState<NormalizedOnboardingStep[]>(() => normalizeSteps(fallbackSteps))
+  const initialPersona = derivePersonaKey(role, emailParam)
+  const [persona, setPersona] = useState<PersonaKey>(initialPersona)
+  const [steps, setSteps] = useState<NormalizedOnboardingStep[]>(() =>
+    normalizeSteps(resolveFallbackSteps(initialPersona)),
+  )
   const [done, setDone] = useState<Set<string>>(() => new Set())
-  const [tips, setTips] = useState<NormalizedOnboardingTip[]>(() => normalizeTips(fallbackTips))
+  const [tips, setTips] = useState<NormalizedOnboardingTip[]>(() => [...fallbackTips])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [errorDetails, setErrorDetails] = useState<string[]>([])
+  const [allowRetry, setAllowRetry] = useState(false)
   const [busyStep, setBusyStep] = useState('')
   const [busyActionStep, setBusyActionStep] = useState('')
   const [refreshingProgress, setRefreshingProgress] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
   const controllersRef = useRef<AbortControllerSet>(new Set())
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [headingId] = useState(() => `onboarding-heading-${Math.random().toString(36).slice(2)}`)
   const [descriptionId] = useState(() => `onboarding-description-${Math.random().toString(36).slice(2)}`)
   const lastCompletionRef = useRef(0)
+  const personaNarrative = personaNarratives[persona] ?? personaNarratives[DEFAULT_PERSONA]
 
   useEffect(() => {
     return () => {
@@ -320,11 +689,46 @@ export default function OnboardingOverlay({
   }, [])
 
   useEffect(() => {
+    const nextPersona = derivePersonaKey(role, emailParam)
+    setPersona((current) => (current === nextPersona ? current : nextPersona))
+  }, [role, emailParam])
+
+  useEffect(() => {
+    setSteps(normalizeSteps(resolveFallbackSteps(persona)))
+    setDone(new Set())
+    setTips([...fallbackTips])
+  }, [persona])
+
+  const showError = useCallback(
+    (message: string, options: { details?: string[]; allowRetry?: boolean } = {}) => {
+      setErrorMessage(message)
+      const filteredDetails = (options.details ?? [])
+        .map((detail) => detail.trim())
+        .filter((detail) => detail.length > 0)
+      setErrorDetails(filteredDetails)
+      setAllowRetry(Boolean(options.allowRetry))
+    },
+    [],
+  )
+
+  const clearError = useCallback(() => {
+    setErrorMessage('')
+    setErrorDetails([])
+    setAllowRetry(false)
+  }, [])
+
+  const handleRetry = useCallback(() => {
+    emitOnboardingEvent('retry_clicked', { email: emailContext, persona })
+    setAllowRetry(false)
+    setReloadToken((value) => value + 1)
+  }, [emailContext, persona])
+
+  useEffect(() => {
     let ignore = false
     const controller = new AbortController()
     controllersRef.current.add(controller)
     setLoading(true)
-    setErrorMessage('')
+    clearError()
 
     const load = async () => {
       try {
@@ -347,8 +751,9 @@ export default function OnboardingOverlay({
         const tipsData = tipsResult.ok ? tipsResult.value : []
         const progressData = progressResult.ok ? progressResult.value : []
 
-        const resolvedSteps = stepsData.length ? normalizeSteps(stepsData) : normalizeSteps(fallbackSteps)
-        const resolvedTips = tipsData.length ? normalizeTips(tipsData) : normalizeTips(fallbackTips)
+        const fallbackSource = resolveFallbackSteps(persona)
+        const resolvedSteps = stepsData.length ? normalizeSteps(stepsData) : normalizeSteps(fallbackSource)
+        const resolvedTips = tipsData.length ? normalizeTips(tipsData) : [...fallbackTips]
 
         setSteps(resolvedSteps)
         setTips(resolvedTips)
@@ -359,9 +764,18 @@ export default function OnboardingOverlay({
         const usedFallbackProgress = !hasEmail || !progressResult.ok
 
         if (usedFallbackSteps || usedFallbackTips || usedFallbackProgress) {
-          setErrorMessage(FALLBACK_MESSAGE)
+          const fallbackDetails: string[] = []
+          if (usedFallbackSteps) fallbackDetails.push('Checklist fallback geactiveerd voor deze sessie.')
+          if (usedFallbackTips) fallbackDetails.push('Fallback tips geladen (API niet beschikbaar).')
+          if (usedFallbackProgress && hasEmail) fallbackDetails.push('Voortgang kon niet opgehaald worden voor dit account.')
+
+          const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+          const combinedDetails = [...fallbackDetails, ...encounteredErrors]
+
+          showError(FALLBACK_MESSAGE, { details: combinedDetails, allowRetry: true })
           emitOnboardingEvent('data_fallback', {
             email: emailContext,
+            persona,
             usedFallbackSteps,
             usedFallbackTips,
             usedFallbackProgress,
@@ -369,27 +783,39 @@ export default function OnboardingOverlay({
             tipsError: tipsResult.ok ? undefined : tipsResult.error.code,
             progressError: progressResult.ok ? undefined : progressResult.error.code,
           })
+        } else {
+          const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+          if (encounteredErrors.length > 0) {
+            showError('Onboardingdata bevat fouten. Controleer de status voor je verder gaat.', {
+              details: encounteredErrors,
+              allowRetry: true,
+            })
+            emitOnboardingEvent('data_error', {
+              email: emailContext,
+              persona,
+              message: encounteredErrors.join(' | '),
+            })
+          }
         }
 
         const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
-
         if (encounteredErrors.length > 0) {
           console.error('Kon onboardinggegevens niet volledig laden', encounteredErrors)
-          emitOnboardingEvent('data_error', {
-            email: emailContext,
-            message: encounteredErrors.join(' | '),
-          })
         }
       } catch (error) {
         if (controller.signal.aborted) {
           return
         }
         console.error('Kon onboardinggegevens niet laden', error)
-        setSteps(normalizeSteps(fallbackSteps))
-        setTips(normalizeTips(fallbackTips))
+        setSteps(normalizeSteps(resolveFallbackSteps(persona)))
+        setTips([...fallbackTips])
         setDone(new Set())
-        setErrorMessage(FALLBACK_MESSAGE)
-        emitOnboardingEvent('data_error', { email: emailContext, message: getErrorMessage(error) })
+        showError(FALLBACK_MESSAGE, { details: [getErrorMessage(error)], allowRetry: true })
+        emitOnboardingEvent('data_error', {
+          email: emailContext,
+          persona,
+          message: getErrorMessage(error),
+        })
       } finally {
         controllersRef.current.delete(controller)
         if (!ignore && !controller.signal.aborted) {
@@ -405,7 +831,7 @@ export default function OnboardingOverlay({
       controller.abort()
       controllersRef.current.delete(controller)
     }
-  }, [emailContext, emailParam, hasEmail])
+  }, [clearError, emailContext, emailParam, hasEmail, persona, reloadToken, showError])
 
   useEffect(() => {
     if (!containerRef.current || typeof document === 'undefined') {
@@ -442,7 +868,7 @@ export default function OnboardingOverlay({
   const refreshProgress = useCallback(async () => {
     if (refreshingProgress) return
     if (!hasEmail) {
-      setErrorMessage('Geen gebruikerscontext gevonden om voortgang te laden. Log opnieuw in om verder te gaan.')
+      showError('Geen gebruikerscontext gevonden om voortgang te laden. Log opnieuw in om verder te gaan.')
       return
     }
     const controller = new AbortController()
@@ -455,49 +881,60 @@ export default function OnboardingOverlay({
         setDone(new Set(result.value.filter((item) => item.status === 'complete').map((item) => item.step_code)))
       } else {
         console.error('Kon voortgang niet verversen', result.error)
-        setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.')
+        showError('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
+          details: [getErrorMessage(result.error)],
+          allowRetry: true,
+        })
         emitOnboardingEvent('data_error', {
           email: emailContext,
+          persona,
           message: getErrorMessage(result.error),
         })
       }
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Kon voortgang niet verversen', error)
-      setErrorMessage('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.')
-      emitOnboardingEvent('data_error', { email: emailContext, message: getErrorMessage(error) })
+      showError('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
+        details: [getErrorMessage(error)],
+        allowRetry: true,
+      })
+      emitOnboardingEvent('data_error', { email: emailContext, persona, message: getErrorMessage(error) })
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
         setRefreshingProgress(false)
       }
     }
-  }, [emailContext, emailParam, hasEmail, refreshingProgress])
+  }, [emailContext, emailParam, hasEmail, persona, refreshingProgress, showError])
 
   const mark = useCallback(
     async (step: NormalizedOnboardingStep) => {
       if (busyStep) return
       if (!hasEmail) {
-        setErrorMessage('Geen gebruikerscontext beschikbaar om stappen af te ronden. Log opnieuw in en probeer het opnieuw.')
+        showError('Geen gebruikerscontext beschikbaar om stappen af te ronden. Log opnieuw in en probeer het opnieuw.')
         return
       }
       const now = Date.now()
       if (now - lastCompletionRef.current < COMPLETION_RATE_LIMIT_MS) {
-        setErrorMessage('Rustig aan! Wacht een paar tellen voordat je de volgende stap afrondt.')
+        showError('Rustig aan! Wacht een paar tellen voordat je de volgende stap afrondt.')
         return
       }
       const controller = new AbortController()
       controllersRef.current.add(controller)
       setBusyStep(step.code)
-      setErrorMessage('')
+      clearError()
       try {
         const completionResult = await completeStep(emailParam, step.code, { signal: controller.signal })
         if (controller.signal.aborted) return
         if (!completionResult.ok) {
           console.error('Stap kon niet worden bijgewerkt', completionResult.error)
-          setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.')
+          showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
+            details: [getErrorMessage(completionResult.error)],
+            allowRetry: true,
+          })
           emitOnboardingEvent('step_error', {
             email: emailContext,
+            persona,
             step: step.code,
             message: getErrorMessage(completionResult.error),
           })
@@ -510,12 +947,16 @@ export default function OnboardingOverlay({
         if (progressResult.ok) {
           setDone(new Set(progressResult.value.filter((item) => item.status === 'complete').map((item) => item.step_code)))
           lastCompletionRef.current = Date.now()
-          emitOnboardingEvent('step_completed', { email: emailContext, step: step.code })
+          emitOnboardingEvent('step_completed', { email: emailContext, persona, step: step.code })
         } else {
           console.error('Kon voortgang na stap niet bijwerken', progressResult.error)
-          setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.')
+          showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
+            details: [getErrorMessage(progressResult.error)],
+            allowRetry: true,
+          })
           emitOnboardingEvent('step_error', {
             email: emailContext,
+            persona,
             step: step.code,
             message: getErrorMessage(progressResult.error),
           })
@@ -523,9 +964,13 @@ export default function OnboardingOverlay({
       } catch (error) {
         if (controller.signal.aborted) return
         console.error('Stap kon niet worden bijgewerkt', error)
-        setErrorMessage('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.')
+        showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
+          details: [getErrorMessage(error)],
+          allowRetry: true,
+        })
         emitOnboardingEvent('step_error', {
           email: emailContext,
+          persona,
           step: step.code,
           message: getErrorMessage(error),
         })
@@ -535,8 +980,7 @@ export default function OnboardingOverlay({
           setBusyStep('')
         }
       }
-    },
-    [busyStep, emailContext, emailParam, hasEmail],
+    [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError],
   )
 
   const handleAction = useCallback(
@@ -545,7 +989,7 @@ export default function OnboardingOverlay({
       const action = stepActions[step.code]
       if (!action?.href) return
       setBusyActionStep(step.code)
-      emitOnboardingEvent('cta_clicked', { email: emailContext, step: step.code, href: action.href })
+      emitOnboardingEvent('cta_clicked', { email: emailContext, persona, step: step.code, href: action.href })
       if (typeof window === 'undefined') {
         setBusyActionStep('')
         return
@@ -558,7 +1002,7 @@ export default function OnboardingOverlay({
         }
       })
     },
-    [emailContext],
+    [emailContext, persona],
   )
 
   return (
@@ -672,9 +1116,7 @@ export default function OnboardingOverlay({
             Onboarding cockpit
           </h2>
           <p id={descriptionId} style={{ margin: 0, maxWidth: 540, lineHeight: 1.5 }}>
-            {allComplete
-              ? 'Fantastisch! Alle Mister DJ modules zijn geactiveerd binnen Sevensa RentGuy. Gebruik de tips hieronder om de UAT-scenario’s te verfijnen.'
-              : 'Volg de stappen om branding, pakketten, crew en finance voor Mister DJ te activeren. We koppelen elke stap aan Sevensa governance en realtime tips.'}
+            {allComplete ? personaNarrative.complete : personaNarrative.pending}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div
@@ -745,7 +1187,57 @@ export default function OnboardingOverlay({
             role="alert"
             aria-live="assertive"
           >
-            {errorMessage}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <span style={{ fontWeight: 600 }}>{errorMessage}</span>
+              {errorDetails.length > 0 && (
+                <ul
+                  style={{
+                    margin: '0 0 0 16px',
+                    padding: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                  }}
+                >
+                  {errorDetails.map((detail) => (
+                    <li key={detail} style={{ marginLeft: 0 }}>{detail}</li>
+                  ))}
+                </ul>
+              )}
+              <span>
+                Hulp nodig? Mail{' '}
+                <a
+                  href="mailto:support@sevensa.com"
+                  style={{ color: brand.colors.secondary, fontWeight: 600 }}
+                >
+                  Sevensa Support
+                </a>
+                .
+              </span>
+              {allowRetry && (
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  disabled={loading}
+                  style={{
+                    alignSelf: 'flex-start',
+                    background: loading
+                      ? withOpacity(brand.colors.secondary, 0.35)
+                      : brand.colors.secondary,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 999,
+                    padding: '8px 18px',
+                    fontWeight: 600,
+                    cursor: loading ? 'wait' : 'pointer',
+                    opacity: loading ? 0.75 : 1,
+                    transition: 'opacity 0.2s ease',
+                  }}
+                >
+                  {loading ? 'Opnieuw laden…' : 'Opnieuw proberen'}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
