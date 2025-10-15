@@ -43,6 +43,19 @@ cd backend
 pytest
 ```
 
+### Debug quickstart
+
+```bash
+npm run debug:prepare
+npm run debug:scan
+npm run debug:run
+```
+
+The commands above provision the debugging artefacts directory, execute the baseline lint/build/test
+pipeline, and refresh the machine-readable status summary. Inspect `artifacts/debug/logs/` for raw
+output, `artifacts/debug/baseline-findings.json` for structured failures, and `artifacts/debug/triage-plan.md`
+for the latest remediation plan.
+
 ### Frontend setup
 
 ```bash
@@ -54,6 +67,8 @@ Configuration is handled through standard Vite environment variables:
 - `VITE_API_URL` &mdash; Base URL of the FastAPI service (defaults to `http://localhost:8000`).
 - `VITE_APP_MODE` &mdash; Set to `scanner` to boot directly into the barcode scanner view. Any other value renders the planner dashboard.
 
+Duplicate [`.env.example`](.env.example) to `.env` (or `.env.local`) and adjust the values for your target environment before running the container build.
+
 With the dependencies installed you can start the development server:
 
 ```bash
@@ -61,6 +76,16 @@ npm run dev
 ```
 
 The app listens on `http://localhost:5175` (configurable in [`vite.config.js`](vite.config.js)).
+
+### Container image build
+
+To produce the static production bundle inside a container run:
+
+```bash
+docker build -f Dockerfile.frontend -t rentguy-frontend:local .
+```
+
+The resulting image serves the compiled assets with Nginx and exposes a `/healthz` endpoint so it can be wired into the existing production compose stack.
 
 ## Project Highlights
 

@@ -1,9 +1,9 @@
 import { FormEvent, useState, type CSSProperties, type ChangeEvent } from 'react'
-import { login, deriveLoginErrorMessage, ensureAuthEmail } from '@application/auth/api'
+import { login, deriveLoginErrorMessage, ensureAuthEmail, type AuthUser } from '@application/auth/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 
 export interface LoginProps {
-  onLogin: (token: string, email?: string) => void
+  onLogin: (token: string, user: AuthUser) => void
 }
 
 interface CredentialHintProps {
@@ -75,7 +75,11 @@ export function Login({ onLogin }: LoginProps) {
       if (result.ok) {
         const { token, user: payloadUser } = result.value
         const ensuredEmail = ensureAuthEmail(payloadUser.email ?? email)
-        onLogin(token, ensuredEmail)
+        const nextUser: AuthUser = {
+          ...payloadUser,
+          email: ensuredEmail,
+        }
+        onLogin(token, nextUser)
       } else {
         console.warn('Login mislukt', result.error)
         setError(deriveLoginErrorMessage(result.error))

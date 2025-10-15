@@ -40,14 +40,44 @@
       "@domain/*": [
         "src/domain/*"
       ],
+      "@hooks": [
+        "src/hooks/index.ts"
+      ],
+      "@hooks/*": [
+        "src/hooks/*"
+      ],
       "@infra/*": [
         "src/infrastructure/*"
       ],
       "@infra/offline-queue": [
         "warehouse/offline-queue.js"
       ],
+      "@errors": [
+        "src/errors/index.ts"
+      ],
+      "@router": [
+        "src/router/index.tsx"
+      ],
+      "@router/*": [
+        "src/router/*"
+      ],
+      "@rg-types/*": [
+        "src/types/*"
+      ],
+      "@stores/*": [
+        "src/stores/*"
+      ],
       "@ui/*": [
         "src/ui/*"
+      ],
+      "react-router-dom": [
+        "src/vendor/react-router-dom.tsx"
+      ],
+      "zustand": [
+        "src/vendor/zustand.ts"
+      ],
+      "zustand/middleware/immer": [
+        "src/vendor/zustand-immer.ts"
       ]
     }
   },
