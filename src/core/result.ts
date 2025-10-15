@@ -1,6 +1,6 @@
-import type { AppError } from '@core/errors'
+import type { ApiError } from '@errors'
 
-export type Result<T, E extends AppError = AppError> = SuccessResult<T> | ErrorResult<E>
+export type Result<T, E extends ApiError = ApiError> = SuccessResult<T> | ErrorResult<E>
 
 type SuccessResult<T> = {
   readonly ok: true
@@ -16,23 +16,23 @@ export function ok<T>(value: T): Result<T> {
   return { ok: true, value }
 }
 
-export function err<E extends AppError>(error: E): Result<never, E> {
+export function err<E extends ApiError>(error: E): Result<never, E> {
   return { ok: false, error }
 }
 
-export function isOk<T, E extends AppError>(result: Result<T, E>): result is SuccessResult<T> {
+export function isOk<T, E extends ApiError>(result: Result<T, E>): result is SuccessResult<T> {
   return result.ok
 }
 
-export function isError<T, E extends AppError>(result: Result<T, E>): result is ErrorResult<E> {
+export function isError<T, E extends ApiError>(result: Result<T, E>): result is ErrorResult<E> {
   return !result.ok
 }
 
-export function unwrapOr<T, E extends AppError>(result: Result<T, E>, fallback: T): T {
+export function unwrapOr<T, E extends ApiError>(result: Result<T, E>, fallback: T): T {
   return result.ok ? result.value : fallback
 }
 
-export function mapError<T, E extends AppError, R extends AppError>(
+export function mapError<T, E extends ApiError, R extends ApiError>(
   result: Result<T, E>,
   mapper: (error: E) => R,
 ): Result<T, R> {

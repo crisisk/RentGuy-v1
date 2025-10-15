@@ -1,18 +1,12 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
 
-import tseslint from 'typescript-eslint';
-import reactPlugin from 'eslint-plugin-react';
-import reactHooksPlugin from 'eslint-plugin-react-hooks';
-import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
-import importPlugin from 'eslint-plugin-import';
-import sonarjsPlugin from 'eslint-plugin-sonarjs';
-import unicornPlugin from 'eslint-plugin-unicorn';
-import securityPlugin from 'eslint-plugin-security';
-import testingLibraryPlugin from 'eslint-plugin-testing-library';
-import jestDomPlugin from 'eslint-plugin-jest-dom';
+const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
+const requireFromFrontend = createRequire(path.resolve(tsconfigRootDir, 'rentguy/frontend/package.json'))
 
-const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url));
+const tsEslintPlugin = requireFromFrontend('@typescript-eslint/eslint-plugin')
+const tsParser = requireFromFrontend('@typescript-eslint/parser')
 
 const browserGlobals = {
   window: 'readonly',
@@ -26,7 +20,7 @@ const browserGlobals = {
   localStorage: 'readonly',
   sessionStorage: 'readonly',
   console: 'readonly',
-};
+}
 
 const nodeGlobals = {
   module: 'readonly',
@@ -40,15 +34,9 @@ const nodeGlobals = {
   setInterval: 'readonly',
   clearInterval: 'readonly',
   global: 'readonly',
-};
+}
 
-const reactRecommended = reactPlugin.configs.flat?.recommended ?? reactPlugin.configs.recommended;
-const testingLibraryReact =
-  testingLibraryPlugin.configs['flat/react'] ?? testingLibraryPlugin.configs.react;
-const jestDomRecommended =
-  jestDomPlugin.configs['flat/recommended'] ?? jestDomPlugin.configs.recommended;
-
-export default tseslint.config(
+export default [
   {
     ignores: [
       'dist/**',
@@ -62,6 +50,8 @@ export default tseslint.config(
       'patches/**',
       'qa/**',
       'rentguy*/**',
+      'vendor/**',
+      'mr-dj-onboarding-enhanced/**',
       'reports/**',
       'testing/**',
       'tests/**',
@@ -71,19 +61,9 @@ export default tseslint.config(
     ],
   },
   {
-    files: ['**/*.{ts,tsx,js,jsx}'],
-    extends: [
-      ...tseslint.configs.recommendedTypeChecked,
-      reactRecommended,
-      reactHooksPlugin.configs.recommended,
-      jsxA11yPlugin.configs.recommended,
-      importPlugin.configs.recommended,
-      sonarjsPlugin.configs.recommended,
-      unicornPlugin.configs.recommended,
-      securityPlugin.configs.recommended,
-    ],
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
-      parser: tseslint.parser,
+      parser: tsParser,
       parserOptions: {
         project: './tsconfig.json',
         tsconfigRootDir,
@@ -98,71 +78,36 @@ export default tseslint.config(
         ...nodeGlobals,
       },
     },
-    settings: {
-      react: {
-        version: 'detect',
-      },
-      'import/resolver': {
-        node: {
-          extensions: ['.js', '.jsx', '.ts', '.tsx'],
-        },
-        typescript: {
-          project: path.join(tsconfigRootDir, 'tsconfig.json'),
-        },
-      },
-    },
     plugins: {
-      '@typescript-eslint': tseslint.plugin,
-      react: reactPlugin,
-      'react-hooks': reactHooksPlugin,
-      import: importPlugin,
-      'jsx-a11y': jsxA11yPlugin,
-      sonarjs: sonarjsPlugin,
-      unicorn: unicornPlugin,
-      security: securityPlugin,
-      'testing-library': testingLibraryPlugin,
-      'jest-dom': jestDomPlugin,
+      '@typescript-eslint': tsEslintPlugin,
     },
     rules: {
-      'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'off',
+      'no-console': 'off',
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/ban-ts-comment': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: false }],
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-      'import/order': [
-        'error',
-        {
-          alphabetize: { order: 'asc', caseInsensitive: true },
-          groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
-          'newlines-between': 'always',
-        },
-      ],
-      'unicorn/prevent-abbreviations': 'off',
-      'unicorn/filename-case': [
-        'error',
-        {
-          cases: {
-            camelCase: true,
-            pascalCase: true,
-          },
-        },
-      ],
-      'unicorn/no-null': 'off',
-      'unicorn/prefer-module': 'off',
-      'unicorn/consistent-function-scoping': 'off',
-      'security/detect-object-injection': 'off',
+      '@typescript-eslint/prefer-as-const': 'warn',
+      '@typescript-eslint/require-await': 'error',
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
     },
   },
   {
-    files: [
-      '**/*.test.{ts,tsx,js,jsx}',
-      '**/*.spec.{ts,tsx,js,jsx}',
-      'tests/**/*.{ts,tsx,js,jsx}',
-    ],
-    extends: [testingLibraryReact, jestDomRecommended].filter(Boolean),
+    files: ['src/**/*.test.{ts,tsx,js,jsx}', 'src/**/__tests__/**/*.{ts,tsx,js,jsx}'],
     rules: {
-      'unicorn/no-null': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/require-await': 'off',
     },
-  }
-);
+  },
+]

@@ -17,6 +17,9 @@ from app.core.config import settings
 from app.core.db import SessionLocal, database_ready
 from app.core.middleware import SecurityHeadersMiddleware
 from .realtime import socket_app, sio  # Import from new realtime module
+from app.modules.recurring_invoices.scheduler import (
+    scheduler as recurring_invoice_scheduler,
+)
 
 setup_logging()
 
@@ -28,7 +31,11 @@ async def lifespan(app: FastAPI):
     app.state.start_time = time.time()
     app.state.metrics_tracker = MetricsTracker()
     app.state.sio = sio  # Store sio server in app state
-    yield
+    await recurring_invoice_scheduler.start()
+    try:
+        yield
+    finally:
+        await recurring_invoice_scheduler.shutdown()
 
 
 app = FastAPI(title="Rentguyapp API", version="0.1", lifespan=lifespan)
@@ -120,6 +127,14 @@ ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
     ("app.modules.billing.routes", "router", "/api/v1", ["billing"]),
     ("app.modules.warehouse.routes", "router", "/api/v1", ["warehouse"]),
     ("app.modules.reporting.routes", "router", "/api/v1", ["reporting"]),
+    ("app.modules.customer_portal.routes", "router", "/api/v1", ["customer-portal"]),
+    (
+        "app.modules.recurring_invoices.routes",
+        "router",
+        "/api/v1",
+        ["recurring-invoices"],
+    ),
+    ("app.modules.onboarding.routes", "router", "/api/v1", ["onboarding"]),
     (
         "app.modules.platform.observability.routes",
         "router",

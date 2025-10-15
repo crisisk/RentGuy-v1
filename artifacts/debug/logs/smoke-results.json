@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-10-15T18:02:28.249Z",
+  "results": [
+    {
+      "name": "healthz",
+      "ok": false,
+      "status": null,
+      "url": "http://localhost:3000/healthz",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "readyz",
+      "ok": false,
+      "status": null,
+      "url": "http://localhost:3000/readyz",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "livez",
+      "ok": false,
+      "status": null,
+      "url": "http://localhost:3000/livez",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "app-root",
+      "ok": false,
+      "status": null,
+      "url": "http://localhost:3000/",
+      "error": "TypeError: fetch failed"
+    }
+  ]
+}

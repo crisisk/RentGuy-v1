@@ -2,9 +2,9 @@
  * @ts-check
  */
 import { forwardRef } from 'react'
-import PlannerComponent from '@ui/Planner.jsx'
+import PlannerComponent from '@ui/Planner'
 
-export * from '@ui/Planner.jsx'
+export * from '@ui/Planner'
 
 /**
  * @typedef {{

@@ -1,28 +1,37 @@
-"""
-Pydantic schemas for Customer Portal module
-"""
+"""Pydantic models for the customer portal APIs."""
+
+from __future__ import annotations
+
 from datetime import datetime
-from pydantic import BaseModel, Field, validator, EmailStr
-from typing import Optional, List
+from typing import Generic, List, Optional, TypeVar
 import re
 
-class UserProfileBase(BaseModel):
-    company_name: Optional[str] = Field(max_length=100)
-    phone: Optional[str] = Field(max_length=20)
-    address: Optional[str] = Field(max_length=200)
-    city: Optional[str] = Field(max_length=50)
-    state: Optional[str] = Field(max_length=50)
-    country: Optional[str] = Field(max_length=50)
-    postal_code: Optional[str] = Field(max_length=20)
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic.generics import GenericModel
 
-    @validator('phone')
-    def validate_phone(cls, v):
-        if v and not re.match(r'^\+?[1-9]\d{1,14}$', v):
-            raise ValueError('Invalid phone number format')
-        return v
+T = TypeVar("T")
+
+
+class UserProfileBase(BaseModel):
+    company_name: Optional[str] = Field(default=None, max_length=100)
+    phone: Optional[str] = Field(default=None, max_length=20)
+    address: Optional[str] = Field(default=None, max_length=200)
+    city: Optional[str] = Field(default=None, max_length=50)
+    state: Optional[str] = Field(default=None, max_length=50)
+    country: Optional[str] = Field(default=None, max_length=50)
+    postal_code: Optional[str] = Field(default=None, max_length=20)
+
+    @field_validator("phone")
+    @classmethod
+    def _validate_phone(cls, value: str | None) -> str | None:
+        if value and not re.fullmatch(r"\+?[0-9]{6,20}", value):
+            raise ValueError("Invalid phone number format")
+        return value
+
 
 class UserProfileCreate(UserProfileBase):
     pass
+
 
 class UserProfileResponse(UserProfileBase):
     id: int
@@ -30,8 +39,8 @@ class UserProfileResponse(UserProfileBase):
     created_at: datetime
     updated_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class InvoiceResponse(BaseModel):
     id: int
@@ -42,8 +51,8 @@ class InvoiceResponse(BaseModel):
     invoice_number: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class OrderResponse(BaseModel):
     id: int
@@ -55,13 +64,15 @@ class OrderResponse(BaseModel):
     status: str
     order_date: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class DocumentCreate(BaseModel):
     name: str = Field(max_length=100)
+    file_path: str = Field(max_length=200)
     is_public: bool = False
-    expires_at: Optional[datetime]
+    expires_at: Optional[datetime] = None
+
 
 class DocumentResponse(BaseModel):
     id: int
@@ -72,9 +83,34 @@ class DocumentResponse(BaseModel):
     uploaded_at: datetime
     expires_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-class PaginatedResponse(BaseModel):
+
+class PaginatedResponse(GenericModel, Generic[T]):
     total: int
-    items: List
+    items: List[T]
+
+
+class PaginatedInvoicesResponse(PaginatedResponse[InvoiceResponse]):
+    pass
+
+
+class PaginatedOrdersResponse(PaginatedResponse[OrderResponse]):
+    pass
+
+
+class PaginatedDocumentsResponse(PaginatedResponse[DocumentResponse]):
+    pass
+
+
+__all__ = [
+    "UserProfileCreate",
+    "UserProfileResponse",
+    "InvoiceResponse",
+    "OrderResponse",
+    "DocumentCreate",
+    "DocumentResponse",
+    "PaginatedInvoicesResponse",
+    "PaginatedOrdersResponse",
+    "PaginatedDocumentsResponse",
+]

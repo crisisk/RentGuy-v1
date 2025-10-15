@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import List
 
+from .ports import ReportingPort
 from .repo import ReportingRepo
 from .schemas import AlertOut, MarginRow
 
 
-class ReportingService:
+class ReportingService(ReportingPort):
     def __init__(self, repo: ReportingRepo) -> None:
         self.repo = repo
 

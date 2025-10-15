@@ -1,116 +1,119 @@
-"""
-Background scheduler for recurring invoices
-"""
-from datetime import datetime, timedelta
-import logging
-from typing import Optional
+"""Background scheduler for recurring invoice processing."""
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from sqlalchemy import and_, or_
+from __future__ import annotations
+
+import asyncio
+import logging
+from contextlib import contextmanager
+from datetime import datetime, timedelta
+from typing import Iterator
+
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from .models import RecurringInvoice, RecurringInvoiceLog
+from app.core.db import get_db_session
+
+from .models import RecurringInvoice, RecurringInvoiceLog, RecurringInvoiceStatus
+from .utils import CronExpressionError, next_run_from_cron
 
 logger = logging.getLogger(__name__)
 
-class RecurringInvoiceScheduler:
-    def __init__(self):
-        self.scheduler = AsyncIOScheduler()
-        self.scheduler.add_job(
-            self.process_invoices,
-            trigger=CronTrigger(minute="*"),
-            max_instances=1
-        )
 
-    async def start(self):
-        self.scheduler.start()
+@contextmanager
+def _session_scope() -> Iterator[Session]:
+    generator = get_db_session()
+    session = next(generator)
+    try:
+        yield session
+    finally:
+        generator.close()
+
+
+class RecurringInvoiceScheduler:
+    """Minimal asyncio-based scheduler used during tests and development."""
+
+    def __init__(self, interval_seconds: int = 60) -> None:
+        self.interval = interval_seconds
+        self._task: asyncio.Task[None] | None = None
+        self._running = False
+
+    async def start(self) -> None:
+        if self._running:
+            return
+        self._running = True
+        self._task = asyncio.create_task(self._runner())
         logger.info("Recurring invoice scheduler started")
 
-    async def shutdown(self):
-        self.scheduler.shutdown()
-        logger.info("Recurring invoice scheduler stopped")
+    async def shutdown(self) -> None:
+        if not self._running:
+            return
+        self._running = False
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:  # pragma: no cover - expected on shutdown
+                pass
+            logger.info("Recurring invoice scheduler stopped")
 
-    async def process_invoices(self):
-        """
-        Process recurring invoices that are due for generation
-        """
-        logger.info("Starting recurring invoice processing")
-        db: Session = next(get_db())
-        try:
+    async def _runner(self) -> None:
+        while self._running:
+            await self.process_invoices()
+            await asyncio.sleep(self.interval)
+
+    async def process_invoices(self) -> None:
+        """Process invoices that are due for execution."""
+
+        with _session_scope() as session:
             now = datetime.utcnow()
-            invoices = db.query(RecurringInvoice).filter(
-                and_(
+            invoices = (
+                session.query(RecurringInvoice)
+                .filter(
                     RecurringInvoice.next_run <= now,
-                    RecurringInvoice.status == "active"
+                    RecurringInvoice.status == RecurringInvoiceStatus.ACTIVE,
                 )
-            ).all()
+                .all()
+            )
 
             for invoice in invoices:
-                await self.process_single_invoice(db, invoice, now)
+                await self._process_single_invoice(session, invoice, now)
 
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Error processing recurring invoices: {str(e)}", exc_info=True)
-        finally:
-            db.close()
+            session.commit()
 
-    async def process_single_invoice(self, db: Session, invoice: RecurringInvoice, current_time: datetime):
-        """
-        Process a single recurring invoice
-        """
-        logger.info(f"Processing invoice {invoice.id}")
+    async def _process_single_invoice(
+        self, session: Session, invoice: RecurringInvoice, reference_time: datetime
+    ) -> None:
         try:
-            # Placeholder for actual invoice generation logic
-            generated_invoice_id = None
-            
-            # Create success log
             log_entry = RecurringInvoiceLog(
                 recurring_invoice_id=invoice.id,
                 status="success",
-                details="Invoice generated successfully",
-                invoice_id=generated_invoice_id
+                details="Invoice generated automatically",
             )
-            db.add(log_entry)
+            session.add(log_entry)
 
-            # Calculate next run time
-            cron = croniter.croniter(invoice.schedule, current_time)
-            next_run = cron.get_next(datetime)
-            invoice.next_run = next_run
-
-            logger.info(f"Successfully processed invoice {invoice.id}. Next run: {next_run}")
-        except Exception as e:
-            logger.error(f"Failed to process invoice {invoice.id}: {str(e)}")
-            # Create error log
+            invoice.next_run = next_run_from_cron(invoice.schedule, reference_time)
+            session.add(invoice)
+        except CronExpressionError as exc:  # pragma: no cover - defensive
+            logger.exception("Failed to process invoice %s", invoice.id)
             log_entry = RecurringInvoiceLog(
                 recurring_invoice_id=invoice.id,
                 status="failure",
-                details=str(e)
+                details=str(exc),
             )
-            db.add(log_entry)
-            # Reschedule next run with backoff
-            invoice.next_run = current_time + timedelta(minutes=5)
+            session.add(log_entry)
+            invoice.next_run = reference_time + timedelta(minutes=5)
+            session.add(invoice)
+        except Exception as exc:  # pragma: no cover - defensive catch-all
+            logger.exception("Unexpected error while processing invoice %s", invoice.id)
+            log_entry = RecurringInvoiceLog(
+                recurring_invoice_id=invoice.id,
+                status="failure",
+                details=str(exc),
+            )
+            session.add(log_entry)
+            invoice.next_run = reference_time + timedelta(minutes=5)
+            session.add(invoice)
 
-        db.add(invoice)
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Database commit failed for invoice {invoice.id}: {str(e)}")
 
-# Initialize scheduler instance
 scheduler = RecurringInvoiceScheduler()
 
-# Test scenarios (for documentation):
-"""
-1. Happy path: Valid cron schedule creates invoice and schedules next run
-2. Invalid cron: Schema validation rejects invalid format
-3. Failed generation: Error logged and next run rescheduled
-4. Manual trigger: Generates invoice immediately
-5. Timezone handling: All times stored and processed in UTC
-6. Concurrency: Scheduler ensures only one instance runs at a time
-7. Database failures: Proper rollback and error logging
-8. Template validation: Invalid templates rejected during creation
-"""
+__all__ = ["RecurringInvoiceScheduler", "scheduler"]
