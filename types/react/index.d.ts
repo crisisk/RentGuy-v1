@@ -65,7 +65,11 @@ declare module 'react' {
   ): [ReturnType<R>, Dispatch<Parameters<R>[1]>]
   export function useContext<T>(context: Context<T>): T
   export function useId(): string
-  export function useSyncExternalStore<T>(subscribe: (listener: () => void) => () => void, getSnapshot: () => T): T
+  export function useSyncExternalStore<T>(
+    subscribe: (listener: () => void) => () => void,
+    getSnapshot: () => T,
+    getServerSnapshot?: () => T,
+  ): T
 
   export function createContext<T>(defaultValue: T): Context<T>
   export function createRef<T>(): RefObject<T>

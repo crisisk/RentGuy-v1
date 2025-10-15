@@ -980,8 +980,7 @@ export default function OnboardingOverlay({
           setBusyStep('')
         }
       }
-    [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError],
-  )
+    }, [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError])
 
   const handleAction = useCallback(
     (step: NormalizedOnboardingStep) => {
