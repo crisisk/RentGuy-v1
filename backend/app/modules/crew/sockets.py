@@ -1,113 +1,179 @@
-import socketio
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from app.core.db import get_db_session
-from app.modules.crew.models import Location
-from app.modules.auth.deps import get_current_user
-from app.modules.auth.models import User
+"""Socket.IO event handlers for crew related real-time features."""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+from typing import Optional
+
 from geoalchemy2.elements import WKTElement
-from datetime import datetime
+from pydantic import ValidationError
+from socketio import AsyncServer
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
-# Assuming the sio server is stored in the app state (from app.main.py)
-# We need a way to access it, typically via the request object in a FastAPI route,
-# but for Socket.IO, we'll rely on the global sio object or a dependency injection pattern.
+from app.core.db import SessionLocal
+from app.modules.crew.models import Location
+from app.modules.crew.schemas import LocationBroadcast, LocationUpdateIn
 
-# For simplicity, we'll use the global sio object for now, assuming it's imported
-# from app.main or passed in a more complex setup.
+logger = logging.getLogger(__name__)
 
-# --- Socket.IO Event Handlers ---
+_sio: Optional[AsyncServer] = None
 
-@socketio.on('connect')
-async def connect(sid, environ):
-    # Authentication check can be done here using headers/cookies from environ
-    # For now, just accept the connection
-    print(f"Client connected: {sid}")
-    # Example: await sio.emit('status', {'message': 'Connected to RentGuy Realtime'}, room=sid)
 
-@socketio.on('disconnect')
-def disconnect(sid):
-    print(f"Client disconnected: {sid}")
+def register_socket_server(server: AsyncServer) -> None:
+    """Register the Socket.IO server instance used by the event handlers."""
 
-@socketio.on('join_project')
-async def join_project(sid, data):
-    project_id = data.get('project_id')
-    if project_id:
-        sio.enter_room(sid, f'project_{project_id}')
-        print(f"Client {sid} joined room project_{project_id}")
-        await sio.emit('status', {'message': f'Joined project {project_id}'}, room=sid)
+    global _sio
+    _sio = server
 
-@socketio.on('leave_project')
-async def leave_project(sid, data):
-    project_id = data.get('project_id')
-    if project_id:
-        sio.leave_room(sid, f'project_{project_id}')
-        print(f"Client {sid} left room project_{project_id}")
-        await sio.emit('status', {'message': f'Left project {project_id}'}, room=sid)
 
-@socketio.on('update_location')
-async def update_location(sid, data, db: Session = Depends(get_db_session), user: User = Depends(get_current_user)):
-    """
-    Handles real-time location updates from a crew member.
-    Data format: {latitude: float, longitude: float, accuracy: float, project_id: int}
-    """
+def _require_server() -> AsyncServer:
+    if _sio is None:  # pragma: no cover - defensive guard
+        raise RuntimeError("Socket server has not been initialised")
+    return _sio
+
+
+def _parse_project_id(data: dict) -> int:
     try:
-        latitude = data['latitude']
-        longitude = data['longitude']
-        project_id = data.get('project_id')
-        accuracy = data.get('accuracy')
-        speed = data.get('speed')
-        heading = data.get('heading')
+        return int(data["project_id"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Invalid project_id") from exc
 
-        # 1. Create WKT (Well-Known Text) representation of the point
-        point = WKTElement(f'POINT({longitude} {latitude})', srid=4326)
 
-        # 2. Upsert the location data
-        # Check if a location record already exists for this user
-        existing_location = db.query(Location).filter(Location.user_id == user.id).first()
+def _update_location_record(
+    db: Session,
+    payload: LocationUpdateIn,
+    event_time: datetime,
+) -> LocationBroadcast:
+    point_wkt = f"POINT({payload.longitude} {payload.latitude})"
+    try:
+        point = WKTElement(point_wkt, srid=4326)
+    except TypeError:
+        point = WKTElement(point_wkt)
 
-        if existing_location:
-            # Update existing record
-            existing_location.geom = point
-            existing_location.timestamp = datetime.now()
-            existing_location.accuracy = accuracy
-            existing_location.speed = speed
-            existing_location.heading = heading
-            existing_location.project_id = project_id
-        else:
-            # Create new record
-            new_location = Location(
-                user_id=user.id,
-                geom=point,
-                accuracy=accuracy,
-                speed=speed,
-                heading=heading,
-                project_id=project_id
-            )
-            db.add(new_location)
+    location = db.query(Location).filter(Location.user_id == payload.user_id).one_or_none()
 
-        db.commit()
+    if location is None:
+        location = Location(
+            user_id=payload.user_id,
+            geom=point,
+            timestamp=event_time,
+            accuracy=payload.accuracy,
+            speed=payload.speed,
+            heading=payload.heading,
+            project_id=payload.project_id,
+        )
+        db.add(location)
+    else:
+        location.geom = point
+        location.timestamp = event_time
+        location.accuracy = payload.accuracy
+        location.speed = payload.speed
+        location.heading = payload.heading
+        location.project_id = payload.project_id
 
-        # 3. Broadcast the update to all clients in the project room
-        location_data = {
-            'user_id': user.id,
-            'latitude': latitude,
-            'longitude': longitude,
-            'timestamp': datetime.now().isoformat(),
-            'project_id': project_id
-        }
+    db.flush()
 
-        if project_id:
-            await sio.to(f'project_{project_id}').emit('location_update', location_data)
-        
-        # Also broadcast to a general room for all managers
-        await sio.to('managers').emit('location_update', location_data)
+    return LocationBroadcast(
+        user_id=payload.user_id,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        timestamp=event_time,
+        project_id=payload.project_id,
+        accuracy=payload.accuracy,
+        speed=payload.speed,
+        heading=payload.heading,
+    )
 
-    except Exception as e:
-        print(f"Error processing location update for user {user.id}: {e}")
-        await sio.emit('error', {'message': 'Failed to process location update'}, room=sid)
 
-# We need to ensure the dependencies (get_db_session, get_current_user) work
-# within the Socket.IO context. This often requires custom middleware or wrappers
-# in a real-world FastAPI/Socket.IO integration. For this implementation, we'll
-# assume a simple dependency injection setup is sufficient for now.
+async def connect(sid: str, environ: dict) -> None:  # pragma: no cover - integration hook
+    """Accept incoming socket connections."""
+
+    logger.info("crew socket connected", extra={"sid": sid})
+
+
+def disconnect(sid: str) -> None:  # pragma: no cover - integration hook
+    """Log socket disconnections."""
+
+    logger.info("crew socket disconnected", extra={"sid": sid})
+
+
+async def join_project(sid: str, data: dict) -> None:
+    sio = _require_server()
+
+    try:
+        project_id = _parse_project_id(data)
+    except ValueError:
+        await sio.emit("error", {"message": "Invalid project_id"}, room=sid)
+        logger.warning("join_project rejected", extra={"sid": sid, "payload": data})
+        return
+
+    await sio.enter_room(sid, f"project_{project_id}")
+    await sio.emit("status", {"message": f"Joined project {project_id}"}, room=sid)
+    logger.info("sid joined project", extra={"sid": sid, "project_id": project_id})
+
+
+async def leave_project(sid: str, data: dict) -> None:
+    sio = _require_server()
+
+    try:
+        project_id = _parse_project_id(data)
+    except ValueError:
+        await sio.emit("error", {"message": "Invalid project_id"}, room=sid)
+        logger.warning("leave_project rejected", extra={"sid": sid, "payload": data})
+        return
+
+    await sio.leave_room(sid, f"project_{project_id}")
+    await sio.emit("status", {"message": f"Left project {project_id}"}, room=sid)
+    logger.info("sid left project", extra={"sid": sid, "project_id": project_id})
+
+
+async def update_location(sid: str, data: dict) -> None:
+    """Persist and broadcast crew location updates."""
+
+    sio = _require_server()
+
+    try:
+        payload = LocationUpdateIn.model_validate(data)
+    except ValidationError as exc:
+        logger.warning(
+            "Invalid location payload",
+            extra={"sid": sid, "errors": exc.errors(), "payload": data},
+        )
+        await sio.emit(
+            "error",
+            {"message": "Invalid location payload", "details": exc.errors()},
+            room=sid,
+        )
+        return
+
+    event_time = datetime.now(timezone.utc)
+
+    try:
+        with SessionLocal() as db:
+            broadcast = _update_location_record(db, payload, event_time)
+            db.commit()
+    except SQLAlchemyError:
+        logger.exception(
+            "Failed to persist crew location",
+            extra={"sid": sid, "user_id": payload.user_id},
+        )
+        await sio.emit(
+            "error",
+            {"message": "Failed to persist crew location"},
+            room=sid,
+        )
+        return
+
+    socket_payload = broadcast.to_socket_payload()
+
+    if payload.project_id is not None:
+        await sio.emit(
+            "location_update",
+            socket_payload,
+            room=f"project_{payload.project_id}",
+        )
+
+    await sio.emit("location_update", socket_payload, room="managers")
 
