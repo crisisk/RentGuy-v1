@@ -3,15 +3,16 @@ import axios, {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios'
-import {
-  clearOnboardingState,
-  getLocalStorageItem,
-  removeLocalStorageItem,
-  setLocalStorageItem,
-  storageAvailable,
-} from '@core/storage'
+import { clearOnboardingState, removeLocalStorageItem } from '@core/storage'
 import { env } from '@config/env'
 import { mapUnknownToAppError } from '@core/errors'
+import {
+  clearStoredToken,
+  getStoredToken,
+  persistToken,
+  subscribeToTokenChanges,
+  type TokenPersistenceOptions,
+} from '@core/auth-token-storage'
 
 const API_BASE_URL = env.apiUrl
 
@@ -35,38 +36,42 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config
 })
 
-let token = getLocalStorageItem('token', '')
-
-export function setToken(newToken: string) {
-  token = newToken
-  if (token) {
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-    if (storageAvailable) {
-      setLocalStorageItem('token', token)
-    }
+function applyAuthorizationHeader(nextToken: string): void {
+  if (nextToken) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${nextToken}`
   } else {
     delete api.defaults.headers.common['Authorization']
-    if (storageAvailable) {
-      removeLocalStorageItem('token')
-    }
   }
 }
 
-if (token) {
-  setToken(token)
+export function setToken(newToken: string, options?: TokenPersistenceOptions): void {
+  const normalised = newToken.trim()
+  if (normalised) {
+    persistToken(normalised, options)
+    applyAuthorizationHeader(normalised)
+  } else {
+    clearStoredToken()
+    applyAuthorizationHeader('')
+  }
 }
+
+const initialToken = getStoredToken()
+if (initialToken) {
+  applyAuthorizationHeader(initialToken)
+}
+
+subscribeToTokenChanges(nextToken => {
+  applyAuthorizationHeader(nextToken)
+})
 
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: unknown) => {
     const appError = mapUnknownToAppError(error)
     if (appError.code === 'unauthorized') {
-      removeLocalStorageItem('token')
+      clearStoredToken()
       removeLocalStorageItem('user_email')
       clearOnboardingState()
-      if (typeof window !== 'undefined') {
-        window.location.reload()
-      }
     }
     return Promise.reject(appError)
   }

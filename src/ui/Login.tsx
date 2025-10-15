@@ -1,7 +1,5 @@
 import { FormEvent, useState, type CSSProperties, type ChangeEvent } from 'react'
 import { login, deriveLoginErrorMessage, ensureAuthEmail } from '@application/auth/api'
-import { setLocalStorageItem } from '@core/storage'
-import { setToken } from '@infra/http/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 
 export interface LoginProps {
@@ -77,8 +75,6 @@ export function Login({ onLogin }: LoginProps) {
       if (result.ok) {
         const { token, user: payloadUser } = result.value
         const ensuredEmail = ensureAuthEmail(payloadUser.email ?? email)
-        setToken(token)
-        setLocalStorageItem('user_email', ensuredEmail)
         onLogin(token, ensuredEmail)
       } else {
         console.warn('Login mislukt', result.error)
