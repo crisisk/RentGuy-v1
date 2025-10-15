@@ -10,8 +10,8 @@ import {
 import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 
 import { api } from '@infra/http/api'
-import { mapUnknownToAppError, type AppError } from '@core/errors'
 import { flushQueue, getQueueCount, queueScan } from '@infra/offline-queue'
+import { mapUnknownToApiError, type ApiError } from '@errors'
 
 type ScanDirection = 'in' | 'out'
 
@@ -80,7 +80,7 @@ function isItemResolution(resolution: TagResolution): resolution is ItemResoluti
   return resolution.kind === 'item'
 }
 
-function extractResponseMeta(error: AppError): ResponseMeta | null {
+function extractResponseMeta(error: ApiError): ResponseMeta | null {
   const response = error.meta?.response
   if (response && typeof response === 'object') {
     return response as ResponseMeta
@@ -122,7 +122,7 @@ export default function Scanner(): JSX.Element {
       }
       setPendingCount(remaining)
     } catch (error) {
-      const appError = mapUnknownToAppError(error)
+      const appError = mapUnknownToApiError(error)
       setStatus(appError.message)
       await fetchQueueCount()
     }
@@ -150,7 +150,7 @@ export default function Scanner(): JSX.Element {
         }
       })
       .catch(error => {
-        const appError = mapUnknownToAppError(error)
+        const appError = mapUnknownToApiError(error)
         setStatus(appError.message)
       })
 
@@ -192,7 +192,7 @@ export default function Scanner(): JSX.Element {
         if (cancelled) {
           return
         }
-        const appError = mapUnknownToAppError(error)
+        const appError = mapUnknownToApiError(error)
         if (appError.code === 'network') {
           setIsOffline(true)
           setStatus('Geen verbinding: tagdetails worden niet opgehaald. Boeking wordt in wachtrij geplaatst.')
@@ -273,7 +273,7 @@ export default function Scanner(): JSX.Element {
       setResolution(null)
       setBundleMode(DEFAULT_BUNDLE_MODE)
     } catch (error) {
-      const appError = mapUnknownToAppError(error)
+      const appError = mapUnknownToApiError(error)
       const response = extractResponseMeta(appError)
 
       if (appError.httpStatus === 409 && response?.code === 'bundle_mode_required') {
