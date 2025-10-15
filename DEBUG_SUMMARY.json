@@ -1,0 +1,18 @@
+{
+  "status": "failed",
+  "lastUpdated": "2025-10-15T18:02:32.910Z",
+  "phases": {
+    "prepare": {
+      "status": "ok",
+      "notes": "Artifacts directory prepared; awaiting scans."
+    },
+    "scan": {
+      "status": "failed",
+      "notes": "Baseline scan recorded 7 failure(s). See artifacts/debug/baseline-findings.json."
+    },
+    "run": {
+      "status": "blocked",
+      "notes": "Pending fixes for baseline findings; see triage plan."
+    }
+  }
+}
