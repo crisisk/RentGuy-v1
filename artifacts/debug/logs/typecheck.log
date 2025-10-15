@@ -1,0 +1,7 @@
+
+> rentguy-pwa-scanner@0.0.1 typecheck
+> tsc -p tsconfig.json --noEmit
+
+src/ui/OnboardingOverlay.tsx(984,3): error TS1109: Expression expected.
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.

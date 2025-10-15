@@ -1,0 +1,26 @@
+# General
+.git
+.gitignore
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+coverage
+dist
+build
+artifacts
+reports
+backend
+apps
+patches
+qa
+rentguy
+rentguyapp_*
+warehouse/__tests__
+playwright-report
+**/*.log
+*.local
+.env
+.env.*

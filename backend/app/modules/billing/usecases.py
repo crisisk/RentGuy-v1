@@ -1,24 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Iterable, Optional
 
 from .adapters.invoice_ninja import InvoiceNinjaClient, invoice_ninja_from_settings
 from .adapters.mollie_adapter import MollieAdapter, mollie_adapter_from_settings, MollieAdapterError
 from .adapters.stripe_adapter import StripeAdapter, stripe_adapter_from_settings, StripeAdapterError
 from .models import Invoice, Payment
+from .ports import BillingPort, CheckoutResult
 from .repo import BillingRepo
 from .schemas import InvoiceLineIn
 
 
-@dataclass
-class CheckoutResult:
-    provider: str
-    external_id: str
-    checkout_url: str
-
-
-class BillingService:
+class BillingService(BillingPort):
     def __init__(self, repo: BillingRepo) -> None:
         self.repo = repo
         self._stripe: StripeAdapter | None = None
