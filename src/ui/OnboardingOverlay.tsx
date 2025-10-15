@@ -199,14 +199,32 @@ const stepActions: Partial<Record<string, StepAction>> = {
 const fallbackSteps = normalizeSteps(fallbackStepsSource)
 const fallbackTips = normalizeTips(fallbackTipsSource)
 
-function normalizeSteps(list: OnboardingStep[] | null | undefined): NormalizedOnboardingStep[] {
-  return (list ?? []).map((step) => ({
-    ...step,
-    code:
-      step.code ||
-      step.title?.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') ||
-      'step',
-  }))
+export function normalizeSteps(list: OnboardingStep[] | null | undefined): NormalizedOnboardingStep[] {
+  const seen = new Set<string>()
+
+  return (list ?? []).map((step, index) => {
+    const explicitCode = typeof step.code === 'string' ? step.code.trim() : ''
+    const titleBasedCode =
+      typeof step.title === 'string'
+        ? step.title.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
+        : ''
+
+    const baseCode = explicitCode || titleBasedCode || `step-${index}`
+
+    let candidate = baseCode || `step-${index}`
+    let suffix = 1
+    while (seen.has(candidate)) {
+      candidate = `${baseCode}-${suffix}`
+      suffix += 1
+    }
+
+    seen.add(candidate)
+
+    return {
+      ...step,
+      code: candidate,
+    }
+  })
 }
 
 function normalizeTips(list: OnboardingTip[] | null | undefined): NormalizedOnboardingTip[] {
