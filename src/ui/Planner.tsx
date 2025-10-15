@@ -2,7 +2,6 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -415,7 +414,6 @@ export default function Planner({ onLogout }: PlannerProps) {
   })
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [calendarSyncing, setCalendarSyncing] = useState(false)
-  const calendarRef = useRef<any>(null)
 
   const loadProjects = useCallback(async () => {
     setLoading(true)
@@ -949,7 +947,6 @@ export default function Planner({ onLogout }: PlannerProps) {
             }}
           >
             <FullCalendar
-              ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView="dayGridMonth"
               editable

@@ -3,11 +3,18 @@ export interface EventDropArg {
     id: string
     title: string
     startStr: string
-    endStr: string
+    endStr: string | null
+    start: Date
+    end: Date | null
   }
   revert(): void
 }
 
-export default function interactionPlugin() {
-  return { name: 'interactionStub' }
+export interface FullCalendarPlugin {
+  name: string
+  displayName: string
+}
+
+export default function interactionPlugin(): FullCalendarPlugin {
+  return { name: 'interaction', displayName: 'Interacties' }
 }
