@@ -62,7 +62,11 @@ for the latest remediation plan.
 npm install
 ```
 
-Configuration is handled through standard Vite environment variables:
+If the public npm registry is unavailable you can still run the frontend tooling
+because the repository ships an esbuild-powered dev server, build script, and
+test runner. No additional binaries are required at runtime.
+
+Configuration is handled through standard Vite-style environment variables:
 
 - `VITE_API_URL` &mdash; Base URL of the FastAPI service (defaults to `http://localhost:8000`).
 - `VITE_APP_MODE` &mdash; Set to `scanner` to boot directly into the barcode scanner view. Any other value renders the planner dashboard.
@@ -75,7 +79,28 @@ With the dependencies installed you can start the development server:
 npm run dev
 ```
 
-The app listens on `http://localhost:5175` (configurable in [`vite.config.js`](vite.config.js)).
+The command launches the esbuild development server on `http://localhost:5175`
+and mirrors `index.html` into the generated `dist/` directory so static assets
+stay in sync.
+
+### Container image build
+
+Create the production-ready bundle locally with:
+
+```bash
+npm run build
+```
+
+The script writes the compiled assets to `dist/` using esbuild and stores the
+resolved client environment in `manifest.json`. After that you can package the
+static site as an image:
+
+```bash
+docker build -f Dockerfile.frontend -t rentguy-frontend:local .
+```
+
+The resulting image serves the compiled assets with Nginx and exposes a
+`/healthz` endpoint so it can be wired into the existing production compose stack.
 
 ### Container image build
 
