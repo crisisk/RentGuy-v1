@@ -1,4 +1,4 @@
-import { AppError } from '@core/errors'
+import type { AppError } from '@core/errors'
 
 export type Result<T, E extends AppError = AppError> = SuccessResult<T> | ErrorResult<E>
 
