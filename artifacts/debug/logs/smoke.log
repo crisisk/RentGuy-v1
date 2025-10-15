@@ -1,0 +1,7 @@
+
+> rentguy-pwa-scanner@0.0.1 smoke
+> node scripts/smoke.mjs
+
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+Smoke checks failed: healthz:TypeError: fetch failed, readyz:TypeError: fetch failed, livez:TypeError: fetch failed, app-root:TypeError: fetch failed

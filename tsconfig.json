@@ -46,6 +46,21 @@
       "@infra/offline-queue": [
         "warehouse/offline-queue.js"
       ],
+      "@errors": [
+        "src/errors/index.ts"
+      ],
+      "@router": [
+        "src/router/index.tsx"
+      ],
+      "@router/*": [
+        "src/router/*"
+      ],
+      "@rg-types/*": [
+        "src/types/*"
+      ],
+      "@stores/*": [
+        "src/stores/*"
+      ],
       "@ui/*": [
         "src/ui/*"
       ]

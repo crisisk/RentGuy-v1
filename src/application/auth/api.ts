@@ -1,7 +1,7 @@
 import type { AxiosRequestConfig } from 'axios'
 import { api } from '@infra/http/api'
 import { err, ok, type Result } from '@core/result'
-import { mapUnknownToAppError, type AppError } from '@core/errors'
+import { mapUnknownToApiError, type ApiError } from '@errors'
 
 export interface AuthUser {
   readonly id?: string
@@ -68,7 +68,7 @@ export async function login(
       user,
     })
   } catch (error) {
-    return err(mapUnknownToAppError(error))
+    return err(mapUnknownToApiError(error))
   }
 }
 
@@ -77,7 +77,7 @@ export async function getCurrentUser(config: RequestConfig = {}): Promise<Curren
     const { data } = await api.get<AuthUser>('/api/v1/auth/me', config)
     return ok(data)
   } catch (error) {
-    return err(mapUnknownToAppError(error))
+    return err(mapUnknownToApiError(error))
   }
 }
 
@@ -89,11 +89,11 @@ export async function updateRole(
     const { data } = await api.post<AuthUser>('/api/v1/auth/role', payload, config)
     return ok(data)
   } catch (error) {
-    return err(mapUnknownToAppError(error))
+    return err(mapUnknownToApiError(error))
   }
 }
 
-export function deriveRoleErrorMessage(error: AppError): string {
+export function deriveRoleErrorMessage(error: ApiError): string {
   if (error.meta && typeof error.meta === 'object') {
     const detail = (error.meta as { response?: { detail?: unknown } }).response?.detail
     if (typeof detail === 'string' && detail.trim().length > 0) {
@@ -115,7 +115,7 @@ export function deriveRoleErrorMessage(error: AppError): string {
   }
 }
 
-export function deriveLoginErrorMessage(error: AppError): string {
+export function deriveLoginErrorMessage(error: ApiError): string {
   switch (error.code) {
     case 'unauthorized':
     case 'forbidden':

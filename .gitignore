@@ -10,6 +10,7 @@ coverage-*/
 .nyc_output/
 .turbo/
 *.log
+!artifacts/debug/logs/*.log
 .DS_Store
 .vscode/
 .idea/

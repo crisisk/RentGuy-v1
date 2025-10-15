@@ -8,9 +8,7 @@ import {
 } from '@application/auth/api'
 import { setToken as setApiToken } from '@infra/http/api'
 import { brand, brandFontStack } from '@ui/branding'
-import Login from './Login'
 import OnboardingOverlay from './OnboardingOverlay'
-import Planner from './Planner'
 import RoleSelection from './RoleSelection'
 import {
   clearOnboardingState,
@@ -18,7 +16,9 @@ import {
   removeLocalStorageItem,
   setLocalStorageItem,
 } from '@core/storage'
-import { getStoredToken, subscribeToTokenChanges } from '@core/auth-token-storage'
+import { subscribeToTokenChanges } from '@core/auth-token-storage'
+import { useAuthStore } from '@stores/authStore'
+import AppRouter from '@router/index'
 
 const SNOOZE_DURATION_MS = 1000 * 60 * 60 * 6
 
@@ -34,9 +34,14 @@ function computeShouldShowOnboarding(): boolean {
 }
 
 export function App() {
-  const [token, setToken] = useState(() => getStoredToken())
+  const token = useAuthStore(state => state.token)
+  const user = useAuthStore(state => state.user)
+  const setAuthCredentials = useAuthStore(state => state.setCredentials)
+  const clearAuth = useAuthStore(state => state.clear)
+  const markAuthChecking = useAuthStore(state => state.markChecking)
+  const markAuthError = useAuthStore(state => state.markError)
+  const syncAuthToken = useAuthStore(state => state.syncToken)
   const [userEmail, setUserEmail] = useState(() => ensureAuthEmail(getLocalStorageItem('user_email', '')))
-  const [user, setUser] = useState<AuthUser | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => computeShouldShowOnboarding())
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
   const [isSavingRole, setIsSavingRole] = useState(false)
@@ -51,6 +56,8 @@ export function App() {
 
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
 
+    markAuthChecking()
+
     ;(async () => {
       const result = await getCurrentUser(controller ? { signal: controller.signal } : {})
       if (ignore || controller?.signal.aborted) {
@@ -59,17 +66,21 @@ export function App() {
 
       if (result.ok) {
         const nextUser = result.value
-        setUser(nextUser)
-        const nextEmail = ensureAuthEmail(nextUser.email)
-        setUserEmail(nextEmail)
-        setLocalStorageItem('user_role', nextUser.role ?? '')
+        const ensuredEmail = ensureAuthEmail(nextUser.email ?? userEmail)
+        const normalizedUser: AuthUser = {
+          ...nextUser,
+          email: ensuredEmail,
+        }
+        setAuthCredentials(token, normalizedUser)
+        setUserEmail(ensuredEmail)
+        setLocalStorageItem('user_role', normalizedUser.role ?? '')
       } else {
         if (result.error.code !== 'cancelled') {
           console.warn('Kon gebruikersgegevens niet laden', result.error)
         }
         const storedEmail = ensureAuthEmail(getLocalStorageItem('user_email', ''))
         setUserEmail(storedEmail)
-        setUser(null)
+        markAuthError(result.error.message ?? 'Authenticatiecontrole mislukt')
       }
     })()
 
@@ -77,7 +88,7 @@ export function App() {
       ignore = true
       controller?.abort()
     }
-  }, [token])
+  }, [markAuthChecking, markAuthError, setAuthCredentials, token, userEmail])
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -122,28 +133,47 @@ export function App() {
 
   useEffect(() => {
     const unsubscribe = subscribeToTokenChanges(nextToken => {
-      setToken(nextToken)
+      const trimmed = nextToken.trim()
+      if (trimmed) {
+        syncAuthToken(trimmed)
+        const storedEmail = ensureAuthEmail(getLocalStorageItem('user_email', ''))
+        setUserEmail(storedEmail)
+        setShowOnboarding(computeShouldShowOnboarding())
+      } else {
+        clearAuth()
+        setUserEmail('')
+        setShowOnboarding(false)
+        setIsRoleModalOpen(false)
+        setRoleError('')
+      }
     })
     return unsubscribe
-  }, [])
+  }, [clearAuth, syncAuthToken])
 
-  const handleLogin = useCallback((nextToken: string, email?: string) => {
-    const normalisedEmail = ensureAuthEmail(email)
-    setLocalStorageItem('user_email', normalisedEmail)
-    removeLocalStorageItem('user_role')
-    setApiToken(nextToken)
-    setToken(nextToken)
-    setUserEmail(normalisedEmail)
-    setUser(null)
-    setShowOnboarding(computeShouldShowOnboarding())
-  }, [])
+  const handleLogin = useCallback(
+    (nextToken: string, authenticatedUser: AuthUser) => {
+      const normalisedEmail = ensureAuthEmail(authenticatedUser.email)
+      setLocalStorageItem('user_email', normalisedEmail)
+      removeLocalStorageItem('user_role')
+      setApiToken(nextToken)
+      const normalizedUser: AuthUser = {
+        ...authenticatedUser,
+        email: normalisedEmail,
+      }
+      setAuthCredentials(nextToken, normalizedUser)
+      setUserEmail(normalisedEmail)
+      setShowOnboarding(computeShouldShowOnboarding())
+      setIsRoleModalOpen(false)
+      setRoleError('')
+    },
+    [setAuthCredentials],
+  )
 
   useEffect(() => {
     if (token) {
       setShowOnboarding(computeShouldShowOnboarding())
     } else {
       setShowOnboarding(false)
-      setUser(null)
       setIsRoleModalOpen(false)
       setRoleError('')
     }
@@ -162,13 +192,12 @@ export function App() {
     removeLocalStorageItem('user_role')
     clearOnboardingState()
     setApiToken('')
-    setToken('')
+    clearAuth()
     setUserEmail('')
-    setUser(null)
     setShowOnboarding(false)
     setIsRoleModalOpen(false)
     setRoleError('')
-  }, [])
+  }, [clearAuth])
 
   const handleSnoozeOnboarding = useCallback(() => {
     const snoozeUntil = Date.now() + SNOOZE_DURATION_MS
@@ -191,10 +220,16 @@ export function App() {
         const result = await updateRole({ role })
         if (result.ok) {
           const nextUser = result.value
-          setUser(nextUser)
-          const nextEmail = ensureAuthEmail(nextUser.email ?? userEmail)
-          setUserEmail(nextEmail)
-          setLocalStorageItem('user_role', nextUser.role ?? '')
+          const ensuredEmail = ensureAuthEmail(nextUser.email ?? userEmail)
+          const normalizedUser: AuthUser = {
+            ...nextUser,
+            email: ensuredEmail,
+          }
+          if (token) {
+            setAuthCredentials(token, normalizedUser)
+          }
+          setUserEmail(ensuredEmail)
+          setLocalStorageItem('user_role', normalizedUser.role ?? '')
           setIsRoleModalOpen(false)
         } else {
           setRoleError(deriveRoleErrorMessage(result.error))
@@ -206,18 +241,14 @@ export function App() {
         setIsSavingRole(false)
       }
     },
-    [userEmail]
+    [setAuthCredentials, token, userEmail]
   )
 
   const resolvedUserRole = user?.role ?? getLocalStorageItem('user_role', '')
 
-  if (!token) {
-    return <Login onLogin={handleLogin} />
-  }
-
   return (
     <>
-      <Planner onLogout={handleLogout} />
+      <AppRouter isAuthenticated={Boolean(token)} onLogin={handleLogin} onLogout={handleLogout} />
       {isRoleModalOpen && (
         <RoleSelection
           email={userEmail}
@@ -227,7 +258,7 @@ export function App() {
           errorMessage={roleError}
         />
       )}
-      {!isRoleModalOpen && showOnboarding && userEmail && (
+      {!isRoleModalOpen && showOnboarding && userEmail && token && (
         <OnboardingOverlay
           email={userEmail}
           role={resolvedUserRole}
