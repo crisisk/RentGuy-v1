@@ -35,13 +35,24 @@ class ItemOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class BundleItemIn(BaseModel):
+    item_id: int
+    quantity: int = 1
+
+class BundleItemOut(BaseModel):
+    item_id: int
+    quantity: int
+
+    model_config = ConfigDict(from_attributes=True)
+
 class BundleIn(BaseModel):
     name: str
     active: bool = True
 
-class BundleItemIn(BaseModel):
-    item_id: int
-    quantity: int = 1
+class BundleCreate(BaseModel):
+    name: str
+    active: bool = True
+    items: list[BundleItemIn] = Field(default_factory=list)
 
 
 class BundleItemOut(BaseModel):
