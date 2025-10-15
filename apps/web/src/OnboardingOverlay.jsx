@@ -88,6 +88,17 @@ const styles = {
     cursor: 'pointer',
     justifySelf: 'flex-start',
   },
+  alertActions: {
+    display: 'flex',
+    gap: 12,
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  alertLink: {
+    color: brand.colors.primaryDark,
+    fontWeight: 600,
+    textDecoration: 'underline',
+  },
   footer: {
     display: 'flex',
     flexWrap: 'wrap',
@@ -155,8 +166,51 @@ const StepItem = ({ step, isDone, isMarking, onMark }) => (
   </li>
 )
 
+const personaHeadings = {
+  cfo: 'Finance launch checklist',
+  compliance: 'Compliance & veiligheid onboarding',
+  general: 'Kickstart Mister DJ in RentGuy',
+}
+
+const personaDescriptions = {
+  cfo: 'Zorg dat cashflow en audit rapportages klaarstaan vóór de eerste facturatiecyclus.',
+  compliance: 'Volg de stappen zodat vergunningen, audit trails en veiligheidsdossiers gevalideerd zijn.',
+  general: 'Volg de stappen zodat je team direct shows kan voorbereiden zonder de groove te verliezen.',
+}
+
+function ErrorBanner({ message, onRetry }) {
+  return (
+    <div role="alert" aria-live="assertive" style={styles.alert}>
+      <p style={{ margin: 0 }}>{message}</p>
+      <div style={styles.alertActions}>
+        {onRetry && (
+          <button type="button" onClick={onRetry} style={styles.alertButton}>
+            Probeer opnieuw
+          </button>
+        )}
+        <a href="mailto:support@sevensa.com" style={styles.alertLink}>
+          Contacteer support
+        </a>
+      </div>
+    </div>
+  )
+}
+
+ErrorBanner.displayName = 'ErrorBanner'
+
 export default function OnboardingOverlay({ email, onClose = () => {}, onSnooze, onFinish }) {
-  const { steps, done, status, errorMessage, marking, progress, mark, retry } = useOnboardingProgress(email)
+  const {
+    steps,
+    done,
+    status,
+    errorMessage,
+    marking,
+    progress,
+    mark,
+    retry,
+    persona,
+    canRetry,
+  } = useOnboardingProgress(email)
   const closeButtonRef = useRef(null)
   const headingId = useId()
   const descriptionId = useId()
@@ -201,10 +255,10 @@ export default function OnboardingOverlay({ email, onClose = () => {}, onSnooze,
               id={headingId}
               style={{ margin: 0, color: brand.colors.secondary, fontFamily: headingFontStack, fontWeight: 600 }}
             >
-              Kickstart Mister DJ in RentGuy
+              {personaHeadings[persona] || personaHeadings.general}
             </h2>
             <p id={descriptionId} style={{ margin: 0, color: brand.colors.mutedText }}>
-              Volg de stappen zodat Bart en team direct shows kunnen voorbereiden zonder de groove te verliezen.
+              {personaDescriptions[persona] || personaDescriptions.general}
             </p>
           </div>
           <button type="button" onClick={onClose} ref={closeButtonRef} style={styles.closeButton}>
@@ -229,22 +283,15 @@ export default function OnboardingOverlay({ email, onClose = () => {}, onSnooze,
           {status === STATUS.LOADING && (
             <p style={{ margin: 0, color: brand.colors.mutedText }}>Onboarding wordt geladen…</p>
           )}
-          {status === STATUS.ERROR && (
-            <div role="alert" style={styles.alert}>
-              <p style={{ margin: 0 }}>{errorMessage || 'De onboarding kon niet geladen worden.'}</p>
-              <button type="button" onClick={retry} style={styles.alertButton}>
-                Probeer opnieuw
-              </button>
-            </div>
+          {(status === STATUS.ERROR || errorMessage) && (
+            <ErrorBanner
+              message={errorMessage || 'De onboarding kon niet geladen worden.'}
+              onRetry={status === STATUS.ERROR || canRetry ? retry : undefined}
+            />
           )}
           {status === STATUS.EMPTY && (
             <p style={{ margin: 0, color: brand.colors.mutedText }}>
               Er zijn nog geen onboarding-stappen beschikbaar voor dit account.
-            </p>
-          )}
-          {errorMessage && status === STATUS.READY && (
-            <p role="status" style={{ margin: 0, color: brand.colors.warning }}>
-              {errorMessage}
             </p>
           )}
         </section>
