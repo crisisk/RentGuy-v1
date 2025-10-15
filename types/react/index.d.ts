@@ -1,6 +1,6 @@
 // Lightweight React type declarations to allow strict builds without the official @types/react package.
 declare module 'react' {
-  export type ReactNode = ReactElement | string | number | boolean | null | undefined
+  export type ReactNode = ReactElement | string | number | boolean | null | undefined | ReactNode[]
 
   export interface ReactElement<P = any> {
     type: any
@@ -72,7 +72,7 @@ declare module 'react' {
   export function forwardRef<T, P = {}>(render: (props: P, ref: RefObject<T> | null) => ReactElement | null): FunctionComponent<P>
   export function memo<T>(component: FunctionComponent<T>, propsAreEqual?: (prev: T, next: T) => boolean): FunctionComponent<T>
 
-  export const Fragment: unique symbol
+  export const Fragment: FunctionComponent<{ children?: ReactNode; key?: string | number }>
   export const StrictMode: FunctionComponent
 
   export const Children: {
@@ -84,7 +84,7 @@ declare module 'react' {
 
 declare global {
   namespace JSX {
-    type Element = import('react').ReactElement
+    type Element = any
     interface IntrinsicElements {
       [elemName: string]: any
     }

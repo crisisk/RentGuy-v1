@@ -40,6 +40,7 @@ declare module 'axios' {
     }
     get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>
     post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>
+    put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>
   }
 
   export interface AxiosStatic extends AxiosInstance {

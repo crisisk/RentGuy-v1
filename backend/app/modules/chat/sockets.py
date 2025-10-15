@@ -1,44 +1,79 @@
-import socketio
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from app.core.db import get_db_session
-from app.modules.auth.deps import get_current_user
-from app.modules.auth.models import User
+"""Socket.IO event handlers for the chat module."""
+
+from __future__ import annotations
+
+import logging
+from typing import Optional
+
+from pydantic import ValidationError
+from socketio import AsyncServer
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.core.db import SessionLocal
 from app.modules.chat.repo import ChatRepo
-from app.modules.chat.schemas import MessageOut
+from app.modules.chat.schemas import MessageIn, MessageOut
 
-# Assuming the sio server is imported from app.realtime
-from app.realtime import sio
+logger = logging.getLogger(__name__)
 
-@socketio.on('send_message')
-async def send_message(sid, data, db: Session = Depends(get_db_session), user: User = Depends(get_current_user)):
-    """
-    Handles incoming chat messages and broadcasts them to the project room.
-    Data format: {project_id: int, content: str}
-    """
+_sio: Optional[AsyncServer] = None
+
+
+def register_socket_server(server: AsyncServer) -> None:
+    global _sio
+    _sio = server
+
+
+def _require_server() -> AsyncServer:
+    if _sio is None:  # pragma: no cover - defensive guard
+        raise RuntimeError("Socket server has not been initialised")
+    return _sio
+
+
+async def send_message(sid: str, data: dict) -> None:
+    """Persist an incoming message and broadcast it to the project room."""
+
+    sio = _require_server()
+
     try:
-        project_id = data.get('project_id')
-        content = data.get('content')
+        payload = MessageIn.model_validate(data)
+    except ValidationError as exc:
+        logger.warning(
+            "Invalid chat message payload",
+            extra={"sid": sid, "errors": exc.errors(), "payload": data},
+        )
+        await sio.emit(
+            "error",
+            {"message": "Invalid message payload", "details": exc.errors()},
+            room=sid,
+        )
+        return
 
-        if not project_id or not content:
-            await sio.emit('error', {'message': 'Missing project_id or content'}, room=sid)
+    with SessionLocal() as db:
+        repo = ChatRepo(db)
+        try:
+            message_model = repo.create_message(
+                project_id=payload.project_id,
+                user_id=payload.user_id,
+                content=payload.content,
+            )
+        except SQLAlchemyError:
+            db.rollback()
+            logger.exception(
+                "Failed to persist chat message",
+                extra={"sid": sid, "project_id": payload.project_id, "user_id": payload.user_id},
+            )
+            await sio.emit(
+                "error",
+                {"message": "Failed to persist message"},
+                room=sid,
+            )
             return
 
-        # 1. Save the message to the database
-        repo = ChatRepo(db)
-        message_model = repo.create_message(
-            project_id=project_id,
-            user_id=user.id,
-            content=content
-        )
+    message_out = MessageOut.model_validate(message_model).model_dump(mode="json")
 
-        # 2. Prepare the message for broadcast
-        message_out = MessageOut.model_validate(message_model).model_dump_json()
-
-        # 3. Broadcast the message to all clients in the project room
-        await sio.to(f'project_{project_id}').emit('new_message', message_out)
-
-    except Exception as e:
-        print(f"Error processing chat message for user {user.id}: {e}")
-        await sio.emit('error', {'message': 'Failed to process chat message'}, room=sid)
+    await sio.emit("new_message", message_out, room=f"project_{payload.project_id}")
+    logger.info(
+        "chat message broadcast",
+        extra={"project_id": payload.project_id, "user_id": payload.user_id},
+    )
 
