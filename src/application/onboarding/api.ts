@@ -1,6 +1,6 @@
 import type { AxiosRequestConfig } from 'axios'
 import { api } from '@infra/http/api'
-import { AppError, mapUnknownToAppError } from '@core/errors'
+import { APIError, mapUnknownToApiError } from '@errors'
 import { err, ok, type Result } from '@core/result'
 
 export interface OnboardingStep {
@@ -93,6 +93,6 @@ export async function getTips(module?: string, config: RequestConfig = {}): Prom
   }
 }
 
-function resolveError(error: unknown): AppError {
-  return mapUnknownToAppError(error)
+function resolveError(error: unknown): APIError {
+  return mapUnknownToApiError(error)
 }
