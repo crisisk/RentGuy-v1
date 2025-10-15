@@ -15,6 +15,15 @@ class CrewRepo:
     def add_member(self, c: CrewMember) -> CrewMember:
         self.db.add(c); self.db.flush(); return c
 
+    def find_member_by_email(self, email: str) -> CrewMember | None:
+        return (
+            self.db.execute(
+                select(CrewMember).where(CrewMember.email == email).limit(1)
+            )
+            .scalars()
+            .first()
+        )
+
     # bookings
     def list_bookings_for_user(self, crew_id: int) -> list[Booking]:
         return self.db.execute(select(Booking).where(Booking.crew_id==crew_id).order_by(Booking.start.desc())).scalars().all()

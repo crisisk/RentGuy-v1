@@ -5,7 +5,7 @@ import axios, {
 } from 'axios'
 import { clearOnboardingState, removeLocalStorageItem } from '@core/storage'
 import { env } from '@config/env'
-import { mapUnknownToAppError } from '@core/errors'
+import { mapUnknownToApiError } from '@errors'
 import {
   clearStoredToken,
   getStoredToken,
@@ -67,7 +67,7 @@ subscribeToTokenChanges(nextToken => {
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: unknown) => {
-    const appError = mapUnknownToAppError(error)
+    const appError = mapUnknownToApiError(error)
     if (appError.code === 'unauthorized') {
       clearStoredToken()
       removeLocalStorageItem('user_email')

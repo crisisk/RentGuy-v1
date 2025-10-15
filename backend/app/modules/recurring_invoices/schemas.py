@@ -1,48 +1,41 @@
-"""
-Pydantic schemas for recurring invoices module
-"""
+"""Pydantic schemas for recurring invoice APIs."""
+
+from __future__ import annotations
+
 from datetime import datetime
-from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, validator
-import croniter
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-class Frequency(str, Enum):
-    DAILY = "0 0 * * *"
-    WEEKLY = "0 0 * * 0"
-    MONTHLY = "0 0 1 * *"
-    YEARLY = "0 0 1 1 *"
+from .models import RecurringInvoiceStatus
+from .utils import is_valid_cron
+
 
 class RecurringInvoiceCreate(BaseModel):
-    schedule: str = Field(..., example="0 0 * * *", description="Cron schedule expression")
-    template: dict = Field(..., example={"amount": 100, "client_id": 1})
-    status: Optional[str] = Field("active", example="active")
+    schedule: str = Field(..., description="Cron schedule expression")
+    template: dict = Field(..., description="Invoice template payload")
+    status: RecurringInvoiceStatus = Field(default=RecurringInvoiceStatus.ACTIVE)
 
-    @validator("schedule")
-    def validate_cron(cls, v):
-        if not croniter.croniter.is_valid(v):
+    @field_validator("schedule")
+    @classmethod
+    def _validate_cron(cls, value: str) -> str:
+        if not is_valid_cron(value):
             raise ValueError("Invalid cron expression")
-        return v
+        return value
 
-    @validator("template")
-    def validate_template(cls, v):
-        if not isinstance(v, dict):
-            raise ValueError("Template must be a JSON object")
-        if "amount" not in v or "client_id" not in v:
-            raise ValueError("Template must contain 'amount' and 'client_id'")
-        return v
 
 class RecurringInvoiceUpdate(BaseModel):
-    schedule: Optional[str] = Field(None, example="0 0 * * 1")
-    template: Optional[dict] = Field(None)
-    status: Optional[str] = Field(None)
+    schedule: Optional[str] = Field(default=None)
+    template: Optional[dict] = Field(default=None)
+    status: Optional[RecurringInvoiceStatus] = Field(default=None)
 
-    @validator("schedule")
-    def validate_cron(cls, v):
-        if v and not croniter.croniter.is_valid(v):
+    @field_validator("schedule")
+    @classmethod
+    def _validate_cron(cls, value: Optional[str]) -> Optional[str]:
+        if value and not is_valid_cron(value):
             raise ValueError("Invalid cron expression")
-        return v
+        return value
+
 
 class RecurringInvoiceResponse(BaseModel):
     id: int
@@ -50,12 +43,12 @@ class RecurringInvoiceResponse(BaseModel):
     schedule: str
     next_run: datetime
     template: dict
-    status: str
+    status: RecurringInvoiceStatus
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class RecurringInvoiceLogResponse(BaseModel):
     id: int
@@ -65,5 +58,12 @@ class RecurringInvoiceLogResponse(BaseModel):
     details: Optional[str]
     invoice_id: Optional[int]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+__all__ = [
+    "RecurringInvoiceCreate",
+    "RecurringInvoiceUpdate",
+    "RecurringInvoiceResponse",
+    "RecurringInvoiceLogResponse",
+]

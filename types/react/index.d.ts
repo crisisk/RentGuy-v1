@@ -36,8 +36,20 @@ declare module 'react' {
 
   export interface ChangeEvent<T = Element> extends SyntheticEvent<T> {}
   export interface FormEvent<T = Element> extends SyntheticEvent<T> {}
+  export interface MouseEvent<T = Element> extends SyntheticEvent<T> {}
+  export interface DragEvent<T = Element> extends SyntheticEvent<T> {
+    dataTransfer: DataTransfer | null
+  }
   export interface KeyboardEvent<T = Element> extends SyntheticEvent<T> {
     key: string
+  }
+
+  export interface DataTransfer {
+    setData(format: string, data: string): void
+    getData(format: string): string
+    effectAllowed: string
+    dropEffect: string
+    setDragImage(image: Element, x: number, y: number): void
   }
 
   export type Dispatch<A> = (value: A) => void
@@ -48,6 +60,8 @@ declare module 'react' {
   export interface MutableRefObject<T> {
     current: T
   }
+  export type RefCallback<T> = (instance: T | null) => void
+  export type ForwardedRef<T> = RefObject<T> | RefCallback<T> | null
 
   export function createElement<P>(type: any, props?: P, ...children: ReactNode[]): ReactElement<P>
   export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>]
@@ -58,6 +72,7 @@ declare module 'react' {
   export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: unknown[]): T
   export function useRef<T>(initialValue: T): MutableRefObject<T>
   export function useRef<T>(initialValue: T | null): RefObject<T>
+  export function useImperativeHandle<T>(ref: ForwardedRef<T>, init: () => T, deps?: unknown[]): void
   export function useReducer<R extends (state: any, action: any) => any, I>(
     reducer: R,
     initialArg: I,
@@ -65,11 +80,17 @@ declare module 'react' {
   ): [ReturnType<R>, Dispatch<Parameters<R>[1]>]
   export function useContext<T>(context: Context<T>): T
   export function useId(): string
-  export function useSyncExternalStore<T>(subscribe: (listener: () => void) => () => void, getSnapshot: () => T): T
+  export function useSyncExternalStore<T>(
+    subscribe: (listener: () => void) => () => void,
+    getSnapshot: () => T,
+    getServerSnapshot?: () => T,
+  ): T
 
   export function createContext<T>(defaultValue: T): Context<T>
   export function createRef<T>(): RefObject<T>
-  export function forwardRef<T, P = {}>(render: (props: P, ref: RefObject<T> | null) => ReactElement | null): FunctionComponent<P>
+  export function forwardRef<T, P = {}>(
+    render: (props: PropsWithChildren<P>, ref: ForwardedRef<T>) => ReactElement | null,
+  ): FunctionComponent<P & { ref?: ForwardedRef<T> }>
   export function memo<T>(component: FunctionComponent<T>, propsAreEqual?: (prev: T, next: T) => boolean): FunctionComponent<T>
 
   export const Fragment: FunctionComponent<{ children?: ReactNode; key?: string | number }>
