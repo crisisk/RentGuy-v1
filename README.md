@@ -43,6 +43,19 @@ cd backend
 pytest
 ```
 
+### Debug quickstart
+
+```bash
+npm run debug:prepare
+npm run debug:scan
+npm run debug:run
+```
+
+The commands above provision the debugging artefacts directory, execute the baseline lint/build/test
+pipeline, and refresh the machine-readable status summary. Inspect `artifacts/debug/logs/` for raw
+output, `artifacts/debug/baseline-findings.json` for structured failures, and `artifacts/debug/triage-plan.md`
+for the latest remediation plan.
+
 ### Frontend setup
 
 ```bash

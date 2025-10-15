@@ -15,70 +15,26 @@ import type { EventInput } from '@fullcalendar/core'
 import { api } from '@infra/http/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 import TipBanner from '@ui/TipBanner'
+import { defaultProjectPresets } from '@stores/projectStore'
+import type {
+  PersonaKey,
+  PersonaPreset,
+  PlannerEvent,
+  PlannerProjectDto,
+  ProjectStatus,
+  RiskFilter,
+  RiskLevel,
+  SortDirection,
+  SortKey,
+  StatusFilter,
+  TimeFilter,
+} from '@rg-types/projectTypes'
 
 const PERSONA_STORAGE_KEY = 'rentguy:plannerPersona'
 const MS_IN_DAY = 86_400_000
 
-type ProjectStatus = 'active' | 'upcoming' | 'completed' | 'at_risk'
-type StatusFilter = ProjectStatus | 'all'
-type RiskLevel = 'ok' | 'warning' | 'critical'
-type RiskFilter = RiskLevel | 'all'
-type SortKey = 'start' | 'end' | 'client' | 'status' | 'risk'
-type SortDirection = 'asc' | 'desc'
-type TimeFilter = 'all' | 'today' | 'next7' | 'next14' | 'next30' | 'past30'
 type ViewMode = 'dashboard' | 'calendar'
-type PersonaKey =
-  | 'all'
-  | 'bart'
-  | 'anna'
-  | 'tom'
-  | 'carla'
-  | 'frank'
-  | 'sven'
-  | 'isabelle'
-  | 'peter'
-  | 'nadia'
-  | 'david'
 type SummaryTone = 'neutral' | 'success' | 'warning' | 'danger'
-
-interface PersonaPreset {
-  label: string
-  description: string
-  statusFilter?: StatusFilter
-  riskFilter?: RiskFilter
-  sortKey?: SortKey
-  sortDir?: SortDirection
-  timeFilter?: TimeFilter
-  searchTerm?: string
-}
-
-interface PlannerProjectDto {
-  id: string | number
-  name: string
-  client_name: string
-  start_date: string
-  end_date?: string | null
-  status?: string | null
-  inventory_risk?: string | null
-  inventory_alerts?: unknown
-  duration_days?: number | null
-  days_until_start?: number | null
-  notes?: string | null
-}
-
-interface PlannerEvent {
-  id: string
-  name: string
-  client: string
-  start: string
-  end: string
-  status: ProjectStatus
-  risk: RiskLevel
-  alerts: string[]
-  durationDays: number | null
-  daysUntilStart: number | null
-  notes: string
-}
 
 interface FeedbackState {
   type: 'success' | 'error'
@@ -112,103 +68,7 @@ interface PlannerProps {
   onLogout: () => void
 }
 
-const personaPresets: Record<PersonaKey, PersonaPreset> = {
-  all: {
-    label: 'Alle rollen',
-    description: 'Toont de volledige planning zonder filters, ideaal voor gezamenlijke UAT-sessies.',
-    timeFilter: 'all',
-  },
-  bart: {
-    label: 'Bart de Manager',
-    description: 'Focus op lopende en risicovolle producties zodat Bart direct kan bijsturen.',
-    statusFilter: 'active',
-    riskFilter: 'warning',
-    sortKey: 'start',
-    sortDir: 'asc',
-    timeFilter: 'next7',
-  },
-  anna: {
-    label: 'Anna de Planner',
-    description: 'Chronologisch overzicht van komende shows met afhankelijkheden en voorraadmatch.',
-    statusFilter: 'upcoming',
-    riskFilter: 'all',
-    sortKey: 'start',
-    sortDir: 'asc',
-    timeFilter: 'next14',
-  },
-  tom: {
-    label: 'Tom de Technicus',
-    description: 'Realtime zicht op vandaag lopende opdrachten inclusief briefingnotities.',
-    statusFilter: 'active',
-    riskFilter: 'ok',
-    sortKey: 'start',
-    sortDir: 'asc',
-    timeFilter: 'today',
-  },
-  carla: {
-    label: 'Carla van Front-Office',
-    description: 'Upcoming shows gegroepeerd per klant om vragen snel te beantwoorden.',
-    statusFilter: 'upcoming',
-    riskFilter: 'all',
-    sortKey: 'client',
-    sortDir: 'asc',
-    timeFilter: 'next30',
-  },
-  frank: {
-    label: 'Frank de Financieel Specialist',
-    description: 'Afgeronde projecten en documentatie om facturatie te versnellen.',
-    statusFilter: 'completed',
-    riskFilter: 'all',
-    sortKey: 'end',
-    sortDir: 'desc',
-    timeFilter: 'past30',
-  },
-  sven: {
-    label: 'Sven de Systeembeheerder',
-    description: 'Filtert kritieke risico’s en voorraadalerts voor escalatiebeheer.',
-    statusFilter: 'all',
-    riskFilter: 'critical',
-    sortKey: 'risk',
-    sortDir: 'desc',
-    timeFilter: 'all',
-  },
-  isabelle: {
-    label: 'Isabelle de International',
-    description: 'Kijkt weken vooruit om internationale producties tijdig te synchroniseren.',
-    statusFilter: 'upcoming',
-    riskFilter: 'all',
-    sortKey: 'start',
-    sortDir: 'asc',
-    timeFilter: 'next30',
-  },
-  peter: {
-    label: 'Peter de Power-User',
-    description: 'Combineert status- en risicoviews voor API-automatiseringen en alerts.',
-    statusFilter: 'all',
-    riskFilter: 'warning',
-    sortKey: 'status',
-    sortDir: 'asc',
-    timeFilter: 'all',
-  },
-  nadia: {
-    label: 'Nadia de Nieuweling',
-    description: 'Behoudt een rustige kijk op de eerstvolgende simpele taken voor onboarding.',
-    statusFilter: 'upcoming',
-    riskFilter: 'ok',
-    sortKey: 'start',
-    sortDir: 'asc',
-    timeFilter: 'next7',
-  },
-  david: {
-    label: 'David de Developer',
-    description: 'Ziet alle statussen tegelijk om integraties en automatiseringen te testen.',
-    statusFilter: 'all',
-    riskFilter: 'all',
-    sortKey: 'status',
-    sortDir: 'asc',
-    timeFilter: 'all',
-  },
-}
+const personaPresets: Record<PersonaKey, PersonaPreset> = defaultProjectPresets
 
 const statusLabels: Record<ProjectStatus, string> = {
   active: 'Actief',
