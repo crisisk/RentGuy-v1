@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.modules.auth.deps import get_db, require_role
 from .schemas import (
     AvailabilityRequest,
     AvailabilityResponse,
     BundleCreate,
-    BundleItemIn,
     BundleItemOut,
     BundleOut,
     CategoryIn,
@@ -64,35 +63,29 @@ def list_bundles(db: Session = Depends(get_db), user=Depends(require_role("admin
                 id=b.id,
                 name=b.name,
                 active=b.active,
-                items=[BundleItemOut.model_validate(i) for i in items],
+                items=[BundleItemOut(item_id=i.item_id, quantity=i.quantity) for i in items],
             )
         )
     return out
 
 @router.post("/bundles", response_model=BundleOut)
-def create_bundle(
-    payload: BundleCreate,
-    db: Session = Depends(get_db),
-    user=Depends(require_role("admin", "planner")),
-):
+def create_bundle(payload: BundleCreate, db: Session = Depends(get_db), user=Depends(require_role("admin","planner"))):
     repo = InventoryRepo(db)
-    bundle = repo.add_bundle(Bundle(name=payload.name, active=payload.active))
-
-    created_links: list[BundleItem] = []
-    for item in payload.items:
+    bundle_data = payload.model_dump(exclude={"items"})
+    b = Bundle(**bundle_data)
+    repo.add_bundle(b)
+    stored_items: list[BundleItemOut] = []
+    for definition in payload.items:
         link = repo.add_bundle_item(
-            BundleItem(bundle_id=bundle.id, item_id=item.item_id, quantity=item.quantity)
+            BundleItem(
+                bundle_id=b.id,
+                item_id=definition.item_id,
+                quantity=definition.quantity,
+            )
         )
-        created_links.append(link)
-
+        stored_items.append(BundleItemOut(item_id=link.item_id, quantity=link.quantity))
     db.commit()
-
-    return BundleOut(
-        id=bundle.id,
-        name=bundle.name,
-        active=bundle.active,
-        items=[BundleItemOut.model_validate(link) for link in created_links],
-    )
+    return BundleOut(id=b.id, name=b.name, active=b.active, items=stored_items)
 
 # ---- Maintenance ----
 @router.post("/maintenance", response_model=MaintenanceLogOut)
@@ -112,6 +105,7 @@ def check_availability(requests: list[AvailabilityRequest], db: Session = Depend
 async def update_item_status(
     item_id: int,
     payload: ItemStatusUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user=Depends(require_role("admin", "warehouse", "crew"))
 ):
@@ -124,18 +118,17 @@ async def update_item_status(
     item.status = payload.status
     db.commit()
 
-    # Broadcast the update via WebSocket
-    # We need to access the global sio server from the app state
-    from app.main import app
-    sio = app.state.sio
+    # Broadcast the update via WebSocket when a server is available
+    sio = getattr(request.app.state, "sio", None)
+    if sio is not None:
+        await sio.emit(
+            "equipment_status_update",
+            {
+                "item_id": item.id,
+                "status": item.status,
+                "timestamp": datetime.now().isoformat(),
+            },
+        )
 
-    # Broadcast to all connected clients
-    await sio.emit("equipment_status_update", {
-        "item_id": item.id,
-        "status": item.status,
-        "timestamp": datetime.now().isoformat()
-    })
-
-    return item
     return item
 

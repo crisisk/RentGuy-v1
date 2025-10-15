@@ -1,44 +1,47 @@
-from app.modules.inventory.models import Category, Item
-from app.modules.inventory.repo import InventoryRepo
+from app.modules.inventory.models import BundleItem
 
 
-def _seed_items(db_session):
-    category = Category(name="Lighting")
-    db_session.add(category)
-    db_session.flush()
+def test_create_bundle_with_items_persists_links(client, db_session):
+    category_response = client.post(
+        "/api/v1/inventory/categories",
+        json={"name": "Lighting"},
+    )
+    assert category_response.status_code == 200
+    category_id = category_response.json()["id"]
 
-    first = Item(name="Fresnel", category_id=category.id, quantity_total=4)
-    second = Item(name="Spot", category_id=category.id, quantity_total=6)
-    db_session.add_all([first, second])
-    db_session.flush()
-    return first, second
+    item_response = client.post(
+        "/api/v1/inventory/items",
+        json={
+            "name": "Moving Head",
+            "category_id": category_id,
+            "quantity_total": 4,
+        },
+    )
+    assert item_response.status_code == 200
+    item_id = item_response.json()["id"]
 
-
-def test_create_bundle_accepts_embedded_items(client, db_session):
-    item_a, item_b = _seed_items(db_session)
-
-    response = client.post(
+    bundle_response = client.post(
         "/api/v1/inventory/bundles",
         json={
-            "name": "Stage Essentials",
+            "name": "Stage Kit",
             "active": True,
             "items": [
-                {"item_id": item_a.id, "quantity": 2},
-                {"item_id": item_b.id, "quantity": 1},
+                {
+                    "item_id": item_id,
+                    "quantity": 2,
+                }
             ],
         },
     )
+    assert bundle_response.status_code == 200
+    payload = bundle_response.json()
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["name"] == "Stage Essentials"
-    assert {entry["item_id"] for entry in payload["items"]} == {item_a.id, item_b.id}
-    assert {entry["quantity"] for entry in payload["items"]} == {2, 1}
+    assert payload["name"] == "Stage Kit"
+    assert payload["items"] == [{"item_id": item_id, "quantity": 2}]
 
-    repo = InventoryRepo(db_session)
-    stored = repo.get_bundle_items(payload["id"])
-    assert len(stored) == 2
-    assert {link.item_id: link.quantity for link in stored} == {
-        item_a.id: 2,
-        item_b.id: 1,
-    }
+    links = db_session.query(BundleItem).all()
+    assert len(links) == 1
+    link = links[0]
+    assert link.bundle_id == payload["id"]
+    assert link.item_id == item_id
+    assert link.quantity == 2

@@ -54,6 +54,12 @@ class BundleCreate(BaseModel):
     active: bool = True
     items: list[BundleItemIn] = Field(default_factory=list)
 
+
+class BundleItemOut(BaseModel):
+    item_id: int
+    quantity: int
+
+
 class BundleOut(BaseModel):
     id: int
     name: str
@@ -61,6 +67,12 @@ class BundleOut(BaseModel):
     items: list[BundleItemOut] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class BundleCreate(BaseModel):
+    name: str
+    active: bool = True
+    items: list[BundleItemIn] = Field(default_factory=list)
 
 class MaintenanceLogIn(BaseModel):
     item_id: int
