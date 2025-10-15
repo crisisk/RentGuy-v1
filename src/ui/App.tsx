@@ -18,6 +18,7 @@ import {
   removeLocalStorageItem,
   setLocalStorageItem,
 } from '@core/storage'
+import { getStoredToken, subscribeToTokenChanges } from '@core/auth-token-storage'
 
 const SNOOZE_DURATION_MS = 1000 * 60 * 60 * 6
 
@@ -33,7 +34,7 @@ function computeShouldShowOnboarding(): boolean {
 }
 
 export function App() {
-  const [token, setToken] = useState(() => getLocalStorageItem('token', ''))
+  const [token, setToken] = useState(() => getStoredToken())
   const [userEmail, setUserEmail] = useState(() => ensureAuthEmail(getLocalStorageItem('user_email', '')))
   const [user, setUser] = useState<AuthUser | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(() => computeShouldShowOnboarding())
@@ -119,9 +120,15 @@ export function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const unsubscribe = subscribeToTokenChanges(nextToken => {
+      setToken(nextToken)
+    })
+    return unsubscribe
+  }, [])
+
   const handleLogin = useCallback((nextToken: string, email?: string) => {
     const normalisedEmail = ensureAuthEmail(email)
-    setLocalStorageItem('token', nextToken)
     setLocalStorageItem('user_email', normalisedEmail)
     removeLocalStorageItem('user_role')
     setApiToken(nextToken)
@@ -151,7 +158,6 @@ export function App() {
   }, [user, token])
 
   const handleLogout = useCallback(() => {
-    removeLocalStorageItem('token')
     removeLocalStorageItem('user_email')
     removeLocalStorageItem('user_role')
     clearOnboardingState()
@@ -162,9 +168,6 @@ export function App() {
     setShowOnboarding(false)
     setIsRoleModalOpen(false)
     setRoleError('')
-    if (typeof window !== 'undefined') {
-      window.location.reload()
-    }
   }, [])
 
   const handleSnoozeOnboarding = useCallback(() => {
