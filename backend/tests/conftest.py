@@ -153,6 +153,9 @@ os.environ.setdefault('DATABASE_URL', 'sqlite://')
 os.environ.setdefault('JWT_SECRET', 'test-secret')
 
 # Ensure models are imported so metadata is populated before accessing the FastAPI app
+import app.modules.auth.models  # noqa: F401
+import app.modules.chat.models  # noqa: F401
+import app.modules.crew.models  # noqa: F401
 import app.modules.inventory.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
 
