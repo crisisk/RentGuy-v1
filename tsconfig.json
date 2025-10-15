@@ -46,6 +46,12 @@
       "@infra/offline-queue": [
         "warehouse/offline-queue.js"
       ],
+      "@rg-types/*": [
+        "src/types/*"
+      ],
+      "@stores/*": [
+        "src/stores/*"
+      ],
       "@ui/*": [
         "src/ui/*"
       ]
