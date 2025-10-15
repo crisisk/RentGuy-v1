@@ -102,6 +102,16 @@ docker build -f Dockerfile.frontend -t rentguy-frontend:local .
 The resulting image serves the compiled assets with Nginx and exposes a
 `/healthz` endpoint so it can be wired into the existing production compose stack.
 
+### Container image build
+
+To produce the static production bundle inside a container run:
+
+```bash
+docker build -f Dockerfile.frontend -t rentguy-frontend:local .
+```
+
+The resulting image serves the compiled assets with Nginx and exposes a `/healthz` endpoint so it can be wired into the existing production compose stack.
+
 ## Project Highlights
 
 - **Modular domain design** keeps inventory, crew, billing, and transport concerns isolated while sharing common observability and error primitives.
