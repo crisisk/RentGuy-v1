@@ -13,8 +13,12 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin, { type EventDropArg } from '@fullcalendar/interaction'
 import type { EventInput } from '@fullcalendar/core'
 import { api } from '@infra/http/api'
-import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
+import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import TipBanner from '@ui/TipBanner'
+import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
+import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
+import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
+import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { defaultProjectPresets } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
 import type {
@@ -104,6 +108,15 @@ const riskPalette: Record<RiskLevel, string> = {
   critical: brand.colors.danger,
 }
 
+const roleLabelMap: Record<string, string> = {
+  planner: 'Operations planner',
+  crew: 'Crew lead',
+  warehouse: 'Warehouse coördinator',
+  finance: 'Finance specialist',
+  admin: 'Administrator',
+  viewer: 'Project stakeholder',
+}
+
 const cardPalette: Record<SummaryTone, string> = {
   neutral: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(227, 232, 255, 0.82) 100%)',
   success: 'linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(255,255,255,0.9) 100%)',
@@ -135,6 +148,17 @@ function isStatusFilter(value: string): value is StatusFilter {
 
 function isRiskFilter(value: string): value is RiskFilter {
   return value === 'all' || isRiskLevel(value)
+}
+
+function describeStatusFilter(filter: StatusFilter): string {
+  if (filter === 'all') return 'Alle statussen'
+  if (filter === 'active') return 'Actief en risico'
+  return statusLabels[filter]
+}
+
+function describeRiskFilter(filter: RiskFilter): string {
+  if (filter === 'all') return 'Alle risiconiveaus'
+  return riskLabels[filter]
 }
 
 function parseDate(dateString: string | null | undefined): Date | null {
@@ -417,6 +441,7 @@ export default function Planner({ onLogout }: PlannerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [calendarSyncing, setCalendarSyncing] = useState(false)
   const userRole = useAuthStore(state => state.user?.role ?? '')
+  const userEmail = useAuthStore(state => state.user?.email ?? '')
   const showSecretsShortcut = userRole === 'admin'
 
   const loadProjects = useCallback(async () => {
@@ -475,28 +500,39 @@ export default function Planner({ onLogout }: PlannerProps) {
     setFormState({ name: '', client: '', start: '', end: '', notes: '' })
   }
 
-  function applyPersonaPreset(value: PersonaKey, { persist = true }: { persist?: boolean } = {}) {
-    setPersonaPreset(value)
-    const preset = personaPresets[value]
-    if (!preset) return
+  const applyPersonaPreset = useCallback(
+    (value: PersonaKey, { persist = true }: { persist?: boolean } = {}) => {
+      setPersonaPreset(value)
+      const preset = personaPresets[value]
+      if (!preset) return
 
-    setStatusFilter(preset.statusFilter ?? 'all')
-    setRiskFilter(preset.riskFilter ?? 'all')
-    setSortKey(preset.sortKey ?? 'start')
-    setSortDir(preset.sortDir ?? 'asc')
-    setTimeFilter(preset.timeFilter ?? 'all')
-    setSearchTerm(preset.searchTerm ?? '')
+      setStatusFilter(preset.statusFilter ?? 'all')
+      setRiskFilter(preset.riskFilter ?? 'all')
+      setSortKey(preset.sortKey ?? 'start')
+      setSortDir(preset.sortDir ?? 'asc')
+      setTimeFilter(preset.timeFilter ?? 'all')
+      setSearchTerm(preset.searchTerm ?? '')
 
-    if (!persist || typeof window === 'undefined') {
-      return
-    }
+      if (!persist || typeof window === 'undefined') {
+        return
+      }
 
-    try {
-      window.localStorage.setItem(PERSONA_STORAGE_KEY, value)
-    } catch (error) {
-      console.warn('Kon persona-voorkeur niet opslaan', error)
-    }
-  }
+      try {
+        window.localStorage.setItem(PERSONA_STORAGE_KEY, value)
+      } catch (error) {
+        console.warn('Kon persona-voorkeur niet opslaan', error)
+      }
+    },
+    [
+      setPersonaPreset,
+      setRiskFilter,
+      setSearchTerm,
+      setSortDir,
+      setSortKey,
+      setStatusFilter,
+      setTimeFilter,
+    ],
+  )
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -515,7 +551,7 @@ export default function Planner({ onLogout }: PlannerProps) {
     }
 
     applyPersonaPreset('all', { persist: false })
-  }, [])
+  }, [applyPersonaPreset])
 
   async function submitUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -669,7 +705,294 @@ export default function Planner({ onLogout }: PlannerProps) {
     [events]
   )
 
+  const plannerJourney: FlowJourneyStep[] = useMemo(() => {
+    const roleConfirmed = userRole && userRole !== 'pending'
+    const riskMetaParts: string[] = []
+    if (summary.critical > 0) {
+      riskMetaParts.push(`${summary.critical} kritieke alerts`)
+    }
+    if (summary.warning > 0 && summary.critical === 0) {
+      riskMetaParts.push(`${summary.warning} waarschuwingen`)
+    }
+    const plannerMeta = summary.total
+      ? `${summary.total} projecten${riskMetaParts.length ? ` · ${riskMetaParts.join(' · ')}` : ''}`
+      : 'Nog geen projecten ingepland'
+
+    return [
+      {
+        id: 'login',
+        title: '1. Inloggen',
+        description: 'Je sessie is actief. Alle acties worden realtime gelogd voor audittrail en rollback.',
+        status: 'complete',
+        badge: 'Authenticatie',
+        meta: userEmail ? `Ingelogd als ${userEmail}` : undefined,
+      },
+      {
+        id: 'role',
+        title: '2. Rol bevestigd',
+        description: roleConfirmed
+          ? 'Persona-presets sturen filters, explainers en notificaties voor jouw verantwoordelijkheden.'
+          : 'Bevestig je rol in de overlay zodat filters en explainers de juiste context laden.',
+        status: roleConfirmed ? 'complete' : 'blocked',
+        badge: 'Persona',
+        meta: roleConfirmed ? `Rol: ${userRole}` : 'Open de rolselectie om door te gaan',
+      },
+      {
+        id: 'planner',
+        title: '3. Planner cockpit',
+        description: 'Prioriteer projecten, bewaak voorraad en schakel tussen dashboard en kalender.',
+        status: 'current',
+        badge: 'Operations',
+        meta: plannerMeta,
+      },
+      {
+        id: 'secrets',
+        title: '4. Configuratie & launch',
+        description: showSecretsShortcut
+          ? 'Controleer integraties en e-maildiagnostiek voordat je naar productie gaat.'
+          : 'Vraag een administrator om de secrets-console te valideren en integraties klaar te zetten.',
+        status: showSecretsShortcut ? 'upcoming' : 'blocked',
+        badge: 'Go-live',
+        meta: showSecretsShortcut ? 'Directe toegang beschikbaar' : 'Administratorrechten vereist',
+        ...(showSecretsShortcut ? { href: '/dashboard' } : {}),
+      },
+    ]
+  }, [showSecretsShortcut, summary.critical, summary.total, summary.warning, userEmail, userRole])
+
+  const today = useMemo(() => startOfUtcDay(new Date()), [])
+
+  const upcomingWithin7 = useMemo(
+    () =>
+      events.reduce((count, eventItem) => {
+        const start = parseDate(eventItem.start)
+        if (!start) {
+          return count
+        }
+        const delta = diffInDays(start, today)
+        if (delta >= 0 && delta <= 7) {
+          return count + 1
+        }
+        return count
+      }, 0),
+    [events, today],
+  )
+
+  const upcomingWithin14 = useMemo(
+    () =>
+      events.reduce((count, eventItem) => {
+        const start = parseDate(eventItem.start)
+        if (!start) {
+          return count
+        }
+        const delta = diffInDays(start, today)
+        if (delta >= 0 && delta <= 14) {
+          return count + 1
+        }
+        return count
+      }, 0),
+    [events, today],
+  )
+
+  const completedLast30 = useMemo(
+    () =>
+      events.reduce((count, eventItem) => {
+        const end = parseDate(eventItem.end)
+        if (!end) {
+          return count
+        }
+        const delta = diffInDays(today, end)
+        if (delta >= 0 && delta <= 30) {
+          return count + 1
+        }
+        return count
+      }, 0),
+    [events, today],
+  )
+
+  const eventsWithAlerts = useMemo(
+    () => events.reduce((count, eventItem) => (eventItem.alerts.length > 0 ? count + 1 : count), 0),
+    [events],
+  )
+
+  const focusPersona = useCallback(
+    (persona: PersonaKey) => {
+      applyPersonaPreset(persona)
+      setViewMode('dashboard')
+      setExpandedRow(null)
+    },
+    [applyPersonaPreset],
+  )
+
+  const focusRiskView = useCallback(() => {
+    setViewMode('dashboard')
+    setExpandedRow(null)
+    setStatusFilter('at_risk')
+    setRiskFilter('critical')
+    setTimeFilter('all')
+    setSortKey('risk')
+    setSortDir('desc')
+    setSearchTerm('')
+  }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
+
+  const focusCompletedView = useCallback(() => {
+    setViewMode('dashboard')
+    setExpandedRow(null)
+    setStatusFilter('completed')
+    setRiskFilter('all')
+    setTimeFilter('past30')
+    setSortKey('end')
+    setSortDir('desc')
+    setSearchTerm('')
+  }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
+
+  const openCalendarView = useCallback(() => {
+    setViewMode('calendar')
+    setExpandedRow(null)
+  }, [])
+
+  const focusEscalationView = useCallback(() => {
+    setViewMode('dashboard')
+    setExpandedRow(null)
+    setStatusFilter('all')
+    setRiskFilter('critical')
+    setTimeFilter('all')
+    setSortKey('risk')
+    setSortDir('desc')
+    setSearchTerm('')
+  }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
+
+  const personaFlows = useMemo<FlowItem[]>(() => {
+    const upcomingBeyond7 = Math.max(0, upcomingWithin14 - upcomingWithin7)
+    return [
+      {
+        id: 'operations',
+        title: 'Operations & voorraad',
+        icon: '🧭',
+        status:
+          summary.critical > 0
+            ? 'danger'
+            : summary.warning > 0 || eventsWithAlerts > 0
+            ? 'warning'
+            : 'success',
+        metricLabel: 'Voorraadbewaking',
+        metricValue: `${summary.critical} kritisch • ${eventsWithAlerts} alerts`,
+        description:
+          'Controleer kritieke voorraadmeldingen voordat crew onderweg gaat. Dit voorkomt showstoppers en volgt de "visibility of system status" richtlijn.',
+        helperText: 'Gebruik de Bart preset voor snelle opvolging en plan direct mitigaties uit het risicolog.',
+        primaryAction: { label: 'Focus op Bart preset', onClick: () => focusPersona('bart') },
+        secondaryAction: { label: 'Bekijk risicolog', onClick: focusRiskView, variant: 'secondary' },
+      },
+      {
+        id: 'planning',
+        title: 'Planning & crewbriefings',
+        icon: '📅',
+        status: upcomingWithin7 > 0 ? 'warning' : upcomingWithin14 > 0 ? 'info' : 'success',
+        metricLabel: 'Korte termijn shows',
+        metricValue: `${upcomingWithin7} binnen 7d • ${upcomingBeyond7} binnen 14d`,
+        description:
+          'Bereid het team voor via de Anna preset: sorteer op eerstvolgende shows en deel briefingnotities zodra er minder dan twee weken resteren.',
+        helperText: 'Best practice: combineer kalenderoverzicht met crew check-ins zodat alle stakeholders aligned zijn.',
+        primaryAction: { label: 'Open Anna preset', onClick: () => focusPersona('anna') },
+        secondaryAction: { label: 'Kalenderoverzicht', onClick: openCalendarView, variant: 'secondary' },
+      },
+      {
+        id: 'finance',
+        title: 'Facturatie & rapportage',
+        icon: '💳',
+        status: completedLast30 > 0 ? 'info' : 'success',
+        metricLabel: 'Afrondingen (30 dagen)',
+        metricValue: `${completedLast30} projecten`,
+        description:
+          'Gebruik de Frank preset om afgeronde projecten te verzamelen, exporteer draaiboeken en start de facturatie-workflow direct.',
+        helperText: 'Heuristiek: geef finance inzicht in recente deliveries zodat cashflow voorspelbaar blijft.',
+        primaryAction: { label: 'Open Frank preset', onClick: () => focusPersona('frank') },
+        secondaryAction: { label: 'Toon facturatiequeue', onClick: focusCompletedView, variant: 'secondary' },
+      },
+      {
+        id: 'admin',
+        title: 'Escalatie & governance',
+        icon: '🛡️',
+        status: summary.atRisk > 0 || eventsWithAlerts > 0 ? 'warning' : 'info',
+        metricLabel: 'Escalatie radar',
+        metricValue: `${summary.atRisk} projecten`,
+        description:
+          'Met de Sven preset zie je direct welke projecten extra checks nodig hebben. Koppel dit aan het secrets-dashboard voor end-to-end governance.',
+        helperText: 'Tip: documenteer elke opschorting zodat audits voldoen aan de Sevensa control framework eisen.',
+        primaryAction: { label: 'Open Sven preset', onClick: () => focusPersona('sven') },
+        secondaryAction: { label: 'Critical alerts', onClick: focusEscalationView, variant: 'secondary' },
+      },
+    ]
+  }, [
+    completedLast30,
+    eventsWithAlerts,
+    focusCompletedView,
+    focusEscalationView,
+    focusPersona,
+    focusRiskView,
+    openCalendarView,
+    upcomingWithin14,
+    upcomingWithin7,
+    summary.atRisk,
+    summary.critical,
+    summary.warning,
+  ])
+
   const personaHint = personaPresets[personaPreset]?.description
+
+  const heroExplainers = useMemo<FlowExplainerItem[]>(() => {
+    const preset = personaPresets[personaPreset]
+    const riskSummary = summary.critical
+      ? `Er zijn ${summary.critical} kritieke projecten die directe opvolging nodig hebben.`
+      : summary.warning
+        ? `Er zijn ${summary.warning} waarschuwingsprojecten die wekelijks opgevolgd worden.`
+        : 'Geen risico’s gemeld. Houd explainers in de gaten voor nieuwe alerts.'
+    const upcomingSummary = upcomingWithin7
+      ? `Binnen 7 dagen starten ${upcomingWithin7} projecten.`
+      : upcomingWithin14
+        ? `Binnen 14 dagen starten ${upcomingWithin14} projecten.`
+        : 'Geen geplande projecten in de komende 14 dagen.'
+
+    return [
+      {
+        id: 'persona',
+        icon: '🧭',
+        title: preset?.label ?? 'Persona-dashboard',
+        description: `Filters en explainers afgestemd op ${preset?.label ?? 'de geselecteerde'} verantwoordelijkheden.`,
+        meta: `Statusfilter: ${describeStatusFilter(statusFilter)} · Risico: ${describeRiskFilter(riskFilter)}`,
+      },
+      {
+        id: 'risk',
+        icon: '⚡',
+        title: 'Risicoregister',
+        description: riskSummary,
+        meta: upcomingSummary,
+      },
+      {
+        id: 'view',
+        icon: '📅',
+        title: viewMode === 'calendar' ? 'Kalendermodus actief' : 'Dashboardmodus actief',
+        description:
+          viewMode === 'calendar'
+            ? 'Sleep events om shifts en voorraad direct te updaten. Gebruik de explainers voor context.'
+            : 'Bekijk alerts, crew en voorraad vanuit één cockpit. Schakel naar de kalender voor planning.',
+        meta: calendarSyncing ? 'Kalendersynchronisatie actief' : 'Kalender klaar voor gebruik',
+        action:
+          viewMode === 'calendar'
+            ? { label: 'Naar dashboard', onClick: () => setViewMode('dashboard') }
+            : { label: 'Open kalender', onClick: () => setViewMode('calendar') },
+      },
+    ] satisfies FlowExplainerItem[]
+  }, [
+    calendarSyncing,
+    personaPreset,
+    riskFilter,
+    statusFilter,
+    summary.critical,
+    summary.warning,
+    upcomingWithin14,
+    upcomingWithin7,
+    viewMode,
+  ])
 
   function shiftRange(delta: number) {
     setFormState(prev => ({
@@ -685,115 +1008,232 @@ export default function Planner({ onLogout }: PlannerProps) {
     Start: 'start',
     Einde: 'end',
   }
-  return (
+
+  const secretsCallout = showSecretsShortcut ? (
     <div
       style={{
-        background: brand.colors.appBackground,
-        minHeight: '100vh',
-        fontFamily: brandFontStack,
-        padding: '32px 20px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        gap: 16,
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
+        borderRadius: 24,
+        padding: '20px 24px',
+        border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+        color: brand.colors.secondary,
       }}
     >
-      <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gap: 24 }}>
-        <div
+      <div style={{ maxWidth: 520, display: 'grid', gap: 6 }}>
+        <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.2em', color: brand.colors.mutedText }}>
+          Systeembeheer
+        </span>
+        <strong style={{ fontFamily: headingFontStack, fontSize: '1.2rem' }}>Nieuwe secrets-console beschikbaar</strong>
+        <span style={{ color: brand.colors.mutedText }}>
+          Vul alle .env-variabelen centraal en push ze naar FastAPI- en Express-services. Houd e-mail, betalingen en observability gekoppeld.
+        </span>
+      </div>
+      <Link
+        to="/dashboard"
+        style={{
+          padding: '10px 18px',
+          borderRadius: 999,
+          textDecoration: 'none',
+          backgroundImage: brand.colors.gradient,
+          color: '#fff',
+          fontWeight: 600,
+          boxShadow: '0 14px 28px rgba(79, 70, 229, 0.26)',
+        }}
+      >
+        Open dashboard
+      </Link>
+    </div>
+  ) : null
+
+  const heroFooter = (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <FlowJourneyMap
+        steps={plannerJourney}
+        subtitle="Volg de aanbevolen volgorde om elke persona-flow en go-live check te voltooien."
+      />
+      {secretsCallout}
+    </div>
+  )
+
+  const breadcrumbs = useMemo(() => {
+    const items = [
+      { id: 'home', label: 'Pilot start', href: '/' },
+      { id: 'operations', label: 'Operations cockpit', href: '/planner' },
+      { id: 'planner', label: 'Projectplanner' },
+    ]
+    if (personaPreset !== 'all') {
+      const preset = personaPresets[personaPreset]
+      if (preset) {
+        items.push({ id: 'persona', label: preset.label })
+      }
+    }
+    return items
+  }, [personaPreset])
+
+  const personaSummary = useMemo<FlowExperiencePersona>(
+    () => {
+      const preset = personaPresets[personaPreset]
+      const personaName = preset ? preset.label : 'Alle persona\'s'
+      const normalizedRole = userRole && userRole !== 'pending' ? userRole : 'planner'
+      const roleLabel = roleLabelMap[normalizedRole] ?? 'Pilot gebruiker'
+      const persona: FlowExperiencePersona = {
+        name: personaName,
+        role: roleLabel,
+      }
+      if (userEmail) {
+        persona.meta = userEmail
+      }
+      return persona
+    },
+    [personaPreset, userEmail, userRole],
+  )
+
+  const stage = useMemo(
+    () => {
+      if (summary.total === 0) {
+        return {
+          label: 'Plan eerste projecten',
+          status: 'upcoming' as const,
+          detail: 'Voeg een project toe om dashboards en explainers te activeren.',
+        }
+      }
+      if (summary.critical > 0) {
+        return {
+          label: 'Los voorraadblokkades op',
+          status: 'in-progress' as const,
+          detail: `${summary.critical} kritieke voorraadissues vereisen actie`,
+        }
+      }
+      if (upcomingWithin7 > 0) {
+        return {
+          label: 'Bereid komende shows voor',
+          status: 'in-progress' as const,
+          detail: `${upcomingWithin7} projecten starten binnen 7 dagen`,
+        }
+      }
+      return {
+        label: 'Operaties op schema',
+        status: 'completed' as const,
+        detail:
+          summary.warning > 0
+            ? `${summary.warning} waarschuwingen gemonitord`
+            : 'Geen kritieke of waarschuwing alerts actief',
+      }
+    },
+    [summary.critical, summary.total, summary.warning, upcomingWithin7],
+  )
+
+  const statusMessage = useMemo(() => {
+    if (feedback?.type === 'error') {
+      return {
+        tone: 'danger' as const,
+        title: 'Actie geblokkeerd',
+        description: feedback.message,
+      }
+    }
+    if (summary.critical > 0) {
+      return {
+        tone: 'danger' as const,
+        title: 'Voorraadblokkades actief',
+        description: `${summary.critical} kritieke projecten wachten op voorraad of goedkeuring. Escaleer via het secrets-dashboard indien nodig.`,
+      }
+    }
+    if (summary.warning > 0) {
+      return {
+        tone: 'warning' as const,
+        title: 'Waarschuwingen in monitoring',
+        description: `${summary.warning} projecten hebben een waarschuwing. Controleer crew of materiaal voordat de planning verspringt.`,
+      }
+    }
+    if (summary.total === 0) {
+      return {
+        tone: 'info' as const,
+        title: 'Start je eerste planning',
+        description: 'Voeg een project toe of importeer data om de dashboard explainers te vullen.',
+      }
+    }
+    if (upcomingWithin7 > 0) {
+      return {
+        tone: 'info' as const,
+        title: 'Aankomende shows voorbereiden',
+        description: `${upcomingWithin7} projecten starten binnen een week. Controleer crew, voorraad en transporttijdslijnen.`,
+      }
+    }
+    return {
+      tone: 'success' as const,
+      title: 'Alle flows op schema',
+      description: `${summary.total} projecten actief zonder kritieke alerts. Houd audittrails en monitoring in de gaten.`,
+    }
+  }, [feedback, summary.critical, summary.total, summary.warning, upcomingWithin7])
+
+  const actions = useMemo(() => {
+    const items: FlowExperienceAction[] = []
+    if (showSecretsShortcut) {
+      items.push({ id: 'secrets', label: 'Secrets-dashboard', variant: 'secondary', href: '/dashboard', icon: '🗝️' })
+    }
+    items.push({ id: 'logout', label: 'Uitloggen', variant: 'ghost', onClick: onLogout, icon: '🚪' })
+    return items
+  }, [onLogout, showSecretsShortcut])
+
+  const footerAside = useMemo(
+    () => (
+      <div style={{ display: 'grid', gap: 10 }}>
+        <strong style={{ fontSize: '0.95rem' }}>Operations handboek</strong>
+        <ul
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(227, 232, 255, 0.82) 100%)',
-            borderRadius: 28,
-            padding: '28px 32px',
-            boxShadow: brand.colors.shadow,
-            border: `1px solid ${withOpacity(brand.colors.primary, 0.28)}`,
+            margin: 0,
+            paddingLeft: 18,
+            display: 'grid',
+            gap: 6,
+            fontSize: '0.85rem',
+            color: withOpacity('#FFFFFF', 0.86),
           }}
         >
-          <div style={{ display: 'grid', gap: 8 }}>
-            <span
-              style={{
-                textTransform: 'uppercase',
-                fontSize: '0.75rem',
-                letterSpacing: '0.22em',
-                color: brand.colors.mutedText,
-              }}
-            >
-              {brand.shortName} · {brand.tenant.name}
-            </span>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: '2rem',
-                color: brand.colors.secondary,
-                fontFamily: headingFontStack,
-              }}
-            >
-              Mister DJ projectplanner
-            </h2>
-            <p style={{ margin: 0, color: brand.colors.mutedText, maxWidth: 520 }}>
-              Persona-presets, voorraadbewaking en corporate audittrail. {brand.partnerTagline} maakt elke flow herkenbaar voor
-              Bart.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            style={{
-              padding: '10px 20px',
-              borderRadius: 999,
-              border: 'none',
-              backgroundImage: brand.colors.gradient,
-              color: '#fff',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 18px 40px rgba(79, 70, 229, 0.28)',
-            }}
-          >
-            Uitloggen
-          </button>
-        </div>
+          <li>Gebruik de persona-presets om crew- en finance dashboards automatisch te synchroniseren.</li>
+          <li>Escalaties verlopen via het secrets-dashboard en NOC monitoring documentatie.</li>
+          <li>Plan rollback scenario’s wekelijks; auditlogs staan gekoppeld aan elke wijziging.</li>
+        </ul>
+        <a
+          href="https://help.sevensa.nl/rentguy/runbook"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: '#ffffff', fontWeight: 600, textDecoration: 'none' }}
+        >
+          Bekijk het volledige runbook →
+        </a>
+      </div>
+    ),
+    [],
+  )
 
-        {showSecretsShortcut && (
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'space-between',
-              gap: 16,
-              alignItems: 'center',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
-              borderRadius: 20,
-              padding: '20px 24px',
-              border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
-              boxShadow: brand.colors.shadow,
-            }}
-          >
-            <div style={{ maxWidth: 560 }}>
-              <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.2em', color: brand.colors.mutedText }}>
-                Systeembeheer
-              </span>
-              <h3 style={{ margin: '6px 0', fontFamily: headingFontStack, color: brand.colors.secondary }}>
-                Nieuwe secrets-console beschikbaar
-              </h3>
-              <p style={{ margin: 0, color: brand.colors.mutedText }}>
-                Vul alle .env-variabelen in vanuit één dashboard en push ze naar de FastAPI- en Express-omgevingen. Houd e-mail, betalingen en observability centraal bij.
-              </p>
-            </div>
-            <Link
-              to="/dashboard"
-              style={{
-                padding: '10px 18px',
-                borderRadius: 999,
-                textDecoration: 'none',
-                backgroundImage: brand.colors.gradient,
-                color: '#fff',
-                fontWeight: 600,
-                boxShadow: '0 14px 28px rgba(79, 70, 229, 0.26)',
-              }}
-            >
-              Open dashboard
-            </Link>
-          </div>
-        )}
-
+  return (
+    <FlowExperienceShell
+      eyebrow="Operations cockpit"
+      heroBadge="Persona-intelligentie"
+      title="Mister DJ projectplanner"
+      description={
+        <>
+          <span>
+            Persona-presets, voorraadbewaking en corporate audittrail maken elke flow herkenbaar voor Bart en het Mister DJ-team.
+          </span>
+          <span>Gebruik explainers per rol om crew, finance en escalaties vanuit één cockpit te sturen.</span>
+        </>
+      }
+      heroPrologue={<FlowExplainerList items={heroExplainers} minWidth={240} />}
+      heroFooter={heroFooter}
+      breadcrumbs={breadcrumbs}
+      persona={personaSummary}
+      stage={stage}
+      actions={actions}
+      statusMessage={statusMessage}
+      footerAside={footerAside}
+    >
+      <>
         <TipBanner module="projects" />
 
         <div
@@ -873,6 +1313,13 @@ export default function Planner({ onLogout }: PlannerProps) {
             tone={summary.critical ? 'danger' : summary.warning ? 'warning' : 'neutral'}
           />
         </div>
+
+        <FlowGuidancePanel
+          eyebrow="User flows"
+          title="Kies de juiste flow per persona"
+          description="We vatten de belangrijkste taken per rol samen op basis van actuele planningsdata. Zo kun je direct schakelen tussen operaties, crew, finance en escalaties zonder context te verliezen."
+          flows={personaFlows}
+        />
 
         <div
           style={{
@@ -1005,7 +1452,7 @@ export default function Planner({ onLogout }: PlannerProps) {
           </div>
         )}
 
-        {feedback && (
+        {feedback?.type === 'success' && (
           <div
             role="alert"
             style={{
@@ -1015,11 +1462,8 @@ export default function Planner({ onLogout }: PlannerProps) {
                 feedback.type === 'success'
                   ? withOpacity(brand.colors.success, 0.15)
                   : withOpacity(brand.colors.danger, 0.15),
-              color: feedback.type === 'success' ? brand.colors.secondary : '#9B1C1C',
-              border: `1px solid ${withOpacity(
-                feedback.type === 'success' ? brand.colors.success : brand.colors.danger,
-                0.35
-              )}`,
+              color: brand.colors.secondary,
+              border: `1px solid ${withOpacity(brand.colors.success, 0.35)}`,
             }}
           >
             {feedback.message}
@@ -1285,7 +1729,7 @@ export default function Planner({ onLogout }: PlannerProps) {
             </div>
           </form>
         )}
-      </div>
-    </div>
+      </>
+    </FlowExperienceShell>
   )
 }
