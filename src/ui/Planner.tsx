@@ -19,6 +19,7 @@ import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
 import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
+import { createFlowNavigation, type FlowNavigationStatus } from '@ui/flowNavigation'
 import { defaultProjectPresets } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
 import type {
@@ -1211,6 +1212,40 @@ export default function Planner({ onLogout }: PlannerProps) {
     [],
   )
 
+  const navigationRail = useMemo(() => {
+    const roleStatus: FlowNavigationStatus = userRole && userRole !== 'pending' ? 'complete' : 'blocked'
+    const secretsStatus: FlowNavigationStatus = showSecretsShortcut ? 'upcoming' : 'blocked'
+
+    return {
+      title: 'Pilot gebruikersflows',
+      caption: 'Volg de navigator om alle persona\'s soepel door planning, crew en go-live stappen te leiden.',
+      items: createFlowNavigation(
+        'planner',
+        {
+          role: roleStatus,
+          secrets: secretsStatus,
+        },
+        {
+          login: userEmail ? `Ingelogd als ${userEmail}` : 'Actieve sessie zonder e-mail',
+          role:
+            roleStatus === 'complete'
+              ? `Persona: ${(roleLabelMap[userRole] ?? userRole) || 'Onbekend'}`
+              : 'Rol moet nog bevestigd worden via het onboarding team.',
+          planner: viewMode === 'calendar' ? 'Kalenderweergave actief' : 'Dashboardweergave actief',
+          secrets:
+            secretsStatus === 'blocked'
+              ? 'Alleen admins kunnen het secrets-dashboard openen.'
+              : 'Gebruik het secrets-dashboard als volgende stap voor go-live.',
+        },
+      ),
+      footer: (
+        <span>
+          Tip: Deel deze navigator tijdens go-live war rooms zodat alle stakeholders dezelfde context hebben.
+        </span>
+      ),
+    }
+  }, [showSecretsShortcut, userEmail, userRole, viewMode])
+
   return (
     <FlowExperienceShell
       eyebrow="Operations cockpit"
@@ -1232,6 +1267,7 @@ export default function Planner({ onLogout }: PlannerProps) {
       actions={actions}
       statusMessage={statusMessage}
       footerAside={footerAside}
+      navigationRail={navigationRail}
     >
       <>
         <TipBanner module="projects" />

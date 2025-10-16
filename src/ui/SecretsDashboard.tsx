@@ -6,6 +6,7 @@ import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
 import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
+import { createFlowNavigation, type FlowNavigationStatus } from '@ui/flowNavigation'
 import { useAuthStore } from '@stores/authStore'
 
 interface SecretsDashboardProps {
@@ -1115,9 +1116,48 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       </div>
     ),
     [configuredIntegrations, emailDiagnostics?.authConfigured, emailDiagnostics?.nodeReady, integrationCoverage, integrationSecrets.length],
-  )
+
+    )
+
+  const navigationRail = useMemo(() => {
+    const roleStatus: FlowNavigationStatus = userRole && userRole !== 'pending' ? 'complete' : 'blocked'
+    const plannerStatus: FlowNavigationStatus = integrationReady ? 'complete' : 'blocked'
+    const emailSummary = emailDiagnostics
+      ? `E-mailstatus: ${emailDiagnostics.status.toUpperCase()}`
+      : 'Voer de e-maildiagnose uit om notificaties te bevestigen.'
+
+    return {
+      title: 'Pilot gebruikersflows',
+      caption: 'Monitor de eindstappen voor go-live. Gebruik dit overzicht als navigatie tijdens release reviews.',
+      items: createFlowNavigation(
+        'secrets',
+        {
+          role: roleStatus,
+          planner: plannerStatus,
+        },
+        {
+          login: userEmail ? `Beheerder: ${userEmail}` : 'Actieve admin-sessie',
+          role:
+            roleStatus === 'complete'
+              ? `Rol bevestigd (${userRole || 'admin'})`
+              : 'Rol nog niet bevestigd door governance.',
+          planner:
+            plannerStatus === 'complete'
+              ? 'Integraties gesynchroniseerd vanuit de planner flows.'
+              : `Ontbrekend: ${missingIntegrationKeys.length} integratie${missingIntegrationKeys.length === 1 ? '' : 's'}.`,
+          secrets: emailSummary,
+        },
+      ),
+      footer: (
+        <span>
+          Combineer deze navigator met de releasechecklist zodat alle compliance-stappen aantoonbaar blijven tijdens go-live.
+        </span>
+      ),
+    }
+  }, [emailDiagnostics, integrationReady, missingIntegrationKeys.length, userEmail, userRole])
 
   return (
+
     <FlowExperienceShell
       eyebrow="Configuration command center"
       heroBadge="Compliance & integraties"
@@ -1136,6 +1176,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       actions={actions}
       statusMessage={statusMessage}
       footerAside={footerAside}
+      navigationRail={navigationRail}
     >
       <>
         <FlowGuidancePanel

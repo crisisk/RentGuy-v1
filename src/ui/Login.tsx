@@ -4,6 +4,7 @@ import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import FlowExperienceShell from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
+import { createFlowNavigation } from '@ui/flowNavigation'
 
 export interface LoginProps {
   onLogin: (token: string, user: AuthUser) => void
@@ -199,8 +200,37 @@ export function Login({ onLogin }: LoginProps) {
   )
 
   const credentialList = useMemo(
-    () => <FlowExplainerList tone="dark" items={credentialExplainers} minWidth={200} />, 
+    () => <FlowExplainerList tone="dark" items={credentialExplainers} minWidth={200} />,
     [],
+  )
+
+  const navigationRail = useMemo(
+    () => ({
+      title: 'Pilot gebruikersflows',
+      caption:
+        'Doorloop de flows in volgorde om explainers, dashboards en go-live checks automatisch te activeren.',
+      items: createFlowNavigation(
+        'login',
+        { secrets: 'blocked' },
+        {
+          login: (
+            <span>
+              Actieve demo: <strong>{resolveEmail(user)}</strong>
+            </span>
+          ),
+          role: 'Kies je persona zodra de login is gelukt.',
+          planner: 'Ontgrendel de cockpit na rolbevestiging.',
+          secrets: 'Alleen beschikbaar voor administrators na go-live staging.',
+        },
+      ),
+      footer: (
+        <span>
+          Tip: Gebruik dezelfde volgorde tijdens demo- en training-sessies zodat auditlogs en monitoring de juiste context
+          bevatten.
+        </span>
+      ),
+    }),
+    [user],
   )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -378,6 +408,7 @@ export function Login({ onLogin }: LoginProps) {
       actions={actions}
       statusMessage={statusMessage}
       footerAside={footerAside}
+      navigationRail={navigationRail}
     />
   )
 }

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import ExperienceLayout, { type ExperienceLayoutProps } from '@ui/ExperienceLayout'
+import FlowExperienceNavRail, { type FlowExperienceNavRailProps } from '@ui/FlowExperienceNavRail'
 import { brand, withOpacity } from '@ui/branding'
 
 type FlowStageStatus = 'completed' | 'in-progress' | 'upcoming'
@@ -49,6 +50,7 @@ export interface FlowExperienceShellProps
   actions?: FlowExperienceAction[]
   statusMessage?: FlowExperienceStatusMessage
   footerAside?: ReactNode
+  navigationRail?: FlowExperienceNavRailProps
 }
 
 const actionTone: Record<FlowActionVariant, CSSProperties> = {
@@ -99,6 +101,7 @@ export default function FlowExperienceShell({
   actions,
   statusMessage,
   footerAside,
+  navigationRail,
   children,
   ...layoutProps
 }: FlowExperienceShellProps) {
@@ -264,26 +267,44 @@ export default function FlowExperienceShell({
 
   const messageBlock = statusMessage ? renderStatusMessage(statusMessage) : null
 
+  const content = (
+    <div style={{ display: 'grid', gap: 24 }}>
+      {messageBlock}
+      {children}
+      {footerAside && (
+        <aside
+          style={{
+            marginTop: 12,
+            padding: '20px 24px',
+            borderRadius: 20,
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%)',
+            color: withOpacity('#FFFFFF', 0.9),
+            border: `1px solid ${withOpacity('#FFFFFF', 0.16)}`,
+          }}
+        >
+          {footerAside}
+        </aside>
+      )}
+    </div>
+  )
+
   return (
     <ExperienceLayout headerSlot={headerSlot} {...layoutProps}>
-      <div style={{ display: 'grid', gap: 24 }}>
-        {messageBlock}
-        {children}
-        {footerAside && (
-          <aside
-            style={{
-              marginTop: 12,
-              padding: '20px 24px',
-              borderRadius: 20,
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 64, 175, 0.88) 100%)',
-              color: withOpacity('#FFFFFF', 0.9),
-              border: `1px solid ${withOpacity('#FFFFFF', 0.16)}`,
-            }}
-          >
-            {footerAside}
-          </aside>
-        )}
-      </div>
+      {navigationRail ? (
+        <div
+          style={{
+            display: 'grid',
+            gap: 24,
+            alignItems: 'start',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          }}
+        >
+          <FlowExperienceNavRail {...navigationRail} />
+          {content}
+        </div>
+      ) : (
+        content
+      )}
     </ExperienceLayout>
   )
 }
@@ -293,6 +314,7 @@ function renderStatusMessage(message: FlowExperienceStatusMessage) {
   return (
     <div
       role={message.tone === 'danger' ? 'alert' : 'status'}
+      aria-live={message.tone === 'danger' ? 'assertive' : 'polite'}
       style={{
         display: 'grid',
         gap: 6,
