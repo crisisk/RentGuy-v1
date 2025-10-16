@@ -64,6 +64,16 @@ source .env
 set +a
 ```
 
+### 1.4 Secrets synchroniseren via het dashboard
+
+- Meld aan op [`https://rentguy.sevensa.nl/dashboard`](https://rentguy.sevensa.nl/dashboard) met een administrator-account.
+- Vul ontbrekende waarden in voor database, JWT, e-mail, betalingen en observability.
+- Gebruik de knop **Secrets synchroniseren** om de versleutelde waarden naar `.env.secrets` te schrijven. Dit bestand wordt tijdens
+  de volgende containerdeploy automatisch ingelezen.
+- Controleer de e-maildiagnosekaart; de status moet `OK` tonen voordat Express/React-mailflows actief worden.
+- Indien het dashboard aangeeft dat een herstart nodig is, herstart de FastAPI-service na het synchroniseren zodat alle
+  configuratie opnieuw wordt ingeladen.
+
 ---
 
 ## 2. Database Migration & Seeding

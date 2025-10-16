@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
+import importlib.metadata as importlib_metadata
 import os
 import sys
 import types
@@ -148,6 +149,44 @@ def _install_geoalchemy_stubs() -> None:
 
 _install_geoalchemy_stubs()
 
+# Provide lightweight stub for optional email_validator dependency required by pydantic
+def _install_email_validator_stub() -> None:
+    if 'email_validator' in sys.modules:
+        return
+
+    module = types.ModuleType('email_validator')
+
+    class _EmailNotValidError(ValueError):
+        pass
+
+    def _validate_email(email, *_args, **_kwargs):  # pragma: no cover - trivial stub
+        return types.SimpleNamespace(email=email, original_email=email, local_part=email)
+
+    module.EmailNotValidError = _EmailNotValidError
+    module.validate_email = _validate_email
+    sys.modules['email_validator'] = module
+
+    original_version = importlib_metadata.version
+    original_discover = importlib_metadata.Distribution.discover
+
+    def _version(name: str) -> str:  # pragma: no cover - simple shim
+        if name == 'email-validator':
+            return '2.0.0'
+        return original_version(name)
+
+    @classmethod
+    def _discover(cls, **kwargs):  # pragma: no cover - simple shim
+        if kwargs.get('name') == 'email-validator':
+            yield types.SimpleNamespace(version='2.0.0')
+        else:
+            yield from original_discover.__func__(cls, **kwargs)  # type: ignore[attr-defined]
+
+    importlib_metadata.version = _version  # type: ignore[assignment]
+    importlib_metadata.Distribution.discover = _discover  # type: ignore[assignment]
+
+
+_install_email_validator_stub()
+
 # Provide sensible defaults for configuration values expected by the settings model
 os.environ.setdefault('DATABASE_URL', 'sqlite://')
 os.environ.setdefault('JWT_SECRET', 'test-secret')
@@ -158,6 +197,7 @@ import app.modules.chat.models  # noqa: F401
 import app.modules.crew.models  # noqa: F401
 import app.modules.inventory.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
+import app.modules.platform.secrets.models  # noqa: F401
 
 from app.core.db import Base
 

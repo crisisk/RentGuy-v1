@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable
 
+import base64
+import hashlib
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,7 +12,9 @@ class Settings(BaseSettings):
     """Application configuration loaded from the environment."""
 
     model_config = SettingsConfigDict(
-        env_file=(".env", ".env.local"), env_file_encoding="utf-8", extra="ignore"
+        env_file=(".env", ".env.local", ".env.secrets"),
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     ENV: str = Field(default="dev", description="Deployment environment name")
@@ -55,6 +59,10 @@ class Settings(BaseSettings):
     OTEL_EXPORTER_OTLP_ENDPOINT: str | None = None
     OTEL_EXPORTER_OTLP_HEADERS: str | None = None
     OTEL_SERVICE_NAME: str = "rentguy-api"
+    SETTINGS_CRYPTO_SECRET: SecretStr | None = Field(
+        default=None,
+        description="Optional secret used to encrypt values managed through the secrets dashboard.",
+    )
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -89,6 +97,18 @@ class Settings(BaseSettings):
         """Return the JWT secret value as a plain string."""
 
         return self.JWT_SECRET.get_secret_value()
+
+    @property
+    def secrets_encryption_key(self) -> bytes:
+        """Return a 32-byte Fernet key derived from the configured secret."""
+
+        if self.SETTINGS_CRYPTO_SECRET is not None:
+            base_secret = self.SETTINGS_CRYPTO_SECRET.get_secret_value()
+        else:
+            base_secret = self.JWT_SECRET.get_secret_value()
+
+        digest = hashlib.sha256(base_secret.encode("utf-8")).digest()
+        return base64.urlsafe_b64encode(digest)
 
 
 settings = Settings()

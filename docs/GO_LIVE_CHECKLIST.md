@@ -40,6 +40,10 @@ Deze checklist bundelt alle technische en functionele stappen die nodig zijn om 
    - PostgreSQL 15+, Redis (optioneel) en SMTP moeten bereikbaar zijn.
    - Docker Engine 20.10+ en Compose 2.x geïnstalleerd.
    - Ingress (Nginx/Traefik) voorbereid met TLS-certificaten.
+4. **Secrets-dashboard gebruiken**
+   - Log in op [`https://rentguy.sevensa.nl/dashboard`](https://rentguy.sevensa.nl/dashboard) met een admin-account.
+   - Vul ontbrekende `.env`-sleutels in, controleer de e-maildiagnose en synchroniseer naar `.env.secrets`.
+   - Bevestig dat eventuele “herstart vereist”-meldingen zijn opgevolgd voordat je verdergaat.
 
 ---
 

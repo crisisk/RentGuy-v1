@@ -83,6 +83,17 @@ The command launches the esbuild development server on `http://localhost:5175`
 and mirrors `index.html` into the generated `dist/` directory so static assets
 stay in sync.
 
+### Secretsbeheer via het dashboard
+
+Beheerders kunnen alle `.env`-variabelen beheren via het beveiligde dashboard op
+[`https://rentguy.sevensa.nl/dashboard`](https://rentguy.sevensa.nl/dashboard).
+De console slaat waarden versleuteld op in de database, controleert of de
+SMTP-configuratie klaar is voor de Express/React-mailer en schrijft de
+geconfigureerde set naar `.env.secrets` met één klik op de synchronisatieknop.
+Gebruik deze flow voor het bijwerken van databasecredentials, API-sleutels voor
+betalingen en observability, of het aanpassen van e-mailinstellingen zonder
+manueel servers te benaderen.
+
 ### Container image build
 
 Create the production-ready bundle locally with:
