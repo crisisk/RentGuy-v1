@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { brand, brandFontStack, headingFontStack } from './branding'
 import type { MarketingExperienceConfig } from './experienceConfig'
 
@@ -58,6 +59,52 @@ const heroHighlights = [
   { label: 'Live asset sync', value: 'Real-time beschikbaarheid voor verhuurteams' },
   { label: 'Self-service onboarding', value: 'Binnen 20 minuten operationeel' },
   { label: 'SLA 99.95%', value: 'Enterprise support via Sevensa' },
+]
+
+const partnerBadges = [
+  { name: 'Sevensa Control Suite', tagline: 'Strategic AI partner' },
+  { name: 'Stripe Verified Partner', tagline: 'Payments & billing' },
+  { name: 'AWS Activate', tagline: 'Secure infrastructure' },
+  { name: 'ISO 27001 Ready', tagline: 'Compliance aligned' },
+]
+
+const testimonials = [
+  {
+    quote:
+      'Met RentGuy schakelen we 35% sneller tussen aanvragen en crewplanning. De automatische hand-offs naar secrets en finance besparen ons elke week uren escalaties.',
+    author: 'Bart Jansen',
+    role: 'Operations Manager',
+    company: 'Mr. DJ Productions',
+  },
+  {
+    quote:
+      'Onze finance sprint sluit nu aan op SLA-afspraken. Het dashboard stuurt direct naar de juiste governance documenten en dat geeft vertrouwen richting klanten.',
+    author: 'Anna de Vries',
+    role: 'Finance Lead',
+    company: 'StageWorks',
+  },
+  {
+    quote:
+      'Het onboarding-team waardeert de ingebouwde explainers. Nieuwe tenants draaien binnen één sprint live inclusief branded subdomein.',
+    author: 'Sven Bakker',
+    role: 'Customer Success Director',
+    company: 'Sevensa',
+  },
+]
+
+const chatCaptureOptions = [
+  {
+    title: 'Plan live chat met onboarding',
+    description: 'Binnen 15 minuten krijg je een walkthrough van de demo-tenant en checklist voor je eigen subdomein.',
+    href: 'https://cal.com/rentguy/chat',
+    actionLabel: 'Start live chat',
+  },
+  {
+    title: 'Vraag pricing & SLA documentatie op',
+    description: 'Ontvang binnen één werkdag een voorstel met SLA-matrix, implementatieplanning en partnerkortingen.',
+    href: 'mailto:hello@rentguy.nl?subject=RentGuy%20SLA%20aanvraag',
+    actionLabel: 'Vraag aan',
+  },
 ]
 
 const pains = [
@@ -145,6 +192,47 @@ const contactChannels = [
 ]
 
 export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX.Element {
+  const [activeTestimonial, setActiveTestimonial] = useState(0)
+
+  const testimonialItems = useMemo(() => {
+    if (testimonials.length > 0) {
+      return testimonials
+    }
+    return [
+      {
+        quote: 'RentGuy levert consistente journeys en governance zodat elk team >99% ready blijft.',
+        author: 'RentGuy Onboarding Team',
+        role: 'Customer Success',
+        company: 'RentGuy',
+      },
+    ]
+  }, [])
+
+  const totalTestimonials = testimonialItems.length
+  const testimonial = testimonialItems[activeTestimonial % totalTestimonials]!
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || totalTestimonials <= 1) {
+      return
+    }
+    const id = window.setInterval(() => {
+      setActiveTestimonial(prev => (prev + 1) % totalTestimonials)
+    }, 8000)
+    return () => {
+      window.clearInterval(id)
+    }
+  }, [totalTestimonials])
+
+  const handleManualTestimonialChange = (direction: -1 | 1) => {
+    setActiveTestimonial(prev => {
+      const next = prev + direction
+      if (next < 0) {
+        return totalTestimonials - 1
+      }
+      return next % totalTestimonials
+    })
+  }
+
   return (
     <div style={layout.page}>
       <nav
@@ -324,6 +412,112 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
           </div>
         </section>
 
+        <section style={{ display: 'grid', gap: '18px' }} aria-label="Partnernetwerk">
+          <span style={{ color: '#94A3B8', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
+            Vertrouwd door operationele partners
+          </span>
+          <div
+            style={{
+              display: 'grid',
+              gap: '16px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            }}
+          >
+            {partnerBadges.map(partner => (
+              <div
+                key={partner.name}
+                style={{
+                  padding: '18px',
+                  borderRadius: '16px',
+                  background: 'rgba(15, 23, 42, 0.65)',
+                  border: '1px solid rgba(148, 163, 184, 0.25)',
+                  display: 'grid',
+                  gap: '6px',
+                }}
+              >
+                <strong style={{ color: '#F8FAFC', fontFamily: headingFontStack }}>{partner.name}</strong>
+                <span style={{ color: '#A5B4FC', fontSize: '0.85rem' }}>{partner.tagline}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section style={layout.section} aria-label="Testimonials">
+          <SectionHeader
+            eyebrow="Social proof"
+            title="Teams uit de verhuurwereld bouwen op RentGuy"
+            description="Lees hoe operations, finance en customer success meer rendement halen door onze journey maps en cross-surface automatisering."
+          />
+          <div
+            style={{
+              display: 'grid',
+              gap: '20px',
+              padding: '28px',
+              borderRadius: '28px',
+              background: 'linear-gradient(135deg, rgba(148, 163, 255, 0.18) 0%, rgba(15, 23, 42, 0.82) 100%)',
+              border: '1px solid rgba(148, 163, 184, 0.35)',
+              boxShadow: '0 24px 60px rgba(15, 23, 42, 0.45)',
+              position: 'relative',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '1.15rem', lineHeight: 1.7, color: '#F8FAFC', fontFamily: headingFontStack }}>
+              “{testimonial.quote}”
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', color: '#CBD5F5' }}>
+              <strong style={{ fontSize: '1rem', color: '#F8FAFC' }}>{testimonial.author}</strong>
+              <span style={{ fontSize: '0.95rem' }}>{testimonial.role}</span>
+              <span style={{ fontSize: '0.95rem', color: '#A5B4FC' }}>{testimonial.company}</span>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => handleManualTestimonialChange(-1)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(148, 163, 184, 0.4)',
+                  background: 'transparent',
+                  color: '#E2E8F0',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Vorige
+              </button>
+              <button
+                type="button"
+                onClick={() => handleManualTestimonialChange(1)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '999px',
+                  border: 'none',
+                  background: brand.colors.gradient,
+                  color: '#0B1026',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Volgende
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '6px', position: 'absolute', bottom: '16px', right: '24px' }}>
+              {testimonialItems.map((item, index) => (
+                <span
+                  key={item.author}
+                  aria-label={`Testimonial ${index + 1}`}
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: index === activeTestimonial ? '#F8FAFC' : 'rgba(148, 163, 184, 0.4)',
+                    transition: 'background 0.2s ease',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section style={layout.section}>
           <SectionHeader
             eyebrow="Waarom teams overstappen"
@@ -477,6 +671,46 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
               >
                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#F8FAFC' }}>{step.title}</h3>
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={layout.section} aria-label="Chat & consult">
+          <SectionHeader
+            eyebrow="Direct contact"
+            title="Plan je volgende stap met ons onboarding team"
+            description="Gebruik live chat of vraag direct de SLA-documentatie aan. We begeleiden je tot het moment dat jouw tenant >99% klaar is."
+          />
+          <div style={{ display: 'grid', gap: '18px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+            {chatCaptureOptions.map(option => (
+              <article
+                key={option.title}
+                style={{
+                  padding: '24px',
+                  borderRadius: '20px',
+                  background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.82) 0%, rgba(30, 64, 175, 0.55) 100%)',
+                  border: '1px solid rgba(148, 163, 184, 0.35)',
+                  display: 'grid',
+                  gap: '12px',
+                }}
+              >
+                <h3 style={{ margin: 0, fontFamily: headingFontStack, color: '#F8FAFC', fontSize: '1.2rem' }}>{option.title}</h3>
+                <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{option.description}</p>
+                <a
+                  href={option.href}
+                  style={{
+                    padding: '12px 18px',
+                    borderRadius: '999px',
+                    background: brand.colors.gradient,
+                    color: '#0B1026',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                  }}
+                >
+                  {option.actionLabel}
+                </a>
               </article>
             ))}
           </div>

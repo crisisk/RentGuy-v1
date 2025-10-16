@@ -53,10 +53,15 @@ Opportunities:
 - To surpass market expectations further, incorporate automated ROI calculators, industry benchmarking data, and packaged onboarding timelines to move toward >95%.
 
 ## Recommendations and Next Steps
-1. **Secrets Onboarding Enhancements** — Implement inline validation states and contextual error recovery to close the remaining usability gaps.
-2. **Mobile Navigation Refinement** — Optimise the nav rail for small screens and add touch feedback to CTAs to uplift UX/UI ratings.
-3. **Conversion Assets** — Layer testimonial carousel, partner badges, and chat capture on the marketing landing page.
-4. **Operational Content Expansion** — Publish SLA matrices and changelog teasers on authenticated dashboards to maintain content excellence.
-5. **Flow Automation** — Automate hand-offs between planner, crew, and billing modules (e.g., cross-surface deep links) to elevate userflow optimisation into the mid-90% range.
+- [x] **Secrets Onboarding Enhancements** — Inline validatie, veldstatussen en herstelknoppen toegevoegd aan het secrets-dashboard (`SecretsDashboard.tsx`).
+- [x] **Mobile Navigation Refinement** — Nav-rail kreeg responsive layout, touch feedback en focus styles (`FlowExperienceNavRail.tsx`).
+- [x] **Conversion Assets** — Marketingpagina uitgebreid met partnerbadges, testimonialcarousel en chat-capturekaarten (`MarketingLandingPage.tsx`).
+- [x] **Operational Content Expansion** — SLA-matrix, release highlights en changelog-teaser gepubliceerd op planner- en secrets dashboards (`Planner.tsx`, `SecretsDashboard.tsx`).
+- [x] **Flow Automation** — Plannerflows openen nu automatische hand-offs naar secrets/billing dashboards via deep links (`Planner.tsx`, `SecretsDashboard.tsx`).
 
-Progress on these actions should be tracked alongside the existing go-live checklist to sustain the >99% quality threshold before scaling to additional subdomains.
+### Next iteration focus
+1. Introduce keyboard shortcuts voor high-volume planneracties (bijv. risicofilters, crew hand-off) om expert usability verder te verhogen.
+2. Onderzoek integratie met realtime analytics (Mixpanel/Amplitude) om conversie-optimalisaties op de marketingpagina continu te meten.
+3. Breid tenant-theming uit met server-side themaloader zodat branding JSON vóór render beschikbaar is, inclusief regressietests per tenant.
+
+Deze vervolgpunten worden toegevoegd aan de go-live checklist zodat de >99% kwaliteitsdrempel standhoudt tijdens de opschaling naar nieuwe tenants.

@@ -36,3 +36,11 @@
 - [ ] DNS bijwerken zodat `www.mr-dj.nl` naar `mr-dj.rentguy.nl` verwijst (in afwachting van klant-goedgekeurde switch).
 - [x] Plan voor nieuwe subdomeinen (bijv. `sevensa.rentguy.nl`) vastgelegd in `docs/multi_tenant_subdomain_rollout.md`.
 
+## Marketing & conversion
+- [x] Partnerbadges, testimonialcarousel en chat-capture live op `www.rentguy.nl`.
+- [x] Chat-opties gekoppeld aan onboardingteam en SLA-aanvraag (mail + live chat).
+
+## Operations & governance content
+- [x] SLA-matrix en release highlights zichtbaar op planner/secrets dashboards.
+- [x] Secrets onboarding playbook gepubliceerd (`docs/secrets_onboarding_playbook.md`).
+
