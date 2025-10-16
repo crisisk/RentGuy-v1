@@ -115,6 +115,12 @@ The resulting image serves the compiled assets with Nginx and exposes a
 - ESLint/Prettier configurations are intentionally omitted to keep the repo lightweight; feel free to extend the toolchain as needed.
 - Use `.gitignore` as the canonical reference for large or sensitive artefacts that should stay out of version control.
 
+## Go-Live & Onboarding Resources
+
+- Consult the step-by-step production playbook in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) before promoting a new release. It walks through environment preparation, migrations, container rollout, validation, and rollback procedures for the complete platform.
+- Gebruik de gedetailleerde go-live checklist in [`docs/GO_LIVE_CHECKLIST.md`](docs/GO_LIVE_CHECKLIST.md) om elk technisch en functioneel onderdeel af te vinken, inclusief debugroutines en post-launch nazorg.
+- Share the updated new-user manual at [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) with every fresh account so teams know how to finish the guided onboarding, use the planner modules, and operate the scanner experience from day one.
+
 ## Contributing
 
 1. Fork the repository and create a feature branch.
