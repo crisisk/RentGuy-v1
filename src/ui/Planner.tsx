@@ -15,6 +15,7 @@ import type { EventInput } from '@fullcalendar/core'
 import { api } from '@infra/http/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 import TipBanner from '@ui/TipBanner'
+import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
 import { defaultProjectPresets } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
 import type {
@@ -475,28 +476,39 @@ export default function Planner({ onLogout }: PlannerProps) {
     setFormState({ name: '', client: '', start: '', end: '', notes: '' })
   }
 
-  function applyPersonaPreset(value: PersonaKey, { persist = true }: { persist?: boolean } = {}) {
-    setPersonaPreset(value)
-    const preset = personaPresets[value]
-    if (!preset) return
+  const applyPersonaPreset = useCallback(
+    (value: PersonaKey, { persist = true }: { persist?: boolean } = {}) => {
+      setPersonaPreset(value)
+      const preset = personaPresets[value]
+      if (!preset) return
 
-    setStatusFilter(preset.statusFilter ?? 'all')
-    setRiskFilter(preset.riskFilter ?? 'all')
-    setSortKey(preset.sortKey ?? 'start')
-    setSortDir(preset.sortDir ?? 'asc')
-    setTimeFilter(preset.timeFilter ?? 'all')
-    setSearchTerm(preset.searchTerm ?? '')
+      setStatusFilter(preset.statusFilter ?? 'all')
+      setRiskFilter(preset.riskFilter ?? 'all')
+      setSortKey(preset.sortKey ?? 'start')
+      setSortDir(preset.sortDir ?? 'asc')
+      setTimeFilter(preset.timeFilter ?? 'all')
+      setSearchTerm(preset.searchTerm ?? '')
 
-    if (!persist || typeof window === 'undefined') {
-      return
-    }
+      if (!persist || typeof window === 'undefined') {
+        return
+      }
 
-    try {
-      window.localStorage.setItem(PERSONA_STORAGE_KEY, value)
-    } catch (error) {
-      console.warn('Kon persona-voorkeur niet opslaan', error)
-    }
-  }
+      try {
+        window.localStorage.setItem(PERSONA_STORAGE_KEY, value)
+      } catch (error) {
+        console.warn('Kon persona-voorkeur niet opslaan', error)
+      }
+    },
+    [
+      setPersonaPreset,
+      setRiskFilter,
+      setSearchTerm,
+      setSortDir,
+      setSortKey,
+      setStatusFilter,
+      setTimeFilter,
+    ],
+  )
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -515,7 +527,7 @@ export default function Planner({ onLogout }: PlannerProps) {
     }
 
     applyPersonaPreset('all', { persist: false })
-  }, [])
+  }, [applyPersonaPreset])
 
   async function submitUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -668,6 +680,184 @@ export default function Planner({ onLogout }: PlannerProps) {
       ),
     [events]
   )
+
+  const today = useMemo(() => startOfUtcDay(new Date()), [])
+
+  const upcomingWithin7 = useMemo(
+    () =>
+      events.reduce((count, eventItem) => {
+        const start = parseDate(eventItem.start)
+        if (!start) {
+          return count
+        }
+        const delta = diffInDays(start, today)
+        if (delta >= 0 && delta <= 7) {
+          return count + 1
+        }
+        return count
+      }, 0),
+    [events, today],
+  )
+
+  const upcomingWithin14 = useMemo(
+    () =>
+      events.reduce((count, eventItem) => {
+        const start = parseDate(eventItem.start)
+        if (!start) {
+          return count
+        }
+        const delta = diffInDays(start, today)
+        if (delta >= 0 && delta <= 14) {
+          return count + 1
+        }
+        return count
+      }, 0),
+    [events, today],
+  )
+
+  const completedLast30 = useMemo(
+    () =>
+      events.reduce((count, eventItem) => {
+        const end = parseDate(eventItem.end)
+        if (!end) {
+          return count
+        }
+        const delta = diffInDays(today, end)
+        if (delta >= 0 && delta <= 30) {
+          return count + 1
+        }
+        return count
+      }, 0),
+    [events, today],
+  )
+
+  const eventsWithAlerts = useMemo(
+    () => events.reduce((count, eventItem) => (eventItem.alerts.length > 0 ? count + 1 : count), 0),
+    [events],
+  )
+
+  const focusPersona = useCallback(
+    (persona: PersonaKey) => {
+      applyPersonaPreset(persona)
+      setViewMode('dashboard')
+      setExpandedRow(null)
+    },
+    [applyPersonaPreset],
+  )
+
+  const focusRiskView = useCallback(() => {
+    setViewMode('dashboard')
+    setExpandedRow(null)
+    setStatusFilter('at_risk')
+    setRiskFilter('critical')
+    setTimeFilter('all')
+    setSortKey('risk')
+    setSortDir('desc')
+    setSearchTerm('')
+  }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
+
+  const focusCompletedView = useCallback(() => {
+    setViewMode('dashboard')
+    setExpandedRow(null)
+    setStatusFilter('completed')
+    setRiskFilter('all')
+    setTimeFilter('past30')
+    setSortKey('end')
+    setSortDir('desc')
+    setSearchTerm('')
+  }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
+
+  const openCalendarView = useCallback(() => {
+    setViewMode('calendar')
+    setExpandedRow(null)
+  }, [])
+
+  const focusEscalationView = useCallback(() => {
+    setViewMode('dashboard')
+    setExpandedRow(null)
+    setStatusFilter('all')
+    setRiskFilter('critical')
+    setTimeFilter('all')
+    setSortKey('risk')
+    setSortDir('desc')
+    setSearchTerm('')
+  }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
+
+  const personaFlows = useMemo<FlowItem[]>(() => {
+    const upcomingBeyond7 = Math.max(0, upcomingWithin14 - upcomingWithin7)
+    return [
+      {
+        id: 'operations',
+        title: 'Operations & voorraad',
+        icon: '🧭',
+        status:
+          summary.critical > 0
+            ? 'danger'
+            : summary.warning > 0 || eventsWithAlerts > 0
+            ? 'warning'
+            : 'success',
+        metricLabel: 'Voorraadbewaking',
+        metricValue: `${summary.critical} kritisch • ${eventsWithAlerts} alerts`,
+        description:
+          'Controleer kritieke voorraadmeldingen voordat crew onderweg gaat. Dit voorkomt showstoppers en volgt de "visibility of system status" richtlijn.',
+        helperText: 'Gebruik de Bart preset voor snelle opvolging en plan direct mitigaties uit het risicolog.',
+        primaryAction: { label: 'Focus op Bart preset', onClick: () => focusPersona('bart') },
+        secondaryAction: { label: 'Bekijk risicolog', onClick: focusRiskView, variant: 'secondary' },
+      },
+      {
+        id: 'planning',
+        title: 'Planning & crewbriefings',
+        icon: '📅',
+        status: upcomingWithin7 > 0 ? 'warning' : upcomingWithin14 > 0 ? 'info' : 'success',
+        metricLabel: 'Korte termijn shows',
+        metricValue: `${upcomingWithin7} binnen 7d • ${upcomingBeyond7} binnen 14d`,
+        description:
+          'Bereid het team voor via de Anna preset: sorteer op eerstvolgende shows en deel briefingnotities zodra er minder dan twee weken resteren.',
+        helperText: 'Best practice: combineer kalenderoverzicht met crew check-ins zodat alle stakeholders aligned zijn.',
+        primaryAction: { label: 'Open Anna preset', onClick: () => focusPersona('anna') },
+        secondaryAction: { label: 'Kalenderoverzicht', onClick: openCalendarView, variant: 'secondary' },
+      },
+      {
+        id: 'finance',
+        title: 'Facturatie & rapportage',
+        icon: '💳',
+        status: completedLast30 > 0 ? 'info' : 'success',
+        metricLabel: 'Afrondingen (30 dagen)',
+        metricValue: `${completedLast30} projecten`,
+        description:
+          'Gebruik de Frank preset om afgeronde projecten te verzamelen, exporteer draaiboeken en start de facturatie-workflow direct.',
+        helperText: 'Heuristiek: geef finance inzicht in recente deliveries zodat cashflow voorspelbaar blijft.',
+        primaryAction: { label: 'Open Frank preset', onClick: () => focusPersona('frank') },
+        secondaryAction: { label: 'Toon facturatiequeue', onClick: focusCompletedView, variant: 'secondary' },
+      },
+      {
+        id: 'admin',
+        title: 'Escalatie & governance',
+        icon: '🛡️',
+        status: summary.atRisk > 0 || eventsWithAlerts > 0 ? 'warning' : 'info',
+        metricLabel: 'Escalatie radar',
+        metricValue: `${summary.atRisk} projecten`,
+        description:
+          'Met de Sven preset zie je direct welke projecten extra checks nodig hebben. Koppel dit aan het secrets-dashboard voor end-to-end governance.',
+        helperText: 'Tip: documenteer elke opschorting zodat audits voldoen aan de Sevensa control framework eisen.',
+        primaryAction: { label: 'Open Sven preset', onClick: () => focusPersona('sven') },
+        secondaryAction: { label: 'Critical alerts', onClick: focusEscalationView, variant: 'secondary' },
+      },
+    ]
+  }, [
+    completedLast30,
+    eventsWithAlerts,
+    focusCompletedView,
+    focusEscalationView,
+    focusPersona,
+    focusRiskView,
+    openCalendarView,
+    upcomingWithin14,
+    upcomingWithin7,
+    summary.atRisk,
+    summary.critical,
+    summary.warning,
+  ])
 
   const personaHint = personaPresets[personaPreset]?.description
 
@@ -873,6 +1063,13 @@ export default function Planner({ onLogout }: PlannerProps) {
             tone={summary.critical ? 'danger' : summary.warning ? 'warning' : 'neutral'}
           />
         </div>
+
+        <FlowGuidancePanel
+          eyebrow="User flows"
+          title="Kies de juiste flow per persona"
+          description="We vatten de belangrijkste taken per rol samen op basis van actuele planningsdata. Zo kun je direct schakelen tussen operaties, crew, finance en escalaties zonder context te verliezen."
+          flows={personaFlows}
+        />
 
         <div
           style={{
