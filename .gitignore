@@ -14,7 +14,6 @@ coverage-*/
 .DS_Store
 .vscode/
 .idea/
-package-lock.json
 # quality tooling artifacts
 # Backup files
 backup_*.tar.gz
