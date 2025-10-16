@@ -6,6 +6,8 @@ import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/brandi
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
 import ExperienceLayout from '@ui/ExperienceLayout'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
+import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
+import { useAuthStore } from '@stores/authStore'
 
 interface SecretsDashboardProps {
   onLogout: () => void
@@ -69,6 +71,9 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   const [syncing, setSyncing] = useState(false)
   const [emailDiagnostics, setEmailDiagnostics] = useState<EmailDiagnostics | null>(null)
   const [activeTab, setActiveTab] = useState<'secrets' | 'integration'>('secrets')
+  const user = useAuthStore(state => state.user)
+  const userEmail = user?.email ?? ''
+  const userRole = user?.role ?? ''
 
   const markSaving = useCallback((key: string, saving: boolean) => {
     setSavingKeys(prev => {
@@ -145,6 +150,15 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
 
   const integrationReady = missingIntegrationKeys.length === 0
 
+  const configuredIntegrations = useMemo(
+    () => integrationSecrets.reduce((count, entry) => (entry.secret?.hasValue ? count + 1 : count), 0),
+    [integrationSecrets],
+  )
+
+  const integrationCoverage = integrationSecrets.length
+    ? Math.round((configuredIntegrations / integrationSecrets.length) * 100)
+    : 0
+
   const handleInputChange = useCallback((key: string, value: string) => {
     setFormValues(prev => ({
       ...prev,
@@ -202,6 +216,18 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     () => secrets.reduce((count, secret) => (secret.hasValue ? count + 1 : count), 0),
     [secrets],
   )
+
+  const emailStatusLabel = useMemo(() => {
+    if (!emailDiagnostics) {
+      return 'E-mailstatus onbekend'
+    }
+    const labelMap: Record<EmailDiagnostics['status'], string> = {
+      ok: 'OK',
+      warning: 'Waarschuwing',
+      error: 'Storing',
+    }
+    return `E-mailstatus: ${labelMap[emailDiagnostics.status]}`
+  }, [emailDiagnostics])
 
   const openSecretsTab = useCallback(() => setActiveTab('secrets'), [])
 
@@ -366,6 +392,69 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     totalSecrets,
     triggerEmailRefresh,
     triggerSync,
+  ])
+
+  const secretsJourney = useMemo<FlowJourneyStep[]>(() => {
+    const plannerMeta = totalSecrets > 0 ? `${totalSecrets} secrets geregistreerd` : 'Nog geen secrets geladen'
+    const integrationMeta = `${integrationCoverage}% integraties compleet${
+      missingIntegrationKeys.length ? ` · ${missingIntegrationKeys.length} ontbrekend` : ''
+    }`
+    const emailMeta = emailDiagnostics ? emailDiagnostics.message : 'Voer een diagnose uit voor e-mail en notificaties'
+    const launchReady = integrationReady && emailDiagnostics?.status === 'ok'
+
+    return [
+      {
+        id: 'login',
+        title: '1. Inloggen',
+        description: 'Je bent aangemeld als Sevensa administrator. Alle wijzigingen worden gelogd.',
+        status: 'complete',
+        badge: 'Authenticatie',
+        meta: userEmail ? `Ingelogd als ${userEmail}` : undefined,
+      },
+      {
+        id: 'role',
+        title: '2. Administratorrechten',
+        description: 'Beheerderstoegang geeft je de mogelijkheid om secrets te synchroniseren en integraties te activeren.',
+        status: userRole === 'admin' ? 'complete' : 'blocked',
+        badge: 'Rollen',
+        meta: userRole ? `Rol: ${userRole}` : 'Rol onbekend',
+      },
+      {
+        id: 'planner',
+        title: '3. Operationele cockpit',
+        description: 'Verifieer dat planners en crew flows draaien voordat je wijzigingen pusht.',
+        status: 'complete',
+        badge: 'Operations',
+        meta: plannerMeta,
+        href: '/planner',
+      },
+      {
+        id: 'secrets',
+        title: '4. Secrets & integraties',
+        description: 'Vul ontbrekende waarden aan en synchroniseer naar de platformdiensten voor productiepariteit.',
+        status: 'current',
+        badge: 'Configuratie',
+        meta: integrationMeta,
+      },
+      {
+        id: 'launch',
+        title: '5. Go-live review',
+        description: launchReady
+          ? 'Plan een laatste review en activeer monitoring voordat je live gaat.'
+          : 'Los integratie- of e-mailissues op voordat je een release plant.',
+        status: launchReady ? 'upcoming' : 'blocked',
+        badge: 'Go-live',
+        meta: emailMeta,
+      },
+    ]
+  }, [
+    emailDiagnostics,
+    integrationCoverage,
+    integrationReady,
+    missingIntegrationKeys.length,
+    totalSecrets,
+    userEmail,
+    userRole,
   ])
 
   const renderFeedback = () => {
@@ -865,9 +954,16 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
           boxShadow: '0 18px 40px rgba(79, 70, 229, 0.28)',
         }}
       >
-        Uitloggen
+      Uitloggen
       </button>
     </>
+  )
+
+  const heroFooter = (
+    <FlowJourneyMap
+      steps={secretsJourney}
+      subtitle="Check elke stap zodat configuratie, monitoring en release readiness aantoonbaar zijn."
+    />
   )
 
   return (
@@ -882,16 +978,10 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
         </>
       }
       heroPrologue={<FlowExplainerList items={heroExplainers} minWidth={240} />}
+      heroFooter={heroFooter}
       headerSlot={headerSlot}
     >
       <>
-        <FlowGuidancePanel
-          eyebrow="Setup flows"
-          title="Volg de platformconfiguratie"
-          description="Deze checklist laat zien welke stappen voor secrets, integraties en e-mail nog aandacht vragen. Gebruik dit als command center zodat elk deploy-venster aantoonbaar compliant is."
-          flows={flowItems}
-        />
-
         <FlowGuidancePanel
           eyebrow="Setup flows"
           title="Volg de platformconfiguratie"

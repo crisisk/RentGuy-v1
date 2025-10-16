@@ -3,6 +3,7 @@ import { login, deriveLoginErrorMessage, ensureAuthEmail, type AuthUser } from '
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import ExperienceLayout from '@ui/ExperienceLayout'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
+import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 
 export interface LoginProps {
   onLogin: (token: string, user: AuthUser) => void
@@ -58,6 +59,35 @@ const credentialExplainers: FlowExplainerItem[] = [
         <strong>Gebruiker:</strong> rentguy · <strong>Wachtwoord:</strong> rentguy
       </span>
     ),
+  },
+]
+
+const loginJourney: FlowJourneyStep[] = [
+  {
+    id: 'login',
+    title: '1. Inloggen',
+    description: 'Gebruik de demo-accounts of je Sevensa SSO om toegang te krijgen tot de pilot.',
+    status: 'current',
+  },
+  {
+    id: 'role',
+    title: '2. Rol bevestigen',
+    description: 'Kies een persona om de juiste dashboards en explainers te activeren.',
+    status: 'upcoming',
+  },
+  {
+    id: 'planner',
+    title: '3. Planner cockpit',
+    description: 'Stuur projecten, crew en materiaal. Alle persona-flows zijn vanuit hier bereikbaar.',
+    status: 'upcoming',
+    href: '/planner',
+  },
+  {
+    id: 'secrets',
+    title: '4. Configuratie & launch',
+    description: 'Controleer integraties en monitoring voordat je naar productie promoveert.',
+    status: 'upcoming',
+    href: '/dashboard',
   },
 ]
 
@@ -148,6 +178,7 @@ export function Login({ onLogin }: LoginProps) {
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={{ fontWeight: 600 }}>Gebruiker</span>
           <input
+            id="login-user"
             value={user}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setUser(event.target.value)}
             style={{
@@ -164,6 +195,7 @@ export function Login({ onLogin }: LoginProps) {
           <span style={{ fontWeight: 600 }}>Wachtwoord</span>
           <input
             type="password"
+            id="login-password"
             value={password}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)}
             style={{
@@ -233,6 +265,12 @@ export function Login({ onLogin }: LoginProps) {
       }
       heroPrologue={<FlowExplainerList tone="dark" items={heroExplainers} minWidth={240} />}
       heroAside={heroAside}
+      heroFooter={
+        <FlowJourneyMap
+          steps={loginJourney}
+          subtitle="De aanbevolen volgorde zorgt ervoor dat explainers en dashboards met de juiste data geladen worden."
+        />
+      }
     />
   )
 }

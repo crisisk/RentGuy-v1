@@ -51,7 +51,7 @@ export function ExperienceLayout({
 
   const containerStyle: CSSProperties = {
     minHeight: '100vh',
-    background: brand.colors.appBackground,
+    background: `radial-gradient(circle at top, ${withOpacity(brand.colors.primary, 0.08)} 0%, transparent 45%) ${brand.colors.appBackground}`,
     fontFamily: brandFontStack,
     color: brand.colors.text,
   }
@@ -61,15 +61,21 @@ export function ExperienceLayout({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 16,
-    padding: '20px 32px 12px',
+    padding: '16px clamp(18px, 4vw, 36px)',
     color: '#ffffff',
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.86) 100%)',
+    borderBottom: `1px solid ${withOpacity('#FFFFFF', 0.08)}`,
+    backdropFilter: 'blur(18px)',
   }
 
   const heroGridStyle: CSSProperties = layout === 'split' && heroAside
     ? {
         display: 'grid',
         gap: 32,
-        gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)',
+        gridTemplateColumns: 'minmax(0, 1.1fr) minmax(clamp(260px, 30vw, 420px), 1fr)',
         alignItems: 'start',
       }
     : {
@@ -80,12 +86,14 @@ export function ExperienceLayout({
   const heroAsideStyle: CSSProperties = {
     background: heroIsDark ? withOpacity('#000000', 0.35) : '#ffffff',
     borderRadius: 24,
-    padding: heroIsDark ? '28px 32px' : '24px 28px',
+    padding: heroIsDark ? 'clamp(24px, 3vw, 32px)' : 'clamp(20px, 3vw, 28px)',
     boxShadow: heroIsDark ? '0 28px 56px rgba(15, 23, 42, 0.55)' : brand.colors.shadow,
     border: heroIsDark ? `1px solid ${withOpacity('#FFFFFF', 0.18)}` : `1px solid ${withOpacity(brand.colors.primary, 0.16)}`,
     color: heroIsDark ? '#ffffff' : brand.colors.secondary,
     display: 'grid',
     gap: 20,
+    width: '100%',
+    maxWidth: 'min(100%, 420px)',
   }
 
   return (
@@ -116,15 +124,15 @@ export function ExperienceLayout({
       <main
         id="experience-main"
         style={{
-          padding: '24px 20px 64px',
+          padding: 'clamp(24px, 4vw, 64px) clamp(16px, 5vw, 64px)',
         }}
       >
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gap: 28 }}>
+        <div style={{ maxWidth: 'min(1200px, 100%)', margin: '0 auto', display: 'grid', gap: 28 }}>
           <section
             style={{
               background: heroBackground,
               borderRadius: 32,
-              padding: '40px 44px',
+              padding: 'clamp(32px, 4vw, 44px)',
               boxShadow: heroIsDark ? '0 36px 72px rgba(15, 23, 42, 0.6)' : brand.colors.shadow,
               border: `1px solid ${heroBorder}`,
               color: heroTextColor,
@@ -189,11 +197,13 @@ export function ExperienceLayout({
                     </div>
                   )}
                 </div>
-                {heroPrologue && <div style={{ display: 'grid', gap: 12 }}>{heroPrologue}</div>}
+                {heroPrologue && <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>{heroPrologue}</div>}
               </div>
               {heroAside && <aside style={heroAsideStyle}>{heroAside}</aside>}
             </div>
-            {heroFooter && <div style={{ marginTop: 32 }}>{heroFooter}</div>}
+            {heroFooter && (
+              <div style={{ marginTop: 32, display: 'grid', gap: 20 }}>{heroFooter}</div>
+            )}
           </section>
 
           {children && (

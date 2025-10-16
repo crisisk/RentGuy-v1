@@ -23,13 +23,6 @@ export interface FlowExplainerListProps {
   minWidth?: number
 }
 
-const defaultCardStyle: CSSProperties = {
-  display: 'grid',
-  gap: 10,
-  padding: '18px 20px',
-  borderRadius: 20,
-}
-
 export function FlowExplainerList({ items, tone = 'light', minWidth = 220 }: FlowExplainerListProps) {
   if (!items.length) {
     return null
@@ -41,17 +34,23 @@ export function FlowExplainerList({ items, tone = 'light', minWidth = 220 }: Flo
   const metaColor = tone === 'dark' ? withOpacity('#FFFFFF', 0.72) : brand.colors.mutedText
 
   return (
-    <div
+    <ul
       role="list"
       style={{
         display: 'grid',
         gap: 16,
         gridTemplateColumns: `repeat(auto-fit, minmax(${minWidth}px, 1fr))`,
+        listStyle: 'none',
+        margin: 0,
+        padding: 0,
       }}
     >
       {items.map(item => {
         const style: CSSProperties = {
-          ...defaultCardStyle,
+          display: 'grid',
+          gap: 10,
+          padding: '18px 20px',
+          borderRadius: 20,
           background,
           border: `1px solid ${border}`,
           color: textColor,
@@ -71,7 +70,7 @@ export function FlowExplainerList({ items, tone = 'light', minWidth = 220 }: Flo
         }
 
         return (
-          <article key={item.id} role="listitem" style={style}>
+          <li key={item.id} role="listitem" style={style}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {item.icon && <span aria-hidden style={{ fontSize: '1.5rem' }}>{item.icon}</span>}
               <div style={{ display: 'grid', gap: 6 }}>
@@ -104,10 +103,10 @@ export function FlowExplainerList({ items, tone = 'light', minWidth = 220 }: Flo
                 </button>
               )
             )}
-          </article>
+          </li>
         )
       })}
-    </div>
+    </ul>
   )
 }
 

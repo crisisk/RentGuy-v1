@@ -18,6 +18,7 @@ import TipBanner from '@ui/TipBanner'
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
 import ExperienceLayout from '@ui/ExperienceLayout'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
+import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { defaultProjectPresets } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
 import type {
@@ -431,6 +432,7 @@ export default function Planner({ onLogout }: PlannerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [calendarSyncing, setCalendarSyncing] = useState(false)
   const userRole = useAuthStore(state => state.user?.role ?? '')
+  const userEmail = useAuthStore(state => state.user?.email ?? '')
   const showSecretsShortcut = userRole === 'admin'
 
   const loadProjects = useCallback(async () => {
@@ -693,6 +695,60 @@ export default function Planner({ onLogout }: PlannerProps) {
       ),
     [events]
   )
+
+  const plannerJourney: FlowJourneyStep[] = useMemo(() => {
+    const roleConfirmed = userRole && userRole !== 'pending'
+    const riskMetaParts: string[] = []
+    if (summary.critical > 0) {
+      riskMetaParts.push(`${summary.critical} kritieke alerts`)
+    }
+    if (summary.warning > 0 && summary.critical === 0) {
+      riskMetaParts.push(`${summary.warning} waarschuwingen`)
+    }
+    const plannerMeta = summary.total
+      ? `${summary.total} projecten${riskMetaParts.length ? ` · ${riskMetaParts.join(' · ')}` : ''}`
+      : 'Nog geen projecten ingepland'
+
+    return [
+      {
+        id: 'login',
+        title: '1. Inloggen',
+        description: 'Je sessie is actief. Alle acties worden realtime gelogd voor audittrail en rollback.',
+        status: 'complete',
+        badge: 'Authenticatie',
+        meta: userEmail ? `Ingelogd als ${userEmail}` : undefined,
+      },
+      {
+        id: 'role',
+        title: '2. Rol bevestigd',
+        description: roleConfirmed
+          ? 'Persona-presets sturen filters, explainers en notificaties voor jouw verantwoordelijkheden.'
+          : 'Bevestig je rol in de overlay zodat filters en explainers de juiste context laden.',
+        status: roleConfirmed ? 'complete' : 'blocked',
+        badge: 'Persona',
+        meta: roleConfirmed ? `Rol: ${userRole}` : 'Open de rolselectie om door te gaan',
+      },
+      {
+        id: 'planner',
+        title: '3. Planner cockpit',
+        description: 'Prioriteer projecten, bewaak voorraad en schakel tussen dashboard en kalender.',
+        status: 'current',
+        badge: 'Operations',
+        meta: plannerMeta,
+      },
+      {
+        id: 'secrets',
+        title: '4. Configuratie & launch',
+        description: showSecretsShortcut
+          ? 'Controleer integraties en e-maildiagnostiek voordat je naar productie gaat.'
+          : 'Vraag een administrator om de secrets-console te valideren en integraties klaar te zetten.',
+        status: showSecretsShortcut ? 'upcoming' : 'blocked',
+        badge: 'Go-live',
+        meta: showSecretsShortcut ? 'Directe toegang beschikbaar' : 'Administratorrechten vereist',
+        ...(showSecretsShortcut ? { href: '/dashboard' } : {}),
+      },
+    ]
+  }, [showSecretsShortcut, summary.critical, summary.total, summary.warning, userEmail, userRole])
 
   const today = useMemo(() => startOfUtcDay(new Date()), [])
 
@@ -1023,6 +1079,16 @@ export default function Planner({ onLogout }: PlannerProps) {
     </div>
   ) : null
 
+  const heroFooter = (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <FlowJourneyMap
+        steps={plannerJourney}
+        subtitle="Volg de aanbevolen volgorde om elke persona-flow en go-live check te voltooien."
+      />
+      {secretsCallout}
+    </div>
+  )
+
   return (
     <ExperienceLayout
       eyebrow="Operations cockpit"
@@ -1037,7 +1103,7 @@ export default function Planner({ onLogout }: PlannerProps) {
         </>
       }
       heroPrologue={<FlowExplainerList items={heroExplainers} minWidth={240} />}
-      heroFooter={secretsCallout}
+      heroFooter={heroFooter}
       headerSlot={headerSlot}
     >
       <>
