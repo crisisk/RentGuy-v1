@@ -10,20 +10,20 @@ import { useAppRouterContext } from './index'
 
 function LoginRoute(): JSX.Element {
   const navigate = useNavigate()
-  const { isAuthenticated, onLogin } = useAppRouterContext()
+  const { isAuthenticated, onLogin, defaultAuthenticatedPath, postLoginPath } = useAppRouterContext()
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/planner', { replace: true })
+      navigate(defaultAuthenticatedPath, { replace: true })
     }
-  }, [isAuthenticated, navigate])
+  }, [defaultAuthenticatedPath, isAuthenticated, navigate])
 
   const handleLogin = useCallback(
     (token: string, user: AuthUser) => {
       onLogin(token, user)
-      navigate('/planner', { replace: true })
+      navigate(postLoginPath, { replace: true })
     },
-    [navigate, onLogin],
+    [navigate, onLogin, postLoginPath],
   )
 
   return <Login onLogin={handleLogin} />
@@ -31,41 +31,45 @@ function LoginRoute(): JSX.Element {
 
 function PlannerRoute(): JSX.Element {
   const navigate = useNavigate()
-  const { onLogout } = useAppRouterContext()
+  const { onLogout, defaultUnauthenticatedPath } = useAppRouterContext()
   const guard = useAuthGuard({ requireAuth: true })
 
   useEffect(() => {
     if (!guard.isAuthenticated && guard.status !== 'checking') {
-      navigate('/login', { replace: true })
+      navigate(defaultUnauthenticatedPath, { replace: true })
     }
-  }, [guard.isAuthenticated, guard.status, navigate])
+  }, [defaultUnauthenticatedPath, guard.isAuthenticated, guard.status, navigate])
 
   if (!guard.isAuthenticated || guard.status === 'checking') {
     return <AuthSpinner message="Authenticatie controleren…" />
   }
 
   if (!guard.isAuthorised) {
-    return <AccessDenied onBackToLogin={() => navigate('/login', { replace: true })} />
+    return (
+      <AccessDenied
+        onBackToLogin={() => navigate(defaultUnauthenticatedPath, { replace: true })}
+      />
+    )
   }
 
   const handleLogout = useCallback(() => {
     onLogout()
-    navigate('/login', { replace: true })
-  }, [navigate, onLogout])
+    navigate(defaultUnauthenticatedPath, { replace: true })
+  }, [defaultUnauthenticatedPath, navigate, onLogout])
 
   return <Planner onLogout={handleLogout} />
 }
 
 function SecretsDashboardRoute(): JSX.Element {
   const navigate = useNavigate()
-  const { onLogout } = useAppRouterContext()
+  const { onLogout, defaultUnauthenticatedPath } = useAppRouterContext()
   const guard = useAuthGuard({ requireAuth: true, allowedRoles: ['admin'] })
 
   useEffect(() => {
     if (!guard.isAuthenticated && guard.status !== 'checking') {
-      navigate('/login', { replace: true })
+      navigate(defaultUnauthenticatedPath, { replace: true })
     }
-  }, [guard.isAuthenticated, guard.status, navigate])
+  }, [defaultUnauthenticatedPath, guard.isAuthenticated, guard.status, navigate])
 
   if (!guard.isAuthenticated || guard.status === 'checking') {
     return <AuthSpinner message="Authenticatie controleren…" />
@@ -76,37 +80,37 @@ function SecretsDashboardRoute(): JSX.Element {
       <AccessDenied
         title="Administrator toegang vereist"
         description="Alleen beheerders hebben toegang tot het secrets dashboard."
-        onBackToLogin={() => navigate('/login', { replace: true })}
+        onBackToLogin={() => navigate(defaultUnauthenticatedPath, { replace: true })}
       />
     )
   }
 
   const handleLogout = useCallback(() => {
     onLogout()
-    navigate('/login', { replace: true })
-  }, [navigate, onLogout])
+    navigate(defaultUnauthenticatedPath, { replace: true })
+  }, [defaultUnauthenticatedPath, navigate, onLogout])
 
   return <SecretsDashboard onLogout={handleLogout} />
 }
 
 function RootRedirect(): JSX.Element {
   const navigate = useNavigate()
-  const { isAuthenticated } = useAppRouterContext()
+  const { isAuthenticated, defaultAuthenticatedPath, defaultUnauthenticatedPath } = useAppRouterContext()
 
   useEffect(() => {
-    navigate(isAuthenticated ? '/planner' : '/login', { replace: true })
-  }, [isAuthenticated, navigate])
+    navigate(isAuthenticated ? defaultAuthenticatedPath : defaultUnauthenticatedPath, { replace: true })
+  }, [defaultAuthenticatedPath, defaultUnauthenticatedPath, isAuthenticated, navigate])
 
   return <AuthSpinner message="Doorsturen…" />
 }
 
 function NotFoundRoute(): JSX.Element {
   const navigate = useNavigate()
-  const { isAuthenticated } = useAppRouterContext()
+  const { isAuthenticated, defaultAuthenticatedPath, defaultUnauthenticatedPath } = useAppRouterContext()
 
   useEffect(() => {
-    navigate(isAuthenticated ? '/planner' : '/login', { replace: true })
-  }, [isAuthenticated, navigate])
+    navigate(isAuthenticated ? defaultAuthenticatedPath : defaultUnauthenticatedPath, { replace: true })
+  }, [defaultAuthenticatedPath, defaultUnauthenticatedPath, isAuthenticated, navigate])
 
   return (
     <div

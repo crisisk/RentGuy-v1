@@ -30,3 +30,9 @@
 - [ ] Axe scan (`npx playwright test --grep accessibility`) geeft geen WCAG 2.2 AA overtredingen.
 - [ ] Secrets & environment variabelen gedocumenteerd (`.env.example`).
 
+## Domein & onboarding rollout
+- [x] Marketing/demo-ervaring beschikbaar gemaakt op `www.rentguy.nl` met hero, proposities, pricing en contact.
+- [x] MR-DJ tenant router geconfigureerd voor snelle onboarding via `/dashboard` inclusief secrets focus.
+- [ ] DNS bijwerken zodat `www.mr-dj.nl` naar `mr-dj.rentguy.nl` verwijst (in afwachting van klant-goedgekeurde switch).
+- [x] Plan voor nieuwe subdomeinen (bijv. `sevensa.rentguy.nl`) vastgelegd in `docs/multi_tenant_subdomain_rollout.md`.
+

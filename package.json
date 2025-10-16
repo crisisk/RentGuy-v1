@@ -48,7 +48,6 @@
     "leaflet": "^1.9.4"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.9.2",
     "@playwright/test": "^1.47.2",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
     "@typescript-eslint/parser": "^8.10.0",
