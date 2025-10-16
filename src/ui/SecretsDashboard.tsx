@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { fetchEmailDiagnostics, fetchManagedSecrets, syncManagedSecrets, updateManagedSecret } from '@application/platform/secrets/api'
 import type { EmailDiagnostics, ManagedSecret } from '@rg-types/platform'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
-import ExperienceLayout from '@ui/ExperienceLayout'
+import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { useAuthStore } from '@stores/authStore'
@@ -61,6 +60,15 @@ const integrationKeys = [
   'MRDJ_WEBHOOK_SECRET',
 ] as const
 
+const roleLabelMap: Record<string, string> = {
+  admin: 'Administrator',
+  planner: 'Operations planner',
+  crew: 'Crew lead',
+  warehouse: 'Warehouse coördinator',
+  finance: 'Finance specialist',
+  viewer: 'Project stakeholder',
+}
+
 export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): JSX.Element {
   const [secrets, setSecrets] = useState<ManagedSecret[]>([])
   const [formValues, setFormValues] = useState<Record<string, string>>({})
@@ -74,6 +82,9 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   const user = useAuthStore(state => state.user)
   const userEmail = user?.email ?? ''
   const userRole = user?.role ?? ''
+  const userFirstName = (user?.first_name ?? '').trim()
+  const userLastName = (user?.last_name ?? '').trim()
+  const userDisplayName = [userFirstName, userLastName].filter(Boolean).join(' ').trim()
 
   const markSaving = useCallback((key: string, saving: boolean) => {
     setSavingKeys(prev => {
@@ -458,8 +469,11 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   ])
 
   const renderFeedback = () => {
-    if (!feedback) return null
-    const color = feedback.tone === 'success' ? brand.colors.success : feedback.tone === 'error' ? brand.colors.danger : brand.colors.primary
+    if (!feedback || feedback.tone === 'error') return null
+    let color = brand.colors.primary
+    if (feedback.tone === 'success') {
+      color = brand.colors.success
+    }
     return (
       <div
         role="status"
@@ -923,42 +937,6 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     )
   }
 
-  const headerSlot = (
-    <>
-      <Link
-        to="/planner"
-        style={{
-          padding: '10px 18px',
-          borderRadius: 999,
-          textDecoration: 'none',
-          background: '#ffffff',
-          color: brand.colors.primary,
-          fontWeight: 600,
-          border: `1px solid ${withOpacity('#FFFFFF', 0.3)}`,
-          boxShadow: '0 14px 28px rgba(79, 70, 229, 0.24)',
-        }}
-      >
-        Terug naar planner
-      </Link>
-      <button
-        type="button"
-        onClick={onLogout}
-        style={{
-          padding: '10px 20px',
-          borderRadius: 999,
-          border: 'none',
-          backgroundImage: brand.colors.gradient,
-          color: '#0F172A',
-          fontWeight: 700,
-          cursor: 'pointer',
-          boxShadow: '0 18px 40px rgba(79, 70, 229, 0.28)',
-        }}
-      >
-      Uitloggen
-      </button>
-    </>
-  )
-
   const heroFooter = (
     <FlowJourneyMap
       steps={secretsJourney}
@@ -966,8 +944,181 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     />
   )
 
+  const breadcrumbs = useMemo(() => {
+    const base = [
+      { id: 'home', label: 'Pilot start', href: '/' },
+      { id: 'governance', label: 'Governance', href: '/dashboard' },
+      { id: 'secrets', label: 'Secrets & configuratie' },
+    ]
+    if (activeTab === 'integration') {
+      base.push({ id: 'integration', label: 'Integraties' })
+    }
+    return base
+  }, [activeTab])
+
+  const personaSummary = useMemo<FlowExperiencePersona>(
+    () => {
+      const persona: FlowExperiencePersona = {
+        name: userDisplayName || 'Sevensa beheer',
+        role: roleLabelMap[userRole ?? 'admin'] ?? 'Administrator',
+      }
+      if (userEmail) {
+        persona.meta = userEmail
+      }
+      return persona
+    },
+    [userDisplayName, userEmail, userRole],
+  )
+
+  const stage = useMemo(() => {
+    if (!integrationReady) {
+      return {
+        label: 'Integraties configureren',
+        status: 'in-progress' as const,
+        detail: `${missingIntegrationKeys.length} sleutel${missingIntegrationKeys.length === 1 ? '' : 's'} ontbreekt`,
+      }
+    }
+    if (!emailDiagnostics) {
+      return {
+        label: 'Diagnose uitvoeren',
+        status: 'in-progress' as const,
+        detail: 'Voer de e-maildiagnose uit om monitoring te bevestigen.',
+      }
+    }
+    if (emailDiagnostics.status === 'error') {
+      return {
+        label: 'Herstel e-mail & notificaties',
+        status: 'in-progress' as const,
+        detail: emailDiagnostics.message,
+      }
+    }
+    if (emailDiagnostics.status === 'warning') {
+      return {
+        label: 'Controleer waarschuwingen',
+        status: 'in-progress' as const,
+        detail:
+          emailDiagnostics.missing.length > 0
+            ? `Ontbrekend: ${emailDiagnostics.missing.join(', ')}`
+            : 'Controleer de logboeken voor aanvullende details.',
+      }
+    }
+    return {
+      label: 'Launch klaar',
+      status: 'completed' as const,
+      detail: 'Alle secrets gesynchroniseerd en e-mail diagnostics groen.',
+    }
+  }, [emailDiagnostics, integrationReady, missingIntegrationKeys.length])
+
+  const statusMessage = useMemo(() => {
+    if (feedback?.tone === 'error') {
+      return {
+        tone: 'danger' as const,
+        title: 'Opslaan mislukt',
+        description: feedback.message,
+      }
+    }
+    if (error) {
+      return {
+        tone: 'danger' as const,
+        title: 'Kon secrets niet laden',
+        description: error,
+      }
+    }
+    if (!integrationReady) {
+      return {
+        tone: 'warning' as const,
+        title: 'Secrets ontbreken',
+        description: `Vul ${missingIntegrationKeys.length} kritieke secrets in voordat je synchroniseert.`,
+      }
+    }
+    if (emailDiagnostics?.status === 'error') {
+      return {
+        tone: 'danger' as const,
+        title: 'E-maildiagnose gefaald',
+        description: emailDiagnostics.message,
+      }
+    }
+    if (emailDiagnostics?.status === 'warning') {
+      return {
+        tone: 'warning' as const,
+        title: 'E-maildiagnose met waarschuwingen',
+        description:
+          emailDiagnostics.missing.length > 0
+            ? `Ontbrekend: ${emailDiagnostics.missing.join(', ')}`
+            : 'Controleer DKIM/SPF en webhookconfiguratie.',
+      }
+    }
+    if (feedback?.tone === 'success') {
+      return {
+        tone: 'success' as const,
+        title: 'Wijziging opgeslagen',
+        description: feedback.message,
+      }
+    }
+    return {
+      tone: 'info' as const,
+      title: 'Secrets gesynchroniseerd',
+      description: integrationReady
+        ? 'Alle integraties zijn gevuld. Voer periodiek een synchronisatie uit om tenants aligned te houden.'
+        : 'Beheer secrets en integraties vanuit dit command center.',
+    }
+  }, [emailDiagnostics, error, feedback, integrationReady, missingIntegrationKeys.length])
+
+  const actions = useMemo(() => {
+    const items: FlowExperienceAction[] = [
+      {
+        id: 'sync-secrets',
+        label: syncing ? 'Synchroniseren…' : 'Synchroniseer secrets',
+        variant: 'primary',
+        onClick: handleSync,
+        icon: '🔄',
+        disabled: syncing,
+      },
+      {
+        id: 'back-planner',
+        label: 'Naar planner',
+        variant: 'secondary',
+        href: '/planner',
+        icon: '🗂️',
+      },
+      {
+        id: 'logout',
+        label: 'Uitloggen',
+        variant: 'ghost',
+        onClick: onLogout,
+        icon: '🚪',
+      },
+    ]
+    return items
+  }, [handleSync, onLogout, syncing])
+
+  const footerAside = useMemo(
+    () => (
+      <div style={{ display: 'grid', gap: 10 }}>
+        <strong style={{ fontSize: '0.95rem' }}>Compliance & monitoring</strong>
+        <p style={{ margin: 0, fontSize: '0.85rem', color: withOpacity('#FFFFFF', 0.82) }}>
+          Houd secrets, e-mail en webhooks aantoonbaar compliant door elke deploy een diagnose en synchronisatie te loggen.
+        </p>
+        <div style={{ display: 'grid', gap: 6, fontSize: '0.8rem', color: withOpacity('#FFFFFF', 0.8) }}>
+          <span>• Integratiecoverage: {integrationCoverage}% ({configuredIntegrations}/{integrationSecrets.length})</span>
+          <span>• Node readiness: {emailDiagnostics?.nodeReady ? 'gereed' : 'actie vereist'}</span>
+          <span>• Authenticatie: {emailDiagnostics?.authConfigured ? 'ingesteld' : 'niet ingesteld'}</span>
+        </div>
+        <a
+          href="https://help.sevensa.nl/rentguy/compliance"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: '#ffffff', fontWeight: 600, textDecoration: 'none' }}
+        >
+          Bekijk het compliance-dossier →
+        </a>
+      </div>
+    ),
+    [configuredIntegrations, emailDiagnostics?.authConfigured, emailDiagnostics?.nodeReady, integrationCoverage, integrationSecrets.length],
+  )
+
   return (
-    <ExperienceLayout
+    <FlowExperienceShell
       eyebrow="Configuration command center"
       heroBadge="Compliance & integraties"
       title="Secrets & configuratie-dashboard"
@@ -979,7 +1130,12 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       }
       heroPrologue={<FlowExplainerList items={heroExplainers} minWidth={240} />}
       heroFooter={heroFooter}
-      headerSlot={headerSlot}
+      breadcrumbs={breadcrumbs}
+      persona={personaSummary}
+      stage={stage}
+      actions={actions}
+      statusMessage={statusMessage}
+      footerAside={footerAside}
     >
       <>
         <FlowGuidancePanel
@@ -1043,6 +1199,6 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
 
         {activeTab === 'integration' ? renderIntegrationTab() : renderSecretManagement()}
       </>
-    </ExperienceLayout>
+    </FlowExperienceShell>
   )
 }

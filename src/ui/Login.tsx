@@ -1,7 +1,7 @@
-import { FormEvent, useMemo, useState, type ChangeEvent, type CSSProperties } from 'react'
+import { FormEvent, useCallback, useMemo, useState, type ChangeEvent, type CSSProperties } from 'react'
 import { login, deriveLoginErrorMessage, ensureAuthEmail, type AuthUser } from '@application/auth/api'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
-import ExperienceLayout from '@ui/ExperienceLayout'
+import FlowExperienceShell from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 
@@ -13,6 +13,12 @@ const linkStyle: CSSProperties = {
   color: withOpacity('#ffffff', 0.82),
   textDecoration: 'none',
   fontWeight: 600,
+}
+
+const footerLinkStyle: CSSProperties = {
+  color: '#ffffff',
+  fontWeight: 600,
+  textDecoration: 'none',
 }
 
 const heroExplainers: FlowExplainerItem[] = [
@@ -91,11 +97,106 @@ const loginJourney: FlowJourneyStep[] = [
   },
 ]
 
+const loginBreadcrumbs = [
+  { id: 'home', label: 'Pilot start', href: '/' },
+  { id: 'login', label: 'Inloggen' },
+]
+
+const loginPersona = {
+  name: 'Gastgebruiker',
+  role: 'Pilot toegang',
+  meta: 'Kies een persona na succesvolle login',
+}
+
 export function Login({ onLogin }: LoginProps) {
   const [user, setUser] = useState('bart')
   const [password, setPassword] = useState('mr-dj')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleScrollToForm = useCallback(() => {
+    if (typeof document === 'undefined') {
+      return
+    }
+    const form = document.getElementById('login-form')
+    form?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const userField = document.getElementById('login-user') as HTMLInputElement | null
+    if (userField && typeof userField.focus === 'function') {
+      userField.focus({ preventScroll: true })
+    }
+  }, [])
+
+  const stage = useMemo(
+    () => ({
+      label: 'Authenticatie & toegang',
+      status: 'in-progress' as const,
+      detail: error ? 'Controleer je gegevens en probeer opnieuw.' : 'Gebruik SSO of een demo-account om verder te gaan.',
+    }),
+    [error],
+  )
+
+  const statusMessage = useMemo(
+    () =>
+      error
+        ? {
+            tone: 'danger' as const,
+            title: 'Login mislukt',
+            description: (
+              <>
+                {error}
+                <br />
+                Controleer gebruikersnaam en wachtwoord of kies een ander demoprofiel.
+              </>
+            ),
+          }
+        : {
+            tone: 'info' as const,
+            title: 'Welkom bij de pilotomgeving',
+            description:
+              'Toegang tot de pilot activeert automatisch explainers, auditlogs en monitoring voor alle persona\'s.',
+          },
+    [error],
+  )
+
+  const actions = useMemo(
+    () => [
+      {
+        id: 'scroll-to-form',
+        label: 'Ga naar loginformulier',
+        variant: 'primary' as const,
+        onClick: handleScrollToForm,
+        icon: '🔐',
+      },
+      {
+        id: 'contact-support',
+        label: 'Mail pilot support',
+        variant: 'ghost' as const,
+        href: 'mailto:support@sevensa.nl?subject=RentGuy%20pilot%20login',
+        icon: '✉️',
+      },
+    ],
+    [handleScrollToForm],
+  )
+
+  const footerAside = useMemo(
+    () => (
+      <div style={{ display: 'grid', gap: 8 }}>
+        <strong style={{ fontSize: '0.95rem' }}>Support & documentatie</strong>
+        <p style={{ margin: 0, fontSize: '0.85rem', color: withOpacity('#FFFFFF', 0.82) }}>
+          Bekijk de release notes en FAQ voor de laatste pilotwijzigingen of open een supportticket voor directe hulp.
+        </p>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <a href="https://help.sevensa.nl/rentguy" target="_blank" rel="noreferrer" style={footerLinkStyle}>
+            Helpcenter
+          </a>
+          <a href="https://status.sevensa.nl" target="_blank" rel="noreferrer" style={footerLinkStyle}>
+            Statuspagina
+          </a>
+        </div>
+      </div>
+    ),
+    [],
+  )
 
   const credentialList = useMemo(
     () => <FlowExplainerList tone="dark" items={credentialExplainers} minWidth={200} />, 
@@ -167,7 +268,7 @@ export function Login({ onLogin }: LoginProps) {
         </div>
       </div>
 
-      <form style={{ display: 'grid', gap: 18 }} onSubmit={handleSubmit}>
+      <form id="login-form" style={{ display: 'grid', gap: 18 }} onSubmit={handleSubmit}>
         <div style={{ display: 'grid', gap: 12 }}>
           <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Demo login</h2>
           <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
@@ -247,7 +348,7 @@ export function Login({ onLogin }: LoginProps) {
   )
 
   return (
-    <ExperienceLayout
+    <FlowExperienceShell
       layout="split"
       heroTone="dark"
       eyebrow="Pilotomgeving"
@@ -271,6 +372,12 @@ export function Login({ onLogin }: LoginProps) {
           subtitle="De aanbevolen volgorde zorgt ervoor dat explainers en dashboards met de juiste data geladen worden."
         />
       }
+      breadcrumbs={loginBreadcrumbs}
+      persona={loginPersona}
+      stage={stage}
+      actions={actions}
+      statusMessage={statusMessage}
+      footerAside={footerAside}
     />
   )
 }

@@ -16,7 +16,7 @@ import { api } from '@infra/http/api'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import TipBanner from '@ui/TipBanner'
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
-import ExperienceLayout from '@ui/ExperienceLayout'
+import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { defaultProjectPresets } from '@stores/projectStore'
@@ -106,6 +106,15 @@ const riskPalette: Record<RiskLevel, string> = {
   ok: brand.colors.success,
   warning: brand.colors.warning,
   critical: brand.colors.danger,
+}
+
+const roleLabelMap: Record<string, string> = {
+  planner: 'Operations planner',
+  crew: 'Crew lead',
+  warehouse: 'Warehouse coördinator',
+  finance: 'Finance specialist',
+  admin: 'Administrator',
+  viewer: 'Project stakeholder',
 }
 
 const cardPalette: Record<SummaryTone, string> = {
@@ -1000,44 +1009,6 @@ export default function Planner({ onLogout }: PlannerProps) {
     Einde: 'end',
   }
 
-  const headerSlot = (
-    <>
-      {showSecretsShortcut && (
-        <Link
-          to="/dashboard"
-          style={{
-            padding: '10px 18px',
-            borderRadius: 999,
-            textDecoration: 'none',
-            background: '#ffffff',
-            color: brand.colors.primary,
-            fontWeight: 600,
-            border: `1px solid ${withOpacity('#FFFFFF', 0.3)}`,
-            boxShadow: '0 14px 28px rgba(79, 70, 229, 0.24)',
-          }}
-        >
-          Secrets-dashboard
-        </Link>
-      )}
-      <button
-        type="button"
-        onClick={onLogout}
-        style={{
-          padding: '10px 20px',
-          borderRadius: 999,
-          border: 'none',
-          backgroundImage: brand.colors.gradient,
-          color: '#0F172A',
-          fontWeight: 700,
-          cursor: 'pointer',
-          boxShadow: '0 18px 40px rgba(79, 70, 229, 0.28)',
-        }}
-      >
-        Uitloggen
-      </button>
-    </>
-  )
-
   const secretsCallout = showSecretsShortcut ? (
     <div
       style={{
@@ -1089,8 +1060,159 @@ export default function Planner({ onLogout }: PlannerProps) {
     </div>
   )
 
+  const breadcrumbs = useMemo(() => {
+    const items = [
+      { id: 'home', label: 'Pilot start', href: '/' },
+      { id: 'operations', label: 'Operations cockpit', href: '/planner' },
+      { id: 'planner', label: 'Projectplanner' },
+    ]
+    if (personaPreset !== 'all') {
+      const preset = personaPresets[personaPreset]
+      if (preset) {
+        items.push({ id: 'persona', label: preset.label })
+      }
+    }
+    return items
+  }, [personaPreset])
+
+  const personaSummary = useMemo<FlowExperiencePersona>(
+    () => {
+      const preset = personaPresets[personaPreset]
+      const personaName = preset ? preset.label : 'Alle persona\'s'
+      const normalizedRole = userRole && userRole !== 'pending' ? userRole : 'planner'
+      const roleLabel = roleLabelMap[normalizedRole] ?? 'Pilot gebruiker'
+      const persona: FlowExperiencePersona = {
+        name: personaName,
+        role: roleLabel,
+      }
+      if (userEmail) {
+        persona.meta = userEmail
+      }
+      return persona
+    },
+    [personaPreset, userEmail, userRole],
+  )
+
+  const stage = useMemo(
+    () => {
+      if (summary.total === 0) {
+        return {
+          label: 'Plan eerste projecten',
+          status: 'upcoming' as const,
+          detail: 'Voeg een project toe om dashboards en explainers te activeren.',
+        }
+      }
+      if (summary.critical > 0) {
+        return {
+          label: 'Los voorraadblokkades op',
+          status: 'in-progress' as const,
+          detail: `${summary.critical} kritieke voorraadissues vereisen actie`,
+        }
+      }
+      if (upcomingWithin7 > 0) {
+        return {
+          label: 'Bereid komende shows voor',
+          status: 'in-progress' as const,
+          detail: `${upcomingWithin7} projecten starten binnen 7 dagen`,
+        }
+      }
+      return {
+        label: 'Operaties op schema',
+        status: 'completed' as const,
+        detail:
+          summary.warning > 0
+            ? `${summary.warning} waarschuwingen gemonitord`
+            : 'Geen kritieke of waarschuwing alerts actief',
+      }
+    },
+    [summary.critical, summary.total, summary.warning, upcomingWithin7],
+  )
+
+  const statusMessage = useMemo(() => {
+    if (feedback?.type === 'error') {
+      return {
+        tone: 'danger' as const,
+        title: 'Actie geblokkeerd',
+        description: feedback.message,
+      }
+    }
+    if (summary.critical > 0) {
+      return {
+        tone: 'danger' as const,
+        title: 'Voorraadblokkades actief',
+        description: `${summary.critical} kritieke projecten wachten op voorraad of goedkeuring. Escaleer via het secrets-dashboard indien nodig.`,
+      }
+    }
+    if (summary.warning > 0) {
+      return {
+        tone: 'warning' as const,
+        title: 'Waarschuwingen in monitoring',
+        description: `${summary.warning} projecten hebben een waarschuwing. Controleer crew of materiaal voordat de planning verspringt.`,
+      }
+    }
+    if (summary.total === 0) {
+      return {
+        tone: 'info' as const,
+        title: 'Start je eerste planning',
+        description: 'Voeg een project toe of importeer data om de dashboard explainers te vullen.',
+      }
+    }
+    if (upcomingWithin7 > 0) {
+      return {
+        tone: 'info' as const,
+        title: 'Aankomende shows voorbereiden',
+        description: `${upcomingWithin7} projecten starten binnen een week. Controleer crew, voorraad en transporttijdslijnen.`,
+      }
+    }
+    return {
+      tone: 'success' as const,
+      title: 'Alle flows op schema',
+      description: `${summary.total} projecten actief zonder kritieke alerts. Houd audittrails en monitoring in de gaten.`,
+    }
+  }, [feedback, summary.critical, summary.total, summary.warning, upcomingWithin7])
+
+  const actions = useMemo(() => {
+    const items: FlowExperienceAction[] = []
+    if (showSecretsShortcut) {
+      items.push({ id: 'secrets', label: 'Secrets-dashboard', variant: 'secondary', href: '/dashboard', icon: '🗝️' })
+    }
+    items.push({ id: 'logout', label: 'Uitloggen', variant: 'ghost', onClick: onLogout, icon: '🚪' })
+    return items
+  }, [onLogout, showSecretsShortcut])
+
+  const footerAside = useMemo(
+    () => (
+      <div style={{ display: 'grid', gap: 10 }}>
+        <strong style={{ fontSize: '0.95rem' }}>Operations handboek</strong>
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: 18,
+            display: 'grid',
+            gap: 6,
+            fontSize: '0.85rem',
+            color: withOpacity('#FFFFFF', 0.86),
+          }}
+        >
+          <li>Gebruik de persona-presets om crew- en finance dashboards automatisch te synchroniseren.</li>
+          <li>Escalaties verlopen via het secrets-dashboard en NOC monitoring documentatie.</li>
+          <li>Plan rollback scenario’s wekelijks; auditlogs staan gekoppeld aan elke wijziging.</li>
+        </ul>
+        <a
+          href="https://help.sevensa.nl/rentguy/runbook"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: '#ffffff', fontWeight: 600, textDecoration: 'none' }}
+        >
+          Bekijk het volledige runbook →
+        </a>
+      </div>
+    ),
+    [],
+  )
+
   return (
-    <ExperienceLayout
+    <FlowExperienceShell
       eyebrow="Operations cockpit"
       heroBadge="Persona-intelligentie"
       title="Mister DJ projectplanner"
@@ -1104,7 +1226,12 @@ export default function Planner({ onLogout }: PlannerProps) {
       }
       heroPrologue={<FlowExplainerList items={heroExplainers} minWidth={240} />}
       heroFooter={heroFooter}
-      headerSlot={headerSlot}
+      breadcrumbs={breadcrumbs}
+      persona={personaSummary}
+      stage={stage}
+      actions={actions}
+      statusMessage={statusMessage}
+      footerAside={footerAside}
     >
       <>
         <TipBanner module="projects" />
@@ -1325,7 +1452,7 @@ export default function Planner({ onLogout }: PlannerProps) {
           </div>
         )}
 
-        {feedback && (
+        {feedback?.type === 'success' && (
           <div
             role="alert"
             style={{
@@ -1335,11 +1462,8 @@ export default function Planner({ onLogout }: PlannerProps) {
                 feedback.type === 'success'
                   ? withOpacity(brand.colors.success, 0.15)
                   : withOpacity(brand.colors.danger, 0.15),
-              color: feedback.type === 'success' ? brand.colors.secondary : '#9B1C1C',
-              border: `1px solid ${withOpacity(
-                feedback.type === 'success' ? brand.colors.success : brand.colors.danger,
-                0.35
-              )}`,
+              color: brand.colors.secondary,
+              border: `1px solid ${withOpacity(brand.colors.success, 0.35)}`,
             }}
           >
             {feedback.message}
@@ -1606,6 +1730,6 @@ export default function Planner({ onLogout }: PlannerProps) {
           </form>
         )}
       </>
-    </ExperienceLayout>
+    </FlowExperienceShell>
   )
 }
