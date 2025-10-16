@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
 import Login from '@ui/Login'
 import Planner from '@ui/Planner'
+import SecretsDashboard from '@ui/SecretsDashboard'
 import type { AuthUser } from '@application/auth/api'
 import { AccessDenied, AuthSpinner, useAuthGuard } from './guards'
 import { useAppRouterContext } from './index'
@@ -55,6 +56,39 @@ function PlannerRoute(): JSX.Element {
   return <Planner onLogout={handleLogout} />
 }
 
+function SecretsDashboardRoute(): JSX.Element {
+  const navigate = useNavigate()
+  const { onLogout } = useAppRouterContext()
+  const guard = useAuthGuard({ requireAuth: true, allowedRoles: ['admin'] })
+
+  useEffect(() => {
+    if (!guard.isAuthenticated && guard.status !== 'checking') {
+      navigate('/login', { replace: true })
+    }
+  }, [guard.isAuthenticated, guard.status, navigate])
+
+  if (!guard.isAuthenticated || guard.status === 'checking') {
+    return <AuthSpinner message="Authenticatie controleren…" />
+  }
+
+  if (!guard.isAuthorised) {
+    return (
+      <AccessDenied
+        title="Administrator toegang vereist"
+        description="Alleen beheerders hebben toegang tot het secrets dashboard."
+        onBackToLogin={() => navigate('/login', { replace: true })}
+      />
+    )
+  }
+
+  const handleLogout = useCallback(() => {
+    onLogout()
+    navigate('/login', { replace: true })
+  }, [navigate, onLogout])
+
+  return <SecretsDashboard onLogout={handleLogout} />
+}
+
 function RootRedirect(): JSX.Element {
   const navigate = useNavigate()
   const { isAuthenticated } = useAppRouterContext()
@@ -94,6 +128,7 @@ export function createAppRoutes(): RouteObject[] {
     { path: '/', element: <RootRedirect /> },
     { path: '/login', element: <LoginRoute /> },
     { path: '/planner', element: <PlannerRoute /> },
+    { path: '/dashboard', element: <SecretsDashboardRoute /> },
     { path: '*', element: <NotFoundRoute /> },
   ]
 }

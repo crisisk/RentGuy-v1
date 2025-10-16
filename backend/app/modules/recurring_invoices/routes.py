@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.modules.auth.deps import get_current_user, get_db
@@ -96,7 +96,11 @@ def update_recurring_invoice(
     return RecurringInvoiceResponse.model_validate(invoice)
 
 
-@router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{invoice_id}",
+    status_code=status.HTTP_200_OK,
+    response_class=Response,
+)
 def delete_recurring_invoice(
     invoice_id: int,
     current_user: User = Depends(get_current_user),
@@ -113,6 +117,7 @@ def delete_recurring_invoice(
     if not deleted:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurring invoice not found")
     db.commit()
+    return Response(status_code=status.HTTP_200_OK)
 
 
 @router.post("/{invoice_id}/trigger", response_model=RecurringInvoiceLogResponse)

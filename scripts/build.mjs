@@ -12,8 +12,8 @@ const outputDir = path.resolve(projectRoot, 'dist')
 const assetsDir = path.join(outputDir, 'assets')
 const indexHtmlPath = path.resolve(projectRoot, 'index.html')
 
-const requireFromFrontend = createRequire(path.resolve(projectRoot, 'rentguy/frontend/package.json'))
-const esbuild = requireFromFrontend('esbuild')
+const requireFromRoot = createRequire(path.resolve(projectRoot, 'package.json'))
+const esbuild = requireFromRoot('esbuild')
 
 async function ensureOutputDirs() {
   await fs.rm(outputDir, { recursive: true, force: true })
@@ -44,7 +44,7 @@ async function build() {
     outdir: assetsDir,
     absWorkingDir: projectRoot,
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json'],
-    nodePaths: [path.resolve(projectRoot, 'rentguy/frontend/node_modules')],
+    nodePaths: [path.resolve(projectRoot, 'node_modules')],
     plugins: [aliasPlugin],
     define,
     logLevel: 'info',

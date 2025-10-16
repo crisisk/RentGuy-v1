@@ -10,8 +10,8 @@ const __filename = fileURLToPath(import.meta.url)
 const projectRoot = path.resolve(path.dirname(__filename), '..')
 const testsRoot = path.resolve(projectRoot, 'src')
 
-const requireFromFrontend = createRequire(path.resolve(projectRoot, 'rentguy/frontend/package.json'))
-const esbuild = requireFromFrontend('esbuild')
+const requireFromRoot = createRequire(path.resolve(projectRoot, 'package.json'))
+const esbuild = requireFromRoot('esbuild')
 
 async function collectTestFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true })
@@ -66,7 +66,7 @@ async function runTestFile(filePath, aliasPlugin) {
     write: false,
     absWorkingDir: projectRoot,
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json'],
-    nodePaths: [path.resolve(projectRoot, 'rentguy/frontend/node_modules')],
+    nodePaths: [path.resolve(projectRoot, 'node_modules')],
     plugins: [aliasPlugin],
     define,
     loader: {

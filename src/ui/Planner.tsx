@@ -6,6 +6,7 @@ import React, {
   type ChangeEvent,
   type FormEvent,
 } from 'react'
+import { Link } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -15,6 +16,7 @@ import { api } from '@infra/http/api'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 import TipBanner from '@ui/TipBanner'
 import { defaultProjectPresets } from '@stores/projectStore'
+import { useAuthStore } from '@stores/authStore'
 import type {
   PersonaKey,
   PersonaPreset,
@@ -414,6 +416,8 @@ export default function Planner({ onLogout }: PlannerProps) {
   })
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [calendarSyncing, setCalendarSyncing] = useState(false)
+  const userRole = useAuthStore(state => state.user?.role ?? '')
+  const showSecretsShortcut = userRole === 'admin'
 
   const loadProjects = useCallback(async () => {
     setLoading(true)
@@ -746,6 +750,49 @@ export default function Planner({ onLogout }: PlannerProps) {
             Uitloggen
           </button>
         </div>
+
+        {showSecretsShortcut && (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              gap: 16,
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
+              borderRadius: 20,
+              padding: '20px 24px',
+              border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+              boxShadow: brand.colors.shadow,
+            }}
+          >
+            <div style={{ maxWidth: 560 }}>
+              <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.2em', color: brand.colors.mutedText }}>
+                Systeembeheer
+              </span>
+              <h3 style={{ margin: '6px 0', fontFamily: headingFontStack, color: brand.colors.secondary }}>
+                Nieuwe secrets-console beschikbaar
+              </h3>
+              <p style={{ margin: 0, color: brand.colors.mutedText }}>
+                Vul alle .env-variabelen in vanuit één dashboard en push ze naar de FastAPI- en Express-omgevingen. Houd e-mail, betalingen en observability centraal bij.
+              </p>
+            </div>
+            <Link
+              to="/dashboard"
+              style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                textDecoration: 'none',
+                backgroundImage: brand.colors.gradient,
+                color: '#fff',
+                fontWeight: 600,
+                boxShadow: '0 14px 28px rgba(79, 70, 229, 0.26)',
+              }}
+            >
+              Open dashboard
+            </Link>
+          </div>
+        )}
 
         <TipBanner module="projects" />
 
