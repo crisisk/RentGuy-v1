@@ -892,6 +892,13 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
           flows={flowItems}
         />
 
+        <FlowGuidancePanel
+          eyebrow="Setup flows"
+          title="Volg de platformconfiguratie"
+          description="Deze checklist laat zien welke stappen voor secrets, integraties en e-mail nog aandacht vragen. Gebruik dit als command center zodat elk deploy-venster aantoonbaar compliant is."
+          flows={flowItems}
+        />
+
         <div
           role="tablist"
           aria-label="Secrets tabs"
