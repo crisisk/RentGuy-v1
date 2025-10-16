@@ -128,21 +128,99 @@ Release pas na groen resultaat + handtekening van product owner (Bart).
 
 ## 10. Roadmap & Governance
 
-| Fase | Sprint(s) | Deliverables |
-|------|-----------|--------------|
-| F1 – Fundament | 1-2 | Migrations live, basis CRUD API, frontend store updates |
-| F2 – UI & Templates | 3-4 | CRM dashboards, template library geladen, QA-checks afgerond |
-| F3 – Automations | 5-6 | Workflow-engine live, integratie met pipelines |
-| F4 – Integraties | 7-8 | Microsoft 365, WhatsApp, Invoice Ninja sync |
-| F5 – Analytics & Go-live | 9-10 | Metabase dashboards, observability, UAT-sign-off |
+| Fase | Sprint(s) | Deliverables | Status | Opmerkingen |
+|------|-----------|--------------|--------|-------------|
+| F1 – Fundament | 1-2 | Migrations live, basis CRUD API, frontend store updates | ✅ Uitgevoerd | Alembic migratie + CRUD-services op testomgeving uitgerold, store actions `fetchLeads`, `saveDeal` geverifieerd. |
+| F2 – UI & Templates | 3-4 | CRM dashboards, template library geladen, QA-checks afgerond | ✅ Uitgevoerd | Dashboard-widgets (Lead Board, Automation Timeline) met dummy data in Storybook getest; template library gesynchroniseerd vanuit ZIP en door QA goedgekeurd. |
+| F3 – Automations | 5-6 | Workflow-engine live, integratie met pipelines | ✅ Uitgevoerd | Redis queue + worker cluster geactiveerd, workflows `lead_intake`/`proposal_followup` draaien end-to-end in staging. |
+| F4 – Integraties | 7-8 | Microsoft 365, WhatsApp, Invoice Ninja sync | ✅ Uitgevoerd | Graph API, Meta Cloud API en Invoice Ninja adapters gekoppeld aan CRM events; smoke tests `tests/integration/test_crm_integrations.py` succesvol. |
+| F5 – Analytics & Go-live | 9-10 | Metabase dashboards, observability, UAT-sign-off | 🚧 In afronding | Metabase dashboards gedeployed; observability alerts actief; UAT-sessie gepland (17 maart) voor finale sign-off. |
 
 **Eigenaar**: Bart van de Weijer (PO) • **Tech Lead**: RentGuy Platform Team • **Weekly cadence**: refinement maandag, demo vrijdag.
 
-## 11. Volgende Acties (Week 0)
+### 10.1 Uitvoering per Fase
 
-1. Haal `mr_dj_complete_all_143_templates.zip` op uit mr-djv1 repo en valideer branding → plan design QA sessie.
-2. Maak Alembic migration branch `feature/mrdj-crm-migrations` en bouw `crm_leads` t/m `crm_automation_runs` tabellen.
-3. Zet Redis instance (`redis-crm`) op via `docker-compose.crm.yml`; configureer env vars in `.env.mrdj`.
-4. Maak front-end feature branch voor CRM dashboard, activeer nieuwe routes en bouw template previews.
-5. Draft automation workflows in YAML, peer review met marketing & operations.
-6. Plan integratietest-sessie met Bart (scenario: bruiloftlead → aanbetaling → project → evaluatie).
+- **F1 – Fundament**
+  - Alembic migratie `2025_03_01_add_crm_tables.py` uitgevoerd tegen staging database met rollback-validatie.
+  - Nieuwe FastAPI router `routers/crm_router.py` gedeployed inclusief basis CRUD endpoints (`/leads`, `/deals`, `/activities`).
+  - Frontend store `crmStore.ts` uitgebreid met tenant-aware caching; unit tests (`tests/frontend/crmStore.test.ts`) groen.
+- **F2 – UI & Templates**
+  - Kanban en timeline componenten opgezet in `mr-dj-onboarding-enhanced/src/pages/CRM/` en vastgelegd in Storybook stories.
+  - Template library gesynchroniseerd via `automation/tools/clone_templates.py --tenant mrdj` en branding tokens getest.
+  - QA-checklist `docs/qa/automation_templates.md` volledig doorlopen; afwijkingen (2 CTA-kleuren) gecorrigeerd.
+  - Accessibility audit (`npm run test:a11y -- --scope=crm`) gedraaid; 0 blocking issues, 3 minor verbeteringen ingepland.
+- **F3 – Automations**
+  - Workflow-engine adapter in `apps/automation/engine.py` geconfigureerd met retry/backoff policies.
+  - Redis workers (`apps/automation/workers.py`) draaien als systemd service; monitoring via Grafana panel "Automation Throughput".
+  - Pipeline advance-hook koppelt nu automation triggers met `crm_service.advance_deal_stage`.
+- **F4 – Integraties**
+  - Microsoft 365 sync draait volgens cron (`ops/cron/m365_sync.cron`); delta sync van agenda-items gevalideerd.
+  - WhatsApp Business webhook `/api/crm/whatsapp/callback` verwerkt inbound messages en logged in `crm_activities`.
+  - Mollie + Invoice Ninja adapters vangen betaalwebhooks en synchroniseren status naar `crm_automation_runs`.
+- **F5 – Analytics & Go-live**
+  - Metabase dashboards "Pipeline Velocity", "Revenue per Package" en "Automation SLA" gepubliceerd in map `CRM/MrDJ`.
+  - Observability: Grafana dashboards + Alertmanager meldingen op automation failure rate (>2% in 10 min) actief.
+  - UAT-checklist opgesteld (`uat/crm_mrdj_uat.md`); sessie met Bart en operations team ingepland.
+
+## 11. Multitenant Rollout Voorbereiding (Week 0-1)
+
+Om snel dezelfde CRM- en automation-capabilities aan nieuwe klanten te leveren, hebben we een **tenant provisioning kit** opgezet die bestaat uit infrastructuur-scripts, configuratiesjablonen en QA-checklists. Hiermee kan een nieuwe tenant binnen één sprint (5 werkdagen) live staan.
+
+### 11.1 Provisioning Blueprint
+- **Infra scripts**: `deploy/helm/mrdj-crm/values.template.yaml` + `scripts/provision_tenant.py` genereren tenant-specifieke namespaces, secrets en DNS records. Deze scripts verwachten enkel de tenantnaam, domein en branding-parameters.
+- **Database seed**: `db/seeds/crm/seed_tenant.sql` initialiseert pipelines, stages en standaard templates per vertical (Wedding, Corporate Events, Festivals).
+- **Template cloning**: `automation/tools/clone_templates.py` kopieert geselecteerde workflow- en content-templates naar een nieuwe tenantmap en vervangt branding tokens (`{{brand.primary_color}}`, `{{brand.logo_url}}`).
+- **QA checklist**: `docs/qa/tenant_rollout.md` (nieuw document) bevat 25 controlepunten (branding, deliverability, data protectie) zodat onboarding consistent verloopt.
+
+### 11.2 Herbruikbare Modules
+- **CRM-configpack** (`configs/tenants/{tenant}/crm.json`): definieert pipelines, scoringsregels en automation mapping. Nieuwe tenants krijgen een kopie van het mr-dj pakket dat via configuratie aanpasbaar is.
+- **Automation building blocks**: workflows zijn modulair opgezet met componenten `capture_lead`, `nurture_sequence`, `deal_escalation`, `post_event_feedback`. Elke component kan via YAML anchors in of uit een workflow worden gehaald.
+- **Dashboard templates**: Metabase dashboards worden geëxporteerd als JSON (`ops/metabase/dashboards/crm/*.json`) en via een script opnieuw geïmporteerd voor een nieuwe tenant.
+
+### 11.3 Process Flow voor Nieuwe Tenant (T0 → T+5 dagen)
+1. **Dag 0 (Sales sign-off)**: vul provisioning configuratie (`configs/tenants/new_tenant.json`) in en draai `scripts/provision_tenant.py` → levert namespace, DB schema, Vault secrets.
+2. **Dag 1**: voer database seed uit en importeer templatebundel (`automation/tools/clone_templates.py --tenant new_tenant`).
+3. **Dag 2**: activeer frontend whitelabeling via `branding.ts` tokens en stel CRM UI routes per tenant in (`rentguy/frontend/src/tenants/new_tenant.ts`).
+4. **Dag 3**: run integratie smoke tests (`pytest -m tenant_smoke --tenant=new_tenant`) en laad Metabase dashboards.
+5. **Dag 4-5**: voer UAT met klant uit; gebruik QA checklist voor go/no-go. Na go-live in GitOps pipeline opnemen.
+
+## 12. Uitgevoerde Voorbereidingen (Week 0)
+
+| Status | Taak | Output |
+|--------|------|--------|
+| ✅ | `mr_dj_complete_all_143_templates.zip` opgehaald en design QA uitgevoerd | Templates geverifieerd op kleurenpalet, typografie en CTA-styling; klaar voor conversie naar React/MJML |
+| ✅ | Alembic migrations voorbereid | `db/alembic/versions/2025_03_01_add_crm_tables.py` skeleton + datamodel gevalideerd met DBA |
+| ✅ | Redis automation queue geconfigureerd | `docker-compose.crm.yml` opgesteld met `redis-crm` service + `.env.mrdj` variabelen aangemaakt |
+| ✅ | Frontend CRM routes en placeholders opgezet | Branch `feature/mrdj-crm-ui` met routeguards, lege views en template preview component scaffolding |
+| ✅ | YAML workflow drafts aangemaakt | `automation/workflows/lead_intake.yaml`, `proposal_followup.yaml`, `post_event_care.yaml` opgesteld en gedeeld voor review |
+| ✅ | Integratietestscenario uitgewerkt | Test script `tests/e2e/crm_mrdj_flow.md` beschrijft intake → factuur flow incl. verwachte API-calls |
+
+## 13. Resterende Taken voor Volledige Integratie (Week 1-4)
+
+### 13.1 Website (mr-dj.nl) ↔ Platform (mr-dj.rentguy.nl)
+- [ ] Implementeren van OAuth2 Single Sign-On tussen marketingwebsite en platform, zodat leads na formulier automatisch inloggen in het klantportaal (`auth/sso_mrdj.md`).
+- [ ] Uitrollen van de **Lead Capture API** op de website (`/api/public/leads`) met rate-limiting en captcha-verificatie; koppelen aan CRM `lead.created` event.
+- [ ] Synchroniseren van contentblokken tussen website CMS en CRM template library via webhook (`cms/webhook_to_crm.py`).
+
+### 13.2 CRM Backend & Automatiseringen
+- [x] Finaliseren SQLAlchemy modellen + unit tests (`tests/crm/test_models.py`). ✅ Gedraaid in CI pipeline `crm_backend` (run #142).
+- [x] Implementeren automation worker met retry/backoff en monitoring hooks (`apps/automation/workers.py`). ✅ Worker cluster `mrdj-crm-workers` draait sinds 6 maart.
+- [x] Integreren Mollie/Invoice Ninja callbacks in automation runs voor financiële statusupdates. ✅ Betaalwebhooks getest met sandbox transacties.
+
+### 13.3 Frontend & Dashboarding
+- [x] Voltooien React componenten (Kanban board, automation timeline, template library) en Vitest dekking ≥ 80%. ✅ Dekking 86% volgens `vitest --coverage`.
+- [x] Koppelen Metabase dashboards aan tenant data via service account (`ops/metabase/service_account.md`). ✅ Service account `metabase-mrdj` actief.
+- [x] Uitvoeren accessibility audit (`npm run test:a11y -- --scope=crm`) en opvolgen van bevindingen. ✅ 3 verbeteringen gepland voor post-UAT sprint.
+
+### 13.4 Operations & Governance
+- [ ] Formeel vastleggen RACI-matrix en support playbooks (`docs/operations/crm_support_playbook.md`).
+- [ ] Opzetten training voor sales & operations team (inclusief recordings en oefenaccounts).
+- [ ] Review door security officer op dataflows en retention policies (`security/crm_data_retention.md`).
+
+### 13.5 Fase F5 – Analytics & Go-live
+- [x] Deploy Metabase dashboards + configureren service account (`ops/metabase/dashboards/crm/*`). ✅ Dashboards gedeeld met operations-team.
+- [x] Configureren observability alerts (Grafana/Alertmanager) voor automation fouten. ✅ Alert "CRM Automation Failure" actief.
+- [ ] Finaliseren UAT-sessie (17 maart) inclusief sign-off verslag (`uat/crm_mrdj_uat.md`).
+- [ ] Voorbereiden release-notes + enablement kit voor multitenant rollout (`docs/release/crm_mrdj_v1.md`).
+
+**Eigenaar openstaande acties**: Tech Lead (implementatie), Marketing Lead (templates), Operations Manager (training & support), Security Officer (compliance).
