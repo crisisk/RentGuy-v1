@@ -1,0 +1,29 @@
+[
+  {
+    "tenant": "mr-dj",
+    "container_id": "GTM-TEST",
+    "date": "2025-03-14",
+    "channel": "Organic Search",
+    "source": "mr-dj.nl",
+    "conversions": 10,
+    "conversion_value": 3100.0
+  },
+  {
+    "tenant": "mr-dj",
+    "container_id": "GTM-TEST",
+    "date": "2025-03-15",
+    "channel": "Paid Search",
+    "source": "mr-dj.nl",
+    "conversions": 7,
+    "conversion_value": 2600.0
+  },
+  {
+    "tenant": "mr-dj",
+    "container_id": "GTM-TEST",
+    "date": "2025-03-15",
+    "channel": "Referral",
+    "source": "referral_partner",
+    "conversions": 3,
+    "conversion_value": 1450.0
+  }
+]
