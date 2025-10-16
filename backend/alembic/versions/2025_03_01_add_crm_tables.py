@@ -105,8 +105,57 @@ def upgrade() -> None:
     op.create_index("ix_crm_automation_runs_trigger", "crm_automation_runs", ["trigger"])
     op.create_index("ix_crm_automation_runs_tenant", "crm_automation_runs", ["tenant_id"])
 
+    op.create_table(
+        "crm_acquisition_metrics",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("tenant_id", sa.String(length=100), nullable=False, index=True),
+        sa.Column("channel", sa.String(length=120), nullable=True),
+        sa.Column("source", sa.String(length=120), nullable=True),
+        sa.Column("medium", sa.String(length=120), nullable=True),
+        sa.Column("captured_date", sa.Date(), nullable=False, index=True),
+        sa.Column("sessions", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("new_users", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("engaged_sessions", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("ga_conversions", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("ga_conversion_value", sa.Numeric(12, 2), nullable=False, server_default="0"),
+        sa.Column("gtm_conversions", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("gtm_conversion_value", sa.Numeric(12, 2), nullable=False, server_default="0"),
+        sa.Column("ga_property_id", sa.String(length=120), nullable=True),
+        sa.Column("gtm_container_id", sa.String(length=120), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "channel",
+            "source",
+            "captured_date",
+            name="uq_acquisition_tenant_channel_source_date",
+        ),
+    )
+    op.create_index(
+        "ix_crm_acquisition_metrics_tenant_date",
+        "crm_acquisition_metrics",
+        ["tenant_id", "captured_date"],
+    )
+
 
 def downgrade() -> None:
+    op.drop_index(
+        "ix_crm_acquisition_metrics_tenant_date",
+        table_name="crm_acquisition_metrics",
+    )
+    op.drop_table("crm_acquisition_metrics")
+
     op.drop_index("ix_crm_automation_runs_tenant", table_name="crm_automation_runs")
     op.drop_index("ix_crm_automation_runs_trigger", table_name="crm_automation_runs")
     op.drop_table("crm_automation_runs")

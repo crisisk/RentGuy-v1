@@ -167,9 +167,53 @@ class AutomationWorkflowKPI(BaseModel):
     failure_rate: float
 
 
+class SalesKPIs(BaseModel):
+    open_deals: int
+    won_deals_last_30_days: int
+    lost_deals_last_30_days: int
+    total_deals: int
+    bookings_last_30_days: int
+    win_rate: float
+    avg_deal_value: float | None = None
+    forecast_next_30_days: float
+    pipeline_velocity_per_day: float
+
+
+class AcquisitionKPIs(BaseModel):
+    lookback_days: int
+    ga_sessions: int
+    ga_new_users: int
+    ga_engaged_sessions: int
+    ga_conversions: int
+    ga_conversion_value: float
+    gtm_conversions: int
+    gtm_conversion_value: float
+    blended_conversion_rate: float
+    active_connectors: list[str]
+
+
+class SourcePerformanceKPI(BaseModel):
+    key: str
+    label: str
+    dimension_type: str
+    lead_count: int
+    deal_count: int
+    won_deal_count: int
+    pipeline_value: float
+    won_value: float
+    ga_sessions: int
+    ga_conversions: int
+    gtm_conversions: int
+    ga_revenue: float
+    gtm_revenue: float
+
+
 class DashboardSummary(BaseModel):
     generated_at: datetime
     headline: HeadlineKPIs
     lead_funnel: LeadFunnelKPIs
     pipeline: list[PipelineStageKPI]
     automation: list[AutomationWorkflowKPI]
+    sales: SalesKPIs
+    acquisition: AcquisitionKPIs
+    source_performance: list[SourcePerformanceKPI]

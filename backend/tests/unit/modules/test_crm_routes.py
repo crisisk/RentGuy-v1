@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.modules.crm import models
 from app.modules.crm import deps as crm_deps
 
@@ -120,101 +122,172 @@ def test_public_lead_capture_endpoint(client: TestClient, db_session: Session) -
 
 
 def test_dashboard_metrics_endpoint(client: TestClient, db_session: Session) -> None:
-    now = datetime.utcnow()
-    pipeline_id, stage_intake, stage_proposal = _seed_pipeline(db_session)
+    original_sources = settings.CRM_ANALYTICS_SOURCES
+    settings.CRM_ANALYTICS_SOURCES = {
+        TENANT_ID: {
+            "ga4_property_id": "properties/test",
+            "gtm_container_id": "GTM-TEST",
+        }
+    }
 
-    lead_recent = models.CRMLead(
-        tenant_id=TENANT_ID,
-        name="Recent Lead",
-        email="recent@example.com",
-        created_at=now - timedelta(days=5),
-        updated_at=now - timedelta(days=5),
-    )
-    lead_old = models.CRMLead(
-        tenant_id=TENANT_ID,
-        name="Old Lead",
-        email="old@example.com",
-        created_at=now - timedelta(days=45),
-        updated_at=now - timedelta(days=45),
-    )
-    db_session.add_all([lead_recent, lead_old])
-    db_session.commit()
-    db_session.refresh(lead_recent)
-    db_session.refresh(lead_old)
+    try:
+        now = datetime.utcnow()
+        pipeline_id, stage_intake, stage_proposal = _seed_pipeline(db_session)
 
-    deal_open = models.CRMDeal(
-        tenant_id=TENANT_ID,
-        lead_id=lead_recent.id,
-        pipeline_id=pipeline_id,
-        stage_id=stage_intake,
-        title="Open Deal",
-        value=2000,
-        probability=50,
-        status="open",
-        created_at=now - timedelta(days=10),
-        updated_at=now - timedelta(days=3),
-    )
-    deal_won = models.CRMDeal(
-        tenant_id=TENANT_ID,
-        lead_id=lead_old.id,
-        pipeline_id=pipeline_id,
-        stage_id=stage_proposal,
-        title="Won Deal",
-        value=3000,
-        probability=100,
-        status="won",
-        created_at=now - timedelta(days=20),
-        updated_at=now - timedelta(days=1),
-    )
-    db_session.add_all([deal_open, deal_won])
-    db_session.commit()
-    db_session.refresh(deal_open)
-    db_session.refresh(deal_won)
+        lead_recent = models.CRMLead(
+            tenant_id=TENANT_ID,
+            name="Recent Lead",
+            email="recent@example.com",
+            source="mr-dj.nl",
+            created_at=now - timedelta(days=5),
+            updated_at=now - timedelta(days=5),
+        )
+        lead_old = models.CRMLead(
+            tenant_id=TENANT_ID,
+            name="Old Lead",
+            email="old@example.com",
+            source="referral_partner",
+            created_at=now - timedelta(days=45),
+            updated_at=now - timedelta(days=45),
+        )
+        db_session.add_all([lead_recent, lead_old])
+        db_session.commit()
+        db_session.refresh(lead_recent)
+        db_session.refresh(lead_old)
 
-    run_completed = models.CRMAutomationRun(
-        tenant_id=TENANT_ID,
-        deal_id=deal_won.id,
-        trigger="proposal_followup",
-        workflow_id="proposal_followup",
-        status="completed",
-        created_at=now - timedelta(minutes=8),
-        completed_at=now - timedelta(minutes=3),
-    )
-    run_failed = models.CRMAutomationRun(
-        tenant_id=TENANT_ID,
-        deal_id=deal_open.id,
-        trigger="lead_intake",
-        workflow_id="lead_intake",
-        status="failed",
-        created_at=now - timedelta(minutes=4),
-    )
-    db_session.add_all([run_completed, run_failed])
-    db_session.commit()
+        deal_open = models.CRMDeal(
+            tenant_id=TENANT_ID,
+            lead_id=lead_recent.id,
+            pipeline_id=pipeline_id,
+            stage_id=stage_intake,
+            title="Open Deal",
+            value=2000,
+            probability=50,
+            status="open",
+            expected_close=(now + timedelta(days=10)).date(),
+            created_at=now - timedelta(days=10),
+            updated_at=now - timedelta(days=3),
+        )
+        deal_won = models.CRMDeal(
+            tenant_id=TENANT_ID,
+            lead_id=lead_old.id,
+            pipeline_id=pipeline_id,
+            stage_id=stage_proposal,
+            title="Won Deal",
+            value=3000,
+            probability=100,
+            status="won",
+            expected_close=(now - timedelta(days=2)).date(),
+            created_at=now - timedelta(days=20),
+            updated_at=now - timedelta(days=1),
+        )
+        db_session.add_all([deal_open, deal_won])
+        db_session.commit()
+        db_session.refresh(deal_open)
+        db_session.refresh(deal_won)
 
-    response = client.get(
-        "/api/v1/crm/analytics/dashboard", headers={"X-Tenant-ID": TENANT_ID}
-    )
-    assert response.status_code == 200
-    payload = response.json()
+        acquisition_metric = models.CRMAcquisitionMetric(
+            tenant_id=TENANT_ID,
+            channel="Organic Search",
+            source="mr-dj.nl",
+            medium="organic",
+            captured_date=now.date(),
+            sessions=150,
+            new_users=90,
+            engaged_sessions=120,
+            ga_conversions=15,
+            ga_conversion_value=Decimal("5000.00"),
+            gtm_conversions=5,
+            gtm_conversion_value=Decimal("1200.00"),
+            ga_property_id="properties/test",
+            gtm_container_id="GTM-TEST",
+        )
+        db_session.add(acquisition_metric)
+        db_session.commit()
 
-    assert payload["headline"]["total_pipeline_value"] == pytest.approx(5000.0)
-    assert payload["headline"]["weighted_pipeline_value"] == pytest.approx(4000.0)
-    assert payload["headline"]["won_value_last_30_days"] == pytest.approx(3000.0)
-    assert payload["headline"]["automation_failure_rate"] == pytest.approx(0.5)
-    assert payload["headline"]["active_workflows"] == 2
-    assert payload["headline"]["avg_deal_cycle_days"] == pytest.approx(19.0)
-    assert payload["lead_funnel"]["total_leads"] == 2
-    assert payload["lead_funnel"]["leads_last_30_days"] == 1
-    assert payload["lead_funnel"]["leads_with_deals"] == 2
-    assert payload["lead_funnel"]["conversion_rate"] == pytest.approx(1.0)
+        run_completed = models.CRMAutomationRun(
+            tenant_id=TENANT_ID,
+            deal_id=deal_won.id,
+            trigger="proposal_followup",
+            workflow_id="proposal_followup",
+            status="completed",
+            created_at=now - timedelta(minutes=8),
+            completed_at=now - timedelta(minutes=3),
+        )
+        run_failed = models.CRMAutomationRun(
+            tenant_id=TENANT_ID,
+            deal_id=deal_open.id,
+            trigger="lead_intake",
+            workflow_id="lead_intake",
+            status="failed",
+            created_at=now - timedelta(minutes=4),
+        )
+        db_session.add_all([run_completed, run_failed])
+        db_session.commit()
 
-    pipeline_metrics = {row["stage_name"]: row for row in payload["pipeline"]}
-    assert pipeline_metrics["Intake"]["deal_count"] == 1
-    assert pipeline_metrics["Intake"]["weighted_value"] == pytest.approx(1000.0)
-    assert pipeline_metrics["Proposal"]["total_value"] == pytest.approx(3000.0)
+        response = client.get(
+            "/api/v1/crm/analytics/dashboard", headers={"X-Tenant-ID": TENANT_ID}
+        )
+        assert response.status_code == 200
+        payload = response.json()
 
-    automation_metrics = {row["workflow_id"]: row for row in payload["automation"]}
-    assert automation_metrics["proposal_followup"]["avg_completion_minutes"] == pytest.approx(5.0)
-    assert automation_metrics["proposal_followup"]["failure_rate"] == pytest.approx(0.0)
-    assert automation_metrics["lead_intake"]["failure_rate"] == pytest.approx(1.0)
-    assert automation_metrics["lead_intake"]["avg_completion_minutes"] is None
+        assert payload["headline"]["total_pipeline_value"] == pytest.approx(5000.0)
+        assert payload["headline"]["weighted_pipeline_value"] == pytest.approx(4000.0)
+        assert payload["headline"]["won_value_last_30_days"] == pytest.approx(3000.0)
+        assert payload["headline"]["automation_failure_rate"] == pytest.approx(0.5)
+        assert payload["headline"]["active_workflows"] == 2
+        assert payload["headline"]["avg_deal_cycle_days"] == pytest.approx(19.0)
+        assert payload["lead_funnel"]["total_leads"] == 2
+        assert payload["lead_funnel"]["leads_last_30_days"] == 1
+        assert payload["lead_funnel"]["leads_with_deals"] == 2
+        assert payload["lead_funnel"]["conversion_rate"] == pytest.approx(1.0)
+
+        pipeline_metrics = {row["stage_name"]: row for row in payload["pipeline"]}
+        assert pipeline_metrics["Intake"]["deal_count"] == 1
+        assert pipeline_metrics["Intake"]["weighted_value"] == pytest.approx(1000.0)
+        assert pipeline_metrics["Proposal"]["total_value"] == pytest.approx(3000.0)
+
+        automation_metrics = {row["workflow_id"]: row for row in payload["automation"]}
+        assert automation_metrics["proposal_followup"]["avg_completion_minutes"] == pytest.approx(5.0)
+        assert automation_metrics["proposal_followup"]["failure_rate"] == pytest.approx(0.0)
+        assert automation_metrics["lead_intake"]["failure_rate"] == pytest.approx(1.0)
+        assert automation_metrics["lead_intake"]["avg_completion_minutes"] is None
+
+        sales = payload["sales"]
+        assert sales["open_deals"] == 1
+        assert sales["won_deals_last_30_days"] == 1
+        assert sales["lost_deals_last_30_days"] == 0
+        assert sales["total_deals"] == 2
+        assert sales["bookings_last_30_days"] == 1
+        assert sales["avg_deal_value"] == pytest.approx(2500.0)
+        assert sales["forecast_next_30_days"] == pytest.approx(1000.0)
+        assert sales["pipeline_velocity_per_day"] == pytest.approx(100.0)
+        assert sales["win_rate"] == pytest.approx(1.0)
+
+        acquisition = payload["acquisition"]
+        assert acquisition["ga_sessions"] == 150
+        assert acquisition["ga_new_users"] == 90
+        assert acquisition["ga_engaged_sessions"] == 120
+        assert acquisition["ga_conversions"] == 15
+        assert acquisition["ga_conversion_value"] == pytest.approx(5000.0)
+        assert acquisition["gtm_conversions"] == 5
+        assert acquisition["gtm_conversion_value"] == pytest.approx(1200.0)
+        assert acquisition["blended_conversion_rate"] == pytest.approx(0.1333)
+        assert set(acquisition["active_connectors"]) == {"ga4", "gtm"}
+
+        source_performance = {row["key"]: row for row in payload["source_performance"]}
+        assert "mr-dj.nl" in source_performance
+        assert source_performance["mr-dj.nl"]["lead_count"] == 1
+        assert source_performance["mr-dj.nl"]["deal_count"] == 1
+        assert source_performance["mr-dj.nl"]["ga_sessions"] == 150
+        assert source_performance["mr-dj.nl"]["ga_conversions"] == 15
+        assert source_performance["mr-dj.nl"]["gtm_conversions"] == 5
+        assert source_performance["mr-dj.nl"]["pipeline_value"] == pytest.approx(2000.0)
+        assert source_performance["mr-dj.nl"]["won_value"] == pytest.approx(0.0)
+
+        assert "referral_partner" in source_performance
+        assert source_performance["referral_partner"]["won_value"] == pytest.approx(3000.0)
+        assert source_performance["referral_partner"]["deal_count"] == 1
+        assert source_performance["referral_partner"]["ga_sessions"] == 0
+    finally:
+        settings.CRM_ANALYTICS_SOURCES = original_sources

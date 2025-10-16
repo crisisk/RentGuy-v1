@@ -11,6 +11,7 @@ from typing import Iterable
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.errors import AppError
 
 from . import models
@@ -212,11 +213,18 @@ class CRMService:
 
     def dashboard_metrics(self) -> dict[str, object]:
         now = datetime.utcnow()
-        window_start = now - timedelta(days=30)
+        lookback_days = 30
+        window_start = now - timedelta(days=lookback_days)
+        forecast_end = now + timedelta(days=30)
 
-        lead_query = self.db.query(models.CRMLead).filter(models.CRMLead.tenant_id == self.tenant_id)
-        total_leads = lead_query.count()
-        leads_last_30 = lead_query.filter(models.CRMLead.created_at >= window_start).count()
+        lead_query = (
+            self.db.query(models.CRMLead)
+            .filter(models.CRMLead.tenant_id == self.tenant_id)
+        )
+        leads = lead_query.all()
+        total_leads = len(leads)
+        leads_last_30 = sum(1 for lead in leads if lead.created_at >= window_start)
+        converted_lead_ids: set[int] = set()
 
         deals = (
             self.db.query(models.CRMDeal)
@@ -226,9 +234,13 @@ class CRMService:
 
         total_pipeline_value = Decimal(0)
         weighted_pipeline_value = Decimal(0)
-        converted_lead_ids: set[int] = set()
         won_value_last_30 = Decimal(0)
         cycle_lengths: list[float] = []
+        open_deals = 0
+        won_deals_last_30 = 0
+        lost_deals_last_30 = 0
+        total_deals = len(deals)
+        forecast_next_30 = Decimal(0)
 
         for deal in deals:
             value = Decimal(deal.value or 0)
@@ -240,10 +252,29 @@ class CRMService:
                 converted_lead_ids.add(deal.lead_id)
 
             status = (deal.status or "").lower()
-            if status == "won" and deal.updated_at:
-                if deal.updated_at >= window_start:
-                    won_value_last_30 += value
-                cycle_lengths.append((deal.updated_at - deal.created_at).total_seconds() / 86400.0)
+            if status == "won":
+                if deal.updated_at:
+                    if deal.updated_at >= window_start:
+                        won_value_last_30 += value
+                        won_deals_last_30 += 1
+                    cycle_lengths.append(
+                        (deal.updated_at - deal.created_at).total_seconds() / 86400.0
+                    )
+            elif status in {"lost", "closed_lost"}:
+                if deal.updated_at and deal.updated_at >= window_start:
+                    lost_deals_last_30 += 1
+                if deal.updated_at:
+                    cycle_lengths.append(
+                        (deal.updated_at - deal.created_at).total_seconds() / 86400.0
+                    )
+            else:
+                open_deals += 1
+
+            if (
+                deal.expected_close
+                and now.date() <= deal.expected_close <= forecast_end.date()
+            ):
+                forecast_next_30 += (value * probability) / Decimal(100)
 
         stage_rows = (
             self.db.query(
@@ -338,6 +369,160 @@ class CRMService:
         overall_failure_rate = total_failed_runs / total_run_count if total_run_count else 0.0
         avg_cycle_days = sum(cycle_lengths) / len(cycle_lengths) if cycle_lengths else None
 
+        acquisition_rows = (
+            self.db.query(models.CRMAcquisitionMetric)
+            .filter(
+                models.CRMAcquisitionMetric.tenant_id == self.tenant_id,
+                models.CRMAcquisitionMetric.captured_date >= window_start.date(),
+                models.CRMAcquisitionMetric.captured_date <= now.date(),
+            )
+            .all()
+        )
+
+        total_ga_sessions = sum(row.sessions or 0 for row in acquisition_rows)
+        total_ga_new_users = sum(row.new_users or 0 for row in acquisition_rows)
+        total_ga_engaged = sum(row.engaged_sessions or 0 for row in acquisition_rows)
+        total_ga_conversions = sum(row.ga_conversions or 0 for row in acquisition_rows)
+        total_ga_value = sum(Decimal(row.ga_conversion_value or 0) for row in acquisition_rows)
+        total_gtm_conversions = sum(row.gtm_conversions or 0 for row in acquisition_rows)
+        total_gtm_value = sum(
+            Decimal(row.gtm_conversion_value or 0) for row in acquisition_rows
+        )
+        blended_conversion_rate = (
+            (total_ga_conversions + total_gtm_conversions) / total_ga_sessions
+            if total_ga_sessions
+            else 0.0
+        )
+
+        tenant_sources = getattr(settings, "CRM_ANALYTICS_SOURCES", {}) or {}
+        tenant_config = tenant_sources.get(self.tenant_id, {})
+        active_connectors: list[str] = []
+        if tenant_config.get("ga4_property_id"):
+            active_connectors.append("ga4")
+        if tenant_config.get("gtm_container_id"):
+            active_connectors.append("gtm")
+
+        acquisition_metrics = {
+            "lookback_days": lookback_days,
+            "ga_sessions": total_ga_sessions,
+            "ga_new_users": total_ga_new_users,
+            "ga_engaged_sessions": total_ga_engaged,
+            "ga_conversions": total_ga_conversions,
+            "ga_conversion_value": float(total_ga_value),
+            "gtm_conversions": total_gtm_conversions,
+            "gtm_conversion_value": float(total_gtm_value),
+            "blended_conversion_rate": round(blended_conversion_rate, 4),
+            "active_connectors": active_connectors,
+        }
+
+        closed_last_30 = won_deals_last_30 + lost_deals_last_30
+        win_rate = won_deals_last_30 / closed_last_30 if closed_last_30 else 0.0
+        avg_deal_value = (
+            (total_pipeline_value / Decimal(total_deals)) if total_deals else None
+        )
+        pipeline_velocity = (
+            (won_value_last_30 / Decimal(lookback_days)) if lookback_days else Decimal(0)
+        )
+
+        sales_metrics = {
+            "open_deals": open_deals,
+            "won_deals_last_30_days": won_deals_last_30,
+            "lost_deals_last_30_days": lost_deals_last_30,
+            "total_deals": total_deals,
+            "bookings_last_30_days": won_deals_last_30,
+            "win_rate": round(win_rate, 4),
+            "avg_deal_value": float(avg_deal_value) if avg_deal_value is not None else None,
+            "forecast_next_30_days": float(forecast_next_30),
+            "pipeline_velocity_per_day": round(float(pipeline_velocity), 2),
+        }
+
+        def _source_default() -> dict[str, object]:
+            return {
+                "lead_count": 0,
+                "deal_count": 0,
+                "won_deal_count": 0,
+                "pipeline_value": Decimal(0),
+                "won_value": Decimal(0),
+                "ga_sessions": 0,
+                "ga_conversions": 0,
+                "gtm_conversions": 0,
+                "ga_revenue": Decimal(0),
+                "gtm_revenue": Decimal(0),
+            }
+
+        source_metrics: defaultdict[str, dict[str, object]] = defaultdict(_source_default)
+        source_labels: dict[str, str] = {}
+        source_types: dict[str, str] = {}
+
+        for lead in leads:
+            key = (lead.source or "Direct/Other").strip().lower()
+            metrics = source_metrics[key]
+            metrics["lead_count"] += 1
+            source_labels.setdefault(key, lead.source or "Direct/Other")
+            source_types.setdefault(key, "lead_source")
+
+        for deal in deals:
+            lead_source = (deal.lead.source if deal.lead and deal.lead.source else None)
+            if lead_source:
+                key = lead_source.strip().lower()
+                label = lead_source
+                dimension_type = "lead_source"
+            else:
+                key = "pipeline"
+                label = "Pipeline"
+                dimension_type = "internal"
+            metrics = source_metrics[key]
+            deal_value = Decimal(deal.value or 0)
+            metrics["deal_count"] += 1
+            metrics["pipeline_value"] += deal_value
+            if (deal.status or "").lower() == "won":
+                metrics["won_deal_count"] += 1
+                metrics["won_value"] += deal_value
+            source_labels.setdefault(key, label)
+            source_types.setdefault(key, dimension_type)
+
+        for row in acquisition_rows:
+            key_source = (row.source or row.channel or "ga/other").strip().lower()
+            label = row.source or row.channel or "GA Other"
+            dimension_type = "ga_source" if row.source else "ga_channel"
+            metrics = source_metrics[key_source]
+            metrics["ga_sessions"] += row.sessions or 0
+            metrics["ga_conversions"] += row.ga_conversions or 0
+            metrics["gtm_conversions"] += row.gtm_conversions or 0
+            metrics["ga_revenue"] += Decimal(row.ga_conversion_value or 0)
+            metrics["gtm_revenue"] += Decimal(row.gtm_conversion_value or 0)
+            source_labels.setdefault(key_source, label)
+            source_types.setdefault(key_source, dimension_type)
+
+        source_performance: list[dict[str, object]] = []
+        for key, metrics in source_metrics.items():
+            if not (
+                metrics["lead_count"]
+                or metrics["deal_count"]
+                or metrics["ga_sessions"]
+                or metrics["ga_conversions"]
+                or metrics["gtm_conversions"]
+            ):
+                continue
+            source_performance.append(
+                {
+                    "key": key,
+                    "label": source_labels.get(key, key.title()),
+                    "dimension_type": source_types.get(key, "lead_source"),
+                    "lead_count": metrics["lead_count"],
+                    "deal_count": metrics["deal_count"],
+                    "won_deal_count": metrics["won_deal_count"],
+                    "pipeline_value": float(metrics["pipeline_value"]),
+                    "won_value": float(metrics["won_value"]),
+                    "ga_sessions": metrics["ga_sessions"],
+                    "ga_conversions": metrics["ga_conversions"],
+                    "gtm_conversions": metrics["gtm_conversions"],
+                    "ga_revenue": float(metrics["ga_revenue"]),
+                    "gtm_revenue": float(metrics["gtm_revenue"]),
+                }
+            )
+        source_performance.sort(key=lambda row: row["label"].lower())
+
         headline = {
             "total_pipeline_value": float(total_pipeline_value),
             "weighted_pipeline_value": float(weighted_pipeline_value),
@@ -360,6 +545,9 @@ class CRMService:
             "lead_funnel": lead_funnel,
             "pipeline": pipeline_metrics,
             "automation": automation_metrics,
+            "sales": sales_metrics,
+            "acquisition": acquisition_metrics,
+            "source_performance": source_performance,
         }
 
     # Internal helpers ----------------------------------------------------

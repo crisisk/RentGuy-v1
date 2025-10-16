@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
@@ -140,4 +140,43 @@ class CRMAutomationRun(Base):
 
     __table_args__ = (
         Index("ix_crm_automation_runs_trigger", "trigger"),
+    )
+
+
+class CRMAcquisitionMetric(Base):
+    """Blended GA4/GTM marketing metrics mapped to CRM tenants."""
+
+    __tablename__ = "crm_acquisition_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(100), index=True)
+    channel: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    source: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    medium: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    captured_date: Mapped[date] = mapped_column(Date, index=True)
+    sessions: Mapped[int] = mapped_column(Integer, default=0)
+    new_users: Mapped[int] = mapped_column(Integer, default=0)
+    engaged_sessions: Mapped[int] = mapped_column(Integer, default=0)
+    ga_conversions: Mapped[int] = mapped_column(Integer, default=0)
+    ga_conversion_value: Mapped[Numeric] = mapped_column(Numeric(12, 2), default=0)
+    gtm_conversions: Mapped[int] = mapped_column(Integer, default=0)
+    gtm_conversion_value: Mapped[Numeric] = mapped_column(Numeric(12, 2), default=0)
+    ga_property_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    gtm_container_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "channel",
+            "source",
+            "captured_date",
+            name="uq_acquisition_tenant_channel_source_date",
+        ),
+        Index("ix_crm_acquisition_metrics_tenant_date", "tenant_id", "captured_date"),
     )

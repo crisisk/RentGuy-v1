@@ -4,6 +4,7 @@ from typing import Iterable
 
 import base64
 import hashlib
+import json
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -105,6 +106,14 @@ class Settings(BaseSettings):
         default=None,
         description="Secret shared with the captcha verification service",
     )
+    CRM_ANALYTICS_SOURCES: dict[str, dict[str, str]] = Field(
+        default_factory=dict,
+        description="Mapping of tenant ids to GA4/GTM configuration.",
+    )
+    CRM_ANALYTICS_LOOKBACK_DAYS: int = Field(
+        default=30,
+        description="Default lookback window when syncing blended analytics metrics.",
+    )
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -112,6 +121,19 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return list(value)
+
+    @field_validator("CRM_ANALYTICS_SOURCES", mode="before")
+    @classmethod
+    def _parse_analytics_sources(cls, value: object) -> dict[str, dict[str, str]]:
+        if not value:
+            return {}
+        if isinstance(value, str):
+            parsed = json.loads(value)
+        else:
+            parsed = value
+        if not isinstance(parsed, dict):  # pragma: no cover - defensive guard
+            raise ValueError("CRM_ANALYTICS_SOURCES must be a dictionary")
+        return parsed
 
     @model_validator(mode="after")
     def _ensure_sensitive_configuration(self) -> "Settings":
@@ -134,6 +156,17 @@ class Settings(BaseSettings):
             object.__setattr__(self, "RENTGUY_FINANCE_URL", self.LEGACY_INVOICE_NINJA_URL)
         if not self.RENTGUY_FINANCE_TOKEN and self.LEGACY_INVOICE_NINJA_TOKEN:
             object.__setattr__(self, "RENTGUY_FINANCE_TOKEN", self.LEGACY_INVOICE_NINJA_TOKEN)
+        return self
+
+    @model_validator(mode="after")
+    def _normalise_analytics_sources(self) -> "Settings":
+        normalised: dict[str, dict[str, str]] = {}
+        for tenant, config in self.CRM_ANALYTICS_SOURCES.items():
+            if not isinstance(config, dict):
+                continue
+            tenant_key = str(tenant).lower()
+            normalised[tenant_key] = config
+        object.__setattr__(self, "CRM_ANALYTICS_SOURCES", normalised)
         return self
 
     @property
