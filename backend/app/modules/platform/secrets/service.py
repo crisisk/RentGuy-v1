@@ -128,6 +128,40 @@ DEFAULT_SECRET_DEFINITIONS: tuple[SecretDefinition, ...] = (
         category="observability",
         description="Authenticatie- of configuratieheaders voor de OTLP-exporter.",
     ),
+    SecretDefinition(
+        key="MRDJ_API_URL",
+        label="Mr. DJ API basis-URL",
+        category="mr_dj",
+        description=(
+            "Publieke URL van de Express API uit het mr-djv1 project voor integratie met RentGuy."
+        ),
+        is_sensitive=False,
+    ),
+    SecretDefinition(
+        key="MRDJ_SERVICE_ACCOUNT_EMAIL",
+        label="Mr. DJ serviceaccount (e-mail)",
+        category="mr_dj",
+        description=(
+            "E-mailadres van het serviceaccount dat de Express/React stack gebruikt voor API-authenticatie."
+        ),
+        is_sensitive=False,
+    ),
+    SecretDefinition(
+        key="MRDJ_SERVICE_ACCOUNT_PASSWORD",
+        label="Mr. DJ serviceaccount wachtwoord",
+        category="mr_dj",
+        description=(
+            "Wachtwoord of token voor het serviceaccount waarmee de mr-djv1 backend verbinding maakt."
+        ),
+    ),
+    SecretDefinition(
+        key="MRDJ_WEBHOOK_SECRET",
+        label="Mr. DJ webhook secret",
+        category="mr_dj",
+        description=(
+            "Gedeeld geheim om webhook-callbacks tussen RentGuy en de mr-djv1 Express gateway te verifiëren."
+        ),
+    ),
 )
 
 DEFAULT_SECRET_LOOKUP = {definition.key: definition for definition in DEFAULT_SECRET_DEFINITIONS}

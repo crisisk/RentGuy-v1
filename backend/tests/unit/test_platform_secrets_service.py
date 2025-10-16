@@ -54,8 +54,13 @@ def test_list_secrets_bootstraps_defaults(secrets_session: Session) -> None:
     keys = {secret.key for secret in secrets}
     assert 'DATABASE_URL' in keys
     assert 'SMTP_HOST' in keys
+    assert 'MRDJ_API_URL' in keys
+    assert 'MRDJ_WEBHOOK_SECRET' in keys
     smtp = next(secret for secret in secrets if secret.key == 'SMTP_HOST')
     assert smtp.category == 'email'
+    mrdj = next(secret for secret in secrets if secret.key == 'MRDJ_WEBHOOK_SECRET')
+    assert mrdj.category == 'mr_dj'
+    assert mrdj.is_sensitive is True
 
 
 def test_update_secret_records_hint(secrets_session: Session) -> None:

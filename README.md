@@ -94,6 +94,11 @@ Gebruik deze flow voor het bijwerken van databasecredentials, API-sleutels voor
 betalingen en observability, of het aanpassen van e-mailinstellingen zonder
 manueel servers te benaderen.
 
+De tab **Mr. DJ integratie** in hetzelfde dashboard groepeert alle secrets die de
+Express/React codebase van [`mr-djv1`](https://github.com/crisisk/mr-djv1) nodig heeft.
+Operators zien hier in één oogopslag welke SMTP- en serviceaccountgegevens nog
+ontbreken en kunnen ze rechtstreeks synchroniseren naar `.env.secrets`.
+
 ### Container image build
 
 Create the production-ready bundle locally with:
@@ -131,6 +136,7 @@ The resulting image serves the compiled assets with Nginx and exposes a
 - Consult the step-by-step production playbook in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) before promoting a new release. It walks through environment preparation, migrations, container rollout, validation, and rollback procedures for the complete platform.
 - Gebruik de gedetailleerde go-live checklist in [`docs/GO_LIVE_CHECKLIST.md`](docs/GO_LIVE_CHECKLIST.md) om elk technisch en functioneel onderdeel af te vinken, inclusief debugroutines en post-launch nazorg.
 - Share the updated new-user manual at [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) with every fresh account so teams know how to finish the guided onboarding, use the planner modules, and operate the scanner experience from day one.
+- Raadpleeg de nieuwe integratiegids in [`docs/MR_DJ_INTEGRATION.md`](docs/MR_DJ_INTEGRATION.md) voor de volledige workflow rondom secrets synchronisatie met de mr-djv1 Express/React stack.
 
 ## Contributing
 
