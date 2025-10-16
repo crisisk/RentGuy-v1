@@ -56,7 +56,16 @@ Deze notitie beschrijft hoe we het platform uitrollen over meerdere subdomeinen,
 
 > **Tip:** hergebruik de MR-DJ setup scripts als referentie voor volgorde en security-hardening.
 
-## 7. Communicatieplan
+## 7. Design & styling blueprint voor nieuwe tenants
+
+1. **Brand intake** – verzamel logo’s, kleuren, tone-of-voice en gewenste UX-accenten via een gestandaardiseerd intakeformulier.
+2. **Design tokens genereren** – gebruik `branding.ts` als basis en genereer per tenant een token-bestand (`configs/tenants/<tenant>.json`). Zet daarin primaire/secondary kleuren, gradients, button-styling en iconografische voorkeuren.
+3. **Layout overrides** – koppel tokens aan `FlowExperienceShell`, nav-rail en marketingcomponenten via een theming hook zodat hero’s, CTA’s en achtergrondgradients per tenant verschillen zonder code duplicatie.
+4. **Component library sync** – documenteer afwijkende componenten (bijv. custom hero, aangepaste CTA-knoppen) in `docs/tenant_playbooks/<tenant>_design.md` inclusief screenshots en QA-checks.
+5. **Regression check** – draai visuele regressietests (Loki/Playwright) op de tenantbranch om design-kwaliteit (perfect pixel) te waarborgen voordat het subdomein live gaat.
+6. **Roll-back plan** – voorzie een fallback naar de standaard Sevensa-styling wanneer tokens ontbreken of inconsistent zijn zodat onboarding nooit blokkeert.
+
+## 8. Communicatieplan
 
 - Marketing-site verwijst naar demo op `mr-dj.rentguy.nl` om prospects een echte tenant te tonen.
 - Customer onboarding krijgt dedicated e-mails met directe links naar `/dashboard` voor secrets upload.

@@ -118,6 +118,49 @@ const roleLabelMap: Record<string, string> = {
   viewer: 'Project stakeholder',
 }
 
+interface ServiceLevelRow {
+  tier: string
+  rto: string
+  coverage: string
+  escalation: string
+}
+
+const serviceLevelMatrix: ServiceLevelRow[] = [
+  {
+    tier: 'Launch',
+    rto: '< 12 uur',
+    coverage: 'Ma–Vr 08:00-20:00 CET',
+    escalation: 'Slack #rentguy-launch → CS manager',
+  },
+  {
+    tier: 'Professional',
+    rto: '< 6 uur',
+    coverage: '7 dagen 07:00-22:00 CET',
+    escalation: 'NOC hotline → Duty engineer → CS lead',
+  },
+  {
+    tier: 'Enterprise',
+    rto: '< 1 uur',
+    coverage: '24/7 follow-the-sun',
+    escalation: 'NOC bridge → Sevensa SRE → RentGuy leadership',
+  },
+]
+
+const releaseHighlights = [
+  {
+    version: '2025.02',
+    summary: 'Automatische hand-offs tussen planner, crew en secrets dashboard.',
+  },
+  {
+    version: '2025.01',
+    summary: 'Secrets inline validatie en emaildiagnose updates voor smoother onboarding.',
+  },
+  {
+    version: '2024.12',
+    summary: 'Multi-tenant router en marketing refresh op rentguy.nl.',
+  },
+]
+
 const cardPalette: Record<SummaryTone, string> = {
   neutral: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(227, 232, 255, 0.82) 100%)',
   success: 'linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(255,255,255,0.9) 100%)',
@@ -862,6 +905,48 @@ export default function Planner({ onLogout }: PlannerProps) {
     setSearchTerm('')
   }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
 
+  const openCrewHandoff = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.open('/dashboard?focus=integration&action=sync&handoff=crew', '_blank', 'noopener,noreferrer')
+    }
+  }, [])
+
+  const openBillingHandoff = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.open('/dashboard?focus=sla&handoff=billing', '_blank', 'noopener,noreferrer')
+    }
+  }, [])
+
+  const openGovernanceHandoff = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.open('/dashboard?focus=changelog&handoff=admin', '_blank', 'noopener,noreferrer')
+    }
+  }, [])
+
+  const startOperationsFlow = useCallback(() => {
+    focusPersona('bart')
+    focusRiskView()
+    openCrewHandoff()
+  }, [focusPersona, focusRiskView, openCrewHandoff])
+
+  const startPlanningFlow = useCallback(() => {
+    focusPersona('anna')
+    openCalendarView()
+    openCrewHandoff()
+  }, [focusPersona, openCalendarView, openCrewHandoff])
+
+  const startFinanceFlow = useCallback(() => {
+    focusPersona('frank')
+    focusCompletedView()
+    openBillingHandoff()
+  }, [focusCompletedView, focusPersona, openBillingHandoff])
+
+  const startAdminFlow = useCallback(() => {
+    focusPersona('sven')
+    focusEscalationView()
+    openGovernanceHandoff()
+  }, [focusEscalationView, focusPersona, openGovernanceHandoff])
+
   const personaFlows = useMemo<FlowItem[]>(() => {
     const upcomingBeyond7 = Math.max(0, upcomingWithin14 - upcomingWithin7)
     return [
@@ -879,8 +964,9 @@ export default function Planner({ onLogout }: PlannerProps) {
         metricValue: `${summary.critical} kritisch • ${eventsWithAlerts} alerts`,
         description:
           'Controleer kritieke voorraadmeldingen voordat crew onderweg gaat. Dit voorkomt showstoppers en volgt de "visibility of system status" richtlijn.',
-        helperText: 'Gebruik de Bart preset voor snelle opvolging en plan direct mitigaties uit het risicolog.',
-        primaryAction: { label: 'Focus op Bart preset', onClick: () => focusPersona('bart') },
+        helperText:
+          'De hand-off opent direct het secrets-dashboard met sync-acties. De risicolog blijft beschikbaar voor aanvullende context.',
+        primaryAction: { label: 'Start operations hand-off', onClick: startOperationsFlow },
         secondaryAction: { label: 'Bekijk risicolog', onClick: focusRiskView, variant: 'secondary' },
       },
       {
@@ -892,8 +978,9 @@ export default function Planner({ onLogout }: PlannerProps) {
         metricValue: `${upcomingWithin7} binnen 7d • ${upcomingBeyond7} binnen 14d`,
         description:
           'Bereid het team voor via de Anna preset: sorteer op eerstvolgende shows en deel briefingnotities zodra er minder dan twee weken resteren.',
-        helperText: 'Best practice: combineer kalenderoverzicht met crew check-ins zodat alle stakeholders aligned zijn.',
-        primaryAction: { label: 'Open Anna preset', onClick: () => focusPersona('anna') },
+        helperText:
+          'De hand-off opent een nieuwe tab voor crew sync met integratievariabelen. Kalenderfilter blijft actief voor snelle updates.',
+        primaryAction: { label: 'Open Anna + crew sync', onClick: startPlanningFlow },
         secondaryAction: { label: 'Kalenderoverzicht', onClick: openCalendarView, variant: 'secondary' },
       },
       {
@@ -905,8 +992,9 @@ export default function Planner({ onLogout }: PlannerProps) {
         metricValue: `${completedLast30} projecten`,
         description:
           'Gebruik de Frank preset om afgeronde projecten te verzamelen, exporteer draaiboeken en start de facturatie-workflow direct.',
-        helperText: 'Heuristiek: geef finance inzicht in recente deliveries zodat cashflow voorspelbaar blijft.',
-        primaryAction: { label: 'Open Frank preset', onClick: () => focusPersona('frank') },
+        helperText:
+          'De billing hand-off opent het secrets-dashboard met SLA matrix zodat facturatie kan escaleren binnen contractuele kaders.',
+        primaryAction: { label: 'Start finance hand-off', onClick: startFinanceFlow },
         secondaryAction: { label: 'Toon facturatiequeue', onClick: focusCompletedView, variant: 'secondary' },
       },
       {
@@ -918,17 +1006,21 @@ export default function Planner({ onLogout }: PlannerProps) {
         metricValue: `${summary.atRisk} projecten`,
         description:
           'Met de Sven preset zie je direct welke projecten extra checks nodig hebben. Koppel dit aan het secrets-dashboard voor end-to-end governance.',
-        helperText: 'Tip: documenteer elke opschorting zodat audits voldoen aan de Sevensa control framework eisen.',
-        primaryAction: { label: 'Open Sven preset', onClick: () => focusPersona('sven') },
+        helperText:
+          'Bij de governance hand-off opent de changelog-teaser en supportmatrix zodat escalaties traceerbaar blijven.',
+        primaryAction: { label: 'Activeer governance flow', onClick: startAdminFlow },
         secondaryAction: { label: 'Critical alerts', onClick: focusEscalationView, variant: 'secondary' },
       },
     ]
   }, [
     completedLast30,
     eventsWithAlerts,
+    startOperationsFlow,
+    startPlanningFlow,
+    startFinanceFlow,
+    startAdminFlow,
     focusCompletedView,
     focusEscalationView,
-    focusPersona,
     focusRiskView,
     openCalendarView,
     upcomingWithin14,
@@ -1231,11 +1323,14 @@ export default function Planner({ onLogout }: PlannerProps) {
             roleStatus === 'complete'
               ? `Persona: ${(roleLabelMap[userRole] ?? userRole) || 'Onbekend'}`
               : 'Rol moet nog bevestigd worden via het onboarding team.',
-          planner: viewMode === 'calendar' ? 'Kalenderweergave actief' : 'Dashboardweergave actief',
+          planner:
+            viewMode === 'calendar'
+              ? 'Kalenderweergave actief · crew hand-off beschikbaar'
+              : 'Dashboardweergave actief · flows openen nieuwe governance tab',
           secrets:
             secretsStatus === 'blocked'
               ? 'Alleen admins kunnen het secrets-dashboard openen.'
-              : 'Gebruik het secrets-dashboard als volgende stap voor go-live.',
+              : 'Secrets-dashboard opent nu automatisch crew/billing/gov hand-offs via nieuwe tab.',
         },
       ),
       footer: (
@@ -1356,6 +1451,120 @@ export default function Planner({ onLogout }: PlannerProps) {
           description="We vatten de belangrijkste taken per rol samen op basis van actuele planningsdata. Zo kun je direct schakelen tussen operaties, crew, finance en escalaties zonder context te verliezen."
           flows={personaFlows}
         />
+
+        <section
+          style={{
+            display: 'grid',
+            gap: 18,
+            padding: '24px 28px',
+            borderRadius: 26,
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(227, 232, 255, 0.86) 100%)',
+            border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+            boxShadow: brand.colors.shadow,
+          }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'grid', gap: 6 }}>
+              <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>Operationale borging</h3>
+              <p style={{ margin: 0, color: brand.colors.mutedText, maxWidth: 680 }}>
+                SLA-verwachtingen en release highlights worden hier samengebracht zodat planners hand-offs kunnen verantwoorden richting crew, finance en governance.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openGovernanceHandoff}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: 'none',
+                background: brand.colors.primary,
+                color: '#fff',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 12px 24px rgba(79, 70, 229, 0.2)',
+              }}
+            >
+              Open governance samenvatting
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gap: 18,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            }}
+          >
+            <article
+              style={{
+                display: 'grid',
+                gap: 12,
+                padding: '18px 20px',
+                borderRadius: 20,
+                background: '#ffffff',
+                border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+              }}
+            >
+              <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>SLA matrix</strong>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.85rem',
+                  color: brand.colors.secondary,
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}` }}>Pakket</th>
+                    <th style={{ textAlign: 'left', padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}` }}>RTO</th>
+                    <th style={{ textAlign: 'left', padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}` }}>Coverage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {serviceLevelMatrix.map(row => (
+                    <tr key={row.tier}>
+                      <td style={{ padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`, fontWeight: 600 }}>{row.tier}</td>
+                      <td style={{ padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}` }}>{row.rto}</td>
+                      <td style={{ padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}` }}>{row.coverage}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <span style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>
+                Escalaties: {serviceLevelMatrix.map(row => row.escalation).join(' • ')}
+              </span>
+            </article>
+
+            <article
+              style={{
+                display: 'grid',
+                gap: 12,
+                padding: '18px 20px',
+                borderRadius: 20,
+                background: '#ffffff',
+                border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+              }}
+            >
+              <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>Release highlights</strong>
+              <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6, color: brand.colors.mutedText, fontSize: '0.9rem' }}>
+                {releaseHighlights.map(item => (
+                  <li key={item.version}>
+                    <strong style={{ color: brand.colors.secondary }}>{item.version}:</strong> {item.summary}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="https://github.com/crisisk/RentGuy-v1/releases"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: brand.colors.primary, fontWeight: 600, textDecoration: 'none', fontSize: '0.85rem' }}
+              >
+                Bekijk volledige changelog →
+              </a>
+            </article>
+          </div>
+        </section>
 
         <div
           style={{
