@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { useId } from 'react'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 
 export type FlowNavigationStatus = 'complete' | 'current' | 'upcoming' | 'blocked'
@@ -61,9 +62,15 @@ export default function FlowExperienceNavRail({ title, caption, items, footer }:
     return null
   }
 
+  const railId = useId()
+  const navClass = 'rg-flow-experience-nav-rail'
+  const itemClass = `${navClass}__item`
+
   return (
     <nav
       aria-label={title ?? 'Gebruikersflows'}
+      id={railId}
+      className={navClass}
       style={{
         display: 'grid',
         gap: 20,
@@ -93,6 +100,7 @@ export default function FlowExperienceNavRail({ title, caption, items, footer }:
       </div>
 
       <ul
+        className={`${navClass}__list`}
         style={{
           display: 'grid',
           gap: 12,
@@ -163,12 +171,13 @@ export default function FlowExperienceNavRail({ title, caption, items, footer }:
 
           if (item.href) {
             return (
-              <li key={item.id}>
+              <li key={item.id} className={itemClass}>
                 <a
                   href={item.href}
                   onClick={item.onClick}
                   style={cardStyle}
                   aria-current={item.status === 'current' ? 'page' : undefined}
+                  className={`${itemClass}-link`}
                 >
                   {content}
                 </a>
@@ -185,10 +194,11 @@ export default function FlowExperienceNavRail({ title, caption, items, footer }:
             : {}
 
           return (
-            <li key={item.id}>
+            <li key={item.id} className={itemClass}>
               <div
                 style={{ ...cardStyle, cursor: item.onClick ? 'pointer' : 'default' }}
                 aria-current={item.status === 'current' ? 'step' : undefined}
+                className={`${itemClass}-card`}
                 {...interactiveProps}
               >
                 {content}
@@ -199,6 +209,69 @@ export default function FlowExperienceNavRail({ title, caption, items, footer }:
       </ul>
 
       {footer && <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{footer}</div>}
+
+      <style>
+        {`
+          .${navClass} {
+            position: relative;
+            overflow: hidden;
+          }
+
+          .${navClass}__list {
+            grid-auto-rows: minmax(0, 1fr);
+          }
+
+          .${itemClass}-link,
+          .${itemClass}-card {
+            transition: transform 160ms ease, box-shadow 160ms ease;
+            will-change: transform;
+          }
+
+          .${itemClass}-link:focus-visible,
+          .${itemClass}-card:focus-visible {
+            outline: 2px solid ${withOpacity(brand.colors.primary, 0.8)};
+            outline-offset: 4px;
+          }
+
+          .${itemClass}-link:active,
+          .${itemClass}-card:active {
+            transform: translateY(2px);
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.16);
+          }
+
+          @media (max-width: 960px) {
+            #${railId}.${navClass} {
+              padding: 16px 18px;
+            }
+
+            #${railId} .${navClass}__list {
+              display: flex;
+              overflow-x: auto;
+              gap: 16px;
+              padding-bottom: 8px;
+              scroll-snap-type: x mandatory;
+            }
+
+            #${railId} .${itemClass} {
+              min-width: 260px;
+              scroll-snap-align: start;
+              flex: 0 0 auto;
+            }
+
+            #${railId} .${itemClass}-link,
+            #${railId} .${itemClass}-card {
+              height: 100%;
+            }
+          }
+
+          @media (max-width: 640px) {
+            #${railId} .${itemClass}-link,
+            #${railId} .${itemClass}-card {
+              padding: 14px 16px;
+            }
+          }
+        `}
+      </style>
     </nav>
   )
 }
