@@ -19,6 +19,13 @@ import {
 import { subscribeToTokenChanges } from '@core/auth-token-storage'
 import { useAuthStore } from '@stores/authStore'
 import AppRouter from '@router/index'
+import MarketingLandingPage from './MarketingLandingPage'
+import {
+  resolveExperienceConfig,
+  describeTenantDisplayName,
+  type MarketingExperienceConfig,
+  type TenantExperienceConfig,
+} from './experienceConfig'
 
 const SNOOZE_DURATION_MS = 1000 * 60 * 60 * 6
 const BRAND_FONT_LINK_ID = 'sevensa-rentguy-fonts'
@@ -32,7 +39,11 @@ const BRANDING_CHROME_OPTIONS = {
   fontLinkId: BRAND_FONT_LINK_ID,
 } as const
 
-export function App() {
+interface TenantPortalAppProps {
+  readonly experience: TenantExperienceConfig
+}
+
+function TenantPortalApp({ experience }: TenantPortalAppProps) {
   const token = useAuthStore(state => state.token)
   const user = useAuthStore(state => state.user)
   const setAuthCredentials = useAuthStore(state => state.setCredentials)
@@ -47,8 +58,9 @@ export function App() {
     markSeen: markOnboardingSeen,
     reset: resetOnboarding,
   } = useOnboardingPreferences(SNOOZE_DURATION_MS)
+  const tenantDisplayName = describeTenantDisplayName(experience)
   useBrandingChrome(BRANDING_CHROME_OPTIONS)
-  useDocumentTitle(`${brand.shortName} × ${brand.tenant.name}`)
+  useDocumentTitle(`${brand.shortName} · ${tenantDisplayName}`)
   const [userEmail, setUserEmail] = useState(() => ensureAuthEmail(getLocalStorageItem('user_email', '')))
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
   const [isSavingRole, setIsSavingRole] = useState(false)
@@ -208,7 +220,15 @@ export function App() {
 
   return (
     <>
-      <AppRouter isAuthenticated={Boolean(token)} onLogin={handleLogin} onLogout={handleLogout} />
+      <AppRouter
+        isAuthenticated={Boolean(token)}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+        basename={experience.routerBasePath}
+        postLoginPath={experience.postLoginPath}
+        defaultAuthenticatedPath={experience.defaultAuthenticatedPath}
+        defaultUnauthenticatedPath={experience.defaultUnauthenticatedPath}
+      />
       {isRoleModalOpen && (
         <RoleSelection
           email={userEmail}
@@ -228,6 +248,21 @@ export function App() {
       )}
     </>
   )
+}
+
+function MarketingExperienceApp({ config }: { readonly config: MarketingExperienceConfig }) {
+  useBrandingChrome(BRANDING_CHROME_OPTIONS)
+  useDocumentTitle('RentGuy · Alles-in-één verhuurplatform')
+  return <MarketingLandingPage config={config} />
+}
+
+export function App(): JSX.Element {
+  const experience = resolveExperienceConfig()
+  if (experience.mode === 'marketing') {
+    return <MarketingExperienceApp config={experience} />
+  }
+
+  return <TenantPortalApp experience={experience} />
 }
 
 export default App
