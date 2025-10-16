@@ -7,6 +7,9 @@ interface AppRouterContextValue {
   readonly isAuthenticated: boolean
   readonly onLogin: (token: string, user: AuthUser) => void
   readonly onLogout: () => void
+  readonly postLoginPath: string
+  readonly defaultAuthenticatedPath: string
+  readonly defaultUnauthenticatedPath: string
 }
 
 const AppRouterContext = createContext<AppRouterContextValue | null>(null)
@@ -24,13 +27,38 @@ export interface AppRouterProps {
   readonly onLogin: (token: string, user: AuthUser) => void
   readonly onLogout: () => void
   readonly basename?: string
+  readonly postLoginPath: string
+  readonly defaultAuthenticatedPath: string
+  readonly defaultUnauthenticatedPath: string
 }
 
-export function AppRouter({ isAuthenticated, onLogin, onLogout, basename = '' }: AppRouterProps): JSX.Element {
+export function AppRouter({
+  isAuthenticated,
+  onLogin,
+  onLogout,
+  basename = '',
+  postLoginPath,
+  defaultAuthenticatedPath,
+  defaultUnauthenticatedPath,
+}: AppRouterProps): JSX.Element {
   const router = useMemo(() => createBrowserRouter(createAppRoutes(), { basename }), [basename])
   const contextValue = useMemo<AppRouterContextValue>(
-    () => ({ isAuthenticated, onLogin, onLogout }),
-    [isAuthenticated, onLogin, onLogout],
+    () => ({
+      isAuthenticated,
+      onLogin,
+      onLogout,
+      postLoginPath,
+      defaultAuthenticatedPath,
+      defaultUnauthenticatedPath,
+    }),
+    [
+      defaultAuthenticatedPath,
+      defaultUnauthenticatedPath,
+      isAuthenticated,
+      onLogin,
+      onLogout,
+      postLoginPath,
+    ],
   )
 
   return (
