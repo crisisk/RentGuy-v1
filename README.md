@@ -10,6 +10,24 @@ RentGuy Enterprise Platform is a full-stack solution for professional rental ope
 | Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.tsx`) conditionally renders the planner UI or the scanner UI depending on `VITE_APP_MODE`, validated through a shared runtime schema. |
 | Infrastructure | Docker artefacts, Alembic migrations, seed scripts, and environment configuration helpers sit alongside documentation that captures the enterprise deployment roadmap. |
 
+## Nieuw plan van aanpak (Q4 2025)
+
+1. **Stabilisatie & debugging**
+   - Draai `pytest` in `backend/` bij elke wijziging en monitor de scheduler-logs om regressies in periodieke facturatie direct te ontdekken.
+   - Houd rekening met omgevingsrestricties (zoals beperkte toegang tot npm) door offline mirrors of een interne registry klaar te zetten.
+2. **API- en datalaag hardening**
+   - Borg dat alle nieuwe modules expliciet indices definiëren zonder dubbele declaraties om migratie-conflicten te voorkomen.
+   - Richt central logging in voor databasefouten en koppel alerts aan de observability endpoints (`/metrics`, `/status`).
+3. **Frontend kwaliteitsborging**
+   - Valideer iedere feature in zowel planner- als scanner-modus en documenteer noodzakelijke `VITE_*` variabelen in `.env.example`.
+   - Automatiseer visuele regressietests zodra de npm-dependencies binnen het beveiligingsbeleid vallen.
+4. **Integraties & payments**
+   - Synchroniseer secrets via het dashboard en verifieer daarna de Mollie- en Stripe-webhooks met de sandboxomgevingen.
+   - Test maandelijks de Invoice Ninja-exportflow en archiveer de audit-logs in de recurring invoice module.
+5. **Deploy & nazorg**
+   - Gebruik de bestaande Dockerfiles voor staging builds en voer rooktests uit met de warehouse scanner vóór productiego-live.
+   - Plan een tweewekelijks onderhoudsvenster om afhankelijkheden bij te werken en het debugrapport te actualiseren.
+
 ## Getting Started
 
 ### Prerequisites

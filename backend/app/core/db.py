@@ -20,6 +20,13 @@ engine_kwargs: dict[str, object] = {"pool_pre_ping": True}
 
 if url.get_backend_name().startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+    # Share a single in-memory database across connections when running with
+    # `sqlite://` (used heavily in tests) by switching to a StaticPool.
+    if url.database in (None, "", ":memory:"):
+        from sqlalchemy.pool import StaticPool
+
+        engine_kwargs["poolclass"] = StaticPool
 else:
     engine_kwargs.update(
         {

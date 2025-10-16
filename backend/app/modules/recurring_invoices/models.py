@@ -36,7 +36,7 @@ class RecurringInvoice(Base):
         ForeignKey("auth_users.id", ondelete="CASCADE"), index=True
     )
     schedule: Mapped[str] = mapped_column(String(50), comment="Cron schedule expression")
-    next_run: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    next_run: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     template: Mapped[dict] = mapped_column(JSON, comment="Invoice template data")
     status: Mapped[RecurringInvoiceStatus] = mapped_column(
         String(20), default=RecurringInvoiceStatus.ACTIVE
