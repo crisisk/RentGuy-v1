@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
+import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
+import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 
 export interface RoleSelectionProps {
   email: string
@@ -61,8 +63,67 @@ const ROLE_OPTIONS: RoleOption[] = [
   },
 ]
 
+const roleExplainers: FlowExplainerItem[] = [
+  {
+    id: 'presets',
+    icon: '🧭',
+    title: 'Persona presets',
+    description: 'Je rol bepaalt welke dashboards, explainers en notificaties automatisch actief worden.',
+  },
+  {
+    id: 'audit',
+    icon: '📝',
+    title: 'Audit & onboarding',
+    description: 'Iedere keuze logt onboardingprogressie en autorisaties volgens het Sevensa control framework.',
+  },
+  {
+    id: 'flex',
+    icon: '🔄',
+    title: 'Flexibel bijsturen',
+    description: 'Na bevestiging kan het admin-team je rol aanpassen zonder context of data te verliezen.',
+  },
+]
+
 export function RoleSelection({ email, onConfirm, onLogout, isSubmitting, errorMessage }: RoleSelectionProps) {
   const [selectedRole, setSelectedRole] = useState('')
+
+  const journeySteps = useMemo<FlowJourneyStep[]>(() => {
+    const roleChosen = Boolean(selectedRole)
+    return [
+      {
+        id: 'login',
+        title: '1. Inloggen',
+        description: 'Je bent aangemeld met Sevensa SSO en klaar om een persona te kiezen.',
+        status: 'complete',
+        badge: 'Authenticatie',
+        meta: email,
+      },
+      {
+        id: 'role',
+        title: '2. Rol selecteren',
+        description: 'Kies de persona die het beste aansluit bij je verantwoordelijkheden.',
+        status: 'current',
+        badge: 'Persona',
+        meta: roleChosen ? `Geselecteerd: ${selectedRole}` : 'Nog geen rol geselecteerd',
+      },
+      {
+        id: 'planner',
+        title: '3. Dashboard onboarding',
+        description: 'Ontvang explainers, filters en sample data passend bij jouw rol.',
+        status: roleChosen ? 'upcoming' : 'blocked',
+        badge: 'Operations',
+        meta: 'Wordt geactiveerd na rolkeuze',
+      },
+      {
+        id: 'secrets',
+        title: '4. Go-live voorbereiden',
+        description: 'Administratorflows blijven beschikbaar voor governance en secrets.',
+        status: roleChosen ? 'upcoming' : 'blocked',
+        badge: 'Go-live',
+        meta: 'Volgende stap na dashboard onboarding',
+      },
+    ]
+  }, [email, selectedRole])
 
   const handleConfirm = () => {
     if (!selectedRole || isSubmitting) {
@@ -137,6 +198,11 @@ export function RoleSelection({ email, onConfirm, onLogout, isSubmitting, errorM
               We stemmen dashboards, notificaties en voorbeelddata af op jouw verantwoordelijkheden. Je kunt dit later via het
               admin team laten aanpassen.
             </p>
+            <FlowExplainerList tone="dark" items={roleExplainers} minWidth={220} />
+            <FlowJourneyMap
+              steps={journeySteps}
+              subtitle="Volg de stappen om alle explainers en dashboards per persona te ontgrendelen."
+            />
           </div>
         </header>
 
