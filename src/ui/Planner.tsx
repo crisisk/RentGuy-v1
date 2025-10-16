@@ -13,9 +13,11 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin, { type EventDropArg } from '@fullcalendar/interaction'
 import type { EventInput } from '@fullcalendar/core'
 import { api } from '@infra/http/api'
-import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
+import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import TipBanner from '@ui/TipBanner'
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
+import ExperienceLayout from '@ui/ExperienceLayout'
+import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import { defaultProjectPresets } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
 import type {
@@ -136,6 +138,17 @@ function isStatusFilter(value: string): value is StatusFilter {
 
 function isRiskFilter(value: string): value is RiskFilter {
   return value === 'all' || isRiskLevel(value)
+}
+
+function describeStatusFilter(filter: StatusFilter): string {
+  if (filter === 'all') return 'Alle statussen'
+  if (filter === 'active') return 'Actief en risico'
+  return statusLabels[filter]
+}
+
+function describeRiskFilter(filter: RiskFilter): string {
+  if (filter === 'all') return 'Alle risiconiveaus'
+  return riskLabels[filter]
 }
 
 function parseDate(dateString: string | null | undefined): Date | null {
@@ -861,6 +874,61 @@ export default function Planner({ onLogout }: PlannerProps) {
 
   const personaHint = personaPresets[personaPreset]?.description
 
+  const heroExplainers = useMemo<FlowExplainerItem[]>(() => {
+    const preset = personaPresets[personaPreset]
+    const riskSummary = summary.critical
+      ? `Er zijn ${summary.critical} kritieke projecten die directe opvolging nodig hebben.`
+      : summary.warning
+        ? `Er zijn ${summary.warning} waarschuwingsprojecten die wekelijks opgevolgd worden.`
+        : 'Geen risico’s gemeld. Houd explainers in de gaten voor nieuwe alerts.'
+    const upcomingSummary = upcomingWithin7
+      ? `Binnen 7 dagen starten ${upcomingWithin7} projecten.`
+      : upcomingWithin14
+        ? `Binnen 14 dagen starten ${upcomingWithin14} projecten.`
+        : 'Geen geplande projecten in de komende 14 dagen.'
+
+    return [
+      {
+        id: 'persona',
+        icon: '🧭',
+        title: preset?.label ?? 'Persona-dashboard',
+        description: `Filters en explainers afgestemd op ${preset?.label ?? 'de geselecteerde'} verantwoordelijkheden.`,
+        meta: `Statusfilter: ${describeStatusFilter(statusFilter)} · Risico: ${describeRiskFilter(riskFilter)}`,
+      },
+      {
+        id: 'risk',
+        icon: '⚡',
+        title: 'Risicoregister',
+        description: riskSummary,
+        meta: upcomingSummary,
+      },
+      {
+        id: 'view',
+        icon: '📅',
+        title: viewMode === 'calendar' ? 'Kalendermodus actief' : 'Dashboardmodus actief',
+        description:
+          viewMode === 'calendar'
+            ? 'Sleep events om shifts en voorraad direct te updaten. Gebruik de explainers voor context.'
+            : 'Bekijk alerts, crew en voorraad vanuit één cockpit. Schakel naar de kalender voor planning.',
+        meta: calendarSyncing ? 'Kalendersynchronisatie actief' : 'Kalender klaar voor gebruik',
+        action:
+          viewMode === 'calendar'
+            ? { label: 'Naar dashboard', onClick: () => setViewMode('dashboard') }
+            : { label: 'Open kalender', onClick: () => setViewMode('calendar') },
+      },
+    ] satisfies FlowExplainerItem[]
+  }, [
+    calendarSyncing,
+    personaPreset,
+    riskFilter,
+    statusFilter,
+    summary.critical,
+    summary.warning,
+    upcomingWithin14,
+    upcomingWithin7,
+    viewMode,
+  ])
+
   function shiftRange(delta: number) {
     setFormState(prev => ({
       ...prev,
@@ -875,115 +943,104 @@ export default function Planner({ onLogout }: PlannerProps) {
     Start: 'start',
     Einde: 'end',
   }
-  return (
-    <div
-      style={{
-        background: brand.colors.appBackground,
-        minHeight: '100vh',
-        fontFamily: brandFontStack,
-        padding: '32px 20px',
-      }}
-    >
-      <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gap: 24 }}>
-        <div
+
+  const headerSlot = (
+    <>
+      {showSecretsShortcut && (
+        <Link
+          to="/dashboard"
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(227, 232, 255, 0.82) 100%)',
-            borderRadius: 28,
-            padding: '28px 32px',
-            boxShadow: brand.colors.shadow,
-            border: `1px solid ${withOpacity(brand.colors.primary, 0.28)}`,
+            padding: '10px 18px',
+            borderRadius: 999,
+            textDecoration: 'none',
+            background: '#ffffff',
+            color: brand.colors.primary,
+            fontWeight: 600,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.3)}`,
+            boxShadow: '0 14px 28px rgba(79, 70, 229, 0.24)',
           }}
         >
-          <div style={{ display: 'grid', gap: 8 }}>
-            <span
-              style={{
-                textTransform: 'uppercase',
-                fontSize: '0.75rem',
-                letterSpacing: '0.22em',
-                color: brand.colors.mutedText,
-              }}
-            >
-              {brand.shortName} · {brand.tenant.name}
-            </span>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: '2rem',
-                color: brand.colors.secondary,
-                fontFamily: headingFontStack,
-              }}
-            >
-              Mister DJ projectplanner
-            </h2>
-            <p style={{ margin: 0, color: brand.colors.mutedText, maxWidth: 520 }}>
-              Persona-presets, voorraadbewaking en corporate audittrail. {brand.partnerTagline} maakt elke flow herkenbaar voor
-              Bart.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            style={{
-              padding: '10px 20px',
-              borderRadius: 999,
-              border: 'none',
-              backgroundImage: brand.colors.gradient,
-              color: '#fff',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 18px 40px rgba(79, 70, 229, 0.28)',
-            }}
-          >
-            Uitloggen
-          </button>
-        </div>
+          Secrets-dashboard
+        </Link>
+      )}
+      <button
+        type="button"
+        onClick={onLogout}
+        style={{
+          padding: '10px 20px',
+          borderRadius: 999,
+          border: 'none',
+          backgroundImage: brand.colors.gradient,
+          color: '#0F172A',
+          fontWeight: 700,
+          cursor: 'pointer',
+          boxShadow: '0 18px 40px rgba(79, 70, 229, 0.28)',
+        }}
+      >
+        Uitloggen
+      </button>
+    </>
+  )
 
-        {showSecretsShortcut && (
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'space-between',
-              gap: 16,
-              alignItems: 'center',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
-              borderRadius: 20,
-              padding: '20px 24px',
-              border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
-              boxShadow: brand.colors.shadow,
-            }}
-          >
-            <div style={{ maxWidth: 560 }}>
-              <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.2em', color: brand.colors.mutedText }}>
-                Systeembeheer
-              </span>
-              <h3 style={{ margin: '6px 0', fontFamily: headingFontStack, color: brand.colors.secondary }}>
-                Nieuwe secrets-console beschikbaar
-              </h3>
-              <p style={{ margin: 0, color: brand.colors.mutedText }}>
-                Vul alle .env-variabelen in vanuit één dashboard en push ze naar de FastAPI- en Express-omgevingen. Houd e-mail, betalingen en observability centraal bij.
-              </p>
-            </div>
-            <Link
-              to="/dashboard"
-              style={{
-                padding: '10px 18px',
-                borderRadius: 999,
-                textDecoration: 'none',
-                backgroundImage: brand.colors.gradient,
-                color: '#fff',
-                fontWeight: 600,
-                boxShadow: '0 14px 28px rgba(79, 70, 229, 0.26)',
-              }}
-            >
-              Open dashboard
-            </Link>
-          </div>
-        )}
+  const secretsCallout = showSecretsShortcut ? (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        gap: 16,
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
+        borderRadius: 24,
+        padding: '20px 24px',
+        border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
+        color: brand.colors.secondary,
+      }}
+    >
+      <div style={{ maxWidth: 520, display: 'grid', gap: 6 }}>
+        <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.2em', color: brand.colors.mutedText }}>
+          Systeembeheer
+        </span>
+        <strong style={{ fontFamily: headingFontStack, fontSize: '1.2rem' }}>Nieuwe secrets-console beschikbaar</strong>
+        <span style={{ color: brand.colors.mutedText }}>
+          Vul alle .env-variabelen centraal en push ze naar FastAPI- en Express-services. Houd e-mail, betalingen en observability gekoppeld.
+        </span>
+      </div>
+      <Link
+        to="/dashboard"
+        style={{
+          padding: '10px 18px',
+          borderRadius: 999,
+          textDecoration: 'none',
+          backgroundImage: brand.colors.gradient,
+          color: '#fff',
+          fontWeight: 600,
+          boxShadow: '0 14px 28px rgba(79, 70, 229, 0.26)',
+        }}
+      >
+        Open dashboard
+      </Link>
+    </div>
+  ) : null
 
+  return (
+    <ExperienceLayout
+      eyebrow="Operations cockpit"
+      heroBadge="Persona-intelligentie"
+      title="Mister DJ projectplanner"
+      description={
+        <>
+          <span>
+            Persona-presets, voorraadbewaking en corporate audittrail maken elke flow herkenbaar voor Bart en het Mister DJ-team.
+          </span>
+          <span>Gebruik explainers per rol om crew, finance en escalaties vanuit één cockpit te sturen.</span>
+        </>
+      }
+      heroPrologue={<FlowExplainerList items={heroExplainers} minWidth={240} />}
+      heroFooter={secretsCallout}
+      headerSlot={headerSlot}
+    >
+      <>
         <TipBanner module="projects" />
 
         <div
@@ -1482,7 +1539,7 @@ export default function Planner({ onLogout }: PlannerProps) {
             </div>
           </form>
         )}
-      </div>
-    </div>
+      </>
+    </ExperienceLayout>
   )
 }
