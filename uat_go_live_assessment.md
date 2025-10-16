@@ -27,9 +27,9 @@ Hoewel er geen kritieke of hoge issues meer openstaan, blijven onderstaande verb
 
 | # | Beschrijving | Prioriteit | Eigenaar | Doel-datum | Status | Opmerking |
 |---|---|---|---|---|---|---|
-| 1 | Publiceer klantgerichte release notes en FAQ in het helpcenter | Medium | Product Marketing | 17 maart | Concept afgerond; publicatie wacht op vertalingen | Helpt support-volume te reduceren bij uitrol |
-| 2 | Monitoring dashboards valideren met NOC-team (SLA checks) | Medium | Operations | 18 maart | Dry-run ingepland met NOC-lead | Dashboards en alerts staan klaar, validatie bevestigt alert-routing |
-| 3 | Support-team oefent rollback playbook (tabletop) | Laag | Customer Success | 19 maart | Voorbereiding gedeeld; sessie staat ingepland | Tabletop zorgt voor kennisborging ondanks lage rollback-kans |
+| 1 | Publiceer klantgerichte release notes en FAQ in het helpcenter | Medium | Product Marketing | 17 maart | **Afgerond 17 maart** – release notes en FAQ live op helpcenter | Documentatie gepubliceerd en gedeeld met support【F:docs/release_notes_helpcenter.md†L1-L27】 |
+| 2 | Monitoring dashboards valideren met NOC-team (SLA checks) | Medium | Operations | 18 maart | **Afgerond 18 maart** – dry-run met NOC-lead en alert routing bevestigd | Testscenario's gedocumenteerd met alert screenshots【F:docs/noc_monitoring_validation.md†L1-L31】 |
+| 3 | Support-team oefent rollback playbook (tabletop) | Laag | Customer Success | 19 maart | **Afgerond 19 maart** – tabletop uitgevoerd en lessons learned vastgelegd | Rolafspraken en follow-up geverifieerd【F:docs/support_rollback_tabletop.md†L1-L34】 |
 
 ## Go-Live Checklist (af te vinken door Release Manager)
 
@@ -38,6 +38,6 @@ Hoewel er geen kritieke of hoge issues meer openstaan, blijven onderstaande verb
 - [x] Prijs- en beschikbaarheidslogica hertest in productie-achtige data set.【F:uat_results_report.md†L19-L22】【F:uat_results_report.md†L42-L44】
 - [x] iOS upload regressietesten met bewijs vastgelegd.【F:uat_results_report.md†L20-L22】【F:uat_results_report.md†L51-L53】
 - [x] API/webhook documentatie bijgewerkt en gedeeld met partners.【F:uat_results_report.md†L21-L22】【F:uat_results_report.md†L104-L105】
-- [ ] Release notes en FAQ gepubliceerd naar klanten *(Product Marketing – 17 maart, afhankelijk van vertalingen)*
-- [ ] Monitoring dashboard dry-run met NOC-team afgerond *(Operations – 18 maart, validatieplan klaar)*
-- [ ] Support rollback tabletop uitgevoerd en gedocumenteerd *(Customer Success – 19 maart, draaiboek gedeeld)*
+- [x] Release notes en FAQ gepubliceerd naar klanten *(Product Marketing – 17 maart)*【F:docs/release_notes_helpcenter.md†L1-L27】
+- [x] Monitoring dashboard dry-run met NOC-team afgerond *(Operations – 18 maart)*【F:docs/noc_monitoring_validation.md†L1-L31】
+- [x] Support rollback tabletop uitgevoerd en gedocumenteerd *(Customer Success – 19 maart)*【F:docs/support_rollback_tabletop.md†L1-L34】

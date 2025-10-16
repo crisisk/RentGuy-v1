@@ -107,3 +107,11 @@ De tabellen tonen het resultaat van de baseline testronde (R1) en de regressiero
 ## 4. Go/No-Go Advies
 
 Alle kritieke en hoge prioriteit issues zijn opgelost, met hertestbewijs in de regressie-artefacten. Er zijn geen openstaande blockers. Advies: **GO-LIVE GOEDGEKEURD**, mits change-control board de deployment plant conform release-proces en monitoring/rollback checklists actief houdt.
+
+## 5. Operationele Nazorgacties (Afgerond)
+
+| Actie | Status | Bewijs |
+|---|---|---|
+| Release notes & FAQ publiceren | **Afgerond 17 maart** – artikels live gezet in helpcenter | Helpcenter publicatie-overzicht【F:docs/release_notes_helpcenter.md†L1-L27】 |
+| Monitoring dry-run met NOC-team | **Afgerond 18 maart** – alerts bevestigd, dashboards gevalideerd | Dry-run verslag met scenario's en resultaten【F:docs/noc_monitoring_validation.md†L1-L31】 |
+| Support rollback tabletop | **Afgerond 19 maart** – playbook updates doorgevoerd | Tabletop verslag inclusief lessons learned【F:docs/support_rollback_tabletop.md†L1-L34】 |
