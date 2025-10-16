@@ -23,7 +23,7 @@ RentGuy Enterprise Platform is a full-stack solution for professional rental ope
    - Automatiseer visuele regressietests zodra de npm-dependencies binnen het beveiligingsbeleid vallen.
 4. **Integraties & payments**
    - Synchroniseer secrets via het dashboard en verifieer daarna de Mollie- en Stripe-webhooks met de sandboxomgevingen.
-   - Test maandelijks de Invoice Ninja-exportflow en archiveer de audit-logs in de recurring invoice module.
+   - Test maandelijks de RentGuy finance-exportflow en archiveer de audit-logs in de recurring invoice module zodat de ingebouwde modules aantoonbaar blijven.
 5. **Deploy & nazorg**
    - Gebruik de bestaande Dockerfiles voor staging builds en voer rooktests uit met de warehouse scanner vóór productiego-live.
    - Plan een tweewekelijks onderhoudsvenster om afhankelijkheden bij te werken en het debugrapport te actualiseren.

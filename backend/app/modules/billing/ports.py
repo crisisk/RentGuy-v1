@@ -31,7 +31,7 @@ class BillingPort(ABC):
         line_items: Iterable[InvoiceLineIn],
         total_net_override: Optional[float],
         total_vat_override: Optional[float],
-        sync_with_invoice_ninja: bool,
+        sync_with_finance_bridge: bool,
     ) -> Invoice:
         """Create an invoice with calculated totals."""
 

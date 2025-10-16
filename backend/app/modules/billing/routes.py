@@ -42,7 +42,7 @@ def create_invoice(payload: InvoiceIn, db: Session = Depends(get_db), user=Depen
         line_items=payload.line_items,
         total_net_override=payload.total_net_override,
         total_vat_override=payload.total_vat_override,
-        sync_with_invoice_ninja=payload.sync_with_invoice_ninja,
+        sync_with_finance_bridge=payload.sync_with_finance_bridge,
     )
     db.commit()
     return invoice

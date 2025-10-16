@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class InvoiceLineIn(BaseModel):
@@ -23,7 +23,17 @@ class InvoiceIn(BaseModel):
     line_items: list[InvoiceLineIn] = Field(default_factory=list)
     total_net_override: float | None = None
     total_vat_override: float | None = None
-    sync_with_invoice_ninja: bool = False
+    sync_with_finance_bridge: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "sync_with_finance_bridge",
+            "sync_with_rentguy_finance",
+            "sync_with_invoice_ninja",
+        ),
+        serialization_alias="sync_with_finance_bridge",
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
 
 class InvoiceOut(BaseModel):
     id: int
