@@ -3,6 +3,7 @@ import type {
   Activity,
   ActivityPayload,
   AutomationRun,
+  DashboardSummary,
   Deal,
   DealPayload,
   Lead,
@@ -73,4 +74,15 @@ export const listAutomationRuns = async (
     withTenant(tenantId),
   );
   return response.data as AutomationRun[];
+};
+
+export const getDashboardSummary = async (
+  tenantId: string,
+  options?: { abortSignal?: AbortSignal },
+): Promise<DashboardSummary> => {
+  const response = await apiClient.get('/api/v1/crm/analytics/dashboard', {
+    ...withTenant(tenantId),
+    signal: options?.abortSignal,
+  });
+  return response.data as DashboardSummary;
 };

@@ -5,6 +5,30 @@
  * Vite exposes env vars via import.meta.env with VITE_ prefix.
  */
 
+const parseTenantList = (value: string | undefined): string[] => {
+  if (!value) {
+    return [];
+  }
+  return value
+    .split(',')
+    .map((tenant) => tenant.trim())
+    .filter(Boolean);
+};
+
+const analyticsDefaultTenant =
+  import.meta.env.VITE_ANALYTICS_DEFAULT_TENANT || import.meta.env.VITE_DEFAULT_TENANT || 'mrdj';
+
+const analyticsTenants = (() => {
+  const configured = parseTenantList(import.meta.env.VITE_ANALYTICS_TENANTS);
+  if (configured.length === 0) {
+    return [analyticsDefaultTenant];
+  }
+  if (!configured.includes(analyticsDefaultTenant)) {
+    return [analyticsDefaultTenant, ...configured];
+  }
+  return configured;
+})();
+
 export const config = {
   /**
    * Base URL for REST API calls
@@ -49,7 +73,12 @@ export const config = {
     const baseUrl = config.apiBaseUrl.replace(/\/$/, ''); // Remove trailing slash
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${baseUrl}${cleanPath}`;
-  }
+  },
+
+  analytics: {
+    defaultTenant: analyticsDefaultTenant,
+    tenants: analyticsTenants,
+  },
 };
 
 // Log configuration in development

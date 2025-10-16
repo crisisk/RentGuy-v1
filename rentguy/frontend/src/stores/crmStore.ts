@@ -4,6 +4,7 @@ import { immer } from 'zustand/middleware/immer';
 import type {
   Activity,
   ActivityPayload,
+  DashboardSummary,
   Deal,
   DealPayload,
   Lead,
@@ -26,6 +27,7 @@ interface CrmState {
   leads: TenantCache<Lead[]>;
   deals: TenantCache<Deal[]>;
   activities: Record<string, ActivityCache>;
+  analytics: TenantCache<DashboardSummary>;
   isLoading: boolean;
   error: string | null;
   fetchLeads: (tenantId: string, options?: { force?: boolean }) => Promise<Lead[]>;
@@ -35,6 +37,7 @@ interface CrmState {
     dealId: number,
     options?: { force?: boolean },
   ) => Promise<Activity[]>;
+  fetchDashboard: (tenantId: string, options?: { force?: boolean }) => Promise<DashboardSummary>;
   createLead: (tenantId: string, payload: LeadPayload) => Promise<Lead>;
   createDeal: (tenantId: string, payload: DealPayload) => Promise<Deal>;
   logActivity: (tenantId: string, payload: ActivityPayload) => Promise<Activity>;
@@ -58,6 +61,7 @@ export const useCrmStore = create<CrmState>()(
     leads: {},
     deals: {},
     activities: {},
+    analytics: {},
     isLoading: false,
     error: null,
 
@@ -144,6 +148,33 @@ export const useCrmStore = create<CrmState>()(
       }
     },
 
+    async fetchDashboard(tenantId, options) {
+      const { analytics } = get();
+      const cached = analytics[tenantId];
+      const force = options?.force ?? false;
+      if (!force && cached && !isExpired(cached)) {
+        return cached.data;
+      }
+      set((state) => {
+        state.isLoading = true;
+        state.error = null;
+      });
+      try {
+        const data = await crmApi.getDashboardSummary(tenantId);
+        set((state) => {
+          state.analytics[tenantId] = { data, fetchedAt: Date.now() };
+          state.isLoading = false;
+        });
+        return data;
+      } catch (error) {
+        set((state) => {
+          state.isLoading = false;
+          state.error = (error as Error).message;
+        });
+        throw error;
+      }
+    },
+
     async createLead(tenantId, payload) {
       const lead = await crmApi.createLead(tenantId, payload);
       set((state) => {
@@ -205,6 +236,7 @@ export const useCrmStore = create<CrmState>()(
         delete state.leads[tenantId];
         delete state.deals[tenantId];
         delete state.activities[tenantId];
+        delete state.analytics[tenantId];
       });
     },
   })),

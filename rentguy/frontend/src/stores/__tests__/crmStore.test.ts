@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as crmApi from '../../api/crm';
 import { useCrmStore } from '../crmStore';
-import type { Activity, Deal, Lead } from '../../types/crm';
+import type { Activity, DashboardSummary, Deal, Lead } from '../../types/crm';
 
 vi.mock('../../api/crm');
 
@@ -48,6 +48,84 @@ const sampleActivity: Activity = {
   created_at: new Date().toISOString(),
 };
 
+const sampleDashboard: DashboardSummary = {
+  generated_at: new Date().toISOString(),
+  headline: {
+    total_pipeline_value: 125000,
+    weighted_pipeline_value: 64000,
+    won_value_last_30_days: 32000,
+    avg_deal_cycle_days: 18.5,
+    automation_failure_rate: 0.01,
+    active_workflows: 3,
+  },
+  lead_funnel: {
+    total_leads: 240,
+    leads_last_30_days: 32,
+    leads_with_deals: 78,
+    conversion_rate: 0.325,
+  },
+  pipeline: [
+    {
+      stage_id: 1,
+      stage_name: 'Intake',
+      deal_count: 12,
+      total_value: 22000,
+      weighted_value: 9500,
+      avg_age_days: 3.2,
+    },
+  ],
+  automation: [
+    {
+      workflow_id: 'lead_intake',
+      run_count: 54,
+      failed_runs: 1,
+      avg_completion_minutes: 4.5,
+      sla_breaches: 0,
+      failure_rate: 0.018,
+    },
+  ],
+  sales: {
+    open_deals: 32,
+    won_deals_last_30_days: 6,
+    lost_deals_last_30_days: 3,
+    total_deals: 120,
+    bookings_last_30_days: 4,
+    win_rate: 0.42,
+    avg_deal_value: 5200,
+    forecast_next_30_days: 18500,
+    pipeline_velocity_per_day: 2100,
+  },
+  acquisition: {
+    lookback_days: 30,
+    ga_sessions: 4200,
+    ga_new_users: 1800,
+    ga_engaged_sessions: 3900,
+    ga_conversions: 96,
+    ga_conversion_value: 28500,
+    gtm_conversions: 54,
+    gtm_conversion_value: 18300,
+    blended_conversion_rate: 0.032,
+    active_connectors: ['ga4', 'gtm'],
+  },
+  source_performance: [
+    {
+      key: 'google_ads',
+      label: 'Google Ads',
+      dimension_type: 'channel',
+      lead_count: 54,
+      deal_count: 24,
+      won_deal_count: 12,
+      pipeline_value: 42000,
+      won_value: 21000,
+      ga_sessions: 1800,
+      ga_conversions: 36,
+      gtm_conversions: 18,
+      ga_revenue: 12000,
+      gtm_revenue: 6000,
+    },
+  ],
+};
+
 beforeEach(() => {
   useCrmStore.setState((state) => {
     state.leads = {};
@@ -68,6 +146,7 @@ beforeEach(() => {
     stage: { ...sampleDeal.stage, id: 2, name: 'Proposal' },
   });
   mockedApi.logActivity.mockResolvedValue(sampleActivity);
+  mockedApi.getDashboardSummary.mockResolvedValue(sampleDashboard);
 });
 
 afterEach(() => {
@@ -113,5 +192,27 @@ describe('useCrmStore caching', () => {
     await store.fetchLeads(tenantId);
     store.invalidateTenant(tenantId);
     expect(useCrmStore.getState().leads[tenantId]).toBeUndefined();
+  });
+
+  test('fetchDashboard caches per tenant and reuses until TTL expires', async () => {
+    const store = useCrmStore.getState();
+    const first = await store.fetchDashboard(tenantId);
+    expect(first).toEqual(sampleDashboard);
+    expect(mockedApi.getDashboardSummary).toHaveBeenCalledTimes(1);
+
+    const second = await store.fetchDashboard(tenantId);
+    expect(second).toEqual(sampleDashboard);
+    expect(mockedApi.getDashboardSummary).toHaveBeenCalledTimes(1);
+
+    useCrmStore.setState((state) => {
+      const cached = state.analytics[tenantId];
+      if (cached) {
+        cached.fetchedAt = Date.now() - 5 * 60 * 1000;
+      }
+    });
+
+    const third = await store.fetchDashboard(tenantId);
+    expect(third).toEqual(sampleDashboard);
+    expect(mockedApi.getDashboardSummary).toHaveBeenCalledTimes(2);
   });
 });
