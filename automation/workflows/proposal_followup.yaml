@@ -1,0 +1,21 @@
+id: proposal_followup
+name: Proposal Follow-up Cadence
+description: |
+  Sequence of reminders that ensures proposals are followed-up with prospects
+  across email, WhatsApp Business and task assignments. Terminates once a deal
+  is marked as won or lost.
+triggers:
+  - deal.stage.proposal_sent
+  - deal.stage.negotiation
+entrypoint: crm.automations.proposal_followup
+retry:
+  max_attempts: 4
+  initial_interval: 2.0
+  backoff_factor: 2.0
+metadata:
+  sla_minutes: 60
+  escalation_contact: operations-lead@mrdj.nl
+  channels:
+    - email
+    - whatsapp
+    - task

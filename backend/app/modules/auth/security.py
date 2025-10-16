@@ -3,6 +3,7 @@ from typing import Any
 
 import jwt
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError
 
 from app.core.config import settings
 
@@ -12,7 +13,10 @@ def hash_password(password: str) -> str:
     return pwd.hash(password)
 
 def verify_password(password: str, hashed: str) -> bool:
-    return pwd.verify(password, hashed)
+    try:
+        return pwd.verify(password, hashed)
+    except (ValueError, UnknownHashError):
+        return False
 
 def create_access_token(sub: str) -> str:
     now = datetime.now(tz=timezone.utc)
