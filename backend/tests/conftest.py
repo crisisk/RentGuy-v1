@@ -198,6 +198,7 @@ import app.modules.crew.models  # noqa: F401
 import app.modules.inventory.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
 import app.modules.platform.secrets.models  # noqa: F401
+import app.modules.crm.models  # noqa: F401
 
 from app.core.db import Base
 

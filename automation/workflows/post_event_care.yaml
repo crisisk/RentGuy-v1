@@ -1,0 +1,20 @@
+id: post_event_care
+name: Post-Event Care and Feedback
+description: |
+  Handles the full post-event journey: sharing thank-you messages, triggering
+  invoice reminders, collecting feedback surveys and creating tasks for
+  testimonial follow-up.
+triggers:
+  - deal.stage.completed
+entrypoint: crm.automations.post_event_care
+retry:
+  max_attempts: 3
+  initial_interval: 5.0
+  backoff_factor: 2.0
+metadata:
+  feedback_form: https://mr-dj.rentguy.nl/forms/post-event-feedback
+  sla_minutes: 120
+  notify_finance: true
+  downstream_workflows:
+    - invoice_sync
+    - satisfaction_report
