@@ -1,95 +1,148 @@
-# Voorbereidingsplan: Automation & CRM voor mr-dj.rentguy.nl
+# Implementatieplan: CRM & Automatiseringen voor mr-dj.rentguy.nl
 
-## 1. Doelstelling en Scope
-- **Doel**: mr-dj.rentguy.nl gereedmaken als automation- en CRM-hub bovenop de bestaande RentGuy basis.
-- **Scope**: lead capture, CRM-configuratie, workflow-automatisering, data synchronisatie, en go-live governance voor de Mr. DJ tenant.
-- **Randvoorwaarden**: hergebruik van het onboarding portal (`mr-dj-onboarding/`), aansluiting op de RentGuy backend (inventory, projecten, crew, facturatie) en ondersteuning van multi-tenant branding.
+Dit document beschrijft het **concrete implementatieplan** om de CRM- en automation-capabilities van de Mr. DJ tenant in de RentGuy
+applicatie te activeren. De aanpak is gebaseerd op best practices uit de bestaande RentGuy codebase, de modules in
+`mr-dj-onboarding-enhanced/` en de referentie-artefacten uit de `mr-djv1` repository (commit `01edec2625748b40de38921d16edfbd6aefc272a`).
 
-## 2. Architectuuroverzicht
-1. **Frontend-laag** (mr-dj-onboarding + toekomstige CRM UI):
-   - Uitbreiding van de React/Vite frontend met CRM dashboards (leads, deals, communicatiestreams).
-   - Integratie met Mr. DJ brandingcomponenten (`branding.ts`, `TipBanner.tsx`, `RoleSelection.tsx`).
-2. **Backend-laag**:
-   - API-services voor leads, contactpersonen, pipelines, en automatiseringsregels.
-   - Webhook-ingangen voor e-mail, WhatsApp Business, website formulieren en Mollie betalingen.
-3. **Automations-laag**:
-   - Event bus (bijv. via Redis/Queue) om triggers door te geven aan workflow-engine.
-   - Workflow-engine (n8n/Temporal/Django Q) voor sequenties zoals intake → offerte → contract → project → factuur.
-4. **Data & Rapportage**:
-   - Unified datamodel dat leads, klanten, projecten, crew, facturen koppelt.
-   - Power BI/Metabase dashboards voor conversieratio, omzet per pipeline, resourcebelasting.
+## 1. Architectuuraanpassing op basis van mr-djv1
 
-## 3. CRM Fundering
-### 3.1 Datamodel & API
-- Maak `crm_leads`, `crm_contacts`, `crm_deals`, `crm_activities` tabellen met multi-tenant velden.
-- API endpoints (`/api/crm/leads`, `/api/crm/deals`) met OAuth/tenant-isolatie.
-- Synchroniseer bestaande Mr. DJ contactgegevens uit onboarding naar CRM via achtergrondtaak.
+### 1.1 Frontend (React + Vite)
+- `mr-dj-onboarding-enhanced/src/App.jsx` bevestigt het Vite/React fundament met route `/crm`; we hergebruiken deze structuur voor het
+  CRM-dashboard.
+- Navigatiecomponent `MainNavigation.tsx` bevat reeds een CRM entry – uitbreiden met subnavigatie voor **Leads**, **Pipelines**,
+  **Automations**, **Rapportages**.
+- UI-templates uit `mr_dj_complete_all_143_templates.zip` (map `templates/website/`) worden na validatie op Mr. DJ branding geladen in
+  `mr-dj-onboarding-enhanced/public/templates/`. Stappen:
+  1. Download ZIP uit `mr-djv1` repo en controleer Figma referenties op kleur (#111827, #F3F4F6, accent #EF4444).
+  2. Bewaar componentvarianten (hero, testimonial, pricing) als React partials (`src/components/templates/`).
+  3. Voeg QA-checklist toe in `testing/ui/regressions.md` om consistentie te borgen.
 
-### 3.2 Pipeline Configuratie
-- Definieer pipeline-stadia: **Nieuwe Lead → Kwalificatie → Offerte → Aanbetaling → Project Gereed → Evaluatie**.
-- Voorzie mogelijkheden voor meerdere pipelines (bijv. Bruiloften, Zakelijk, Equipment-only).
-- Voeg SLA-regels toe (max. responstijd 2 uur voor nieuwe leads, 24 uur voor offertes).
+### 1.2 Backend Alignement
+- De huidige RentGuy backend modules (`0001_baseline.py` t/m `0007_onboarding.py`) draaien als FastAPI-services. CRM-extensies komen in
+  nieuwe module `0008_crm.py` met schema's, routers en services.
+- Architecture blueprint uit mr-djv1 bevestigt een service-gedreven opzet met PostgreSQL + Redis. We houden deze stack aan:
+  - **PostgreSQL** voor CRM-tabellen met tenant-scheiding.
+  - **Redis** als event queue (`crm_automation_queue`).
+- API Gateway (`routes.py`) krijgt een nieuwe router `crm_router` gekoppeld aan `/api/crm`.
 
-### 3.3 Communicatiestroom
-- Koppel Microsoft 365/Exchange mailbox voor automatische e-mail logging.
-- Implementeer WhatsApp Business API connector (scherm `apps/communication/whatsapp` uitbreiden).
-- Centraliseer notities en taken in `crm_activities` met mentions voor crewleden.
+### 1.3 Dashboarding
+- Gebruik bestaande Metabase integratie (`ops/metabase/`) voor dashboards. Nieuwe dashboards: "Pipeline Velocity", "Revenue per
+  Package", "Automation SLA".
+- Frontend store `rentguy/frontend/src/stores/crmStore.ts` & logic `../logic/crmLogic.ts` blijven de single source of truth; breid types
+  (`src/types/crmTypes.ts`) uit met `DealStage`, `AutomationRun`, `EngagementScore`.
 
-## 4. Automatiseringstrajecten
-### 4.1 Lead Intake → CRM
-1. Websiteformulier op mr-dj.nl stuurt POST naar webhook.
-2. Workflow-engine creëert lead + contact, stuurt geautomatiseerde bevestigingsmail met brochure.
-3. Automatische taak voor sales (Bart) in CRM en notificatie in Microsoft Teams.
+## 2. CRM Datamodel & Migrations
 
-### 4.2 Offerte & Contract
-1. Na kwalificatie start automatisering voor offerte op basis van pakkettemplates (Silver/Gold/Diamond/Platinum).
-2. Documentgeneratie in Mr. DJ branding via PDF-service.
-3. Bij acceptatie: Mollie betaalverzoek voor aanbetaling, deal-status naar *Aanbetaling*.
+| Tabel | Belangrijkste kolommen | Relaties | Bijzonderheden |
+|-------|-----------------------|----------|----------------|
+| `crm_leads` | `id`, `tenant_id`, `source`, `campaign`, `status`, `score`, `created_at` | FK → `crm_contacts` (optioneel) | Index `idx_leads_tenant_status` voor snelle filter op tenant/stage |
+| `crm_contacts` | `id`, `tenant_id`, `first_name`, `last_name`, `email`, `phone`, `preferences`, `gdpr_opt_in` | 1:N `crm_deals`, 1:N `crm_activities` | Gebruik `citext` type voor case-insensitive mail |
+| `crm_deals` | `id`, `tenant_id`, `contact_id`, `pipeline_id`, `stage`, `value`, `currency`, `expected_close`, `probability` | FK → `crm_contacts`, FK → `crm_pipelines` | Stage map naar automation triggers |
+| `crm_pipelines` | `id`, `tenant_id`, `name`, `type`, `sla_response_hours`, `is_default` | 1:N `crm_deals`, 1:N `crm_stages` | Tenant kan meerdere pipelines bezitten |
+| `crm_stages` | `id`, `pipeline_id`, `sequence`, `name`, `auto_progress_rule` | FK → `crm_pipelines` | JSONB `auto_progress_rule` voor automatisering |
+| `crm_activities` | `id`, `tenant_id`, `deal_id`, `activity_type`, `payload`, `due_at`, `owner_id` | FK → `crm_deals`, FK → `users` | Gebruik `payload` JSONB voor omnichannel content |
+| `crm_automation_runs` | `id`, `tenant_id`, `trigger`, `workflow_id`, `status`, `started_at`, `completed_at`, `context` | FK → `crm_deals` | Log voor audit & debugging |
 
-### 4.3 Project & Crew Planning
-1. Na aanbetaling maakt workflow automatisch project in RentGuy backend (`0003_projects.py`).
-2. Inventory check (uit `0002_inventory.py`) + crewmatching (Crew API) → notificaties naar crewportal.
-3. Synchronisatie met Microsoft 365 agenda + ICS-bestanden naar klant.
+**Migrations**: toevoegen aan `db/alembic/versions/` met naming `2025_XX_XX_add_crm_tables.py`. Zorg voor backward-compatible default waarden,
+foreign key constraints met `ON DELETE CASCADE` (behalve `crm_contacts`).
 
-### 4.4 Event Execution & Nazorg
-1. 24u voor evenement: automatische checklistmail + SMS-reminder.
-2. Na event: taak voor evaluatie, verstuur reviewverzoek en upsell-automatisering.
-3. Factuurfinalisatie, boekhouding update en rapportage naar dashboard.
+## 3. API & Service Implementatie
 
-## 5. Technische Voorbereiding
-- **Domain & SSL**: Configureer `mr-dj.rentguy.nl` in DNS + Let's Encrypt automatisering via Traefik (`docker-compose.rentguy.yml`).
-- **Tenant Config**: Voeg Mr. DJ tenantconfig toe (`config.py` multi-tenant settings, themavariabelen, toegangsrollen).
-- **CI/CD**: Update pipelines om mr-dj tenant-specifieke environment vars te deployen.
-- **Monitoring**: Zet tracing/logging op (OpenTelemetry) voor CRM en workflow-events.
-- **Security**: Implementeer RBAC voor sales/marketing/operations, 2FA via bestaande auth.
+1. **Schemas**: creëer Pydantic modellen in `schemas/crm.py` voor `LeadCreate`, `DealUpdate`, `AutomationRunRead`.
+2. **CRUD Services**: in `services/crm_service.py` implementeren met SQLAlchemy models; hergebruik `BaseService` uit `0001_baseline.py`.
+3. **Routers** (`routers/crm_router.py`):
+   - `POST /leads` → maakt lead + optioneel contact; stuurt event `lead.created` naar Redis queue.
+   - `GET /deals` → filter op `tenant_id`, `stage`, `pipeline_id`, met paginatie.
+   - `POST /deals/{id}/advance` → valideert stage en triggert automation.
+   - `POST /activities` → logt interactie + verstuurt Teams notificatie.
+4. **Security**: gebruik `Depends(get_current_tenant)` en RBAC (`ROLE_SALES`, `ROLE_MARKETING`). Multi-tenant policies in `security.py`.
+5. **Automations**: workflow-engine adapter in `apps/automation/engine.py` (wrapper om n8n/Temporal); events uit Redis consumeren en
+   uitvoeren via `asyncio` workers (`apps/automation/workers.py`).
 
-## 6. Data Migratie & Integraties
-- Migreer historische leads/klanten vanuit huidige CRM (CSV import tool).
-- Koppel bestaande facturatie (Invoice Ninja) via API voor volledige 360° klantbeeld.
-- Zet connectoren op voor boekhouding (Exact Online) en marketing automation (Mailchimp/ActiveCampaign).
+## 4. Integratie met Bestaande Modules
 
-## 7. Test- & Acceptatieplan
-1. **Unit & API Tests**: CRUD-tests voor CRM endpoints, workflow-trigger tests.
-2. **Integratietests**: E2E-simulaties vanaf leadintake tot factuur.
-3. **User Acceptance**: Scenario's met Bart (bruiloft lead, zakelijke lead, equipment-only aanvraag).
-4. **Load & Failover**: Test 100 gelijktijdige leads + queue failover.
+- **Onboarding → CRM**: `0007_onboarding.py` levert intake-data. Voeg background task toe die `OnboardingCompleted` events vertaalt naar
+  `crm_leads` records en pipeline "Nieuwe Lead".
+- **Inventory & Projects**: `0002_inventory.py` en `0003_projects.py` worden geraadpleegd wanneer een deal naar stage `Project Gereed`
+  schuift. Implementatie in `crm_service.advance_deal_stage` met service calls naar `project_service.create_project_from_deal`.
+- **Billing**: bij stage `Facturatie` trigger `0006_billing.py` Mollie integratie. Voeg idempotency keys toe (`automation_run_id`).
+- **Dashboards**: exposeer REST endpoint `/api/crm/analytics/pipeline` dat data levert aan Metabase. Gebruik SQL views voor performance.
 
-## 8. Roadmap & Planning
-| Fase | Duur | Deliverables |
-|------|------|--------------|
-| Fase 1 – Foundation | Week 1-2 | Datamodel, API, tenantconfig, DNS/SSL |
-| Fase 2 – CRM UI & Pipelines | Week 3-4 | CRM dashboards, pipeline configuratie, communicatiekoppelingen |
-| Fase 3 – Automations | Week 5-7 | Workflow-engine, offerte/contract automatisering, crew sync |
-| Fase 4 – Integraties & Rapportage | Week 8-9 | Invoice Ninja sync, dashboards, marketing connector |
-| Fase 5 – UAT & Go-live | Week 10 | UAT-scripts, trainingsmateriaal, go-live checklist |
+## 5. UI & UX Implementatie
 
-## 9. Governance & KPI's
-- **Eigenaar**: Bart van de Weijer (Product Owner Mr. DJ), ondersteund door RentGuy Enterprise team.
-- **KPI's**: lead-responstijd < 15 min, conversie van lead → project ≥ 35%, 90% automatisering van standaard taken, NPS ≥ 8.
-- **Reviewmomenten**: Wekelijkse stand-ups, maandelijkse executive review, post-go-live evaluatie na 30 dagen.
+1. **State Management**: breid `rentguy/frontend/src/stores/crmStore.ts` uit met actions `advanceDealStage`, `fetchAutomationRuns`.
+2. **Types**: update `rentguy/frontend/src/types/crmTypes.ts` met `DealStage`, `AutomationRun`, `PipelineDefinition`.
+3. **API Client**: voeg functies toe aan `rentguy/frontend/src/api/crm.ts` voor nieuwe endpoints (gebruik Axios instance met tenant header).
+4. **CRMDashboard**: in `mr-dj-onboarding-enhanced/src/pages/CRM/` creëren:
+   - **Lead Board** (kanban per stage) met drag & drop (react-beautiful-dnd).
+   - **Automation Timeline** component met status-badges.
+   - **Template Library** widget die entries uit `public/templates/` toont met preview.
+5. **Branding**: importeer kleuren & fonts uit `branding.ts`, voeg theming tokens toe (`--mdj-primary`, `--mdj-accent`).
+6. **Accessibility**: alle formulieren voorzien van labels, aria-attributes; test via `npm run lint:a11y`.
 
-## 10. Next Actions
-1. Bevestig keuze workflow-engine en CRM UI requirements met Bart.
-2. Start tenantconfig + DNS setup in sprint board.
-3. Plan gezamenlijke workshop om automatiseringsflows te valideren.
-4. Verzamel historische CRM-data en definieer importformaten.
+## 6. Automatiseringen & Templates
+
+### 6.1 Workflowbibliotheek
+- Maak map `automation/workflows/` met YAML-definities (`lead_intake.yaml`, `proposal_followup.yaml`, `post_event_care.yaml`).
+- Templatebron: `mr_dj_complete_all_143_templates.zip` → converteer relevante e-mail/SMS-templates naar Markdown + MJML.
+- Iedere workflow bevat metadata: `trigger`, `entry_stage`, `actions[]`, `sla_hours`, `fallback_owner`.
+
+### 6.2 Triggers & Actions
+- **Triggers**: `lead.created`, `deal.stage.changed`, `payment.received`, `event.completed`.
+- **Acties**: e-mail (SendGrid), WhatsApp (Meta Cloud API), Teams webhook, task creatie.
+- **Branching**: definieer condities (bijv. `if deal.value > 5000 → voeg director review toe`).
+
+### 6.3 Kwaliteitsbewaking
+- Voer linting uit met `automation/validate.py` om YAML-structuur te controleren.
+- Template review checklist in `docs/qa/automation_templates.md` (brand check, CTA, tone-of-voice).
+
+## 7. Data Synchronisatie & Integraties
+
+- **Microsoft 365**: gebruik Graph API voor mail/calendar sync; credentials via Azure App Registration.
+- **WhatsApp Business**: configureer webhook endpoint `/api/crm/whatsapp/callback` en koppeling met template ID's.
+- **Invoice Ninja**: bestaande adapter (`invoice_ninja.py`) uitbreiden met `sync_deal_payments(deal_id)`.
+- **Exact Online**: nightly sync job (`cronjob exact_sync`) voor financiële data.
+- **Mailchimp/ActiveCampaign**: export segments via `crm_segments` view; push naar marketing automation.
+
+## 8. Test- & Validatieplan
+
+| Testtype | Acties | Tools |
+|----------|--------|-------|
+| Unit tests | `pytest tests/crm/test_services.py` voor services, `tests/frontend/crmStore.test.ts` voor store | Pytest, Vitest |
+| Integratie | Mocked API + Redis queue (`docker-compose.crm.yml`) | Docker Compose |
+| E2E | Cypress scenario `tests/e2e/crm.spec.ts` uitbreiden met intake → factuur flow | Cypress |
+| Performance | Locust test `tests/perf/crm_locustfile.py` (100 gelijktijdige leads) | Locust |
+| Accessibility | `npm run test:a11y -- --scope=crm` | Axe |
+
+Release pas na groen resultaat + handtekening van product owner (Bart).
+
+## 9. Deployment & Observability
+
+- **CI/CD**: voeg pipeline-stappen toe in `deploy/github-actions/crm.yml`:
+  1. Build CRM frontend (`pnpm build --filter crm`).
+  2. Run backend tests + Alembic migrations.
+  3. Deploy naar staging namespace `rg-mrdj-crm` met Helm chart.
+- **Secrets**: beheer via HashiCorp Vault (`ops/vault/crm/`).
+- **Monitoring**: configureer Grafana dashboards (`observability/crm.json`), alerts op SLA-violations.
+- **Logging**: structurele logging (JSON) met `correlation_id` per automation run.
+
+## 10. Roadmap & Governance
+
+| Fase | Sprint(s) | Deliverables |
+|------|-----------|--------------|
+| F1 – Fundament | 1-2 | Migrations live, basis CRUD API, frontend store updates |
+| F2 – UI & Templates | 3-4 | CRM dashboards, template library geladen, QA-checks afgerond |
+| F3 – Automations | 5-6 | Workflow-engine live, integratie met pipelines |
+| F4 – Integraties | 7-8 | Microsoft 365, WhatsApp, Invoice Ninja sync |
+| F5 – Analytics & Go-live | 9-10 | Metabase dashboards, observability, UAT-sign-off |
+
+**Eigenaar**: Bart van de Weijer (PO) • **Tech Lead**: RentGuy Platform Team • **Weekly cadence**: refinement maandag, demo vrijdag.
+
+## 11. Volgende Acties (Week 0)
+
+1. Haal `mr_dj_complete_all_143_templates.zip` op uit mr-djv1 repo en valideer branding → plan design QA sessie.
+2. Maak Alembic migration branch `feature/mrdj-crm-migrations` en bouw `crm_leads` t/m `crm_automation_runs` tabellen.
+3. Zet Redis instance (`redis-crm`) op via `docker-compose.crm.yml`; configureer env vars in `.env.mrdj`.
+4. Maak front-end feature branch voor CRM dashboard, activeer nieuwe routes en bouw template previews.
+5. Draft automation workflows in YAML, peer review met marketing & operations.
+6. Plan integratietest-sessie met Bart (scenario: bruiloftlead → aanbetaling → project → evaluatie).
