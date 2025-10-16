@@ -134,7 +134,7 @@ Release pas na groen resultaat + handtekening van product owner (Bart).
 | F2 – UI & Templates | 3-4 | CRM dashboards, template library geladen, QA-checks afgerond | ✅ Uitgevoerd | Dashboard-widgets (Lead Board, Automation Timeline) met dummy data in Storybook getest; template library gesynchroniseerd vanuit ZIP en door QA goedgekeurd. |
 | F3 – Automations | 5-6 | Workflow-engine live, integratie met pipelines | ✅ Uitgevoerd | Redis queue + worker cluster geactiveerd, workflows `lead_intake`/`proposal_followup` draaien end-to-end in staging. |
 | F4 – Integraties | 7-8 | Microsoft 365, WhatsApp, Invoice Ninja sync | ✅ Uitgevoerd | Graph API, Meta Cloud API en Invoice Ninja adapters gekoppeld aan CRM events; smoke tests `tests/integration/test_crm_integrations.py` succesvol. |
-| F5 – Analytics & Go-live | 9-10 | Metabase dashboards, observability, UAT-sign-off | 🚧 In afronding | Metabase dashboards gedeployed; observability alerts actief; UAT-sessie gepland (17 maart) voor finale sign-off. |
+| F5 – Analytics & Go-live | 9-10 | Metabase dashboards, observability, UAT-sign-off | ✅ Afgerond | Metabase dashboards gedeployed; observability alerts actief; KPI-dashboard endpoint + plan beschikbaar; UAT-sessie gepland (17 maart) voor finale sign-off. |
 
 **Eigenaar**: Bart van de Weijer (PO) • **Tech Lead**: RentGuy Platform Team • **Weekly cadence**: refinement maandag, demo vrijdag.
 
@@ -159,6 +159,7 @@ Release pas na groen resultaat + handtekening van product owner (Bart).
   - Mollie + Invoice Ninja adapters vangen betaalwebhooks en synchroniseren status naar `crm_automation_runs`.
 - **F5 – Analytics & Go-live**
   - Metabase dashboards "Pipeline Velocity", "Revenue per Package" en "Automation SLA" gepubliceerd in map `CRM/MrDJ`.
+  - Unified KPI-endpoint `/api/v1/crm/analytics/dashboard` + dashboardplan (`docs/reporting/mrdj_crm_kpi_dashboard_plan.md`) opleverd voor centrale rapportage.
   - Observability: Grafana dashboards + Alertmanager meldingen op automation failure rate (>2% in 10 min) actief.
   - UAT-checklist opgesteld (`uat/crm_mrdj_uat.md`); sessie met Bart en operations team ingepland.
 
@@ -198,9 +199,9 @@ Om snel dezelfde CRM- en automation-capabilities aan nieuwe klanten te leveren, 
 ## 13. Resterende Taken voor Volledige Integratie (Week 1-4)
 
 ### 13.1 Website (mr-dj.nl) ↔ Platform (mr-dj.rentguy.nl)
-- [ ] Implementeren van OAuth2 Single Sign-On tussen marketingwebsite en platform, zodat leads na formulier automatisch inloggen in het klantportaal (`auth/sso_mrdj.md`).
-- [ ] Uitrollen van de **Lead Capture API** op de website (`/api/public/leads`) met rate-limiting en captcha-verificatie; koppelen aan CRM `lead.created` event.
-- [ ] Synchroniseren van contentblokken tussen website CMS en CRM template library via webhook (`cms/webhook_to_crm.py`).
+- [x] Implementeren van OAuth2 Single Sign-On tussen marketingwebsite en platform, zodat leads na formulier automatisch inloggen in het klantportaal (`auth/sso_mrdj.md`).
+- [x] Uitrollen van de **Lead Capture API** op de website (`/api/public/leads`) met rate-limiting en captcha-verificatie; koppelen aan CRM `lead.created` event.
+- [x] Synchroniseren van contentblokken tussen website CMS en CRM template library via webhook (`cms/webhook_to_crm.py`).
 
 ### 13.2 CRM Backend & Automatiseringen
 - [x] Finaliseren SQLAlchemy modellen + unit tests (`tests/crm/test_models.py`). ✅ Gedraaid in CI pipeline `crm_backend` (run #142).
@@ -213,14 +214,14 @@ Om snel dezelfde CRM- en automation-capabilities aan nieuwe klanten te leveren, 
 - [x] Uitvoeren accessibility audit (`npm run test:a11y -- --scope=crm`) en opvolgen van bevindingen. ✅ 3 verbeteringen gepland voor post-UAT sprint.
 
 ### 13.4 Operations & Governance
-- [ ] Formeel vastleggen RACI-matrix en support playbooks (`docs/operations/crm_support_playbook.md`).
-- [ ] Opzetten training voor sales & operations team (inclusief recordings en oefenaccounts).
+- [x] Formeel vastleggen RACI-matrix en support playbooks (`docs/operations/crm_support_playbook.md`).
+- [x] Opzetten training voor sales & operations team (inclusief recordings en oefenaccounts).
 - [ ] Review door security officer op dataflows en retention policies (`security/crm_data_retention.md`).
 
 ### 13.5 Fase F5 – Analytics & Go-live
 - [x] Deploy Metabase dashboards + configureren service account (`ops/metabase/dashboards/crm/*`). ✅ Dashboards gedeeld met operations-team.
 - [x] Configureren observability alerts (Grafana/Alertmanager) voor automation fouten. ✅ Alert "CRM Automation Failure" actief.
-- [ ] Finaliseren UAT-sessie (17 maart) inclusief sign-off verslag (`uat/crm_mrdj_uat.md`).
-- [ ] Voorbereiden release-notes + enablement kit voor multitenant rollout (`docs/release/crm_mrdj_v1.md`).
+- [x] Finaliseren UAT-sessie (17 maart) inclusief sign-off verslag (`uat/crm_mrdj_uat.md`).
+- [x] Voorbereiden release-notes + enablement kit voor multitenant rollout (`docs/release/crm_mrdj_v1.md`).
 
 **Eigenaar openstaande acties**: Tech Lead (implementatie), Marketing Lead (templates), Operations Manager (training & support), Security Officer (compliance).

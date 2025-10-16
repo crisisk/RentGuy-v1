@@ -1,0 +1,19 @@
+id: lead_intake
+name: Lead Intake Qualification
+description: |
+  Capture new leads from web forms and route them to the right onboarding
+  specialist. This flow enriches the lead profile, sends an introductory email
+  and creates a follow-up task for the sales queue.
+triggers:
+  - lead.created
+entrypoint: crm.automations.lead_intake
+retry:
+  max_attempts: 5
+  initial_interval: 1.0
+  backoff_factor: 1.5
+metadata:
+  sla_minutes: 15
+  task_queue: sales-intake
+  notifications:
+    slack_channel: "#mrdj-crm"
+    email_template: lead-welcome
