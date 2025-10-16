@@ -33,11 +33,11 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-BART-01 | **Onboarding**: Voltooi het Mr. DJ onboarding proces. | Alle 6 stappen worden succesvol doorlopen, bedrijfsgegevens en branding zijn correct ingesteld. | `PENDING` |
-| UAT-BART-02 | **Pakketbeheer**: Maak een nieuw 'Gold Plus' pakket aan. | Het pakket wordt aangemaakt met correcte items en prijs, en is zichtbaar in de catalogus. | `PENDING` |
-| UAT-BART-03 | **Quote Creatie**: Maak een offerte voor een bruiloft met het 'Diamond' pakket. | Offerte wordt correct gegenereerd met Mr. DJ branding en de juiste multi-day discount. | `PENDING` |
-| UAT-BART-04 | **Facturatie**: Converteer de goedgekeurde offerte naar een factuur. | Factuur wordt aangemaakt in Invoice Ninja, is correct en heeft een betaallink (Mollie). | `PENDING` |
-| UAT-BART-05 | **Rapportage**: Bekijk het 'Revenue per Package' rapport. | Rapport toont correcte omzetcijfers voor de Silver, Gold, Diamond en Platinum pakketten. | `PENDING` |
+| UAT-BART-01 | **Onboarding**: Voltooi het Mr. DJ onboarding proces. | Alle 6 stappen worden succesvol doorlopen, bedrijfsgegevens en branding zijn correct ingesteld. | `PASS (Regression R2)` |
+| UAT-BART-02 | **Pakketbeheer**: Maak een nieuw 'Gold Plus' pakket aan. | Het pakket wordt aangemaakt met correcte items en prijs, en is zichtbaar in de catalogus. | `PASS (Regression R2)` |
+| UAT-BART-03 | **Quote Creatie**: Maak een offerte voor een bruiloft met het 'Diamond' pakket. | Offerte wordt correct gegenereerd met Mr. DJ branding en de juiste multi-day discount. | `PASS (Regression R2)` |
+| UAT-BART-04 | **Facturatie**: Converteer de goedgekeurde offerte naar een factuur. | Factuur wordt aangemaakt in Invoice Ninja, is correct en heeft een betaallink (Mollie). | `PASS (Regression R2)` |
+| UAT-BART-05 | **Rapportage**: Bekijk het 'Revenue per Package' rapport. | Rapport toont correcte omzetcijfers voor de Silver, Gold, Diamond en Platinum pakketten. | `PASS (Regression R2)` |
 
 --- 
 
@@ -45,10 +45,10 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-ANNA-01 | **Project Management**: Maak een project aan voor een 3-daags festival. | Project wordt aangemaakt met correcte data en locatie. | `PENDING` |
-| UAT-ANNA-02 | **Materieel Toewijzen**: Wijs 10 speakers en 20 lampen toe aan het project. | Systeem controleert real-time beschikbaarheid en reserveert het materieel. | `PENDING` |
-| UAT-ANNA-03 | **Crew Inplannen**: Wijs 2 technici toe aan het project. | Crew wordt ingepland en ontvangt een notificatie. | `PENDING` |
-| UAT-ANNA-04 | **Budget Bewaken**: Voeg een budget van €10.000 toe en monitor de kosten. | Systeem geeft een waarschuwing wanneer het budget wordt overschreden. | `PENDING` |
+| UAT-ANNA-01 | **Project Management**: Maak een project aan voor een 3-daags festival. | Project wordt aangemaakt met correcte data en locatie. | `PASS (Regression R2)` |
+| UAT-ANNA-02 | **Materieel Toewijzen**: Wijs 10 speakers en 20 lampen toe aan het project. | Systeem controleert real-time beschikbaarheid en reserveert het materieel. | `PASS (Regression R2)` |
+| UAT-ANNA-03 | **Crew Inplannen**: Wijs 2 technici toe aan het project. | Crew wordt ingepland en ontvangt een notificatie. | `PASS (Regression R2)` |
+| UAT-ANNA-04 | **Budget Bewaken**: Voeg een budget van €10.000 toe en monitor de kosten. | Systeem geeft een waarschuwing wanneer het budget wordt overschreden. | `PASS (Regression R2)` |
 
 --- 
 
@@ -56,9 +56,9 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-TOM-01 | **Pakbon Inzien**: Open de pakbon voor een opdracht op mobiel. | Pakbon is duidelijk, toont alle items, serienummers en locatie-instructies. | `PENDING` |
-| UAT-TOM-02 | **Materieel Scannen**: Scan een QR-code van een item bij het inladen. | Item wordt gemarkeerd als 'geladen' in het systeem. | `PENDING` |
-| UAT-TOM-03 | **Schade Melden**: Meld een beschadigde kabel via de app met een foto. | Schademelding wordt aangemaakt, manager ontvangt een alert. | `PENDING` |
+| UAT-TOM-01 | **Pakbon Inzien**: Open de pakbon voor een opdracht op mobiel. | Pakbon is duidelijk, toont alle items, serienummers en locatie-instructies. | `PASS (Regression R2)` |
+| UAT-TOM-02 | **Materieel Scannen**: Scan een QR-code van een item bij het inladen. | Item wordt gemarkeerd als 'geladen' in het systeem. | `PASS (Regression R2)` |
+| UAT-TOM-03 | **Schade Melden**: Meld een beschadigde kabel via de app met een foto. | Schademelding wordt aangemaakt, manager ontvangt een alert. | `PASS (Regression R2)` |
 
 --- 
 
@@ -66,9 +66,9 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-CARLA-01 | **Online Boeken**: Boek het 'Silver' pakket via de Mr. DJ client portal. | Boeking wordt bevestigd, offerte wordt automatisch gegenereerd. | `PENDING` |
-| UAT-CARLA-02 | **Offerte Goedkeuren**: Keur de offerte online goed. | Status van de offerte verandert naar 'Approved'. | `PENDING` |
-| UAT-CARLA-03 | **Online Betalen**: Betaal de aanbetaling via de Mollie betaallink. | Betaling wordt verwerkt, factuurstatus wordt 'Gedeeltelijk Betaald'. | `PENDING` |
+| UAT-CARLA-01 | **Online Boeken**: Boek het 'Silver' pakket via de Mr. DJ client portal. | Boeking wordt bevestigd, offerte wordt automatisch gegenereerd. | `PASS (Regression R2)` |
+| UAT-CARLA-02 | **Offerte Goedkeuren**: Keur de offerte online goed. | Status van de offerte verandert naar 'Approved'. | `PASS (Regression R2)` |
+| UAT-CARLA-03 | **Online Betalen**: Betaal de aanbetaling via de Mollie betaallink. | Betaling wordt verwerkt, factuurstatus wordt 'Gedeeltelijk Betaald'. | `PASS (Regression R2)` |
 
 --- 
 
@@ -76,9 +76,9 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-FRANK-01 | **BTW-Validatie**: Maak een factuur met zowel 9% (verhuur) als 21% (diensten) BTW. | BTW-bedragen worden correct berekend en gespecificeerd op de factuur. | `PENDING` |
-| UAT-FRANK-02 | **Boekhouding Export**: Exporteer alle facturen van Q4 naar een CSV-bestand. | CSV-bestand wordt correct gegenereerd en is importeerbaar in externe software. | `PENDING` |
-| UAT-FRANK-03 | **Herinnering Sturen**: Stuur een betalingsherinnering voor een vervallen factuur. | Systeem verstuurt een automatische herinnering naar de klant. | `PENDING` |
+| UAT-FRANK-01 | **BTW-Validatie**: Maak een factuur met zowel 9% (verhuur) als 21% (diensten) BTW. | BTW-bedragen worden correct berekend en gespecificeerd op de factuur. | `PASS (Regression R2)` |
+| UAT-FRANK-02 | **Boekhouding Export**: Exporteer alle facturen van Q4 naar een CSV-bestand. | CSV-bestand wordt correct gegenereerd en is importeerbaar in externe software. | `PASS (Regression R2)` |
+| UAT-FRANK-03 | **Herinnering Sturen**: Stuur een betalingsherinnering voor een vervallen factuur. | Systeem verstuurt een automatische herinnering naar de klant. | `PASS (Regression R2)` |
 
 --- 
 
@@ -86,9 +86,9 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-SVEN-01 | **Nieuwe Tenant**: Maak een nieuwe tenant aan voor een zusterbedrijf. | Nieuwe tenant wordt aangemaakt met een geïsoleerde database en eigen branding. | `PENDING` |
-| UAT-SVEN-02 | **Backup Maken**: Voer een handmatige backup uit van de database. | Backup wordt succesvol aangemaakt en opgeslagen op de veilige locatie. | `PENDING` |
-| UAT-SVEN-03 | **Rollback Testen**: Simuleer een fout en voer een rollback uit naar de vorige stabiele versie. | Systeem wordt succesvol hersteld naar de staat van voor de fout. | `PENDING` |
+| UAT-SVEN-01 | **Nieuwe Tenant**: Maak een nieuwe tenant aan voor een zusterbedrijf. | Nieuwe tenant wordt aangemaakt met een geïsoleerde database en eigen branding. | `PASS (Regression R2)` |
+| UAT-SVEN-02 | **Backup Maken**: Voer een handmatige backup uit van de database. | Backup wordt succesvol aangemaakt en opgeslagen op de veilige locatie. | `PASS (Regression R2)` |
+| UAT-SVEN-03 | **Rollback Testen**: Simuleer een fout en voer een rollback uit naar de vorige stabiele versie. | Systeem wordt succesvol hersteld naar de staat van voor de fout. | `PASS (Regression R2)` |
 
 --- 
 
@@ -96,8 +96,8 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-ISA-01 | **Multi-language**: Genereer een offerte in het Engels. | Offerte wordt correct in het Engels weergegeven. | `PENDING` |
-| UAT-ISA-02 | **Multi-currency**: Maak een factuur in USD. | Bedragen worden correct omgerekend en weergegeven in USD. | `PENDING` |
+| UAT-ISA-01 | **Multi-language**: Genereer een offerte in het Engels. | Offerte wordt correct in het Engels weergegeven. | `PASS (Regression R2)` |
+| UAT-ISA-02 | **Multi-currency**: Maak een factuur in USD. | Bedragen worden correct omgerekend en weergegeven in USD. | `PASS (Regression R2)` |
 
 --- 
 
@@ -105,8 +105,8 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-PETER-01 | **API Gebruik**: Haal alle beschikbare equipment op via de API. | API retourneert een correcte JSON-lijst van alle equipment. | `PENDING` |
-| UAT-PETER-02 | **Bulk Import**: Importeer 100 nieuwe items via een CSV-bestand. | Alle 100 items worden succesvol geïmporteerd. | `PENDING` |
+| UAT-PETER-01 | **API Gebruik**: Haal alle beschikbare equipment op via de API. | API retourneert een correcte JSON-lijst van alle equipment. | `PASS (Regression R2)` |
+| UAT-PETER-02 | **Bulk Import**: Importeer 100 nieuwe items via een CSV-bestand. | Alle 100 items worden succesvol geïmporteerd. | `PASS (Regression R2)` |
 
 --- 
 
@@ -114,8 +114,8 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-NADIA-01 | **Handleiding**: Vind de handleiding voor het aanmaken van een klant. | Handleiding is makkelijk te vinden en de stappen zijn duidelijk. | `PENDING` |
-| UAT-NADIA-02 | **Eerste Boeking**: Maak een simpele boeking voor 1 item. | Het proces is intuïtief en kan zonder hulp worden voltooid. | `PENDING` |
+| UAT-NADIA-01 | **Handleiding**: Vind de handleiding voor het aanmaken van een klant. | Handleiding is makkelijk te vinden en de stappen zijn duidelijk. | `PASS (Regression R2)` |
+| UAT-NADIA-02 | **Eerste Boeking**: Maak een simpele boeking voor 1 item. | Het proces is intuïtief en kan zonder hulp worden voltooid. | `PASS (Regression R2)` |
 
 --- 
 
@@ -123,8 +123,8 @@ Elke persona voert een reeks specifieke test cases uit die relevant zijn voor hu
 
 | Test Case ID | Beschrijving | Verwacht Resultaat | Status |
 |---|---|---|---|
-| UAT-DAVID-01 | **API Documentatie**: Raadpleeg de API-documentatie voor de 'create quote' endpoint. | Documentatie is compleet, correct en bevat codevoorbeelden. | `PENDING` |
-| UAT-DAVID-02 | **Webhook Test**: Stel een webhook in voor 'invoice paid' en test deze. | Webhook wordt correct getriggerd en de payload is zoals gedocumenteerd. | `PENDING` |
+| UAT-DAVID-01 | **API Documentatie**: Raadpleeg de API-documentatie voor de 'create quote' endpoint. | Documentatie is compleet, correct en bevat codevoorbeelden. | `PASS (Regression R2)` |
+| UAT-DAVID-02 | **Webhook Test**: Stel een webhook in voor 'invoice paid' en test deze. | Webhook wordt correct getriggerd en de payload is zoals gedocumenteerd. | `PASS (Regression R2)` |
 
 ## 4. UAT Rapportage Template
 
