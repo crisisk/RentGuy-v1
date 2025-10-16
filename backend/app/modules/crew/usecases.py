@@ -1,6 +1,7 @@
 """Business logic for crew and booking operations."""
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Sequence
 
@@ -12,6 +13,8 @@ from .models import Booking, CrewMember
 from .ports import CrewServicePort
 from .repo import CrewRepo
 from .schemas import BookingIn, CrewMemberIn
+
+logger = logging.getLogger(__name__)
 
 
 class CrewService(CrewServicePort):
@@ -94,8 +97,8 @@ class CrewService(CrewServicePort):
                 "Je bent geboekt. Zie bijlage of portal voor details.",
                 ics,
             )
-        except Exception:
-            # Mailing is best-effort; we deliberately swallow errors to avoid
-            # masking the successful booking creation.
-            pass
+        except Exception:  # pragma: no cover - defensive logging
+            # Mailing is best-effort; we log the exception to aid debugging
+            # while deliberately avoiding a rollback of the confirmed booking.
+            logger.exception("Failed to send booking notification for booking %s", booking.id)
 
