@@ -74,19 +74,19 @@ class StripeAdapter:
     ) -> Dict[str, Any]:
         if not self.webhook_secret:
             raise StripeAdapterError("Stripe webhook secret not configured")
-        timestamp: int | None = None
-        signatures: list[str] = []
-        for part in signature_header.split(","):
-            cleaned = part.strip()
-            if cleaned.startswith("t="):
-                timestamp = int(cleaned.split("=", 1)[1])
-            elif cleaned.startswith("v1="):
-                signatures.append(cleaned.split("=", 1)[1])
-        if timestamp is None or not signatures:
-            raise StripeAdapterError("Stripe signature header malformed")
-        if abs(time.time() - timestamp) > tolerance_seconds:
+        if not signature_header or not signature_header.strip():
+            raise StripeAdapterError("Stripe signature header missing")
+        try:
+            timestamp, signatures = _parse_signature_header(signature_header)
+        except ValueError as exc:  # pragma: no cover - defensive parsing guard
+            raise StripeAdapterError("Stripe signature header malformed") from exc
+        current_time = int(time.time())
+        if abs(current_time - timestamp) > tolerance_seconds:
             raise StripeAdapterError("Stripe webhook timestamp outside tolerance")
-        body = payload.decode("utf-8")
+        try:
+            body = payload.decode("utf-8")
+        except UnicodeDecodeError as exc:  # pragma: no cover - defensive
+            raise StripeAdapterError("Stripe webhook payload must be UTF-8") from exc
         signed_payload = f"{timestamp}.{body}".encode("utf-8")
         expected = hmac.new(
             self.webhook_secret.encode("utf-8"),
@@ -95,7 +95,10 @@ class StripeAdapter:
         ).hexdigest()
         if not _match_signatures(expected, signatures):
             raise StripeAdapterError("Stripe webhook signature mismatch")
-        return json.loads(body)
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError as exc:  # pragma: no cover - defensive
+            raise StripeAdapterError("Stripe webhook payload is not valid JSON") from exc
 
 
 def _match_signatures(expected: str, candidates: Iterable[str]) -> bool:
@@ -105,6 +108,30 @@ def _match_signatures(expected: str, candidates: Iterable[str]) -> bool:
         if hmac.compare_digest(expected, candidate):
             return True
     return False
+
+
+def _parse_signature_header(signature_header: str) -> tuple[int, list[str]]:
+    """Extract the timestamp and candidate signatures from Stripe's signature header."""
+
+    timestamp: int | None = None
+    signatures: list[str] = []
+    for part in signature_header.split(","):
+        cleaned = part.strip()
+        if not cleaned:
+            continue
+        if cleaned.startswith("t="):
+            value = cleaned.split("=", 1)[1]
+            try:
+                timestamp = int(value)
+            except ValueError as exc:
+                raise ValueError("timestamp is not an integer") from exc
+        elif cleaned.startswith("v1="):
+            signature = cleaned.split("=", 1)[1].strip()
+            if signature:
+                signatures.append(signature)
+    if timestamp is None or not signatures:
+        raise ValueError("missing timestamp or signatures")
+    return timestamp, signatures
 
 
 def stripe_adapter_from_settings() -> StripeAdapter | None:
