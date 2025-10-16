@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from .models import Bundle, BundleItem, Category, Item, MaintenanceLog
+from app.modules.projects.models import Project, ProjectItem
 
 
 class InventoryRepo:
@@ -135,5 +136,16 @@ class InventoryRepo:
                 raise LookupError(f"Item with id {item_id} was not found")
             return 0
 
-        # TODO: subtract overlapping reservations when projects module is active
-        return max(item.quantity_total, 0)
+        reserved_stmt = (
+            select(func.coalesce(func.sum(ProjectItem.qty_reserved), 0))
+            .join(Project, ProjectItem.project_id == Project.id)
+            .where(
+                ProjectItem.item_id == item_id,
+                Project.start_date <= end,
+                Project.end_date >= start,
+            )
+        )
+        reserved = self.db.execute(reserved_stmt).scalar_one()
+
+        available = int(item.quantity_total) - int(reserved or 0)
+        return max(available, 0)

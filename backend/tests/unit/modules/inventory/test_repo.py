@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.inventory.models import Bundle, BundleItem, Category, Item, MaintenanceLog
 from app.modules.inventory.repo import InventoryRepo
+from app.modules.projects.models import Project, ProjectItem
 
 
 def _create_category(session: Session, name: str = "Lighting") -> Category:
@@ -82,6 +83,59 @@ def test_calc_available_returns_total_quantity(db_session: Session) -> None:
     item = _create_item(db_session, category, quantity=7)
 
     assert repo.calc_available(item.id, date(2024, 5, 1), date(2024, 5, 2)) == 7
+
+
+def test_calc_available_subtracts_project_reservations(db_session: Session) -> None:
+    repo = InventoryRepo(db_session)
+    category = _create_category(db_session, "Events")
+    item = _create_item(db_session, category, name="Stage Deck", quantity=6)
+    other_item = _create_item(db_session, category, name="Cable Loom", quantity=10)
+
+    project_one = Project(
+        name="Festival Build Day",
+        client_name="ACME",
+        start_date=date(2024, 5, 1),
+        end_date=date(2024, 5, 3),
+        notes="",
+    )
+    project_two = Project(
+        name="Soundcheck",
+        client_name="ACME",
+        start_date=date(2024, 5, 2),
+        end_date=date(2024, 5, 4),
+        notes="",
+    )
+    project_future = Project(
+        name="Summer Event",
+        client_name="ACME",
+        start_date=date(2024, 6, 10),
+        end_date=date(2024, 6, 12),
+        notes="",
+    )
+    project_other_item = Project(
+        name="Other Gear",
+        client_name="ACME",
+        start_date=date(2024, 5, 1),
+        end_date=date(2024, 5, 3),
+        notes="",
+    )
+
+    db_session.add_all([project_one, project_two, project_future, project_other_item])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            ProjectItem(project_id=project_one.id, item_id=item.id, qty_reserved=4),
+            ProjectItem(project_id=project_two.id, item_id=item.id, qty_reserved=5),
+            ProjectItem(project_id=project_future.id, item_id=item.id, qty_reserved=2),
+            ProjectItem(project_id=project_other_item.id, item_id=other_item.id, qty_reserved=7),
+        ]
+    )
+    db_session.flush()
+
+    available = repo.calc_available(item.id, date(2024, 5, 2), date(2024, 5, 3))
+
+    assert available == 0
 
 
 def test_log_maintenance_persists_entry(db_session: Session) -> None:
