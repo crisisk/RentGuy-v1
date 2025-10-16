@@ -1,24 +1,76 @@
-import { Client, Interaction } from '../types';
+import apiClient from './client';
+import type {
+  Activity,
+  ActivityPayload,
+  AutomationRun,
+  Deal,
+  DealPayload,
+  Lead,
+  LeadPayload,
+} from '../types/crm';
 
-const mockClients: Client[] = [
-  { id: '1', name: 'Client A', email: 'clienta@example.com', segment: 'vip' },
-  { id: '2', name: 'Client B', email: 'clientb@example.com', segment: 'regular' },
-];
+const withTenant = (tenantId: string) => ({
+  headers: {
+    'X-Tenant-ID': tenantId,
+  },
+});
 
-const mockInteractions: Interaction[] = [
-  { id: '1', type: 'call', timestamp: '2025-10-14T10:00:00Z', content: 'Initial call' },
-  { id: '2', type: 'email', timestamp: '2025-10-14T11:00:00Z', content: 'Follow-up email' },
-];
-
-export const getClients = async (): Promise<Client[]> => {
-  // const response = await apiClient.get('/clients');
-  // return response.data;
-  return mockClients;
+export const listLeads = async (tenantId: string): Promise<Lead[]> => {
+  const response = await apiClient.get('/api/v1/crm/leads', withTenant(tenantId));
+  return response.data as Lead[];
 };
 
-export const getInteractions = async (clientId: string): Promise<Interaction[]> => {
-  // const response = await apiClient.get(`/clients/${clientId}/interactions`);
-  // return response.data;
-  return mockInteractions;
+export const createLead = async (tenantId: string, payload: LeadPayload): Promise<Lead> => {
+  const response = await apiClient.post('/api/v1/crm/leads', payload, withTenant(tenantId));
+  return response.data as Lead;
 };
 
+export const listDeals = async (tenantId: string): Promise<Deal[]> => {
+  const response = await apiClient.get('/api/v1/crm/deals', withTenant(tenantId));
+  return response.data as Deal[];
+};
+
+export const createDeal = async (tenantId: string, payload: DealPayload): Promise<Deal> => {
+  const response = await apiClient.post('/api/v1/crm/deals', payload, withTenant(tenantId));
+  return response.data as Deal;
+};
+
+export const advanceDealStage = async (
+  tenantId: string,
+  dealId: number,
+  stageId: number,
+): Promise<Deal> => {
+  const response = await apiClient.post(
+    `/api/v1/crm/deals/${dealId}/advance`,
+    { stage_id: stageId },
+    withTenant(tenantId),
+  );
+  return response.data as Deal;
+};
+
+export const listActivities = async (tenantId: string, dealId: number): Promise<Activity[]> => {
+  const response = await apiClient.get(
+    `/api/v1/crm/deals/${dealId}/activities`,
+    withTenant(tenantId),
+  );
+  return response.data as Activity[];
+};
+
+export const logActivity = async (
+  tenantId: string,
+  payload: ActivityPayload,
+): Promise<Activity> => {
+  const response = await apiClient.post('/api/v1/crm/activities', payload, withTenant(tenantId));
+  return response.data as Activity;
+};
+
+export const listAutomationRuns = async (
+  tenantId: string,
+  dealId: number,
+): Promise<AutomationRun[]> => {
+  const response = await apiClient.get(
+    `/api/v1/crm/deals/${dealId}/automation`,
+    withTenant(tenantId),
+  );
+  return response.data as AutomationRun[];
+};
