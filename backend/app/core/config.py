@@ -53,8 +53,10 @@ class Settings(BaseSettings):
     MOLLIE_API_KEY: str | None = None
     MOLLIE_WEBHOOK_SECRET: str | None = None
     MOLLIE_API_BASE: str = "https://api.mollie.com/v2"
-    INVOICE_NINJA_URL: str | None = None
-    INVOICE_NINJA_TOKEN: str | None = None
+    RENTGUY_FINANCE_URL: str | None = None
+    RENTGUY_FINANCE_TOKEN: str | None = None
+    LEGACY_INVOICE_NINJA_URL: str | None = Field(default=None, alias="INVOICE_NINJA_URL")
+    LEGACY_INVOICE_NINJA_TOKEN: str | None = Field(default=None, alias="INVOICE_NINJA_TOKEN")
     PAYMENT_WEBHOOK_BASE_URL: str | None = None
     OTEL_EXPORTER_OTLP_ENDPOINT: str | None = None
     OTEL_EXPORTER_OTLP_HEADERS: str | None = None
@@ -84,6 +86,14 @@ class Settings(BaseSettings):
                 raise ValueError(
                     f"Missing critical configuration values for production: {joined}"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _backfill_legacy_finance_aliases(self) -> "Settings":
+        if not self.RENTGUY_FINANCE_URL and self.LEGACY_INVOICE_NINJA_URL:
+            object.__setattr__(self, "RENTGUY_FINANCE_URL", self.LEGACY_INVOICE_NINJA_URL)
+        if not self.RENTGUY_FINANCE_TOKEN and self.LEGACY_INVOICE_NINJA_TOKEN:
+            object.__setattr__(self, "RENTGUY_FINANCE_TOKEN", self.LEGACY_INVOICE_NINJA_TOKEN)
         return self
 
     @property

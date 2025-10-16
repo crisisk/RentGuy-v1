@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
-from .adapters.invoice_ninja import InvoiceNinjaClient, invoice_ninja_from_settings
+from .adapters.rentguy_finance import RentGuyFinanceClient, rentguy_finance_from_settings
 from .adapters.mollie_adapter import MollieAdapter, mollie_adapter_from_settings, MollieAdapterError
 from .adapters.stripe_adapter import StripeAdapter, stripe_adapter_from_settings, StripeAdapterError
 from .models import Invoice, Payment
@@ -16,9 +16,23 @@ class BillingService(BillingPort):
         self.repo = repo
         self._stripe: StripeAdapter | None = None
         self._mollie: MollieAdapter | None = None
-        self._invoice_ninja: InvoiceNinjaClient | None = None
+        self._finance_bridge: RentGuyFinanceClient | None = None
 
-    def create_invoice(self, *, project_id: int, client_name: str, currency: str, issued_at, due_at, reference: Optional[str], vat_rate: Optional[float], line_items: Iterable[InvoiceLineIn], total_net_override: Optional[float], total_vat_override: Optional[float], sync_with_invoice_ninja: bool) -> Invoice:
+    def create_invoice(
+        self,
+        *,
+        project_id: int,
+        client_name: str,
+        currency: str,
+        issued_at,
+        due_at,
+        reference: Optional[str],
+        vat_rate: Optional[float],
+        line_items: Iterable[InvoiceLineIn],
+        total_net_override: Optional[float],
+        total_vat_override: Optional[float],
+        sync_with_finance_bridge: bool,
+    ) -> Invoice:
         lines = list(line_items)
         resolved_vat = vat_rate
         if resolved_vat is None:
@@ -40,11 +54,11 @@ class BillingService(BillingPort):
         )
         invoice = self.repo.add_invoice(invoice)
 
-        if sync_with_invoice_ninja:
-            client = self._invoice_ninja_client()
+        if sync_with_finance_bridge:
+            client = self._finance_bridge_client()
             if client:
-                ninja_payload = self._build_invoice_ninja_payload(invoice, lines, resolved_vat)
-                client.create_invoice(ninja_payload)
+                bridge_payload = self._build_finance_bridge_payload(invoice, lines, resolved_vat)
+                client.create_invoice(bridge_payload)
 
         return invoice
 
@@ -147,7 +161,7 @@ class BillingService(BillingPort):
             gross = net + vat
         return round(net, 2), round(vat, 2), round(gross, 2)
 
-    def _build_invoice_ninja_payload(self, invoice: Invoice, line_items: Iterable[InvoiceLineIn], vat_rate: float) -> dict:
+    def _build_finance_bridge_payload(self, invoice: Invoice, line_items: Iterable[InvoiceLineIn], vat_rate: float) -> dict:
         items = list(line_items)
         if not items:
             items = [
@@ -180,7 +194,7 @@ class BillingService(BillingPort):
             self._mollie = mollie_adapter_from_settings()
         return self._mollie
 
-    def _invoice_ninja_client(self) -> InvoiceNinjaClient | None:
-        if self._invoice_ninja is None:
-            self._invoice_ninja = invoice_ninja_from_settings()
-        return self._invoice_ninja
+    def _finance_bridge_client(self) -> RentGuyFinanceClient | None:
+        if self._finance_bridge is None:
+            self._finance_bridge = rentguy_finance_from_settings()
+        return self._finance_bridge

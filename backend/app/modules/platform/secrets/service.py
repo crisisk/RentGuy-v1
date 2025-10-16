@@ -96,17 +96,17 @@ DEFAULT_SECRET_DEFINITIONS: tuple[SecretDefinition, ...] = (
         description="Verificatiesleutel voor Mollie-webhooks.",
     ),
     SecretDefinition(
-        key="INVOICE_NINJA_URL",
-        label="Invoice Ninja URL",
+        key="RENTGUY_FINANCE_URL",
+        label="RentGuy Finance URL",
         category="integrations",
-        description="Basis-URL van de Invoice Ninja instance voor facturatie.",
+        description="Basis-URL van de geïntegreerde RentGuy finance core voor facturatie.",
         is_sensitive=False,
     ),
     SecretDefinition(
-        key="INVOICE_NINJA_TOKEN",
-        label="Invoice Ninja token",
+        key="RENTGUY_FINANCE_TOKEN",
+        label="RentGuy Finance token",
         category="integrations",
-        description="Authenticatietoken voor de Invoice Ninja API.",
+        description="Authenticatietoken voor de RentGuy finance bridge.",
     ),
     SecretDefinition(
         key="PAYMENT_WEBHOOK_BASE_URL",

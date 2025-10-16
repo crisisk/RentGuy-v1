@@ -34,7 +34,7 @@ def test_create_invoice_calculates_totals(db_session):
         ],
         total_net_override=None,
         total_vat_override=None,
-        sync_with_invoice_ninja=False,
+        sync_with_finance_bridge=False,
     )
 
     assert float(invoice.total_net) == pytest.approx(250.0)

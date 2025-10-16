@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Iterator
 
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
@@ -65,14 +66,21 @@ class RecurringInvoiceScheduler:
 
         with _session_scope() as session:
             now = datetime.utcnow()
-            invoices = (
-                session.query(RecurringInvoice)
-                .filter(
-                    RecurringInvoice.next_run <= now,
-                    RecurringInvoice.status == RecurringInvoiceStatus.ACTIVE,
+            try:
+                invoices = (
+                    session.query(RecurringInvoice)
+                    .filter(
+                        RecurringInvoice.next_run <= now,
+                        RecurringInvoice.status == RecurringInvoiceStatus.ACTIVE,
+                    )
+                    .all()
                 )
-                .all()
-            )
+            except OperationalError:
+                session.rollback()
+                logger.debug(
+                    "Recurring invoice tables unavailable; skipping tick until setup completes"
+                )
+                return
 
             for invoice in invoices:
                 await self._process_single_invoice(session, invoice, now)

@@ -30,16 +30,24 @@ class User(Base):
     # models.  They remain optional to avoid pulling related rows unless they
     # are explicitly accessed.
     profile: Mapped[UserProfile | None] = relationship(
-        "UserProfile", back_populates="user", uselist=False
+        "app.modules.customer_portal.models.UserProfile",
+        back_populates="user",
+        uselist=False,
     )
     invoices: Mapped[list[Invoice]] = relationship(
-        "Invoice", back_populates="user", cascade="all,delete-orphan"
+        "app.modules.customer_portal.models.Invoice",
+        back_populates="user",
+        cascade="all,delete-orphan",
     )
     orders: Mapped[list[Order]] = relationship(
-        "Order", back_populates="user", cascade="all,delete-orphan"
+        "app.modules.customer_portal.models.Order",
+        back_populates="user",
+        cascade="all,delete-orphan",
     )
     documents: Mapped[list[Document]] = relationship(
-        "Document", back_populates="user", cascade="all,delete-orphan"
+        "app.modules.customer_portal.models.Document",
+        back_populates="user",
+        cascade="all,delete-orphan",
     )
     recurring_invoices: Mapped[list[RecurringInvoice]] = relationship(
         "RecurringInvoice", back_populates="user", cascade="all,delete-orphan"
