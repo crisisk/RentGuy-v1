@@ -20,6 +20,11 @@ interface FeedbackMessage {
   message: string
 }
 
+interface ValidationResult {
+  valid: boolean
+  message?: string
+}
+
 const timestampFormatter = new Intl.DateTimeFormat('nl-NL', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -61,6 +66,59 @@ const integrationKeys = [
   'MRDJ_WEBHOOK_SECRET',
 ] as const
 
+const requiredSecretKeys = new Set<string>(integrationKeys)
+
+function validateSecretInput(key: string, rawValue: string, secret?: ManagedSecret | null): ValidationResult {
+  const value = rawValue.trim()
+  const normalizedKey = key.toUpperCase()
+
+  if (requiredSecretKeys.has(normalizedKey) && value.length === 0) {
+    return { valid: false, message: 'Dit veld is verplicht voor de MR DJ koppeling.' }
+  }
+
+  if (normalizedKey.endsWith('_PORT') && value.length > 0) {
+    const parsed = Number(value)
+    if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
+      return { valid: false, message: 'Gebruik een geldig poortnummer tussen 1 en 65535.' }
+    }
+  }
+
+  if ((normalizedKey.includes('EMAIL') || normalizedKey === 'MAIL_FROM') && value.length > 0) {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailPattern.test(value)) {
+      return { valid: false, message: 'Voer een geldig e-mailadres in (bijv. alerts@rentguy.nl).' }
+    }
+  }
+
+  if (normalizedKey.includes('URL') && value.length > 0) {
+    try {
+      const parsedUrl = new URL(value)
+      if (!/^https?:$/.test(parsedUrl.protocol)) {
+        return { valid: false, message: 'Alleen http(s) URL\'s zijn toegestaan.' }
+      }
+    } catch (error) {
+      return { valid: false, message: 'Gebruik een volledige URL inclusief protocol (bijv. https://).' }
+    }
+  }
+
+  if (/(PASSWORD|SECRET|TOKEN)$/.test(normalizedKey) && value.length > 0) {
+    if (value.length < 12) {
+      return { valid: false, message: 'Geheime waarden moeten minimaal 12 tekens bevatten.' }
+    }
+    const hasNumber = /\d/.test(value)
+    const hasLetter = /[a-zA-Z]/.test(value)
+    if (!hasNumber || !hasLetter) {
+      return { valid: false, message: 'Gebruik een mix van letters en cijfers voor extra veiligheid.' }
+    }
+  }
+
+  if (!secret?.hasValue && value.length === 0 && secret && !requiredSecretKeys.has(normalizedKey)) {
+    return { valid: false, message: 'Vul een waarde in voordat je opslaat.' }
+  }
+
+  return { valid: true }
+}
+
 const roleLabelMap: Record<string, string> = {
   admin: 'Administrator',
   planner: 'Operations planner',
@@ -69,6 +127,53 @@ const roleLabelMap: Record<string, string> = {
   finance: 'Finance specialist',
   viewer: 'Project stakeholder',
 }
+
+interface SlaMatrixRow {
+  tier: string
+  rto: string
+  rpo: string
+  coverage: string
+  escalation: string
+}
+
+const slaMatrixRows: SlaMatrixRow[] = [
+  {
+    tier: 'Launch',
+    rto: '< 12 uur',
+    rpo: '4 uur',
+    coverage: 'Ma–Vr 08:00-20:00 CET',
+    escalation: 'Slack #rentguy-launch → CS manager',
+  },
+  {
+    tier: 'Professional',
+    rto: '< 6 uur',
+    rpo: '1 uur',
+    coverage: '7 dagen 07:00-22:00 CET',
+    escalation: 'NOC hotline → Duty engineer → Customer success lead',
+  },
+  {
+    tier: 'Enterprise',
+    rto: '< 1 uur',
+    rpo: '15 minuten',
+    coverage: '24/7 follow-the-sun',
+    escalation: 'NOC bridge → Sevensa SRE → RentGuy leadership',
+  },
+]
+
+const changelogTeasers = [
+  {
+    version: '2025.02',
+    highlights: 'Nieuwe FlowExperienceShell met nav-rail automation en planner hand-offs.',
+  },
+  {
+    version: '2025.01',
+    highlights: 'UAT R2 voltooid, secrets-sync herstart indicator en monitoring dry-run.',
+  },
+  {
+    version: '2024.12',
+    highlights: 'Multi-tenant router update + marketing hero storytelling.',
+  },
+]
 
 export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): JSX.Element {
   const [secrets, setSecrets] = useState<ManagedSecret[]>([])
@@ -80,6 +185,8 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   const [syncing, setSyncing] = useState(false)
   const [emailDiagnostics, setEmailDiagnostics] = useState<EmailDiagnostics | null>(null)
   const [activeTab, setActiveTab] = useState<'secrets' | 'integration'>('secrets')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [fieldSuccess, setFieldSuccess] = useState<Record<string, string>>({})
   const user = useAuthStore(state => state.user)
   const userEmail = user?.email ?? ''
   const userRole = user?.role ?? ''
@@ -94,6 +201,44 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
         next.add(key)
       } else {
         next.delete(key)
+      }
+      return next
+    })
+  }, [])
+
+  const secretMap = useMemo(() => {
+    const map = new Map<string, ManagedSecret>()
+    for (const secret of secrets) {
+      map.set(secret.key, secret)
+    }
+    return map
+  }, [secrets])
+
+  const setFieldError = useCallback((key: string, message?: string) => {
+    setFieldErrors(prev => {
+      if (!message && !(key in prev)) {
+        return prev
+      }
+      const next = { ...prev }
+      if (!message) {
+        delete next[key]
+      } else {
+        next[key] = message
+      }
+      return next
+    })
+  }, [])
+
+  const setFieldSuccessMessage = useCallback((key: string, message?: string) => {
+    setFieldSuccess(prev => {
+      if (!message && !(key in prev)) {
+        return prev
+      }
+      const next = { ...prev }
+      if (!message) {
+        delete next[key]
+      } else {
+        next[key] = message
       }
       return next
     })
@@ -171,11 +316,44 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     ? Math.round((configuredIntegrations / integrationSecrets.length) * 100)
     : 0
 
-  const handleInputChange = useCallback((key: string, value: string) => {
-    setFormValues(prev => ({
-      ...prev,
-      [key]: value,
-    }))
+  const handleInputChange = useCallback(
+    (key: string, value: string, secretOverride?: ManagedSecret | null) => {
+      setFormValues(prev => ({
+        ...prev,
+        [key]: value,
+      }))
+      setFieldSuccessMessage(key)
+      const secret = secretOverride ?? secretMap.get(key) ?? null
+      const validation = validateSecretInput(key, value, secret)
+      if (!validation.valid) {
+        setFieldError(key, validation.message ?? 'Ongeldige invoer')
+      } else {
+        setFieldError(key)
+      }
+    },
+    [secretMap, setFieldError, setFieldSuccessMessage],
+  )
+
+  const handleResetField = useCallback(
+    (key: string) => {
+      setFormValues(prev => ({
+        ...prev,
+        [key]: '',
+      }))
+      setFieldError(key)
+      setFieldSuccessMessage(key)
+    },
+    [setFieldError, setFieldSuccessMessage],
+  )
+
+  const openRecoveryGuide = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.open(
+        'https://github.com/crisisk/RentGuy-v1/blob/work/docs/secrets_onboarding_playbook.md',
+        '_blank',
+        'noopener,noreferrer',
+      )
+    }
   }, [])
 
   const handleSave = useCallback(
@@ -183,8 +361,12 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       const draftValue = formValues[secret.key] ?? ''
       const trimmed = draftValue.trim()
 
-      if (!secret.hasValue && trimmed.length === 0) {
-        setFeedback({ tone: 'error', message: `Vul een waarde in voor ${secret.label} voordat je opslaat.` })
+      const validation = validateSecretInput(secret.key, draftValue, secret)
+      if (!validation.valid) {
+        const message = validation.message ?? `Controleer de invoer voor ${secret.label}.`
+        setFieldError(secret.key, message)
+        setFieldSuccessMessage(secret.key)
+        setFeedback({ tone: 'error', message })
         return
       }
 
@@ -194,14 +376,20 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       if (result.ok) {
         setSecrets(prev => prev.map(item => (item.key === secret.key ? result.value : item)))
         setFormValues(prev => ({ ...prev, [secret.key]: '' }))
-        setFeedback({ tone: trimmed.length > 0 ? 'success' : 'info', message: `${secret.label} is ${trimmed.length > 0 ? 'opgeslagen' : 'leeg gemaakt'}.` })
+        const savedMessage = `${secret.label} ${trimmed.length > 0 ? 'opgeslagen' : 'leeg gemaakt'} (${timestampFormatter.format(new Date())}).`
+        setFeedback({ tone: trimmed.length > 0 ? 'success' : 'info', message: savedMessage })
+        setFieldError(secret.key)
+        setFieldSuccessMessage(secret.key, savedMessage)
         await refreshEmailDiagnostics()
       } else {
         setFeedback({ tone: 'error', message: result.error.message ?? 'Opslaan mislukt. Probeer het opnieuw.' })
+        const errorMessage = result.error.message ?? 'Opslaan mislukt. Controleer verbinding en toegangsrechten.'
+        setFieldError(secret.key, errorMessage)
+        setFieldSuccessMessage(secret.key)
       }
       markSaving(secret.key, false)
     },
-    [formValues, markSaving, refreshEmailDiagnostics],
+    [formValues, markSaving, refreshEmailDiagnostics, setFieldError, setFieldSuccessMessage],
   )
 
   const handleSync = useCallback(async () => {
@@ -260,6 +448,43 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       window.open('https://github.com/crisisk/mr-djv1', '_blank', 'noopener,noreferrer')
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const params = new URLSearchParams(window.location.search)
+    const focus = params.get('focus') ?? ''
+    if (!focus) {
+      return
+    }
+
+    if (focus === 'integration') {
+      setActiveTab('integration')
+    } else if (focus === 'email' || focus === 'sla' || focus === 'changelog') {
+      setActiveTab('secrets')
+    }
+
+    const focusToElement: Record<string, string> = {
+      integration: 'integration-overview',
+      email: 'email-diagnostics-card',
+      sla: 'secrets-sla-matrix',
+      changelog: 'secrets-changelog-teaser',
+    }
+
+    const targetId = focusToElement[focus]
+    if (targetId) {
+      window.setTimeout(() => {
+        document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 250)
+    }
+
+    if (params.get('action') === 'sync') {
+      window.setTimeout(() => {
+        triggerSync()
+      }, 400)
+    }
+  }, [triggerSync])
 
   const flowItems = useMemo<FlowItem[]>(() => {
     const missingSecrets = Math.max(totalSecrets - configuredSecrets, 0)
@@ -516,6 +741,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     const statusColor = emailDiagnostics.status === 'ok' ? brand.colors.success : emailDiagnostics.status === 'warning' ? brand.colors.warning : brand.colors.danger
     return (
       <div
+        id="email-diagnostics-card"
         style={{
           display: 'grid',
           gap: 12,
@@ -567,6 +793,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     return (
       <div style={{ display: 'grid', gap: 24 }}>
         <section
+          id="integration-overview"
           style={{
             display: 'grid',
             gap: 16,
@@ -854,19 +1081,99 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                           </div>
                         </div>
                         <div style={{ display: 'grid', gap: 12 }}>
-                          <input
-                            type={item.isSensitive ? 'password' : 'text'}
-                            value={inputValue}
-                            placeholder={placeholder}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange(item.key, event.target.value)}
-                            style={{
-                              padding: '10px 14px',
-                              borderRadius: 12,
-                              border: `1px solid ${withOpacity(brand.colors.primary, 0.24)}`,
-                              fontSize: '1rem',
-                              fontFamily: 'inherit',
-                            }}
-                          />
+                          {(() => {
+                            const errorMessage = fieldErrors[item.key]
+                            const successMessage = fieldSuccess[item.key]
+                            const messageId = errorMessage || successMessage ? `${item.key}-message` : undefined
+                            const borderColor = errorMessage
+                              ? withOpacity(brand.colors.danger, 0.7)
+                              : successMessage
+                              ? withOpacity(brand.colors.success, 0.6)
+                              : withOpacity(brand.colors.primary, 0.24)
+                            return (
+                              <>
+                                <input
+                                  type={item.isSensitive ? 'password' : 'text'}
+                                  value={inputValue}
+                                  placeholder={placeholder}
+                                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                                    handleInputChange(item.key, event.target.value, item)
+                                  }
+                                  onBlur={() => {
+                                    const nextValue = formValues[item.key] ?? ''
+                                    const validation = validateSecretInput(item.key, nextValue, item)
+                                    if (!validation.valid) {
+                                      setFieldError(item.key, validation.message)
+                                    }
+                                  }}
+                                  aria-invalid={Boolean(errorMessage)}
+                                  aria-describedby={messageId}
+                                  style={{
+                                    padding: '10px 14px',
+                                    borderRadius: 12,
+                                    border: `1px solid ${borderColor}`,
+                                    fontSize: '1rem',
+                                    fontFamily: 'inherit',
+                                    boxShadow: successMessage
+                                      ? `0 0 0 3px ${withOpacity(brand.colors.success, 0.18)}`
+                                      : errorMessage
+                                      ? `0 0 0 3px ${withOpacity(brand.colors.danger, 0.12)}`
+                                      : 'none',
+                                    transition: 'border 0.2s ease, box-shadow 0.2s ease',
+                                  }}
+                                />
+                                {(errorMessage || successMessage) && (
+                                  <div
+                                    id={messageId}
+                                    style={{
+                                      fontSize: '0.85rem',
+                                      color: errorMessage ? brand.colors.danger : brand.colors.success,
+                                      display: 'grid',
+                                      gap: 8,
+                                    }}
+                                  >
+                                    <span>{errorMessage ?? successMessage}</span>
+                                    {errorMessage && (
+                                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleResetField(item.key)}
+                                          style={{
+                                            padding: '6px 12px',
+                                            borderRadius: 999,
+                                            border: `1px solid ${withOpacity(brand.colors.danger, 0.4)}`,
+                                            background: '#fff',
+                                            color: brand.colors.danger,
+                                            fontSize: '0.8rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                          }}
+                                        >
+                                          Reset invoer
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={openRecoveryGuide}
+                                          style={{
+                                            padding: '6px 12px',
+                                            borderRadius: 999,
+                                            border: 'none',
+                                            background: brand.colors.danger,
+                                            color: '#fff',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                          }}
+                                        >
+                                          Herstelgids openen
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: brand.colors.mutedText }}>
                             <span>Laatst gewijzigd: {formatTimestamp(item.updatedAt)}</span>
                             <span>Laatste sync: {formatTimestamp(item.lastSyncedAt)}</span>
@@ -899,6 +1206,123 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
               </section>
             )
           })}
+
+        <section
+          id="secrets-sla-matrix"
+          style={{
+            display: 'grid',
+            gap: 16,
+            padding: '22px 26px',
+            borderRadius: 24,
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(226, 232, 255, 0.84) 100%)',
+            border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+            boxShadow: brand.colors.shadow,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div style={{ display: 'grid', gap: 6 }}>
+              <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>SLA matrix</h3>
+              <p style={{ margin: 0, color: brand.colors.mutedText }}>
+                Gebruik deze matrix om escalaties te verbinden aan Sevensa support en klantverwachtingen te bevestigen per pakket.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openRecoveryGuide}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 999,
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.4)}`,
+                background: '#fff',
+                color: brand.colors.secondary,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Bekijk playbook
+            </button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                minWidth: 540,
+                fontSize: '0.9rem',
+                color: brand.colors.secondary,
+              }}
+            >
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>Pakket</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>RTO</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>RPO</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>Coverage</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>Escalatiepad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {slaMatrixRows.map(row => (
+                  <tr key={row.tier}>
+                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`, fontWeight: 600 }}>{row.tier}</td>
+                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}` }}>{row.rto}</td>
+                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}` }}>{row.rpo}</td>
+                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}` }}>{row.coverage}</td>
+                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}` }}>{row.escalation}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section
+          id="secrets-changelog-teaser"
+          style={{
+            display: 'grid',
+            gap: 16,
+            padding: '22px 26px',
+            borderRadius: 24,
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(226, 232, 255, 0.82) 100%)',
+            border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
+            boxShadow: brand.colors.shadow,
+          }}
+        >
+          <div style={{ display: 'grid', gap: 6 }}>
+            <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.primary }}>Release highlights</h3>
+            <p style={{ margin: 0, color: brand.colors.mutedText }}>
+              Deze teaser laat de laatste wijzigingen zien. De volledige changelog staat in het helpcenter en wordt gekoppeld aan het monitoringrapport.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {changelogTeasers.map(item => (
+              <article
+                key={item.version}
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 16,
+                  background: '#ffffff',
+                  border: `1px solid ${withOpacity(brand.colors.primary, 0.16)}`,
+                  display: 'grid',
+                  gap: 4,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>Versie {item.version}</strong>
+                  <a
+                    href={`https://github.com/crisisk/RentGuy-v1/releases/tag/${item.version}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: brand.colors.primary, fontSize: '0.85rem', textDecoration: 'none', fontWeight: 600 }}
+                  >
+                    Volledige release →
+                  </a>
+                </div>
+                <span style={{ color: brand.colors.mutedText }}>{item.highlights}</span>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
     </>
   )
