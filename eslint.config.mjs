@@ -3,10 +3,10 @@ import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 
 const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
-const requireFromFrontend = createRequire(path.resolve(tsconfigRootDir, 'rentguy/frontend/package.json'))
+const requireFromRoot = createRequire(path.resolve(tsconfigRootDir, 'package.json'))
 
-const tsEslintPlugin = requireFromFrontend('@typescript-eslint/eslint-plugin')
-const tsParser = requireFromFrontend('@typescript-eslint/parser')
+const tsEslintPlugin = requireFromRoot('@typescript-eslint/eslint-plugin')
+const tsParser = requireFromRoot('@typescript-eslint/parser')
 
 const browserGlobals = {
   window: 'readonly',
