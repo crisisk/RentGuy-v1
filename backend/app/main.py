@@ -141,6 +141,12 @@ ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
         "/api/v1",
         ["observability"],
     ),
+    (
+        "app.modules.platform.secrets.routes",
+        "router",
+        "/api/v1/platform",
+        ["platform"],
+    ),
 )
 
 

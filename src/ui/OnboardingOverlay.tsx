@@ -663,7 +663,7 @@ export default function OnboardingOverlay({
   const [persona, setPersona] = useState<PersonaKey>(initialPersona)
   const [steps, setSteps] = useState<NormalizedOnboardingStep[]>(() =>
     normalizeSteps(resolveFallbackSteps(initialPersona)),
-  )
+  );
   const [done, setDone] = useState<Set<string>>(() => new Set())
   const [tips, setTips] = useState<NormalizedOnboardingTip[]>(() => [...fallbackTips])
   const [loading, setLoading] = useState(true)
@@ -709,19 +709,19 @@ export default function OnboardingOverlay({
       setAllowRetry(Boolean(options.allowRetry))
     },
     [],
-  )
+  );
 
   const clearError = useCallback(() => {
     setErrorMessage('')
     setErrorDetails([])
     setAllowRetry(false)
-  }, [])
+  }, []);
 
   const handleRetry = useCallback(() => {
     emitOnboardingEvent('retry_clicked', { email: emailContext, persona })
     setAllowRetry(false)
     setReloadToken((value) => value + 1)
-  }, [emailContext, persona])
+  }, [emailContext, persona]);
 
   useEffect(() => {
     let ignore = false
@@ -852,7 +852,7 @@ export default function OnboardingOverlay({
       }
     },
     [snoozeHandler],
-  )
+  );
 
   const progress = useMemo(() => {
     return steps.length ? Math.round((done.size / steps.length) * 100) : 0
@@ -905,7 +905,7 @@ export default function OnboardingOverlay({
         setRefreshingProgress(false)
       }
     }
-  }, [emailContext, emailParam, hasEmail, persona, refreshingProgress, showError])
+  }, [emailContext, emailParam, hasEmail, persona, refreshingProgress, showError]);
 
   const mark = useCallback(
     async (step: NormalizedOnboardingStep) => {
@@ -980,7 +980,7 @@ export default function OnboardingOverlay({
           setBusyStep('')
         }
       }
-    }, [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError])
+    }, [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError]);
 
   const handleAction = useCallback(
     (step: NormalizedOnboardingStep) => {
@@ -1002,7 +1002,7 @@ export default function OnboardingOverlay({
       })
     },
     [emailContext, persona],
-  )
+  );
 
   return (
     <div

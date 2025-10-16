@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type CSSProperties,
   type MouseEvent,
   type ReactNode,
 } from 'react'
@@ -213,9 +214,10 @@ export interface LinkProps {
   readonly children?: ReactNode
   readonly replace?: boolean
   readonly className?: string
+  readonly style?: CSSProperties
 }
 
-export function Link({ to, children, replace = false, className }: LinkProps): JSX.Element {
+export function Link({ to, children, replace = false, className, style }: LinkProps): JSX.Element {
   const navigate = useNavigate()
   const handleClick = useCallback(
     (event: MouseEvent<HTMLAnchorElement>) => {
@@ -226,7 +228,7 @@ export function Link({ to, children, replace = false, className }: LinkProps): J
   )
 
   return (
-    <a href={to} onClick={handleClick} className={className}>
+    <a href={to} onClick={handleClick} className={className} style={style}>
       {children}
     </a>
   )
