@@ -23,13 +23,13 @@
 Alle aanbevelingen uit de vorige beoordelingsronde zijn uitgevoerd. De regressie-artefacten tonen een bewezen ≥99% (100%) passrate zonder kritieke of hoge restissues. Advies: **GO-LIVE GOEDGEKEURD**, mits change-control board de release inplant volgens het standaardproces en monitoring/rollback checklists actief houdt.【F:uat_results_report.md†L6-L22】【F:uat_results_report.md†L104-L109】
 
 ## Openstaande acties en verbeterpunten
-Hoewel er geen kritieke of hoge issues meer openstaan, worden onderstaande verbeteracties opgevolgd om de livegang verder te versterken.
+Hoewel er geen kritieke of hoge issues meer openstaan, blijven onderstaande verbeteracties actief opgevolgd zodat de livegang gefaseerd en gecontroleerd verloopt.
 
-| # | Beschrijving | Prioriteit | Eigenaar | Status | Opmerking |
-|---|---|---|---|---|---|
-| 1 | Publiceer klantgerichte release notes en FAQ in het helpcenter | Medium | Product Marketing | In uitvoering – concept gereviewd, publicatie gepland op 17 maart | Zorgt voor minder supportvragen bij uitrol |
-| 2 | Monitoring dashboards valideren met NOC-team (SLA checks) | Medium | Operations | Gepland voor 18 maart | Dashboards en alerts al geconfigureerd, laatste dry-run volgt |
-| 3 | Support-team oefent rollback playbook (tabletop) | Laag | Customer Success | Gepland voor 19 maart | Simulatie bevestigt kennisborging ondanks lage kans op rollback |
+| # | Beschrijving | Prioriteit | Eigenaar | Doel-datum | Status | Opmerking |
+|---|---|---|---|---|---|---|
+| 1 | Publiceer klantgerichte release notes en FAQ in het helpcenter | Medium | Product Marketing | 17 maart | Concept afgerond; publicatie wacht op vertalingen | Helpt support-volume te reduceren bij uitrol |
+| 2 | Monitoring dashboards valideren met NOC-team (SLA checks) | Medium | Operations | 18 maart | Dry-run ingepland met NOC-lead | Dashboards en alerts staan klaar, validatie bevestigt alert-routing |
+| 3 | Support-team oefent rollback playbook (tabletop) | Laag | Customer Success | 19 maart | Voorbereiding gedeeld; sessie staat ingepland | Tabletop zorgt voor kennisborging ondanks lage rollback-kans |
 
 ## Go-Live Checklist (af te vinken door Release Manager)
 
@@ -38,6 +38,6 @@ Hoewel er geen kritieke of hoge issues meer openstaan, worden onderstaande verbe
 - [x] Prijs- en beschikbaarheidslogica hertest in productie-achtige data set.【F:uat_results_report.md†L19-L22】【F:uat_results_report.md†L42-L44】
 - [x] iOS upload regressietesten met bewijs vastgelegd.【F:uat_results_report.md†L20-L22】【F:uat_results_report.md†L51-L53】
 - [x] API/webhook documentatie bijgewerkt en gedeeld met partners.【F:uat_results_report.md†L21-L22】【F:uat_results_report.md†L104-L105】
-- [ ] Release notes en FAQ gepubliceerd naar klanten. *(Owner: Product Marketing – gepland 17 maart)*
-- [ ] Monitoring dashboard dry-run met NOC-team afgerond. *(Owner: Operations – gepland 18 maart)*
-- [ ] Support rollback tabletop uitgevoerd en gedocumenteerd. *(Owner: Customer Success – gepland 19 maart)*
+- [ ] Release notes en FAQ gepubliceerd naar klanten *(Product Marketing – 17 maart, afhankelijk van vertalingen)*
+- [ ] Monitoring dashboard dry-run met NOC-team afgerond *(Operations – 18 maart, validatieplan klaar)*
+- [ ] Support rollback tabletop uitgevoerd en gedocumenteerd *(Customer Success – 19 maart, draaiboek gedeeld)*
