@@ -65,6 +65,46 @@ class Settings(BaseSettings):
         default=None,
         description="Optional secret used to encrypt values managed through the secrets dashboard.",
     )
+    MRDJ_SSO_AUTHORITY: str | None = Field(
+        default=None,
+        description="Base authority URL for the Mr. DJ Azure AD B2C tenant",
+    )
+    MRDJ_SSO_CLIENT_ID: str | None = Field(
+        default=None,
+        description="OAuth client id configured for the marketing → platform SSO flow",
+    )
+    MRDJ_SSO_CLIENT_SECRET: SecretStr | None = Field(
+        default=None,
+        description="Optional client secret used when exchanging authorization codes",
+    )
+    MRDJ_SSO_REDIRECT_URI: str | None = Field(
+        default=None,
+        description="Redirect URI registered for the marketing site callback",
+    )
+    MRDJ_SSO_SCOPE: str = Field(
+        default="openid offline_access profile email",
+        description="Space separated scope list requested during the SSO handshake",
+    )
+    MRDJ_PLATFORM_REDIRECT_URL: str = Field(
+        default="https://mr-dj.rentguy.nl/crm",
+        description="Default URL the marketing site should forward to after login",
+    )
+    MRDJ_LEAD_CAPTURE_RATE_LIMIT: int = Field(
+        default=10,
+        description="Maximum lead capture submissions allowed per IP address within the window",
+    )
+    MRDJ_LEAD_CAPTURE_RATE_WINDOW_SECONDS: int = Field(
+        default=300,
+        description="Duration of the lead capture rate limit window in seconds",
+    )
+    MRDJ_LEAD_CAPTURE_CAPTCHA_ENDPOINT: str | None = Field(
+        default=None,
+        description="Verification endpoint for the marketing site captcha tokens",
+    )
+    MRDJ_LEAD_CAPTURE_CAPTCHA_SECRET: SecretStr | None = Field(
+        default=None,
+        description="Secret shared with the captcha verification service",
+    )
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod

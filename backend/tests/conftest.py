@@ -190,6 +190,12 @@ _install_email_validator_stub()
 # Provide sensible defaults for configuration values expected by the settings model
 os.environ.setdefault('DATABASE_URL', 'sqlite://')
 os.environ.setdefault('JWT_SECRET', 'test-secret')
+os.environ.setdefault('MRDJ_SSO_AUTHORITY', 'https://login.test/tenant')
+os.environ.setdefault('MRDJ_SSO_CLIENT_ID', 'test-client-id')
+os.environ.setdefault('MRDJ_SSO_REDIRECT_URI', 'https://mr-dj.nl/auth/callback')
+os.environ.setdefault('MRDJ_PLATFORM_REDIRECT_URL', 'https://mr-dj.rentguy.nl/crm')
+os.environ.setdefault('MRDJ_LEAD_CAPTURE_CAPTCHA_ENDPOINT', 'https://captcha.test/verify')
+os.environ.setdefault('MRDJ_LEAD_CAPTURE_CAPTCHA_SECRET', 'dummy-secret')
 
 # Ensure models are imported so metadata is populated before accessing the FastAPI app
 import app.modules.auth.models  # noqa: F401

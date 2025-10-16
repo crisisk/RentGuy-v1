@@ -13,6 +13,9 @@ vragen en wijzigingsverzoeken rondom de CRM- en automation-suite afhandelt.
 | Dashboard/Metrics incident       |  I   |     A      |     C       |   R     |
 | Data correction                  |  C   |     R      |     A       |   I     |
 | Security/compliance vragen       |  I   |     C      |     A       |   R     |
+| SSO escalaties                   |  I   |     R      |     A       |   C     |
+| UAT sign-off documentatie        |  C   |     A      |     R       |   I     |
+| Release notes / enablement kit   |  A   |     R      |     C       |   I     |
 
 Legenda: **R** = Responsible, **A** = Accountable, **C** = Consulted,
 **I** = Informed.
@@ -37,6 +40,7 @@ Legenda: **R** = Responsible, **A** = Accountable, **C** = Consulted,
 2. Draai smoke test `pytest -m tenant_smoke --tenant=mrdj --case=sso`.
 3. Indien token mismatch: reset client secret in Azure AD en update Vault secret.
 4. Documenteer wijziging in release notes.
+5. Controleer of webhook `cms/webhook_to_crm.py` geen verouderde templates overschrijft.
 
 ## 3. Escalatiepaden
 - **P1 (system down)** – bel direct engineering on-call (telefoonnummer in Opsgenie).

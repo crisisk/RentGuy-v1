@@ -41,3 +41,18 @@
 - [ ] Automations < 2% failure-rate (Alertmanager)
 - [ ] Monitoring dashboards gecontroleerd
 - [ ] Stakeholder sign-off ontvangen
+
+## Planning & voorbereiding
+- **T-5 dagen:** Verstuur agenda + deel enablement kit (`docs/release/crm_mrdj_v1.md`).
+- **T-3 dagen:** Run dress rehearsal met sandbox data, valideer `/api/v1/auth/sso` flow.
+- **T-1 dag:** Freeze template updates via `cms/webhook_to_crm.py` en snapshot dashboards.
+- **T+1 dag:** Consolideer bevindingen, plan eventuele hotfix sprint.
+
+## Sign-off
+
+| Rol | Naam | Datum | Handtekening |
+|-----|------|-------|--------------|
+| Product Owner | Bart van de Weijer |  |  |
+| Sales Lead | Chantal |  |  |
+| Security Officer | Sofie |  |  |
+| Operations Manager | Niels |  |  |

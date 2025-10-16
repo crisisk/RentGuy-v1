@@ -30,3 +30,4 @@
 - Audit logs naar SIEM (`security_events` index) met 400 dagen retentie.
 - Alert op ongeautoriseerde exports uit `crm_automation_runs` (>500 records).
 - Maandelijkse check door security officer (Sofie) + rapportage in Confluence.
+- Kwartaalreview van retention policies tijdens security board met notulen in `security/crm_reviews/`.

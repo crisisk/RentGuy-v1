@@ -26,8 +26,12 @@
 - Maak oefenaccounts aan (`seed_bart_user.py` gebruiken voor basisdata).
 - Zorg dat `uat/crm_mrdj_uat.md` scenario's in demo tenant geladen zijn.
 - Verstuur agenda-invite + hand-out 2 dagen vooraf.
+- Boek vergaderruimte + Teams meeting (host: operations lead).
+- Neem sessie op en archiveer recording in SharePoint map `Training/MrDJ`.
+- Stuur follow-up survey link binnen 1 uur na afronding.
 
 ## Evaluatie
 - Verzamel feedback via Typeform (link in enablement kit).
 - Review recordings en update FAQ in `OPERATIONS.md`.
 - Plan refresh sessie na 30 dagen voor nieuwe medewerkers.
+- Deel resultaten met Bart + CS lead tijdens wekelijkse sync.

@@ -45,3 +45,28 @@ class TokenOut(BaseModel):
 
 class UserRoleUpdate(BaseModel):
     role: SelectableRole
+
+
+class SSOLoginRequest(BaseModel):
+    redirect_uri: str | None = None
+    return_url: str | None = None
+
+
+class SSOLoginResponse(BaseModel):
+    authorization_url: str
+    state: str
+    code_challenge: str
+    expires_in: int
+
+
+class SSOCallbackRequest(BaseModel):
+    code: str
+    state: str
+    return_url: str | None = None
+
+
+class SSOCallbackResponse(BaseModel):
+    session_token: str
+    redirect_url: str
+    expires_in: int
+    tenant: str

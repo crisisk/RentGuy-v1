@@ -22,6 +22,6 @@
 
 ## To-do
 - [x] Documentatie
-- [ ] Backend endpoints implementeren
+- [x] Backend endpoints implementeren
 - [ ] Marketing site callback bouwen
 - [ ] End-to-end smoke test (`pytest -m tenant_smoke --case=sso`)
