@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
+import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 
 export interface RoleSelectionProps {
   email: string
@@ -58,6 +59,27 @@ const ROLE_OPTIONS: RoleOption[] = [
     description:
       'Configureer tenants, beheer rollen en bewaak integraties. Gebruik alleen indien noodzakelijk.',
     focus: 'Governance',
+  },
+]
+
+const roleExplainers: FlowExplainerItem[] = [
+  {
+    id: 'presets',
+    icon: '🧭',
+    title: 'Persona presets',
+    description: 'Je rol bepaalt welke dashboards, explainers en notificaties automatisch actief worden.',
+  },
+  {
+    id: 'audit',
+    icon: '📝',
+    title: 'Audit & onboarding',
+    description: 'Iedere keuze logt onboardingprogressie en autorisaties volgens het Sevensa control framework.',
+  },
+  {
+    id: 'flex',
+    icon: '🔄',
+    title: 'Flexibel bijsturen',
+    description: 'Na bevestiging kan het admin-team je rol aanpassen zonder context of data te verliezen.',
   },
 ]
 
@@ -137,6 +159,7 @@ export function RoleSelection({ email, onConfirm, onLogout, isSubmitting, errorM
               We stemmen dashboards, notificaties en voorbeelddata af op jouw verantwoordelijkheden. Je kunt dit later via het
               admin team laten aanpassen.
             </p>
+            <FlowExplainerList tone="dark" items={roleExplainers} minWidth={220} />
           </div>
         </header>
 
