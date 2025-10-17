@@ -1,181 +1,160 @@
-import { useState, useEffect, useCallback } from 'react';
-import { crmStore } from '@/stores/crmStore';
-import { Customer } from '@/types/customer';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import crmStore from '../../stores/crmStore';
 
-interface CustomerFormProps {
-  customer?: Customer;
-  onSuccess?: () => void;
+interface Customer {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  status: 'active' | 'inactive';
 }
 
-const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
-  // Form state management
-  const [name, setName] = useState(customer?.name || '');
-  const [email, setEmail] = useState(customer?.email || '');
-  const [phone, setPhone] = useState(customer?.phone || '');
-  const [company, setCompany] = useState(customer?.company || '');
-  const [address, setAddress] = useState(customer?.address || '');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const CustomerForm: React.FC = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(!!id);
+  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [formData, setFormData] = useState<Customer>({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    status: 'active'
+  });
 
-  // Initialize form when customer prop changes
+  const [errors, setErrors] = useState<Partial<Customer>>({});
+
   useEffect(() => {
-    if (customer) {
-      setName(customer.name);
-      setEmail(customer.email);
-      setPhone(customer.phone);
-      setCompany(customer.company);
-      setAddress(customer.address);
+    if (id) {
+      crmStore.getCustomer(id)
+        .then(customer => {
+          if (customer) setFormData(customer);
+          else setFormError('Customer not found');
+          setLoading(false);
+        })
+        .catch(() => {
+          setFormError('Failed to load customer');
+          setLoading(false);
+        });
     }
-  }, [customer]);
+  }, [id]);
 
-  // Handle form submission
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const validate = (): boolean => {
+    const newErrors: Partial<Customer> = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email';
+    if (!formData.phone.match(/^\d{10,15}$/)) newErrors.phone = 'Invalid phone number';
+    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    setFormError('');
+    if (!validate()) return;
 
-    // Basic validation
-    if (!name.trim() || !email.trim() || !company.trim()) {
-      setError('Name, email, and company are required fields');
-      setLoading(false);
-      return;
-    }
-
+    setIsSubmitting(true);
     try {
-      const customerData: Omit<Customer, 'id' | 'createdAt'> = {
-        name,
-        email,
-        phone,
-        company,
-        address,
-      };
-
-      if (customer?.id) {
-        await crmStore.updateCustomer(customer.id, customerData);
-      } else {
-        await crmStore.createCustomer(customerData);
-      }
-
-      onSuccess?.();
-      if (!customer?.id) {
-        // Reset form after successful creation
-        setName('');
-        setEmail('');
-        setPhone('');
-        setCompany('');
-        setAddress('');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save customer');
+      await crmStore.saveCustomer(formData);
+      navigate('/customers');
+    } catch (error) {
+      setFormError('Failed to save customer');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
-  }, [name, email, phone, company, address, customer, onSuccess]);
+  };
+
+  const handleChange = (field: keyof Customer) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+    setErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  if (loading) return <div className="p-4 text-center">Loading...</div>;
+  if (formError) return <div className="p-4 text-red-500">{formError}</div>;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      {error && (
-        <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
-          {error}
-        </div>
-      )}
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h1 className="text-2xl font-bold mb-6">{id ? 'Edit' : 'Create'} Customer</h1>
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {formError && <div className="text-red-500 text-sm">{formError}</div>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Name Field */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            Name <span className="text-red-500">*</span>
-          </label>
+          <label className="block text-sm font-medium mb-1">Name *</label>
           <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            disabled={loading}
-            required
+            value={formData.name}
+            onChange={handleChange('name')}
+            className={`w-full p-2 border rounded ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
           />
+          {errors.name && <span className="text-red-500 text-sm">{errors.name}</span>}
         </div>
 
-        {/* Email Field */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email <span className="text-red-500">*</span>
-          </label>
+          <label className="block text-sm font-medium mb-1">Email *</label>
           <input
-            id="email"
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            disabled={loading}
-            required
+            value={formData.email}
+            onChange={handleChange('email')}
+            className={`w-full p-2 border rounded ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
           />
+          {errors.email && <span className="text-red-500 text-sm">{errors.email}</span>}
         </div>
 
-        {/* Phone Field */}
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-            Phone
-          </label>
+          <label className="block text-sm font-medium mb-1">Phone *</label>
           <input
-            id="phone"
-            type="text"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            disabled={loading}
+            value={formData.phone}
+            onChange={handleChange('phone')}
+            className={`w-full p-2 border rounded ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
           />
+          {errors.phone && <span className="text-red-500 text-sm">{errors.phone}</span>}
         </div>
 
-        {/* Company Field */}
         <div>
-          <label htmlFor="company" className="block text-sm font-medium text-gray-700">
-            Company <span className="text-red-500">*</span>
-          </label>
+          <label className="block text-sm font-medium mb-1">Address *</label>
           <input
-            id="company"
-            type="text"
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            disabled={loading}
-            required
+            value={formData.address}
+            onChange={handleChange('address')}
+            className={`w-full p-2 border rounded ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
           />
+          {errors.address && <span className="text-red-500 text-sm">{errors.address}</span>}
         </div>
 
-        {/* Address Field */}
-        <div className="md:col-span-2">
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-            Address
-          </label>
-          <textarea
-            id="address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            rows={3}
-            disabled={loading}
-          />
+        <div>
+          <label className="block text-sm font-medium mb-1">Status</label>
+          <select
+            value={formData.status}
+            onChange={handleChange('status')}
+            className="w-full p-2 border border-gray-300 rounded"
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
-      </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? (
-          <span className="flex items-center justify-center">
-            <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            Saving...
-          </span>
-        ) : customer?.id ? 'Update Customer' : 'Create Customer'}
-      </button>
-    </form>
+        <div className="flex gap-4 mt-6">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            {isSubmitting ? 'Saving...' : 'Save'}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/customers')}
+            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 

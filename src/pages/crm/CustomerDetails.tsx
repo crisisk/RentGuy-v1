@@ -1,122 +1,134 @@
-Here's a comprehensive CustomerDetails component:
-
-```typescript
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { observer } from 'mobx-react-lite';
-import { useCrmStore } from '@/stores/crmStore';
-import { Customer, CustomerActivity, CustomerProject } from '@/types/customer';
+import { useParams, Link } from 'react-router-dom';
+import crmStore from '../../stores/crmStore';
 
-import Spinner from '@/components/common/Spinner';
-import ErrorDisplay from '@/components/common/ErrorDisplay';
-import ContactInfoCard from '@/components/customer/ContactInfoCard';
-import ActivityHistoryTable from '@/components/customer/ActivityHistoryTable';
-import LinkedProjectsList from '@/components/customer/LinkedProjectsList';
-import CustomerNotesSection from '@/components/customer/CustomerNotesSection';
+interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+}
 
-const CustomerDetails: React.FC = observer(() => {
+interface Activity {
+  id: string;
+  type: string;
+  date: string;
+  description: string;
+}
+
+const CustomerDetails: React.FC = () => {
   const { customerId } = useParams<{ customerId: string }>();
-  const crmStore = useCrmStore();
-
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   useEffect(() => {
     const fetchCustomerDetails = async () => {
       try {
-        setIsLoading(true);
-        const customerData = await crmStore.fetchCustomerById(customerId);
+        setLoading(true);
+        const customerData = await crmStore.getCustomerById(customerId);
+        const customerActivities = await crmStore.getCustomerActivities(customerId);
+        
         setCustomer(customerData);
+        setActivities(customerActivities);
+        setLoading(false);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load customer details');
-      } finally {
-        setIsLoading(false);
+        setError('Failed to load customer details');
+        setLoading(false);
       }
     };
 
     fetchCustomerDetails();
-  }, [customerId, crmStore]);
+  }, [customerId]);
 
-  if (isLoading) return <Spinner />;
-  if (error) return <ErrorDisplay message={error} />;
-  if (!customer) return <ErrorDisplay message="No customer found" />;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        {error}
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return <div>No customer found</div>;
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Contact Information */}
-        <ContactInfoCard customer={customer} />
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid md:grid-cols-2 gap-8">
+        {/* Customer Info Card */}
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">{customer.name}</h2>
+          <div className="space-y-2">
+            <p className="text-gray-600">
+              <strong>Email:</strong> {customer.email}
+            </p>
+            <p className="text-gray-600">
+              <strong>Phone:</strong> {customer.phone}
+            </p>
+            <p className="text-gray-600">
+              <strong>Company:</strong> {customer.company}
+            </p>
+          </div>
+        </div>
 
-        {/* Activity Overview */}
-        <div className="md:col-span-2">
-          <ActivityHistoryTable 
-            activities={customer.activities || []} 
-          />
+        {/* Activities Table */}
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-800">Recent Activities</h3>
+          {activities.length === 0 ? (
+            <p className="text-gray-500">No recent activities</p>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-2">Type</th>
+                  <th className="p-2">Date</th>
+                  <th className="p-2">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activities.map((activity) => (
+                  <tr key={activity.id} className="border-b">
+                    <td className="p-2">{activity.type}</td>
+                    <td className="p-2">{formatDate(activity.date)}</td>
+                    <td className="p-2">{activity.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
-
-      {/* Linked Projects */}
-      <LinkedProjectsList 
-        projects={customer.projects || []} 
-      />
-
-      {/* Customer Notes */}
-      <CustomerNotesSection 
-        customerId={customer.id} 
-        initialNotes={customer.notes || []} 
-      />
+      
+      <div className="mt-8 text-center">
+        <Link 
+          to="/customers" 
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+        >
+          Back to Customers
+        </Link>
+      </div>
     </div>
   );
-});
+};
 
 export default CustomerDetails;
-```
-
-Key Features:
-- TypeScript with strong typing
-- MobX store integration
-- Responsive grid layout
-- Modular component structure
-- Error and loading state handling
-- Lazy loading of customer details
-- Separation of concerns with sub-components
-- Modern React hooks pattern
-- Observer pattern for reactive updates
-
-Recommended companion types and components would include:
-
-```typescript
-// types/customer.ts
-export interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  activities?: CustomerActivity[];
-  projects?: CustomerProject[];
-  notes?: CustomerNote[];
-}
-
-export interface CustomerActivity {
-  id: string;
-  type: 'call' | 'email' | 'meeting';
-  date: Date;
-  description: string;
-}
-
-export interface CustomerProject {
-  id: string;
-  name: string;
-  status: 'active' | 'completed' | 'pending';
-}
-
-export interface CustomerNote {
-  id: string;
-  content: string;
-  createdAt: Date;
-  author: string;
-}
-```
-
-This implementation provides a robust, type-safe, and modular approach to displaying customer details with a focus on enterprise-grade React development.
