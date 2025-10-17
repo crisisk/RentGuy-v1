@@ -18,7 +18,7 @@ services:
       - "8080:80"
       - "8443:443"
     environment:
-      - VITE_API_URL=https://rentguy.sevensa.nl/api
+      - VITE_API_URL=https://www.rentguy.nl/api
     networks:
       - rentguy-production
       - sevensa-edge
@@ -26,13 +26,13 @@ services:
       - rentguy-backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rentguy.rule=Host(`rentguy.sevensa.nl`)"
+      - "traefik.http.routers.rentguy.rule=Host(`www.rentguy.nl`) || Host(`rentguy.nl`) || Host(`mr-dj.rentguy.nl`) || Host(`rentguy.sevensa.nl`)"
       - "traefik.http.routers.rentguy.entrypoints=websecure"
       - "traefik.http.routers.rentguy.tls.certresolver=letsencrypt"
       - "traefik.http.services.rentguy.loadbalancer.server.port=80"
       - "traefik.docker.network=sevensa-edge"
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      test: ["CMD-SHELL", "curl -f http://localhost:80/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -58,7 +58,7 @@ services:
       - sevensa-edge
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rentguy-api.rule=Host(`rentguy.sevensa.nl`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.rentguy-api.rule=(Host(`www.rentguy.nl`) || Host(`rentguy.nl`) || Host(`mr-dj.rentguy.nl`) || Host(`rentguy.sevensa.nl`)) && PathPrefix(`/api`)"
       - "traefik.http.routers.rentguy-api.entrypoints=websecure"
       - "traefik.http.routers.rentguy-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.rentguy-api.loadbalancer.server.port=8000"
@@ -68,7 +68,7 @@ services:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-rentguy}:${POSTGRES_PASSWORD}@rentguy-db:5432/${POSTGRES_DB:-rentguy_production}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@rentguy-redis:6379/0
       - ENV=production
-      - ALLOWED_ORIGINS=["http://localhost","http://localhost:80","http://localhost:8000","https://rentguy.sevensa.nl","http://rentguy.sevensa.nl"]
+      - ALLOWED_ORIGINS=["http://localhost","http://localhost:80","http://localhost:8000","https://rentguy.sevensa.nl","http://rentguy.sevensa.nl","https://www.rentguy.nl","https://rentguy.nl","https://mr-dj.rentguy.nl","http://www.rentguy.nl","http://rentguy.nl","http://mr-dj.rentguy.nl"]
       - JWT_SECRET=${JWT_SECRET_KEY}
       - JWT_ALG=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_EXPIRATION_MINUTES:-60}

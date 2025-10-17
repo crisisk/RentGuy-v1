@@ -48,7 +48,7 @@ function normaliseHostname(rawHostname?: string): string {
 export function resolveExperienceConfig(rawHostname?: string): ExperienceConfig {
   const hostname = normaliseHostname(rawHostname ?? (typeof window !== 'undefined' ? window.location.hostname : undefined))
 
-  if (hostname === 'rentguy.nl' || hostname === 'www.rentguy.nl') {
+  if (hostname === 'rentguy.nl' || hostname === 'www.rentguy.nl' || hostname === 'rentguy.sevensa.nl') {
     return {
       mode: 'marketing',
       hostname,
