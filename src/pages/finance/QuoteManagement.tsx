@@ -1,162 +1,123 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useFinanceStore } from '@/stores/financeStore';
-import { DataTable, DataTableColumn, ActionItem } from '@/components/DataTable';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card } from '@/components/ui/Card';
-import { Spinner } from '@/components/ui/Spinner';
-import { Quote, QuoteStatus } from '@/types/finance';
-import { formatDate } from '@/utils/dateUtils';
-import { CreateQuoteForm } from './CreateQuoteForm';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import FinanceStore from '../../stores/financeStore';
 
-export const QuoteManagement = () => {
-  const { quotes, loading, error, fetchQuotes, createQuote, convertQuoteToInvoice } = useFinanceStore();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
+interface Quote {
+  id: string;
+  number: string;
+  client: string;
+  amount: number;
+  date: string;
+  status: 'draft' | 'sent' | 'converted';
+}
 
-  const filteredQuotes = quotes.filter(quote =>
-    quote.client.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const loadQuotes = useCallback(async () => {
-    try {
-      await fetchQuotes();
-      setLocalError(null);
-    } catch (err) {
-      setLocalError('Failed to load quotes');
-    }
-  }, [fetchQuotes]);
+const QuoteManagement = () => {
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const store = FinanceStore();
 
   useEffect(() => {
+    const loadQuotes = async () => {
+      try {
+        const data = await store.getQuotes();
+        setQuotes(data);
+      } catch (err) {
+        setError('Failed to load quotes');
+      } finally {
+        setLoading(false);
+      }
+    };
     loadQuotes();
-  }, [loadQuotes]);
+  }, []);
 
-  const handleConvertToInvoice = async (quoteId: string) => {
+  const handleConvert = async (quoteId: string) => {
     try {
-      await convertQuoteToInvoice(quoteId);
-      // Optional: Show success notification
+      const invoiceId = await store.convertQuoteToInvoice(quoteId);
+      navigate(`/invoices/${invoiceId}`);
     } catch (err) {
-      setLocalError('Failed to convert quote to invoice');
+      setError('Failed to convert quote to invoice');
     }
   };
 
-  const columns: DataTableColumn<Quote>[] = [
-    { header: 'Quote ID', accessor: 'id' },
-    { header: 'Client', accessor: (item) => item.client.name },
-    { header: 'Amount', accessor: (item) => `$${item.amount.toFixed(2)}` },
-    { header: 'Status', accessor: (item) => item.status },
-    { header: 'Date', accessor: (item) => formatDate(item.date) },
-    {
-      header: 'Actions',
-      accessor: (item) => (
-        <div className="flex space-x-2">
-          <Button variant="ghost" size="sm">View</Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => handleConvertToInvoice(item.id)}
-            disabled={item.status !== QuoteStatus.DRAFT}
-          >
-            Convert to Invoice
-          </Button>
-          <Button variant="destructive" size="sm">Delete</Button>
-        </div>
-      )
-    }
-  ];
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
-  if (error || localError) {
+  if (error) {
     return (
-      <Card className="p-4 mb-4 bg-red-50 text-red-600">
-        {error || localError}
-        <Button variant="ghost" onClick={loadQuotes} className="ml-4">
-          Retry
-        </Button>
-      </Card>
+      <div className="p-4 text-red-500 bg-red-100 rounded-lg">
+        {error}
+      </div>
     );
   }
 
   return (
-    <div className="max-w-screen-xl mx-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <Button 
-          onClick={() => setShowCreateForm(true)}
-          className="w-full md:w-auto"
-        >
-          Create Quote
-        </Button>
-        <Input
-          placeholder="Search quotes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full"
-        />
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">Quotes</h1>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={filteredQuotes}
-        emptyMessage="No quotes found"
-        responsive
-        className="bg-white rounded-lg shadow-sm"
-      />
-
-      {showCreateForm && (
-        <CreateQuoteForm
-          onClose={() => setShowCreateForm(false)}
-          onSubmit={async (values) => {
-            try {
-              await createQuote(values);
-              setShowCreateForm(false);
-            } catch (err) {
-              setLocalError('Failed to create quote');
-            }
-          }}
-        />
-      )}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Number</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {quotes.map((quote) => (
+              <tr key={quote.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{quote.number}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{quote.client}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(quote.date)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  ${quote.amount.toLocaleString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                    ${quote.status === 'converted' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                    {quote.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <button
+                    onClick={() => handleConvert(quote.id)}
+                    disabled={quote.status === 'converted'}
+                    className={`px-3 py-1 rounded-md text-sm font-medium 
+                      ${quote.status === 'converted' 
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                  >
+                    Convert
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
 
-// CreateQuoteForm component would typically be in a separate file
-// Included here for completeness
-const CreateQuoteForm = ({ onClose, onSubmit }: { 
-  onClose: () => void;
-  onSubmit: (values: Omit<Quote, 'id' | 'date'>) => Promise<void>;
-}) => {
-  const [formValues, setFormValues] = useState<Omit<Quote, 'id' | 'date'>>({
-    client: { name: '', email: '' },
-    amount: 0,
-    status: QuoteStatus.DRAFT,
-    items: []
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formValues);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <Card className="w-full max-w-md p-4">
-        <h2 className="text-xl font-semibold mb-4">Create New Quote</h2>
-        <form onSubmit={handleSubmit}>
-          {/* Form fields implementation */}
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit">Create</Button>
-          </div>
-        </form>
-      </Card>
-    </div>
-  );
-};
+export default QuoteManagement;

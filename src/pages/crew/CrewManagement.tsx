@@ -1,238 +1,124 @@
-import { useEffect, useState, useCallback } from 'react';
-import { observer } from 'mobx-react-lite';
-import crewStore from '@/stores/crewStore';
-import { CrewMember, AvailabilityStatus } from '@/types/crew';
-import { Combobox, Listbox, Transition } from '@headlessui/react';
-import { ChevronUpDownIcon, CheckIcon, PlusIcon } from '@heroicons/react/20/solid';
-import { Spinner } from '@/components/common/Spinner';
-import { ErrorAlert } from '@/components/common/ErrorAlert';
-import { Modal } from '@/components/common/Modal';
-import { format, parseISO } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import crewStore from '../../stores/crewStore';
 
-interface AssignmentForm {
-  shiftDate: string;
-  shiftType: 'day' | 'night';
-  selectedMemberId: string | null;
+interface CrewMember {
+  id: string;
+  name: string;
+  availability: string;
+  skills: string[];
+  rate: number;
 }
 
-const CrewManagement: React.FC = observer(() => {
-  const { crewMembers, isLoading, error, loadCrew, assignToShift } = crewStore;
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityStatus>('available');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [assignmentForm, setAssignmentForm] = useState<AssignmentForm>({
-    shiftDate: format(new Date(), 'yyyy-MM-dd'),
-    shiftType: 'day',
-    selectedMemberId: null,
-  });
+const CrewManagement: React.FC = () => {
+  const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSkill, setSelectedSkill] = useState('');
 
-  // Load crew data on component mount
   useEffect(() => {
+    const loadCrew = async () => {
+      try {
+        await crewStore.fetchCrew();
+        const members = crewStore.getCrew();
+        setCrewMembers(members);
+      } catch (err) {
+        setError('Failed to load crew members');
+      } finally {
+        setLoading(false);
+      }
+    };
     loadCrew();
-  }, [loadCrew]);
+  }, []);
 
-  // Filter crew members based on selected criteria
-  const filteredMembers = useCallback(() => {
-    return crewMembers.filter(member => {
-      const skillMatch = selectedSkills.length === 0 || 
-        selectedSkills.every(skill => member.skills.includes(skill));
-      const availabilityMatch = member.availability.status === availabilityFilter;
-      return skillMatch && availabilityMatch;
-    });
-  }, [crewMembers, selectedSkills, availabilityFilter]);
-
-  // Available skills from all crew members
-  const allSkills = Array.from(new Set(crewMembers.flatMap(member => member.skills)));
-
-  const handleAssignmentSubmit = async () => {
-    if (assignmentForm.selectedMemberId) {
-      await assignToShift(
-        assignmentForm.selectedMemberId,
-        parseISO(assignmentForm.shiftDate),
-        assignmentForm.shiftType
-      );
-      setIsModalOpen(false);
-    }
+  const filterMembers = (member: CrewMember) => {
+    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSkill = !selectedSkill || member.skills.includes(selectedSkill);
+    return matchesSearch && matchesSkill;
   };
 
-  if (isLoading) return <div className="p-8 text-center"><Spinner size="lg" /></div>;
-  if (error) return <ErrorAlert message={error} className="m-4" />;
+  const checkAvailability = (dateString: string) => {
+    const today = new Date();
+    const availableDate = new Date(dateString);
+    return availableDate >= today ? 'Available' : 'Unavailable';
+  };
+
+  const skills = Array.from(new Set(crewMembers.flatMap(m => m.skills)));
+
+  if (loading) return <div className="p-4 text-center">Loading...</div>;
+  if (error) return <div className="p-4 text-red-500">{error}</div>;
 
   return (
-    <div className="p-4 space-y-6">
-      {/* Filters Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Listbox
-          as="div"
-          value={availabilityFilter}
-          onChange={setAvailabilityFilter}
-          className="relative"
+    <div className="p-4">
+      <div className="mb-4 flex flex-col sm:flex-row gap-2">
+        <input
+          type="text"
+          placeholder="Search crew..."
+          className="p-2 border rounded"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <select
+          className="p-2 border rounded"
+          value={selectedSkill}
+          onChange={(e) => setSelectedSkill(e.target.value)}
         >
-          <Listbox.Button className="w-full p-2 border rounded-md">
-            {availabilityFilter}
-            <ChevronUpDownIcon className="w-5 h-5 float-right" />
-          </Listbox.Button>
-          <Transition
-            enter="transition duration-100 ease-out"
-            enterFrom="transform scale-95 opacity-0"
-            enterTo="transform scale-100 opacity-100"
-            leave="transition duration-75 ease-out"
-            leaveFrom="transform scale-100 opacity-100"
-            leaveTo="transform scale-95 opacity-0"
-          >
-            <Listbox.Options className="absolute w-full mt-1 bg-white border rounded-md shadow-lg">
-              {Object.values(AvailabilityStatus).map(status => (
-                <Listbox.Option
-                  key={status}
-                  value={status}
-                  className={({ active }) => `p-2 cursor-pointer ${active ? 'bg-blue-50' : ''}`}
-                >
-                  {status}
-                </Listbox.Option>
-              ))}
-            </Listbox.Options>
-          </Transition>
-        </Listbox>
-
-        <Combobox
-          as="div"
-          value={selectedSkills}
-          onChange={setSelectedSkills}
-          multiple
-          className="relative"
-        >
-          <Combobox.Input
-            placeholder="Select skills..."
-            className="w-full p-2 border rounded-md"
-          />
-          <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
-            <ChevronUpDownIcon className="w-5 h-5" />
-          </Combobox.Button>
-          <Transition
-            enter="transition duration-100 ease-out"
-            enterFrom="transform scale-95 opacity-0"
-            enterTo="transform scale-100 opacity-100"
-            leave="transition duration-75 ease-out"
-            leaveFrom="transform scale-100 opacity-100"
-            leaveTo="transform scale-95 opacity-0"
-          >
-            <Combobox.Options className="absolute w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-              {allSkills.map(skill => (
-                <Combobox.Option
-                  key={skill}
-                  value={skill}
-                  className={({ active }) => `p-2 cursor-pointer ${active ? 'bg-blue-50' : ''}`}
-                >
-                  {({ selected }) => (
-                    <div className="flex items-center">
-                      {selected && <CheckIcon className="w-5 h-5 mr-2 text-blue-600" />}
-                      {skill}
-                    </div>
-                  )}
-                </Combobox.Option>
-              ))}
-            </Combobox.Options>
-          </Transition>
-        </Combobox>
+          <option value="">All Skills</option>
+          {skills.map(skill => (
+            <option key={skill} value={skill}>{skill}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Crew Data Table */}
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {['Name', 'Role', 'Skills', 'Availability', 'Rate', ''].map((header, idx) => (
-                <th
-                  key={idx}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  {header}
-                </th>
-              ))}
+      <div className="overflow-x-auto">
+        <table className="min-w-full table-auto">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Availability</th>
+              <th className="px-4 py-2 text-left">Skills</th>
+              <th className="px-4 py-2 text-left">Daily Rate</th>
+              <th className="px-4 py-2 text-left">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredMembers().map(member => (
-              <tr key={member.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{member.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{member.role}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
+          <tbody>
+            {crewMembers.filter(filterMembers).map(member => (
+              <tr key={member.id} className="border-b">
+                <td className="px-4 py-2">{member.name}</td>
+                <td className="px-4 py-2">
+                  <span className={`px-2 py-1 rounded ${checkAvailability(member.availability) === 'Available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {checkAvailability(member.availability)}
+                  </span>
+                </td>
+                <td className="px-4 py-2">
                   <div className="flex flex-wrap gap-1">
                     {member.skills.map(skill => (
-                      <span
-                        key={skill}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                      >
+                      <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
                         {skill}
                       </span>
                     ))}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    member.availability.status === 'available'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {member.availability.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">${member.rate}/hr</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => {
-                      setAssignmentForm(f => ({ ...f, selectedMemberId: member.id }));
-                      setIsModalOpen(true);
-                    }}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-md"
+                <td className="px-4 py-2">${member.rate.toLocaleString()}</td>
+                <td className="px-4 py-2">
+                  <Link
+                    to={`/crew/${member.id}`}
+                    className="text-blue-500 hover:text-blue-700"
                   >
-                    <PlusIcon className="w-5 h-5" />
-                  </button>
+                    Details
+                  </Link>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {crewMembers.filter(filterMembers).length === 0 && (
+          <div className="p-4 text-center text-gray-500">No crew members found</div>
+        )}
       </div>
-
-      {/* Assignment Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Assign to Shift"
-        actions={[
-          { label: 'Cancel', onClick: () => setIsModalOpen(false), variant: 'secondary' },
-          { label: 'Assign', onClick: handleAssignmentSubmit },
-        ]}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Shift Date</label>
-            <input
-              type="date"
-              value={assignmentForm.shiftDate}
-              onChange={e => setAssignmentForm(f => ({ ...f, shiftDate: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Shift Type</label>
-            <select
-              value={assignmentForm.shiftType}
-              onChange={e => setAssignmentForm(f => ({
-                ...f,
-                shiftType: e.target.value as 'day' | 'night'
-              }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-            >
-              <option value="day">Day Shift</option>
-              <option value="night">Night Shift</option>
-            </select>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
-});
+};
 
 export default CrewManagement;

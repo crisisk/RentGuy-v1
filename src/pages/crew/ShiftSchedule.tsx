@@ -1,149 +1,117 @@
-Here's a comprehensive `ShiftSchedule.tsx` implementation:
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import crewStore from '../../stores/crewStore';
 
-```typescript
-import React, { useState, useEffect, useMemo } from 'react';
-import { observer } from 'mobx-react-lite';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { useStores } from '@/stores/RootStore';
-import { Shift, CrewMember } from '@/types';
-import { 
-  CalendarIcon, 
-  ExclamationTriangleIcon 
-} from '@heroicons/react/24/solid';
-
-interface ShiftScheduleProps {
-  selectedWeek?: Date;
+interface Shift {
+  id: string;
+  employeeName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
 }
 
-const ShiftSchedule: React.FC<ShiftScheduleProps> = observer(({ 
-  selectedWeek = new Date() 
-}) => {
-  const { crewStore, authStore } = useStores();
-  const [isLoading, setIsLoading] = useState(true);
+const ShiftSchedule: React.FC = () => {
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  const getCurrentWeekDates = (): string[] => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+    return daysOfWeek.map((_, index) => {
+      const date = new Date(today.setDate(diff + index));
+      return date.toISOString().split('T')[0];
+    });
+  };
+
+  const weekDates = getCurrentWeekDates();
 
   useEffect(() => {
     const fetchShifts = async () => {
       try {
-        setIsLoading(true);
-        await crewStore.fetchWeeklyShifts(selectedWeek);
+        const fetchedShifts = await crewStore.getWeeklyShifts(weekDates[0], weekDates[6]);
+        setShifts(fetchedShifts);
+        setLoading(false);
       } catch (err) {
         setError('Failed to load shifts');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     fetchShifts();
-  }, [selectedWeek]);
+  }, []);
 
-  const handleDragEnd = (result) => {
-    const { source, destination } = result;
-    
-    if (!destination) return;
-
-    // Complex shift reassignment logic
-    const sourceShift = crewStore.shifts[source.droppableId];
-    const destShift = crewStore.shifts[destination.droppableId];
-
-    // Conflict detection
-    if (hasScheduleConflict(sourceShift, destShift)) {
-      // Show conflict warning
-      return;
-    }
-
-    crewStore.updateShiftAssignment(
-      sourceShift.id, 
-      destination.droppableId
-    );
+  const getShiftsForDay = (date: string) => {
+    return shifts.filter(shift => shift.date === date);
   };
 
-  const hasScheduleConflict = (
-    sourceShift: Shift, 
-    destShift: Shift
-  ): boolean => {
-    // Implement complex conflict resolution logic
-    return false;
-  };
-
-  const renderShiftCard = (shift: Shift) => (
-    <Draggable 
-      key={shift.id} 
-      draggableId={shift.id} 
-      index={0}
-    >
-      {(provided) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className="bg-white shadow-md rounded-lg p-4 mb-2"
-        >
-          <div className="flex justify-between">
-            <span>{shift.crewMember?.name}</span>
-            <span>{shift.timeSlot}</span>
-          </div>
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="spinner-border" role="status">
+          <span className="sr-only">Loading...</span>
         </div>
-      )}
-    </Draggable>
-  );
-
-  if (isLoading) {
-    return <div>Loading shifts...</div>;
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="text-red-500 flex items-center">
-        <ExclamationTriangleIcon className="h-6 w-6 mr-2" />
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
         {error}
       </div>
     );
   }
 
   return (
-    <div className="w-full p-4 bg-gray-100">
-      <div className="flex items-center mb-4">
-        <CalendarIcon className="h-6 w-6 mr-2 text-blue-500" />
-        <h2 className="text-xl font-bold">
-          Weekly Shift Schedule
-        </h2>
-      </div>
-
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-7 gap-4">
-          {Object.entries(crewStore.shifts).map(([day, shifts]) => (
-            <Droppable key={day} droppableId={day}>
-              {(provided) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className="bg-white rounded-lg p-3 shadow-sm"
+    <div className="container mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Weekly Shift Schedule</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              {daysOfWeek.map((day, index) => (
+                <th 
+                  key={day} 
+                  className="border border-gray-300 p-2 text-center"
                 >
-                  <h3 className="font-semibold mb-2">{day}</h3>
-                  {shifts.map(renderShiftCard)}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          ))}
-        </div>
-      </DragDropContext>
+                  {day}
+                  <br />
+                  <small className="text-gray-500">{weekDates[index]}</small>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {daysOfWeek.map((_, index) => (
+                <td 
+                  key={index} 
+                  className="border border-gray-300 p-2 align-top"
+                >
+                  {getShiftsForDay(weekDates[index]).map(shift => (
+                    <div 
+                      key={shift.id} 
+                      className="bg-blue-100 rounded p-2 mb-2"
+                    >
+                      <div className="font-semibold">{shift.employeeName}</div>
+                      <div className="text-sm text-gray-600">
+                        {shift.startTime} - {shift.endTime}
+                      </div>
+                    </div>
+                  ))}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
-});
+};
 
 export default ShiftSchedule;
-```
-
-Key Features:
-- MobX observer pattern
-- React Beautiful DnD for drag-and-drop
-- TypeScript typing
-- Error and loading states
-- Responsive Tailwind design
-- Complex shift management logic
-- Heroicons for visual indicators
-
-Note: This assumes corresponding types and store implementations exist in your project structure.

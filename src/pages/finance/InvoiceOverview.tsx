@@ -1,167 +1,129 @@
-import { useEffect, useState } from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { financeStore } from '@/stores/financeStore';
-import { Invoice, InvoiceStatus } from '@/types/invoice';
-import { Spinner } from '@/components/ui/Spinner';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import store from '../../stores/financeStore';
 
-type InvoiceFilters = {
-  status?: InvoiceStatus;
-  startDate?: Date;
-  endDate?: Date;
-  searchQuery?: string;
-};
+interface Invoice {
+  id: string;
+  clientName: string;
+  amount: number;
+  date: string;
+  status: 'paid' | 'pending' | 'overdue';
+}
 
-const InvoiceOverview = () => {
-  const { invoices, loading, error, fetchInvoices } = financeStore();
-  const [filters, setFilters] = useState<InvoiceFilters>({
-    status: undefined,
-    startDate: undefined,
-    endDate: undefined,
-    searchQuery: '',
+const InvoiceOverview: React.FC = () => {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [clientNameFilter, setClientNameFilter] = useState<string>('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    store.fetchInvoices()
+      .then((data: Invoice[]) => {
+        setInvoices(data);
+        setIsLoading(false);
+      })
+      .catch((err: Error) => {
+        setError(err.message);
+        setIsLoading(false);
+      });
+  }, []);
+
+  const filteredInvoices = invoices.filter(invoice => {
+    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+    const matchesName = invoice.clientName.toLowerCase().includes(clientNameFilter.toLowerCase());
+    return matchesStatus && matchesName;
   });
 
-  // Debounce search input to prevent excessive API calls
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      fetchInvoices(filters);
-    }, 300);
-
-    return () => clearTimeout(debounceTimer);
-  }, [filters.searchQuery]);
-
-  // Handle date and status filter changes
-  useEffect(() => {
-    fetchInvoices(filters);
-  }, [filters.status, filters.startDate, filters.endDate]);
-
-  const handleStatusChange = (value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      status: value as InvoiceStatus || undefined
-    }));
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  const handleExport = () => {
-    // Export logic here
-    console.log('Exporting invoices...');
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case 'paid': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'overdue': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  const statusOptions = [
-    { value: '', label: 'All Statuses' },
-    { value: 'paid', label: 'Paid' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'overdue', label: 'Overdue' },
-  ];
+  if (isLoading) return <div className="p-4 text-center">Loading invoices...</div>;
+  if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Invoice Overview</h1>
-          <Button onClick={handleExport} variant="primary">
-            Export CSV
-          </Button>
-        </div>
+    <div className="p-4 md:p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Invoice Overview</h1>
+        <Link
+          to="/invoices/new"
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          New Invoice
+        </Link>
+      </div>
 
-        {/* Filter Controls */}
-        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="col-span-2 flex gap-4">
-              <DatePicker
-                selected={filters.startDate}
-                onChange={(date: Date) => setFilters(prev => ({ ...prev, startDate: date }))}
-                placeholderText="Start Date"
-                className="w-full p-2 border rounded"
-              />
-              <DatePicker
-                selected={filters.endDate}
-                onChange={(date: Date) => setFilters(prev => ({ ...prev, endDate: date }))}
-                placeholderText="End Date"
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <Select
-              options={statusOptions}
-              value={filters.status || ''}
-              onChange={handleStatusChange}
-            />
-            <Input
-              type="text"
-              placeholder="Search invoices..."
-              value={filters.searchQuery}
-              onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-            />
-          </div>
-        </div>
+      <div className="mb-6 flex flex-col md:flex-row gap-4">
+        <input
+          type="text"
+          placeholder="Filter by client name..."
+          className="p-2 border rounded flex-grow"
+          value={clientNameFilter}
+          onChange={(e) => setClientNameFilter(e.target.value)}
+        />
+        <select
+          className="p-2 border rounded"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All Statuses</option>
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+          <option value="overdue">Overdue</option>
+        </select>
+      </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-8">
-            <Spinner className="w-12 h-12 mx-auto" />
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
-            Error loading invoices: {error.message}
-          </div>
-        )}
-
-        {/* Data Table */}
-        {!loading && !error && (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+      <div className="rounded-lg border overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Client</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {filteredInvoices.map((invoice) => (
+                <tr key={invoice.id}>
+                  <td className="px-4 py-3">{invoice.clientName}</td>
+                  <td className="px-4 py-3">${invoice.amount.toFixed(2)}</td>
+                  <td className="px-4 py-3">{formatDate(invoice.date)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-sm ${getStatusClass(invoice.status)}`}>
+                      {invoice.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => navigate(`/invoices/${invoice.id}`)}
+                      className="text-blue-500 hover:underline"
+                    >
+                      View
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {invoices.map((invoice) => (
-                  <tr key={invoice.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{invoice.number}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{invoice.customer}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(invoice.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ${invoice.amount.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          invoice.status === 'paid'
-                            ? 'bg-green-100 text-green-800'
-                            : invoice.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {invoice.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-            {/* Empty State */}
-            {invoices.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No invoices found matching your criteria
-              </div>
-            )}
-          </div>
+        {filteredInvoices.length === 0 && (
+          <div className="p-4 text-center text-gray-500">No invoices found</div>
         )}
       </div>
     </div>
