@@ -1,195 +1,206 @@
-Here's a comprehensive ProjectForm component:
-
-```typescript
 import React, { useState, useEffect } from 'react';
-import { observer } from 'mobx-react-lite';
-import { useStores } from '@/stores/root-store';
-import { Project, ProjectStatus } from '@/types/project-types';
-import DatePicker from '@/components/common/DatePicker';
-import MultiSelect from '@/components/common/MultiSelect';
-import { 
-  CheckCircleIcon, 
-  ExclamationTriangleIcon 
-} from '@heroicons/react/24/solid';
+import { useNavigate, useParams } from 'react-router-dom';
+import projectStore from '../../stores/projectStore';
 
-interface ProjectFormProps {
-  initialProject?: Project;
-  onSubmitSuccess?: () => void;
+interface ProjectFormProps {}
+
+interface ProjectData {
+  id?: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  status: 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
 }
 
-const ProjectForm: React.FC<ProjectFormProps> = observer(({ 
-  initialProject, 
-  onSubmitSuccess 
-}) => {
-  const { 
-    projectStore, 
-    customerStore, 
-    crewStore 
-  } = useStores();
+const ProjectForm: React.FC<ProjectFormProps> = () => {
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<Partial<Project>>({
-    name: initialProject?.name || '',
-    customerId: initialProject?.customerId || null,
-    startDate: initialProject?.startDate || new Date(),
-    endDate: initialProject?.endDate || null,
-    status: initialProject?.status || ProjectStatus.PLANNING,
-    venue: initialProject?.venue || {
-      name: '',
-      address: '',
-      capacity: 0
-    },
-    equipmentList: initialProject?.equipmentList || [],
-    assignedCrewIds: initialProject?.assignedCrewIds || []
+  const [formData, setFormData] = useState<ProjectData>({
+    name: '',
+    description: '',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    status: 'PLANNING'
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState<boolean>(!!id);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Prefetch dependencies
-    customerStore.fetchCustomers();
-    crewStore.fetchAvailableCrewMembers();
-  }, []);
+    if (id) {
+      const fetchProject = async () => {
+        try {
+          const project = await projectStore.getProjectById(id);
+          if (project) {
+            setFormData({
+              id: project.id,
+              name: project.name,
+              description: project.description,
+              startDate: project.startDate,
+              endDate: project.endDate || '',
+              status: project.status
+            });
+          }
+          setLoading(false);
+        } catch (err) {
+          setError('Failed to load project');
+          setLoading(false);
+        }
+      };
+      fetchProject();
+    } else {
+      setLoading(false);
+    }
+  }, [id]);
 
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (!formData.name) errors.name = 'Project name is required';
-    if (!formData.customerId) errors.customer = 'Customer selection is required';
-    if (!formData.startDate) errors.startDate = 'Start date is required';
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
+    setLoading(true);
+    setError(null);
 
-    setIsSubmitting(true);
     try {
-      const projectPayload = {
-        ...formData,
-        id: initialProject?.id
-      } as Project;
-
-      await projectStore.createOrUpdateProject(projectPayload);
-      
-      onSubmitSuccess?.();
-      resetForm();
-    } catch (error) {
-      // Handle submission errors
-      console.error('Project submission failed', error);
-    } finally {
-      setIsSubmitting(false);
+      if (id) {
+        await projectStore.updateProject(formData);
+      } else {
+        await projectStore.createProject(formData);
+      }
+      navigate('/projects');
+    } catch (err) {
+      setError('Failed to save project');
+      setLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      customerId: null,
-      startDate: new Date(),
-      status: ProjectStatus.PLANNING
-    });
+  const validateForm = () => {
+    return formData.name.trim() && formData.description.trim();
   };
+
+  if (loading) {
+    return <div className="p-4 text-center">Loading...</div>;
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Project Name */}
+      <h2 className="text-2xl font-bold mb-6">
+        {id ? 'Edit Project' : 'Create New Project'}
+      </h2>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
             Project Name
           </label>
           <input
             type="text"
+            id="name"
+            name="name"
             value={formData.name}
-            onChange={(e) => setFormData(prev => ({
-              ...prev, 
-              name: e.target.value
-            }))}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-          />
-          {formErrors.name && (
-            <p className="text-red-500 text-xs mt-1">
-              {formErrors.name}
-            </p>
-          )}
-        </div>
-
-        {/* Customer Select */}
-        <MultiSelect
-          options={customerStore.customers}
-          value={formData.customerId}
-          onChange={(value) => setFormData(prev => ({
-            ...prev, 
-            customerId: value
-          }))}
-          placeholder="Select Customer"
-        />
-
-        {/* Date Range */}
-        <div className="flex space-x-4">
-          <DatePicker
-            label="Start Date"
-            value={formData.startDate}
-            onChange={(date) => setFormData(prev => ({
-              ...prev, 
-              startDate: date
-            }))}
-          />
-          <DatePicker
-            label="End Date"
-            value={formData.endDate}
-            onChange={(date) => setFormData(prev => ({
-              ...prev, 
-              endDate: date
-            }))}
+            onChange={handleChange}
+            required
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
           />
         </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`
-            w-full py-2 px-4 rounded-md 
-            ${isSubmitting 
-              ? 'bg-gray-300 cursor-not-allowed' 
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }
-          `}
-        >
-          {isSubmitting ? 'Submitting...' : 'Save Project'}
-        </button>
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+            Description
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+            rows={4}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
+              Start Date
+            </label>
+            <input
+              type="date"
+              id="startDate"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
+              End Date
+            </label>
+            <input
+              type="date"
+              id="endDate"
+              name="endDate"
+              value={formData.endDate}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+            Project Status
+          </label>
+          <select
+            id="status"
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
+          >
+            <option value="PLANNING">Planning</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="ON_HOLD">On Hold</option>
+          </select>
+        </div>
+
+        <div className="flex justify-end space-x-4 mt-6">
+          <button
+            type="button"
+            onClick={() => navigate('/projects')}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!validateForm()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          >
+            {id ? 'Update Project' : 'Create Project'}
+          </button>
+        </div>
       </form>
     </div>
   );
-});
+};
 
 export default ProjectForm;
-```
-
-This component includes:
-
-✅ TypeScript typing
-✅ MobX store integration
-✅ Form validation
-✅ Error handling
-✅ Loading states
-✅ Responsive design
-✅ Complex form logic
-✅ Tailwind CSS styling
-✅ Modular structure
-
-Key features:
-- Supports create and edit modes
-- Prefetches related data
-- Comprehensive form validation
-- Flexible state management
-- Error display
-- Submission handling
-
-Recommended companion files would include corresponding types and store logic.

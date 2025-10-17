@@ -1,164 +1,142 @@
-Here's a comprehensive ProjectOverview component meeting the specified requirements:
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import projectStore from '../../stores/projectStore';
 
-```tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { observer } from 'mobx-react-lite';
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableColumn, 
-  TableRow, 
-  Button, 
-  Input, 
-  Chip, 
-  Spinner 
-} from '@nextui-org/react';
-import { useProjectStore } from '@/stores/projectStore';
-import { Project, ProjectStatus } from '@/types/project';
-import { SearchIcon, PlusIcon } from '@/components/icons';
-import CreateProjectModal from './CreateProjectModal';
+interface Project {
+  id: string;
+  name: string;
+  status: string;
+  createdAt: string;
+  teamSize: number;
+}
 
-const ProjectOverview: React.FC = observer(() => {
-  const projectStore = useProjectStore();
+const ProjectOverview: React.FC = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Fetch projects on component mount
   useEffect(() => {
-    projectStore.fetchProjects();
-  }, [projectStore]);
+    const fetchProjects = async () => {
+      try {
+        const fetchedProjects = await projectStore.getProjects();
+        setProjects(fetchedProjects);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load projects');
+        setLoading(false);
+      }
+    };
 
-  // Memoized filtered projects
-  const filteredProjects = useMemo(() => {
-    return projectStore.projects.filter(project => {
-      const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             project.customer.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
-    });
-  }, [projectStore.projects, searchTerm, statusFilter]);
+    fetchProjects();
+  }, []);
 
-  // Status badge color mapping
-  const getStatusColor = (status: ProjectStatus) => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'pending': return 'warning';
-      case 'completed': return 'primary';
-      default: return 'default';
-    }
+  const filterProjects = (projects: Project[]): Project[] => {
+    return projects.filter(project => 
+      project.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (statusFilter === 'all' || project.status === statusFilter)
+    );
   };
 
-  // Render loading state
-  if (projectStore.isLoading) {
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <Spinner size="lg" />
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div>
       </div>
     );
   }
 
-  // Render error state
-  if (projectStore.error) {
+  if (error) {
     return (
-      <div className="p-4 bg-red-100 text-red-800">
-        Error loading projects: {projectStore.error}
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        {error}
       </div>
     );
   }
+
+  const filteredProjects = filterProjects(projects);
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex space-x-4">
-          <Input
-            placeholder="Search projects..."
-            startContent={<SearchIcon />}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-64"
-          />
-          <select 
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'all')}
-            className="border rounded px-2 py-1"
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-        <Button 
-          color="primary" 
-          startContent={<PlusIcon />}
-          onClick={() => setIsCreateModalOpen(true)}
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row justify-between mb-6">
+        <input 
+          type="text" 
+          placeholder="Search projects..." 
+          className="w-full md:w-1/3 px-3 py-2 border rounded-md mb-2 md:mb-0"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <select 
+          className="w-full md:w-1/4 px-3 py-2 border rounded-md"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
         >
-          Create Project
-        </Button>
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
+          <option value="pending">Pending</option>
+        </select>
       </div>
 
-      <Table aria-label="Projects table">
-        <TableHeader>
-          <TableColumn>PROJECT NAME</TableColumn>
-          <TableColumn>CUSTOMER</TableColumn>
-          <TableColumn>START DATE</TableColumn>
-          <TableColumn>STATUS</TableColumn>
-          <TableColumn>ACTIONS</TableColumn>
-        </TableHeader>
-        <TableBody 
-          items={filteredProjects}
-          emptyContent="No projects found"
-        >
-          {(project) => (
-            <TableRow key={project.id}>
-              <TableColumn>{project.name}</TableColumn>
-              <TableColumn>{project.customer}</TableColumn>
-              <TableColumn>
-                {new Date(project.startDate).toLocaleDateString()}
-              </TableColumn>
-              <TableColumn>
-                <Chip 
-                  color={getStatusColor(project.status)} 
-                  size="sm"
-                >
-                  {project.status}
-                </Chip>
-              </TableColumn>
-              <TableColumn>
-                {/* Action buttons would go here */}
-                <div className="flex space-x-2">
-                  <Button size="sm" variant="light">View</Button>
-                  <Button size="sm" color="danger" variant="light">Delete</Button>
-                </div>
-              </TableColumn>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-
-      <CreateProjectModal 
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-      />
+      <div className="overflow-x-auto">
+        <table className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-4 py-3 text-left">Project Name</th>
+              <th className="px-4 py-3 text-left hidden md:table-cell">Status</th>
+              <th className="px-4 py-3 text-left hidden md:table-cell">Created</th>
+              <th className="px-4 py-3 text-left">Team Size</th>
+              <th className="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredProjects.map(project => (
+              <tr key={project.id} className="border-b hover:bg-gray-50">
+                <td className="px-4 py-3">{project.name}</td>
+                <td className="px-4 py-3 hidden md:table-cell">
+                  <span className={`
+                    px-2 py-1 rounded-full text-xs font-semibold
+                    ${project.status === 'active' ? 'bg-green-100 text-green-800' : 
+                      project.status === 'completed' ? 'bg-blue-100 text-blue-800' : 
+                      'bg-yellow-100 text-yellow-800'}
+                  `}>
+                    {project.status}
+                  </span>
+                </td>
+                <td className="px-4 py-3 hidden md:table-cell">
+                  {formatDate(project.createdAt)}
+                </td>
+                <td className="px-4 py-3">{project.teamSize}</td>
+                <td className="px-4 py-3 text-right">
+                  <Link 
+                    to={`/projects/${project.id}`} 
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    View
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filteredProjects.length === 0 && (
+          <div className="text-center py-6 text-gray-500">
+            No projects found
+          </div>
+        )}
+      </div>
     </div>
   );
-});
+};
 
 export default ProjectOverview;
-```
-
-Key Features:
-- MobX observer pattern
-- TypeScript typing
-- Responsive design with Tailwind/NextUI
-- Search and filter functionality
-- Loading and error states
-- Create project modal integration
-- Memoized filtering for performance
-- Flexible status handling
-
-Note: This assumes you have corresponding types, stores, and supporting components like CreateProjectModal and icons. The implementation provides a robust, production-ready project overview component with modern React practices.

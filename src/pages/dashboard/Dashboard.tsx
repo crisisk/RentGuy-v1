@@ -1,178 +1,115 @@
-import { useEffect } from 'react';
-import { useProjectStore } from '../stores/projectStore';
-import { useFinanceStore } from '../stores/financeStore';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-// Type definitions for dashboard data
-interface DashboardData {
-  upcomingProjects: Array<{
-    id: string;
-    name: string;
-    deadline: string;
-    status: 'planning' | 'active' | 'completed';
-  }>;
-  recentActivities: Array<{
-    id: string;
-    description: string;
-    timestamp: string;
-    type: 'update' | 'creation' | 'alert';
-  }>;
-  revenueData: Array<{
-    date: string;
-    amount: number;
-  }>;
-  crewSchedule: Array<{
-    id: string;
-    crewMember: string;
-    project: string;
-    shift: string;
-  }>;
-}
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import projectStore from '../../stores/projectStore';
 
 const Dashboard = () => {
-  const { projects, loading: projectsLoading, error: projectsError } = useProjectStore();
-  const { revenue, loading: financeLoading, error: financeError } = useFinanceStore();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [projects, setProjects] = useState<number>(0);
+  const [stats, setStats] = useState<{ totalTasks: number; completedTasks: number }>({ totalTasks: 0, completedTasks: 0 });
+  const [activities, setActivities] = useState<Array<{ id: string; title: string; date: string; status: string }>>([]);
+  const [revenueData, setRevenueData] = useState<number[]>([]);
 
   useEffect(() => {
-    // Fetch initial data on mount
-    useProjectStore.getState().fetchProjects();
-    useFinanceStore.getState().fetchRevenue();
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const projectData = await projectStore.getProjects();
+        const statsData = await projectStore.getStats();
+        const activitiesData = await projectStore.getRecentActivities();
+        
+        setProjects(projectData.length);
+        setStats(statsData);
+        setActivities(activitiesData);
+        setRevenueData(generateRevenueData());
+        setError('');
+      } catch (err) {
+        setError('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
-  // Combined loading state
-  const isLoading = projectsLoading || financeLoading;
-  const error = projectsError || financeError;
+  const generateRevenueData = () => {
+    return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10000) + 5000);
+  };
 
-  if (error) {
-    return (
-      <div className="p-6 bg-red-50 text-red-600 rounded-lg">
-        Error loading dashboard data: {error.message}
-      </div>
-    );
-  }
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+  };
+
+  if (loading) return <div className="p-4 text-gray-500">Loading dashboard...</div>;
+  if (error) return <div className="p-4 text-red-500">{error}</div>;
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Quick Actions Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          Create New Project
-        </button>
-        <button className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          Generate Report
-        </button>
-        <button className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          Schedule Meeting
-        </button>
+    <div className="p-4 space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-gray-500 text-sm">Total Projects</h3>
+          <p className="text-2xl font-semibold">{projects}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-gray-500 text-sm">Total Tasks</h3>
+          <p className="text-2xl font-semibold">{stats.totalTasks}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-gray-500 text-sm">Completed Tasks</h3>
+          <p className="text-2xl font-semibold">{stats.completedTasks}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-gray-500 text-sm">Completion Rate</h3>
+          <p className="text-2xl font-semibold">
+            {stats.totalTasks ? `${Math.round((stats.completedTasks / stats.totalTasks) * 100)}%` : '0%'}
+          </p>
+        </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Revenue Chart */}
-          <div className="p-6 bg-white rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Revenue Overview</h2>
-            {isLoading ? (
-              <div className="h-64 bg-gray-100 animate-pulse rounded" />
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={revenue}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="amount"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
+      {/* Revenue Chart */}
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <h2 className="text-lg font-semibold mb-4">Revenue Overview</h2>
+        <div className="h-64">
+          <svg width="100%" height="100%">
+            {revenueData.map((value, index) => (
+              <React.Fragment key={index}>
+                <circle
+                  cx={`${(index / (revenueData.length - 1)) * 100}%`}
+                  cy={`${100 - (value / 15000) * 100}%`}
+                  r="4"
+                  className="fill-blue-500"
+                />
+                {index > 0 && (
+                  <line
+                    x1={`${((index - 1) / (revenueData.length - 1)) * 100}%`}
+                    y1={`${100 - (revenueData[index - 1] / 15000) * 100}%`}
+                    x2={`${(index / (revenueData.length - 1)) * 100}%`}
+                    y2={`${100 - (value / 15000) * 100}%`}
+                    className="stroke-blue-500 stroke-2"
                   />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-
-          {/* Upcoming Projects */}
-          <div className="p-6 bg-white rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Upcoming Projects</h2>
-            {isLoading ? (
-              Array(3).fill(0).map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 animate-pulse rounded mb-2" />
-              ))
-            ) : (
-              <table className="w-full">
-                <tbody>
-                  {projects.slice(0, 5).map((project) => (
-                    <tr key={project.id} className="border-b last:border-0">
-                      <td className="py-3">{project.name}</td>
-                      <td className="py-3 text-gray-500">{project.deadline}</td>
-                      <td className="py-3">
-                        <span className={`px-2 py-1 rounded-full text-sm ${
-                          project.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                          project.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {project.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                )}
+              </React.Fragment>
+            ))}
+          </svg>
         </div>
+      </div>
 
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* Crew Schedule */}
-          <div className="p-6 bg-white rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Crew Schedule</h2>
-            {isLoading ? (
-              Array(3).fill(0).map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 animate-pulse rounded mb-2" />
-              ))
-            ) : (
-              <div className="space-y-3">
-                {projects[0]?.crewSchedule?.map((schedule) => (
-                  <div key={schedule.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{schedule.crewMember}</p>
-                      <p className="text-sm text-gray-500">{schedule.project}</p>
-                    </div>
-                    <span className="text-sm text-gray-600">{schedule.shift}</span>
-                  </div>
-                ))}
+      {/* Recent Activities */}
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <h2 className="text-lg font-semibold mb-4">Recent Activities</h2>
+        <div className="space-y-3">
+          {activities.map(activity => (
+            <div key={activity.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+              <div className="flex items-center space-x-3">
+                <div className={`w-2 h-2 rounded-full ${activity.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                <span className="font-medium">{activity.title}</span>
               </div>
-            )}
-          </div>
-
-          {/* Recent Activities */}
-          <div className="p-6 bg-white rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Recent Activities</h2>
-            {isLoading ? (
-              Array(3).fill(0).map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 animate-pulse rounded mb-2" />
-              ))
-            ) : (
-              <div className="space-y-3">
-                {projects[0]?.recentActivities?.map((activity) => (
-                  <div key={activity.id} className="flex items-start">
-                    <div className={`w-2 h-2 mt-2 rounded-full ${
-                      activity.type === 'update' ? 'bg-blue-500' :
-                      activity.type === 'creation' ? 'bg-green-500' :
-                      'bg-red-500'
-                    }`} />
-                    <div className="ml-3">
-                      <p className="text-sm">{activity.description}</p>
-                      <p className="text-xs text-gray-500">{activity.timestamp}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+              <span className="text-sm text-gray-500">{formatDate(activity.date)}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
