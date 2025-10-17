@@ -1,4 +1,3 @@
-// guards.tsx
 import React, { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authStore } from './authStore'; // Update import path according to your project structure

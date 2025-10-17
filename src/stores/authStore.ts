@@ -1,6 +1,3 @@
-Here's a production-ready Zustand authentication store in TypeScript:
-
-```typescript
 import create from 'zustand';
 import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -177,14 +174,3 @@ const useAuthStore = create<AuthState>()(
 );
 
 export default useAuthStore;
-```
-
-This implementation includes:
-- Comprehensive TypeScript typing
-- Persistent storage with localStorage
-- Immer middleware for immutable state updates
-- Error handling
-- Token management
-- Axios interceptor setup
-- Actions for login, logout, token refresh, auth check, and profile update
-- Secure token storage and management

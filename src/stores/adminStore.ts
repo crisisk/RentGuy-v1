@@ -1,7 +1,3 @@
-Here's a complete, production-ready Zustand store implementation meeting all requirements:
-
-```typescript
-// adminStore.ts
 import { create } from 'zustand';
 import { produce } from 'immer';
 import axios, { AxiosError } from 'axios';
@@ -153,7 +149,6 @@ export const adminStore = create<AdminState>((set) => ({
     }
   },
 }));
-```
 
 Key features:
 1. Strong TypeScript typing for all state and actions
@@ -167,4 +162,3 @@ Key features:
 9. Separation of concerns with all admin-related operations in one store
 10. Production-ready error handling patterns with try/catch blocks
 
-Note: Make sure to have axios installed in your project (`npm install axios`) and adjust the API endpoints/headers according to your backend implementation.

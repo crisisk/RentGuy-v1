@@ -152,7 +152,6 @@ export const useCRMStore = create<CRMState>()(
     },
   }))
 );
-```
 
 Key features:
 - Full TypeScript typing

@@ -1,6 +1,3 @@
-Here's a comprehensive, production-ready Zustand store for finance functionality:
-
-```typescript
 import create from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import axios from 'axios';
@@ -199,7 +196,6 @@ export const useFinanceStore = create<FinanceState>()(
     },
   }))
 );
-```
 
 This implementation provides:
 - Comprehensive TypeScript types
