@@ -1,12 +1,12 @@
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional, Dict
 import uuid
 from datetime import datetime, timedelta
 
-app = FastAPI()
+router = APIRouter()
 
 # In-memory user storage (mock database)
 USERS = {
@@ -22,11 +22,11 @@ TOKEN_STORE = {}
 
 # Pydantic models
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class UserResponse(BaseModel):
-    email: EmailStr
+    email: str
     is_active: bool
 
 class TokenResponse(BaseModel):
@@ -74,7 +74,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     return USERS.get(email)
 
 # Authentication routes
-@app.post("/api/v1/auth/login", response_model=TokenResponse)
+@router.post("/auth/login", response_model=TokenResponse)
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = USERS.get(form_data.username)
     if not user or user['hashed_password'] != form_data.password:
@@ -91,17 +91,17 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "refresh_token": refresh_token
     }
 
-@app.post("/api/v1/auth/logout")
+@router.post("/auth/logout")
 def logout(token: str = Depends(oauth2_scheme)):
     if token in TOKEN_STORE:
         del TOKEN_STORE[token]
     return {"message": "Logged out successfully"}
 
-@app.get("/api/v1/auth/me", response_model=UserResponse)
+@router.get("/auth/me", response_model=UserResponse)
 def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
 
-@app.post("/api/v1/auth/refresh", response_model=TokenResponse)
+@router.post("/auth/refresh", response_model=TokenResponse)
 def refresh_token(token: str = Depends(oauth2_scheme)):
     email = validate_token(token)
     if not email or TOKEN_STORE[token]['type'] != 'refresh':

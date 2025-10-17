@@ -1,11 +1,12 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID, uuid4
+from enum import Enum
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
+router = APIRouter(prefix="/projects", tags=["projects"])
 
 class ProjectStatus(str, Enum):
     PLANNING = "planning"

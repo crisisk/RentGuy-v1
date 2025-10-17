@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import List
 
-router = APIRouter(prefix="/api/v1/crew")
+router = APIRouter(prefix="/crew")
 
 # Pydantic Models
 class CrewMemberCreate(BaseModel):

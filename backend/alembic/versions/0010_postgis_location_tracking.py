@@ -25,24 +25,25 @@ def upgrade():
     op.create_table(
         'locations',
         sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('user_id', sa.Integer, sa.ForeignKey('users.id'), nullable=False),
+        sa.Column('user_id', sa.Integer, sa.ForeignKey('auth_users.id'), nullable=False),
         sa.Column('timestamp', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         # Use Geometry type for geospatial data
         sa.Column('geom', Geometry(geometry_type='POINT', srid=4326), nullable=False),
         sa.Column('accuracy', sa.Float, nullable=True),
         sa.Column('speed', sa.Float, nullable=True),
         sa.Column('heading', sa.Float, nullable=True),
-        sa.Column('project_id', sa.Integer, sa.ForeignKey('projects.id'), nullable=True),
+        sa.Column('project_id', sa.Integer, sa.ForeignKey('prj_projects.id'), nullable=True),
         sa.UniqueConstraint('user_id', name='uq_locations_user_id')
     )
 
     # 3. Create a spatial index for performance
-    op.create_index('idx_locations_geom', 'locations', ['geom'], unique=False, postgresql_using='gist')
+    # NOTE: PostGIS automatically creates a spatial index on geometry columns
+    # op.create_index('idx_locations_geom', 'locations', ['geom'], unique=False, postgresql_using='gist')
 
 
 def downgrade():
-    # 1. Drop the spatial index
-    op.drop_index('idx_locations_geom', table_name='locations', postgresql_using='gist')
+    # 1. Drop the spatial index (commented out as it's auto-created by PostGIS)
+    # op.drop_index('idx_locations_geom', table_name='locations', postgresql_using='gist')
 
     # 2. Drop the Location table
     op.drop_table('locations')

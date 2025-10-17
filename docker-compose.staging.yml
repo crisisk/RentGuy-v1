@@ -5,12 +5,15 @@ services:
     image: nginx:alpine
     volumes:
       - ./dist:/usr/share/nginx/html
+      - ./nginx/rentguy.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "80:80"
+      - "8080:80"
     networks:
       - rentguy-staging
+    depends_on:
+      - backend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -21,43 +24,54 @@ services:
       - "8000:8000"
     networks:
       - rentguy-staging
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql+psycopg://rentguy:rentguy_password@postgres:5432/rentguy
+      - REDIS_URL=redis://redis:6379/0
+      - ENV=staging
+      - ALLOWED_ORIGINS=["http://localhost:8080","http://localhost:3000"]
+      - JWT_SECRET=staging-secret-key-change-in-production-123456789
+      - JWT_ALG=HS512
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   postgres:
-    image: postgres:15
+    image: postgis/postgis:15-3.4-alpine
     environment:
-      POSTGRES_DB: rentguy
-      POSTGRES_PASSWORD: rentguy_password
+      - POSTGRES_DB=rentguy
+      - POSTGRES_USER=rentguy
+      - POSTGRES_PASSWORD=rentguy_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - rentguy-staging
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U rentguy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
     volumes:
       - redis_data:/data
     networks:
       - rentguy-staging
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
 
 networks:
   rentguy-staging:

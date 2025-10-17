@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 
-router = APIRouter(prefix="/api/v1/finance")
+router = APIRouter(prefix="/finance")
 
 class InvoiceBase(BaseModel):
     amount: float
@@ -153,6 +153,6 @@ def get_stats():
     )
 
 # Include this router in your FastAPI app with:
-# from fastapi import FastAPI
+# from fastapi import APIRouter
 # app = FastAPI()
 # app.include_router(router)

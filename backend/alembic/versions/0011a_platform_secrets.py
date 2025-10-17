@@ -6,8 +6,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0011_platform_secrets"
-down_revision = "0010_postgis_location_tracking"
+revision = "0011a_platform_secrets"
+down_revision = "0011_add_status_to_inv_items"
 branch_labels = None
 depends_on = None
 

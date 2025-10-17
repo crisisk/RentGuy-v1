@@ -1,0 +1,199 @@
+version: '3.8'
+
+# RentGuy Production - Standalone Deployment
+# No Traefik/Keycloak dependencies
+
+services:
+  # Frontend Service
+  rentguy-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - NODE_VERSION=${NODE_VERSION:-20.17.1}
+    image: rentguy-frontend:${VERSION:-latest}
+    container_name: rentguy-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    environment:
+      - VITE_API_URL=http://localhost/api
+    networks:
+      - rentguy-production
+    depends_on:
+      - rentguy-backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Backend Service
+  rentguy-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: rentguy-backend:${VERSION:-latest}
+    container_name: rentguy-backend-prod
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - rentguy-production
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-rentguy}:${POSTGRES_PASSWORD}@rentguy-db:5432/${POSTGRES_DB:-rentguy_production}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@rentguy-redis:6379/0
+      - ENV=production
+      - ALLOWED_ORIGINS=["http://localhost","http://localhost:80","http://localhost:8000"]
+      - JWT_SECRET=${JWT_SECRET_KEY}
+      - JWT_ALG=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_EXPIRATION_MINUTES:-60}
+      - REFRESH_TOKEN_EXPIRE_MINUTES=1440
+    env_file:
+      - .env.production
+    depends_on:
+      rentguy-db:
+        condition: service_healthy
+      rentguy-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Database Service
+  rentguy-db:
+    image: postgis/postgis:15-3.4-alpine
+    container_name: rentguy-db-prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-rentguy_production}
+      - POSTGRES_USER=${POSTGRES_USER:-rentguy}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - rentguy-db-data:/var/lib/postgresql/data
+    networks:
+      - rentguy-production
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rentguy} -d ${POSTGRES_DB:-rentguy_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    shm_size: 256mb
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c max_connections=100
+      -c work_mem=16MB
+      -c maintenance_work_mem=128MB
+      -c effective_cache_size=1GB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+
+  # Redis Service
+  rentguy-redis:
+    image: redis:7-alpine
+    container_name: rentguy-redis-prod
+    restart: unless-stopped
+    volumes:
+      - rentguy-redis-data:/data
+    networks:
+      - rentguy-production
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+
+  # Backup Service
+  rentguy-backup:
+    image: prodrigestivill/postgres-backup-local:15-alpine
+    container_name: rentguy-backup-prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=rentguy-db
+      - POSTGRES_DB=${POSTGRES_DB:-rentguy_production}
+      - POSTGRES_USER=${POSTGRES_USER:-rentguy}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SCHEDULE=@daily
+      - BACKUP_KEEP_DAYS=${BACKUP_KEEP_DAYS:-30}
+      - BACKUP_KEEP_WEEKS=${BACKUP_KEEP_WEEKS:-8}
+      - BACKUP_KEEP_MONTHS=${BACKUP_KEEP_MONTHS:-12}
+      - HEALTHCHECK_PORT=8080
+    volumes:
+      - /root/backups/rentguy:/backups
+    networks:
+      - rentguy-production
+    depends_on:
+      - rentguy-db
+
+networks:
+  rentguy-production:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24
+
+volumes:
+  rentguy-db-data:
+    driver: local
+
+  rentguy-redis-data:
+    driver: local

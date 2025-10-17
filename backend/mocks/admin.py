@@ -1,12 +1,12 @@
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from uuid import uuid4
 
 # Pydantic Models
 class UserBase(BaseModel):
-    email: EmailStr
+    email: str
     name: str
     role_id: str
 
@@ -45,7 +45,7 @@ roles = [
 settings = Settings()
 
 # Admin Router
-admin_router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+admin_router = APIRouter(prefix="/admin", tags=["admin"])
 
 # Users Endpoints
 @admin_router.get("/users", response_model=List[User])
