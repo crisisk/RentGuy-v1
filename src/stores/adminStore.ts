@@ -1,8 +1,6 @@
-
 import { create } from 'zustand';
 import { produce } from 'immer';
 import axios from 'axios';
-
 interface AdminState {
     users: any[];
     roles: any[];
@@ -16,7 +14,6 @@ interface AdminState {
     fetchRoles: () => Promise<void>;
     updateSettings: (settings: Record<string, any>) => Promise<void>;
 }
-
 export const adminStore = create<AdminState>((set) => ({
     users: [],
     roles: [],
@@ -26,7 +23,7 @@ export const adminStore = create<AdminState>((set) => ({
     fetchUsers: async () => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.get('http://localhost:8000/api/admin/users');
+            const response = await axios.get('http://localhost:8000/api/v1/admin/users');
             set(produce((state: AdminState) => { state.users = response.data; }));
         } catch (error: any) {
             set(produce((state: AdminState) => { state.error = error.message; }));
@@ -37,7 +34,7 @@ export const adminStore = create<AdminState>((set) => ({
     createUser: async (user) => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.post('http://localhost:8000/api/admin/users', user);
+            const response = await axios.post('http://localhost:8000/api/v1/admin/users', user);
             set(produce((state: AdminState) => { state.users.push(response.data); }));
         } catch (error: any) {
             set(produce((state: AdminState) => { state.error = error.message; }));
@@ -48,7 +45,7 @@ export const adminStore = create<AdminState>((set) => ({
     updateUser: async (id, userData) => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.put(`http://localhost:8000/api/admin/users/${id}`, userData);
+            const response = await axios.put(`http://localhost:8000/api/v1/admin/users/${id}`, userData);
             set(produce((state: AdminState) => {
                 state.users = state.users.map((u: any) => u.id === id ? response.data : u);
             }));
@@ -61,7 +58,7 @@ export const adminStore = create<AdminState>((set) => ({
     deleteUser: async (id) => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            await axios.delete(`http://localhost:8000/api/admin/users/${id}`);
+            await axios.delete(`http://localhost:8000/api/v1/admin/users/${id}`);
             set(produce((state: AdminState) => {
                 state.users = state.users.filter((u: any) => u.id !== id);
             }));
@@ -74,7 +71,7 @@ export const adminStore = create<AdminState>((set) => ({
     fetchRoles: async () => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.get('http://localhost:8000/api/admin/roles');
+            const response = await axios.get('http://localhost:8000/api/v1/admin/roles');
             set(produce((state: AdminState) => { state.roles = response.data; }));
         } catch (error: any) {
             set(produce((state: AdminState) => { state.error = error.message; }));
@@ -85,7 +82,7 @@ export const adminStore = create<AdminState>((set) => ({
     updateSettings: async (settings) => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.patch('http://localhost:8000/api/admin/settings', settings);
+            const response = await axios.patch('http://localhost:8000/api/v1/admin/settings', settings);
             set(produce((state: AdminState) => { state.settings = response.data; }));
         } catch (error: any) {
             set(produce((state: AdminState) => { state.error = error.message; }));
@@ -94,5 +91,4 @@ export const adminStore = create<AdminState>((set) => ({
         }
     }
 }));
-
 export default adminStore;

@@ -1,9 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import axios from 'axios';
-
-const API_BASE = 'http://localhost:8000/api/finance';
-
+const API_BASE = 'http://localhost:8000/api/v1/finance';
 interface FinanceState {
   invoices: any[];
   quotes: any[];
@@ -22,7 +20,6 @@ interface FinanceState {
   recordPayment: (paymentData: any) => Promise<void>;
   getFinanceStats: () => Promise<void>;
 }
-
 export const financeStore = create<FinanceState>()(immer((set) => ({
   invoices: [],
   quotes: [],
@@ -129,5 +126,4 @@ export const financeStore = create<FinanceState>()(immer((set) => ({
     }
   },
 })));
-
 export default financeStore;
