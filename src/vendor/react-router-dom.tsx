@@ -197,6 +197,21 @@ export function useLocation(): Location {
   return context.location
 }
 
+export function useParams<T extends Record<string, string> = Record<string, string>>(): T {
+  const location = useLocation()
+  const pathname = location.pathname
+
+  // Simple extraction from pathname - assumes format like /resource/:id
+  const segments = pathname.split('/').filter(Boolean)
+  const params: Record<string, string> = {}
+
+  if (segments.length > 1) {
+    params.id = segments[segments.length - 1]
+  }
+
+  return params as T
+}
+
 export function Navigate({ to, replace = false }: NavigateProps): null {
   const navigate = useNavigate()
   useEffect(() => {

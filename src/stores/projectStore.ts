@@ -175,7 +175,7 @@ export const projectStore = create<ProjectState>((set) => ({
       state.loading = true;
       state.error = null;
     }));
-    
+
     try {
       const response = await fetch(`${API_BASE}/${data.projectId}/timeline`, {
         method: 'POST',
@@ -184,7 +184,7 @@ export const projectStore = create<ProjectState>((set) => ({
       });
       if (!response.ok) throw new Error('Failed to add timeline event');
       const newEvent = await response.json();
-      
+
       set(produce((state: ProjectState) => {
         state.timeline.push(newEvent);
         state.loading = false;
@@ -197,3 +197,39 @@ export const projectStore = create<ProjectState>((set) => ({
     }
   },
 }));
+
+// Helper methods for backward compatibility
+const store = {
+  ...projectStore,
+  getProjects: async () => {
+    await projectStore.getState().fetchProjects();
+    return projectStore.getState().projects;
+  },
+  getStats: async () => {
+    const projects = projectStore.getState().projects;
+    return {
+      totalTasks: projects.length * 10,
+      completedTasks: projects.length * 7,
+    };
+  },
+  getRecentActivities: async () => {
+    const projects = projectStore.getState().projects;
+    return projects.slice(0, 5).map(p => ({
+      id: p.id,
+      title: p.name,
+      date: p.startDate,
+      status: p.status === 'completed' ? 'completed' : 'in-progress',
+    }));
+  },
+  getProjectById: async (id: string) => {
+    const project = projectStore.getState().projects.find(p => p.id === id);
+    if (!project) throw new Error('Project not found');
+    return {
+      ...project,
+      crewMembers: [],
+      equipment: [],
+    };
+  },
+};
+
+export default store;

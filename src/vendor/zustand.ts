@@ -102,3 +102,6 @@ export function create<State extends object>(
 
   return useBoundStore as Store<State>
 }
+
+// Default export for backward compatibility
+export default create
