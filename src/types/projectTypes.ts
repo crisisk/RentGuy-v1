@@ -1,68 +1,64 @@
-export type ProjectStatus = 'active' | 'upcoming' | 'completed' | 'at_risk'
-export type RiskLevel = 'ok' | 'warning' | 'critical'
-export type StatusFilter = ProjectStatus | 'all'
-export type RiskFilter = RiskLevel | 'all'
-export type SortKey = 'start' | 'end' | 'client' | 'status' | 'risk'
-export type SortDirection = 'asc' | 'desc'
-export type TimeFilter = 'all' | 'today' | 'next7' | 'next14' | 'next30' | 'past30'
-
-export type PersonaKey =
-  | 'all'
-  | 'bart'
-  | 'anna'
-  | 'tom'
-  | 'carla'
-  | 'frank'
-  | 'sven'
-  | 'isabelle'
-  | 'peter'
-  | 'nadia'
-  | 'david'
-
-export interface PersonaPreset {
-  label: string
-  description: string
-  statusFilter?: StatusFilter
-  riskFilter?: RiskFilter
-  sortKey?: SortKey
-  sortDir?: SortDirection
-  timeFilter?: TimeFilter
-  searchTerm?: string
+export enum ProjectType {
+  WEDDING = "WEDDING",
+  CORPORATE = "CORPORATE",
+  PRIVATE = "PRIVATE",
+  FESTIVAL = "FESTIVAL",
 }
 
-export interface PlannerProjectDto {
-  id: string | number
-  name: string
-  client_name: string
-  start_date: string
-  end_date?: string | null
-  status?: string | null
-  inventory_risk?: string | null
-  inventory_alerts?: unknown
-  duration_days?: number | null
-  days_until_start?: number | null
-  notes?: string | null
+export enum ProjectStatus {
+  QUOTE = "QUOTE",
+  CONFIRMED = "CONFIRMED",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
 }
 
-export interface PlannerEvent {
-  id: string
-  name: string
-  client: string
-  start: string
-  end: string
-  status: ProjectStatus
-  risk: RiskLevel
-  alerts: string[]
-  durationDays: number | null
-  daysUntilStart: number | null
-  notes: string
+export enum EventType {
+  CEREMONY = "CEREMONY",
+  COCKTAIL = "COCKTAIL",
+  DINNER = "DINNER",
+  PARTY = "PARTY",
+  BREAKDOWN = "BREAKDOWN",
 }
 
-export interface PlannerFilters {
-  status: StatusFilter
-  risk: RiskFilter
-  time: TimeFilter
-  searchTerm: string
-  sortKey: SortKey
-  sortDir: SortDirection
+export interface Project {
+  id: string;
+  name: string;
+  customerId: string;
+  type: ProjectType;
+  date: string;
+  venue: Venue;
+  status: ProjectStatus;
+  equipment: Equipment[];
+  crew: string[];
+  budget: number;
+  notes?: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  projectId: string;
+  type: EventType;
+  date: string;
+  time: string;
+  title: string;
+  description: string;
+  completed: boolean;
+}
+
+export interface Venue {
+  name: string;
+  address: string;
+  city: string;
+  contactPerson: string;
+  phone: string;
+  notes?: string;
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  status: string;
 }

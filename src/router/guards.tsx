@@ -1,152 +1,98 @@
-import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
-import type { AuthUser } from '@application/auth/api'
-import { useAuthStore, type AuthStatus } from '@stores/authStore'
+// guards.tsx
+import React, { useEffect } from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { authStore } from './authStore'; // Update import path according to your project structure
 
-export interface AuthGuardOptions {
-  readonly requireAuth?: boolean
-  readonly allowedRoles?: string[]
-}
+export const AuthSpinner = () => (
+  <div className="auth-spinner">
+    <div className="spinner-border text-primary" role="status">
+      <span className="visually-hidden">Loading...</span>
+    </div>
+    <p>Authenticating...</p>
+  </div>
+);
 
-export interface AuthGuardResult {
-  readonly status: AuthStatus
-  readonly user: AuthUser | null
-  readonly isAuthenticated: boolean
-  readonly isAuthorised: boolean
-}
+export const AccessDenied = () => {
+  const location = useLocation();
+  return (
+    <div className="access-denied">
+      <h1>403 - Access Denied</h1>
+      <p>You don't have permission to access {location.pathname}</p>
+      <Navigate to="/" replace />
+    </div>
+  );
+};
 
-export function useAuthGuard(options: AuthGuardOptions = {}): AuthGuardResult {
-  const status = useAuthStore(state => state.status)
-  const user = useAuthStore(state => state.user)
-  const token = useAuthStore(state => state.token)
+export const useAuthGuard = (requiredPermissions?: string[], strategy: 'all' | 'any' = 'all') => {
+  const { isAuthenticated, checkAuth, permissions, isLoading } = authStore();
+  const location = useLocation();
 
-  const isAuthenticated = Boolean(token)
-  const requireAuth = options.requireAuth !== false
-  const allowedRoles = options.allowedRoles?.filter(role => role && role.trim().length > 0) ?? []
-  const userRole = typeof user?.role === 'string' ? user.role.trim() : ''
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth, location.pathname]);
 
-  let isAuthorised = true
-  if (requireAuth && allowedRoles.length > 0) {
-    isAuthorised = userRole ? allowedRoles.includes(userRole) : false
-  }
-
-  if (!requireAuth) {
-    isAuthorised = true
-  }
+  const hasPermissions = () => {
+    if (!requiredPermissions) return true;
+    return strategy === 'all'
+      ? requiredPermissions.every(p => permissions.includes(p))
+      : requiredPermissions.some(p => permissions.includes(p));
+  };
 
   return {
-    status,
-    user,
     isAuthenticated,
-    isAuthorised,
+    isLoading,
+    isAuthorized: hasPermissions(),
+    requiredPermissions,
+  };
+};
+
+type ProtectedRouteProps = {
+  children?: React.ReactElement;
+  requiredPermissions?: string[];
+  permissionStrategy?: 'all' | 'any';
+};
+
+export const ProtectedRoute = ({
+  children,
+  requiredPermissions,
+  permissionStrategy = 'all',
+}: ProtectedRouteProps) => {
+  const { isAuthenticated, isLoading, isAuthorized } = useAuthGuard(requiredPermissions, permissionStrategy);
+  const location = useLocation();
+
+  if (isLoading) {
+    return <AuthSpinner />;
   }
-}
 
-export interface AuthSpinnerProps {
-  readonly message?: string
-}
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
 
-export function AuthSpinner({ message = 'Laden…' }: AuthSpinnerProps) {
-  return (
-    <div
-      style={{
-        minHeight: '60vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
-        fontFamily: brandFontStack,
-        color: brand.colors.text,
-      }}
-    >
-      <div
-        aria-hidden
-        style={{
-          width: 54,
-          height: 54,
-          borderRadius: '50%',
-          border: `4px solid ${withOpacity(brand.colors.primary, 0.25)}`,
-          borderTopColor: brand.colors.primary,
-          animation: 'rg-spin 1s linear infinite',
-        }}
-      />
-      <span style={{ fontSize: '1rem', fontWeight: 600 }}>{message}</span>
-      <style>
-        {`@keyframes rg-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}
-      </style>
-    </div>
-  )
-}
+  if (!isAuthorized) {
+    return <AccessDenied />;
+  }
 
-export interface AccessDeniedProps {
-  readonly title?: string
-  readonly description?: string
-  readonly onBackToLogin?: () => void
-}
+  return children ? children : <Outlet />;
+};
 
-export function AccessDenied({
-  title = 'Geen toegang',
-  description = 'Je hebt geen rechten om deze pagina te bekijken.',
-  onBackToLogin,
-}: AccessDeniedProps) {
-  return (
-    <div
-      role="alert"
-      style={{
-        minHeight: '60vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 18,
-        padding: '48px 20px',
-        fontFamily: brandFontStack,
-        color: brand.colors.text,
-      }}
-    >
-      <div
-        style={{
-          display: 'grid',
-          gap: 12,
-          maxWidth: 420,
-          textAlign: 'center',
-          background: withOpacity(brand.colors.primary, 0.05),
-          border: `1px solid ${withOpacity(brand.colors.primary, 0.2)}`,
-          borderRadius: 18,
-          padding: '28px 32px',
-        }}
-      >
-        <h2
-          style={{
-            margin: 0,
-            fontSize: '1.45rem',
-            fontFamily: headingFontStack,
-            color: brand.colors.primary,
-          }}
-        >
-          {title}
-        </h2>
-        <p style={{ margin: 0, fontSize: '1rem', color: withOpacity(brand.colors.text, 0.82) }}>{description}</p>
-        {onBackToLogin && (
-          <button
-            type="button"
-            onClick={onBackToLogin}
-            style={{
-              marginTop: 8,
-              padding: '10px 18px',
-              borderRadius: 999,
-              border: 'none',
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              cursor: 'pointer',
-              background: brand.colors.primary,
-              color: '#ffffff',
-            }}
-          >
-            Terug naar login
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
+// Optional: Add basic CSS for components
+const styles = `
+  .auth-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 1rem;
+  }
+
+  .access-denied {
+    text-align: center;
+    padding: 2rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+`;
+
+// Inject styles (consider using CSS modules or styled-components in real project)
+document.head.insertAdjacentHTML('beforeend', `<style>${styles}</style>`);
