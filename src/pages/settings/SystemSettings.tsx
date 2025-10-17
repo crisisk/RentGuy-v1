@@ -1,163 +1,171 @@
-Here's a comprehensive SystemSettings component:
-
-```typescript
 import React, { useState, useEffect } from 'react';
-import { observer } from 'mobx-react-lite';
-import { useAdminStore } from '@/stores/adminStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useNavigate } from 'react-router-dom';
+import adminStore from '../../stores/adminStore';
 
-import { 
-  Tabs, 
-  TabList, 
-  TabPanels, 
-  Tab, 
-  TabPanel, 
-  Button, 
-  Spinner, 
-  Alert 
-} from '@/components/ui';
+type SettingsTab = 'general' | 'email' | 'security';
 
-import GeneralSettingsForm from './forms/GeneralSettingsForm';
-import EmailSettingsForm from './forms/EmailSettingsForm';
-import SecuritySettingsForm from './forms/SecuritySettingsForm';
-import IntegrationsSettingsForm from './forms/IntegrationsSettingsForm';
+interface SystemSettingsProps {}
 
-interface SystemSettingsProps {
-  className?: string;
-}
-
-const SystemSettings: React.FC<SystemSettingsProps> = observer(({ className = '' }) => {
-  const adminStore = useAdminStore();
-  const authStore = useAuthStore();
-
-  const [activeTab, setActiveTab] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+const SystemSettings: React.FC<SystemSettingsProps> = () => {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<any>({
+    general: {},
+    email: {},
+    security: {}
+  });
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        setIsLoading(true);
-        await adminStore.fetchSystemSettings();
+        setLoading(true);
+        const fetchedSettings = await adminStore.getSystemSettings();
+        setSettings(fetchedSettings);
+        setLoading(false);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load system settings');
-      } finally {
-        setIsLoading(false);
+        setError(err instanceof Error ? err.message : 'Failed to load settings');
+        setLoading(false);
       }
     };
 
     fetchSettings();
-  }, [adminStore]);
+  }, []);
 
-  const handleSaveSettings = async () => {
+  const handleUpdateSettings = async () => {
     try {
-      await adminStore.updateSystemSettings();
-      // Optional: Show success toast
+      setLoading(true);
+      await adminStore.updateSystemSettings(settings);
+      alert('Settings updated successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings');
+      setError(err instanceof Error ? err.message : 'Failed to update settings');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <Spinner size="large" />
-      </div>
-    );
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'general':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">General Settings</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                System Name
+                <input 
+                  type="text"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  value={settings.general.systemName || ''}
+                  onChange={(e) => setSettings({
+                    ...settings, 
+                    general: { ...settings.general, systemName: e.target.value }
+                  })}
+                />
+              </label>
+            </div>
+          </div>
+        );
+      case 'email':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Email Settings</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                SMTP Server
+                <input 
+                  type="text"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  value={settings.email.smtpServer || ''}
+                  onChange={(e) => setSettings({
+                    ...settings, 
+                    email: { ...settings.email, smtpServer: e.target.value }
+                  })}
+                />
+              </label>
+            </div>
+          </div>
+        );
+      case 'security':
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Security Settings</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Two-Factor Authentication
+                <select 
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  value={settings.security.twoFactorEnabled || 'disabled'}
+                  onChange={(e) => setSettings({
+                    ...settings, 
+                    security: { ...settings.security, twoFactorEnabled: e.target.value }
+                  })}
+                >
+                  <option value="disabled">Disabled</option>
+                  <option value="enabled">Enabled</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  if (loading) {
+    return <div className="p-4 text-center">Loading...</div>;
   }
 
   if (error) {
     return (
-      <Alert 
-        type="error" 
-        message={error} 
-        onClose={() => setError(null)} 
-      />
+      <div className="p-4 bg-red-100 text-red-800">
+        {error}
+        <button 
+          onClick={() => navigate('/dashboard')} 
+          className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Back to Dashboard
+        </button>
+      </div>
     );
   }
 
   return (
-    <div className={`system-settings container mx-auto p-6 ${className}`}>
-      <h1 className="text-2xl font-bold mb-6">System Settings</h1>
-
-      <Tabs 
-        selectedIndex={activeTab} 
-        onSelect={(index) => setActiveTab(index)}
-      >
-        <TabList className="mb-6 border-b">
-          <Tab>General</Tab>
-          <Tab>Email</Tab>
-          <Tab>Security</Tab>
-          <Tab>Integrations</Tab>
-        </TabList>
-
-        <TabPanels>
-          <TabPanel>
-            <GeneralSettingsForm 
-              settings={adminStore.systemSettings.general} 
-              onUpdate={adminStore.updateGeneralSettings}
-            />
-          </TabPanel>
-          
-          <TabPanel>
-            <EmailSettingsForm 
-              settings={adminStore.systemSettings.email} 
-              onUpdate={adminStore.updateEmailSettings}
-            />
-          </TabPanel>
-          
-          <TabPanel>
-            <SecuritySettingsForm 
-              settings={adminStore.systemSettings.security} 
-              onUpdate={adminStore.updateSecuritySettings}
-            />
-          </TabPanel>
-          
-          <TabPanel>
-            <IntegrationsSettingsForm 
-              settings={adminStore.systemSettings.integrations} 
-              onUpdate={adminStore.updateIntegrationSettings}
-            />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-
-      <div className="mt-8 flex justify-end space-x-4">
-        <Button 
-          variant="secondary" 
-          onClick={() => adminStore.resetSystemSettings()}
-        >
-          Reset to Default
-        </Button>
-        <Button 
-          variant="primary" 
-          onClick={handleSaveSettings}
-          disabled={!adminStore.systemSettingsChanged}
-        >
-          Save Changes
-        </Button>
+    <div className="container mx-auto p-6 max-w-4xl">
+      <div className="bg-white shadow-md rounded-lg">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px" aria-label="Tabs">
+            {(['general', 'email', 'security'] as SettingsTab[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`
+                  px-4 py-2 border-b-2 font-medium text-sm
+                  ${activeTab === tab 
+                    ? 'border-blue-500 text-blue-600' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                `}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)} Settings
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="p-6">
+          {renderTabContent()}
+        </div>
+        <div className="bg-gray-50 px-4 py-3 sm:px-6 flex justify-end">
+          <button
+            onClick={handleUpdateSettings}
+            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+          >
+            Save Settings
+          </button>
+        </div>
       </div>
     </div>
   );
-});
+};
 
 export default SystemSettings;
-```
-
-Key Features:
-- Modular design with separate form components
-- MobX store integration with observer pattern
-- Comprehensive error and loading state handling
-- Responsive Tailwind CSS layout
-- TypeScript type safety
-- Flexible configuration with optional className prop
-- Tabs for different setting categories
-- Save/Reset functionality
-
-Note: This assumes you have corresponding store methods and UI components. You'll need to implement:
-- adminStore methods
-- Form components
-- UI components like Tabs, Button, Spinner, Alert
-- Proper TypeScript interfaces for settings
-
-Would you like me to elaborate on any specific part of the implementation?

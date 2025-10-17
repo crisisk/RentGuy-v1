@@ -1,127 +1,131 @@
-Here's a comprehensive AdminPanel component:
-
-```typescript
 import React, { useState, useEffect } from 'react';
-import { observer } from 'mobx-react-lite';
-import { adminStore } from '@/stores/adminStore';
-import { userStore } from '@/stores/userStore';
+import { Link } from 'react-router-dom';
+import adminStore from '../../stores/adminStore';
 
-import SystemStatCard from '@/components/SystemStatCard';
-import UserActivityTable from '@/components/UserActivityTable';
-import QuickSettingsForm from '@/components/QuickSettingsForm';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import LoadingSpinner from '@/components/LoadingSpinner';
-
-interface AdminPanelProps {
-  permissions: string[];
+interface SystemStats {
+  totalUsers: number;
+  activeUsers: number;
+  serverUptime: string;
+  memoryUsage: number;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = observer(({ permissions }) => {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+interface UserActivity {
+  id: number;
+  username: string;
+  lastLogin: string;
+  loginCount: number;
+}
+
+const AdminPanel: React.FC = () => {
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const formatUptime = (seconds: number): string => {
+    const days = Math.floor(seconds / (24 * 3600));
+    const hours = Math.floor((seconds % (24 * 3600)) / 3600);
+    return `${days}d ${hours}h`;
+  };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
-        setIsLoading(true);
-        await adminStore.fetchSystemStats();
-        await userStore.fetchRecentActivity();
+        setLoading(true);
+        const systemStats = await adminStore.getSystemStats();
+        const activities = await adminStore.getUserActivities();
+        
+        setStats({
+          totalUsers: systemStats.totalUsers,
+          activeUsers: systemStats.activeUsers,
+          serverUptime: formatUptime(systemStats.uptimeSeconds),
+          memoryUsage: systemStats.memoryUsage
+        });
+
+        setUserActivities(activities);
+        setLoading(false);
       } catch (err) {
-        setError('Failed to load admin dashboard');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
+        setError('Failed to load admin data');
+        setLoading(false);
       }
     };
 
     fetchAdminData();
   }, []);
 
-  // Render loading state
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  // Render error state
-  if (error) {
+  if (loading) {
     return (
-      <div className="p-4 text-red-500">
-        {error}
-        <button 
-          onClick={() => window.location.reload()}
-          className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          Retry
-        </button>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
       </div>
     );
   }
 
-  // Check admin permissions
-  const hasFullAccess = permissions.includes('ADMIN_FULL');
+  if (error) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        {error}
+      </div>
+    );
+  }
 
   return (
-    <ErrorBoundary>
-      <div className="admin-panel grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
-        {/* System Statistics */}
-        <div className="col-span-1 md:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <SystemStatCard 
-              title="Server Load" 
-              value={adminStore.systemStats.cpuLoad} 
-              icon="server"
-            />
-            <SystemStatCard 
-              title="Memory Usage" 
-              value={adminStore.systemStats.memoryUsage} 
-              icon="memory"
-            />
-            <SystemStatCard 
-              title="Active Users" 
-              value={adminStore.systemStats.activeUsers} 
-              icon="users"
-            />
-          </div>
-
-          {/* User Activity Table */}
-          <UserActivityTable 
-            activities={userStore.recentActivities}
-            canModify={hasFullAccess}
-          />
+    <div className="container mx-auto px-4 py-8 md:px-8">
+      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white shadow rounded-lg p-4">
+          <h2 className="text-gray-500 text-sm">Total Users</h2>
+          <p className="text-2xl font-bold">{stats?.totalUsers}</p>
         </div>
-
-        {/* Quick Settings & Configuration */}
-        <div className="col-span-1">
-          <QuickSettingsForm 
-            initialSettings={adminStore.systemSettings}
-            disabled={!hasFullAccess}
-            onSubmit={adminStore.updateSystemSettings}
-          />
+        <div className="bg-white shadow rounded-lg p-4">
+          <h2 className="text-gray-500 text-sm">Active Users</h2>
+          <p className="text-2xl font-bold">{stats?.activeUsers}</p>
+        </div>
+        <div className="bg-white shadow rounded-lg p-4">
+          <h2 className="text-gray-500 text-sm">Server Uptime</h2>
+          <p className="text-2xl font-bold">{stats?.serverUptime}</p>
+        </div>
+        <div className="bg-white shadow rounded-lg p-4">
+          <h2 className="text-gray-500 text-sm">Memory Usage</h2>
+          <p className="text-2xl font-bold">{stats?.memoryUsage}%</p>
         </div>
       </div>
-    </ErrorBoundary>
+
+      <div className="bg-white shadow rounded-lg p-4">
+        <h2 className="text-xl font-semibold mb-4">Recent User Activity</h2>
+        <table className="w-full text-sm text-left">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3">Username</th>
+              <th className="p-3">Last Login</th>
+              <th className="p-3">Login Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {userActivities.map((activity) => (
+              <tr key={activity.id} className="border-b">
+                <td className="p-3">{activity.username}</td>
+                <td className="p-3">{formatDate(activity.lastLogin)}</td>
+                <td className="p-3">{activity.loginCount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
-});
+};
 
 export default AdminPanel;
-```
-
-Key Features:
-- TypeScript with strong typing
-- MobX store integration
-- Responsive grid layout
-- Error and loading state handling
-- Permission-based rendering
-- Modular component design
-- Performance optimized with `observer`
-- Tailwind CSS for styling
-- Comprehensive error boundary
-
-Recommended companion components and stores would include:
-- `SystemStatCard`
-- `UserActivityTable`
-- `QuickSettingsForm`
-- `adminStore`
-- `userStore`
-
-Would you like me to elaborate on any specific aspect of the implementation?

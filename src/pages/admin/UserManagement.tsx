@@ -1,135 +1,128 @@
-// UserManagement.tsx
-import React, { useEffect, useState } from 'react';
-import { adminStore } from '@/stores/adminStore';
-import { User, UserRole } from '@/types/user';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { FiEdit, FiTrash2, FiUserPlus } from 'react-icons/fi';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import adminStore from '../../stores/adminStore';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'editor' | 'user';
+  createdAt: string;
+}
 
 const UserManagement: React.FC = () => {
-  const { users, loading, error, loadUsers } = adminStore();
-  const [localUsers, setLocalUsers] = useState<User[]>([]);
-  
-  // Load users on component mount
+  const navigate = useNavigate();
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
   useEffect(() => {
-    if (users.length === 0) {
-      loadUsers().catch((err) => console.error('Failed to load users:', err));
-    }
-    setLocalUsers(users);
-  }, [users, loadUsers]);
+    adminStore.loadUsers();
+  }, []);
 
-  const getRoleBadgeVariant = (role: UserRole) => {
-    switch (role) {
-      case 'ADMIN':
-        return 'destructive';
-      case 'MANAGER':
-        return 'warning';
-      default:
-        return 'default';
+  const handleDeleteConfirm = async () => {
+    if (selectedUserId) {
+      await adminStore.deleteUser(selectedUserId);
+      setShowConfirmDelete(false);
+      adminStore.loadUsers();
     }
   };
 
-  const handleEditUser = (userId: string) => {
-    // Implement edit logic
-    console.log('Edit user:', userId);
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    // Implement delete logic
-    console.log('Delete user:', userId);
-  };
-
-  if (error) {
+  if (adminStore.loading) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Error Loading Users</AlertTitle>
-        <AlertDescription>{error.message}</AlertDescription>
-      </Alert>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (adminStore.error) {
+    return (
+      <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">
+        {adminStore.error}
+      </div>
     );
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">User Management</h1>
-        <Button>
-          <FiUserPlus className="mr-2" />
-          Create User
-        </Button>
+    <div className="p-6">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {adminStore.users.map((user) => (
+              <tr key={user.id}>
+                <td className="px-6 py-4 whitespace-nowrap">{user.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                    user.role === 'editor' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {user.role}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {new Date(user.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap space-x-2">
+                  <Link
+                    to={`/admin/users/${user.id}/edit`}
+                    className="text-indigo-600 hover:text-indigo-900"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setSelectedUserId(user.id);
+                      setShowConfirmDelete(true);
+                    }}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-md" />
-          ))}
+      {showConfirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg">
+            <p className="mb-4">Are you sure you want to delete this user?</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowConfirmDelete(false)}
+                className="px-4 py-2 border rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
-      ) : (
-        <Table className="border-collapse w-full">
-          <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
-              <TableHead className="py-4 px-6">Name</TableHead>
-              <TableHead className="py-4 px-6">Email</TableHead>
-              <TableHead className="py-4 px-6">Role</TableHead>
-              <TableHead className="py-4 px-6">Last Login</TableHead>
-              <TableHead className="py-4 px-6 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {localUsers.map((user) => (
-              <TableRow key={user.id} className="hover:bg-gray-50">
-                <TableCell className="py-4 px-6 font-medium">{user.name}</TableCell>
-                <TableCell className="py-4 px-6">{user.email}</TableCell>
-                <TableCell className="py-4 px-6">
-                  <Badge variant={getRoleBadgeVariant(user.role)}>
-                    {user.role.toLowerCase()}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-4 px-6">
-                  {user.lastLogin ? 
-                    format(new Date(user.lastLogin), 'PPpp') : 
-                    'Never logged in'}
-                </TableCell>
-                <TableCell className="py-4 px-6 text-right space-x-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleEditUser(user.id)}
-                  >
-                    <FiEdit className="text-gray-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteUser(user.id)}
-                  >
-                    <FiTrash2 className="text-red-600" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
       )}
     </div>
   );
 };
 
 export default UserManagement;
-
-// Type definitions
-declare module '@/types/user' {
-  export interface User {
-    id: string;
-    name: string;
-    email: string;
-    role: UserRole;
-    lastLogin?: string;
-  }
-
-  export type UserRole = 'ADMIN' | 'MANAGER' | 'USER';
-}
