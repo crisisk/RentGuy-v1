@@ -28,7 +28,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.rentguy.rule=Host(`www.rentguy.nl`) || Host(`rentguy.nl`) || Host(`mr-dj.rentguy.nl`) || Host(`rentguy.sevensa.nl`)"
       - "traefik.http.routers.rentguy.entrypoints=websecure"
-      - "traefik.http.routers.rentguy.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.rentguy.tls.certresolver=zerossl"
       - "traefik.http.services.rentguy.loadbalancer.server.port=80"
       - "traefik.docker.network=sevensa-edge"
     healthcheck:
@@ -60,7 +60,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.rentguy-api.rule=(Host(`www.rentguy.nl`) || Host(`rentguy.nl`) || Host(`mr-dj.rentguy.nl`) || Host(`rentguy.sevensa.nl`)) && PathPrefix(`/api`)"
       - "traefik.http.routers.rentguy-api.entrypoints=websecure"
-      - "traefik.http.routers.rentguy-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.rentguy-api.tls.certresolver=zerossl"
       - "traefik.http.services.rentguy-api.loadbalancer.server.port=8000"
       - "traefik.docker.network=sevensa-edge"
     environment:
