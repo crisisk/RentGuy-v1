@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./dist:/usr/share/nginx/html
+    ports:
+      - "80:80"
+    networks:
+      - rentguy-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    networks:
+      - rentguy-staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: rentguy
+      POSTGRES_PASSWORD: rentguy_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rentguy-staging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+    networks:
+      - rentguy-staging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  rentguy-staging:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
