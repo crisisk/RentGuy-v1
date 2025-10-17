@@ -1,19 +1,28 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { routes } from './routes';
-import { Guards } from './guards';
-import ErrorPage from '../pages/ErrorPage';
-import NotFoundPage from '../pages/NotFoundPage';
+import ProtectedRoute from './guards';
+import routes from './routes';
 
-export const router = createBrowserRouter([
+const router = createBrowserRouter([
   {
-    element: <Guards />,
-    errorElement: <ErrorPage />,
+    errorElement: (
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-2">Something went wrong!</h1>
+        <p className="text-gray-600">Please try refreshing the page or contact support.</p>
+      </div>
+    ),
     children: [
       ...routes,
       {
         path: '*',
-        element: <NotFoundPage />,
-      },
-    ],
-  },
+        element: (
+          <div className="p-4">
+            <h1 className="text-2xl font-bold mb-2">404 - Page Not Found</h1>
+            <p className="text-gray-600">The requested page could not be found.</p>
+          </div>
+        )
+      }
+    ]
+  }
 ]);
+
+export default router;
