@@ -1,0 +1,173 @@
+
+name: CI/CD Pipeline
+
+on:
+  push:
+  pull_request:
+
+env:
+  CI: true
+
+jobs:
+  lint-and-typecheck:
+    name: Lint and Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      
+      - name: Cache npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('**/package-lock.json') }}
+      
+      - name: Check for lint script
+        id: check-lint
+        run: |
+          if grep -q '"lint"' package.json; then
+            echo "lint_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "lint_exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run lint
+        if: steps.check-lint.outputs.lint_exists == 'true'
+        run: npm run lint
+      
+      - name: Run typecheck
+        run: npm run typecheck
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      
+      - name: Cache npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('**/package-lock.json') }}
+      
+      - name: Check for test script
+        id: check-test
+        run: |
+          if grep -q '"test"' package.json; then
+            echo "test_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "test_exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run tests
+        if: steps.check-test.outputs.test_exists == 'true'
+        run: npm test
+      
+      - name: Upload coverage
+        if: steps.check-test.outputs.test_exists == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      
+      - name: Cache npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('**/package-lock.json') }}
+      
+      - name: Build project
+        run: npm run build
+      
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist-artifact
+          path: dist/
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      
+      - name: Cache npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('**/package-lock.json') }}
+      
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      
+      - name: Start dev server
+        run: npm run dev &
+      
+      - name: Wait for dev server
+        run: npx wait-on http://localhost:3000
+      
+      - name: Run E2E tests
+        run: npm run test:e2e
+      
+      - name: Upload test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-reports
+          path: playwright-report/
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dist-artifact
+          path: dist
+      
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /var/www/staging
+            rm -rf dist
+            mv ~/dist .
+            npm install --production
+            pm2 restart rentguy

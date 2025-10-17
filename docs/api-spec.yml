@@ -1,0 +1,335 @@
+openapi: 3.0.0
+info:
+  title: RentGuy API
+  version: 1.0.0
+  description: Enterprise rental management platform
+servers:
+  - url: http://localhost:8000
+  - url: https://api.rentguy.com
+paths:
+  /api/v1/projects:
+    get:
+      summary: List all projects
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+              example:
+                - id: "prj_123"
+                  name: "Downtown Tower"
+                  status: "active"
+                - id: "prj_456"
+                  name: "Suburban Mall"
+                  status: "planned"
+    post:
+      summary: Create new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+            example:
+              name: "New Office Complex"
+              status: "draft"
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                id: "prj_789"
+                name: "New Office Complex"
+                status: "draft"
+
+  /api/v1/projects/{id}:
+    get:
+      summary: Get project details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "prj_123"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                id: "prj_123"
+                name: "Downtown Tower"
+                status: "active"
+                start_date: "2024-01-15"
+    put:
+      summary: Update project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "prj_123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+            example:
+              name: "Updated Tower Name"
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Delete project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "prj_123"
+      responses:
+        '204':
+          description: No Content
+
+  /api/v1/crm/customers:
+    get:
+      summary: List customers
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+              example:
+                - company_name: "ACME Corp"
+                  contact_email: "contact@acme.com"
+    post:
+      summary: Create customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+            example:
+              company_name: "New Customer Inc"
+              contact_phone: "+1234567890"
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/finance/invoices:
+    get:
+      summary: List invoices
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+              example:
+                - invoice_number: "INV-2024-001"
+                  amount: 1500.00
+    post:
+      summary: Create invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Invoice'
+            example:
+              invoice_number: "INV-2024-002"
+              amount: 2000.00
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/admin/users:
+    get:
+      summary: List users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              example:
+                - username: "admin_user"
+                  role: "administrator"
+    post:
+      summary: Create user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+            example:
+              username: "new_user"
+              password: "secret123"
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/crew/members:
+    get:
+      summary: List crew members
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CrewMember'
+              example:
+                - name: "John Doe"
+                  position: "Foreman"
+    post:
+      summary: Create crew member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrewMember'
+            example:
+              name: "Jane Smith"
+              position: "Operator"
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/auth/login:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+            example:
+              email: "user@example.com"
+              password: "securepassword"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              example:
+                token: "jwt.token.here"
+                expires_in: 3600
+
+  /api/v1/auth/me:
+    get:
+      summary: Get current user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: "usr_123"
+                username: "current_user"
+                role: "manager"
+
+components:
+  schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, completed]
+        start_date:
+          type: string
+          format: date
+
+    Customer:
+      type: object
+      properties:
+        company_name:
+          type: string
+        contact_email:
+          type: string
+          format: email
+        contact_phone:
+          type: string
+
+    Invoice:
+      type: object
+      properties:
+        invoice_number:
+          type: string
+        amount:
+          type: number
+          format: float
+        due_date:
+          type: string
+          format: date
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+
+    CrewMember:
+      type: object
+      properties:
+        name:
+          type: string
+        position:
+          type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
