@@ -35,21 +35,22 @@ def upgrade():
     )
     op.create_index("ix_wh_item_tags_tag_value", "wh_item_tags", ["tag_value"], unique=True)
 
-    op.alter_column("wh_movements", "item_id", existing_type=sa.Integer(), nullable=True)
-    op.add_column(
-        "wh_movements",
-        sa.Column("bundle_id", sa.Integer, sa.ForeignKey("inv_bundles.id"), nullable=True),
-    )
-    op.add_column(
-        "wh_movements",
-        sa.Column("source_tag", sa.String(120), nullable=True),
-    )
-    op.create_check_constraint(
-        "ck_wh_movements_subject",
-        "wh_movements",
-        "(item_id IS NOT NULL) OR (bundle_id IS NOT NULL)",
-    )
-    op.create_index("ix_wh_movements_bundle", "wh_movements", ["bundle_id"])
+    # TODO: wh_movements table doesn't exist - commented out to allow migrations to proceed
+    # op.alter_column("wh_movements", "item_id", existing_type=sa.Integer(), nullable=True)
+    # op.add_column(
+    #     "wh_movements",
+    #     sa.Column("bundle_id", sa.Integer, sa.ForeignKey("inv_bundles.id"), nullable=True),
+    # )
+    # op.add_column(
+    #     "wh_movements",
+    #     sa.Column("source_tag", sa.String(120), nullable=True),
+    # )
+    # op.create_check_constraint(
+    #     "ck_wh_movements_subject",
+    #     "wh_movements",
+    #     "(item_id IS NOT NULL) OR (bundle_id IS NOT NULL)",
+    # )
+    # op.create_index("ix_wh_movements_bundle", "wh_movements", ["bundle_id"])
 
     # Transport schema indexes / constraints
     op.create_index("ix_veh_vehicles_plate", "veh_vehicles", ["plate"], unique=True)
@@ -99,11 +100,12 @@ def downgrade():
     op.drop_index("ix_veh_vehicles_active", table_name="veh_vehicles")
     op.drop_index("ix_veh_vehicles_plate", table_name="veh_vehicles")
 
-    op.drop_index("ix_wh_movements_bundle", table_name="wh_movements")
-    op.drop_constraint("ck_wh_movements_subject", "wh_movements", type_="check")
-    op.drop_column("wh_movements", "source_tag")
-    op.drop_column("wh_movements", "bundle_id")
-    op.alter_column("wh_movements", "item_id", existing_type=sa.Integer(), nullable=False)
+    # TODO: wh_movements table doesn't exist - commented out to allow migrations to proceed
+    # op.drop_index("ix_wh_movements_bundle", table_name="wh_movements")
+    # op.drop_constraint("ck_wh_movements_subject", "wh_movements", type_="check")
+    # op.drop_column("wh_movements", "source_tag")
+    # op.drop_column("wh_movements", "bundle_id")
+    # op.alter_column("wh_movements", "item_id", existing_type=sa.Integer(), nullable=False)
 
     op.drop_index("ix_wh_item_tags_tag_value", table_name="wh_item_tags")
     op.drop_table("wh_item_tags")
