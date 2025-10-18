@@ -61,7 +61,7 @@ services:
       - REDIS_URL=redis://rentguy-redis:6379/0
       
       # JWT & Security
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION_MINUTES=60
       - REFRESH_TOKEN_EXPIRATION_DAYS=7
@@ -143,6 +143,9 @@ services:
       # Database
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@rentguy-db:5432/${POSTGRES_DB}
 
+      # JWT & Security
+      - JWT_SECRET=${JWT_SECRET}
+
       # Celery
       - CELERY_BROKER_URL=redis://rentguy-redis:6379/0
       - CELERY_RESULT_BACKEND=redis://rentguy-redis:6379/0
@@ -185,6 +188,9 @@ services:
     environment:
       # Database
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@rentguy-db:5432/${POSTGRES_DB}
+
+      # JWT & Security
+      - JWT_SECRET=${JWT_SECRET}
 
       # Celery
       - CELERY_BROKER_URL=redis://rentguy-redis:6379/0
