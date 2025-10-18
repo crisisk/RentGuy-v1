@@ -265,7 +265,7 @@ def _generate_dummy_data(template_type: Optional[str]) -> dict:
         "client_phone": "+31 6 1234 5678",
         "company_name": "Mister DJ",
         "company_email": "info@mr-dj.nl",
-        "company_phone": "+31 20 123 4567",
+        "company_phone": "+31 (0) 40 8422594",
         "current_date": datetime.now().strftime("%d-%m-%Y"),
         "current_year": str(datetime.now().year),
     }

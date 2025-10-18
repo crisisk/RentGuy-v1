@@ -65,7 +65,7 @@ def send_customer_auto_response(
         # Company details
         company_name = 'Mister DJ'
         company_email = 'info@mr-dj.nl'
-        company_phone = '+31 20 123 4567'
+        company_phone = '+31 (0) 40 8422594'
 
         subject = None
         body_text = None

@@ -11,7 +11,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 # OpenRouter configuration
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
@@ -23,7 +23,7 @@ def generate_personalized_email(
     message: str,
     company_name: str = "Mister DJ",
     company_email: str = "info@mr-dj.nl",
-    company_phone: str = "+31 20 123 4567"
+    company_phone: str = "+31 (0) 40 8422594"
 ) -> Dict[str, str]:
     """
     Generate a personalized email using OpenRouter AI.
