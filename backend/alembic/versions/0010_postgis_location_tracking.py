@@ -25,7 +25,7 @@ def upgrade():
     op.create_table(
         'locations',
         sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('user_id', sa.Integer, sa.ForeignKey('users.id'), nullable=False),
+        sa.Column('user_id', sa.Integer, sa.ForeignKey('auth_users.id'), nullable=False),
         sa.Column('timestamp', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         # Use Geometry type for geospatial data
         sa.Column('geom', Geometry(geometry_type='POINT', srid=4326), nullable=False),
