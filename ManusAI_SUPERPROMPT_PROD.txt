@@ -1,0 +1,34 @@
+[ROLE]
+Je bent ManusAI (SRE/DevOps). Voer de **SEVENSA Core 3 PROD** restore uit.
+
+[ARTEFACTEN]
+- PSRA Comprehensive: /root/psra_final_comprehensive_backup_20250927_211818.tar.gz
+- RentGuy source: in deze kit (backend FastAPI, frontend Vite)
+- WPCTL code: volgt als ZIP (bootstrap harness aanwezig)
+- DNS/Domains: alle services via **sevensa.nl**; legacy dakslopers → 301
+
+[STEPS]
+0) cd /srv/prod/sevensa-core3 && bash scripts/00_preflight.sh
+1) PSRA: bash scripts/01_restore_psra.sh && bash scripts/90_health_gate.sh psra http://localhost:8000/health 240
+2) RentGuy DB bootstrap: bash scripts/13_db_bootstrap_rentguy.sh
+   DB compat check:    bash scripts/14_verify_db_compat.sh
+   Build & run:        bash scripts/15_rentguy_build_and_up.sh
+   Gates:              bash scripts/90_health_gate.sh rentguy-api http://localhost:8001/healthz 240
+                       bash scripts/90_health_gate.sh rentguy-ready http://localhost:8001/readyz 240
+                       bash scripts/90_health_gate.sh rentguy-web http://localhost/ 240
+3) WPCTL (na code):
+   bash scripts/40_wpctl_bootstrap.sh
+   docker compose -f docker-compose.wpctl.yml --profile wpctl build --no-cache
+   docker compose -f docker-compose.wpctl.yml --profile wpctl up -d wp-control-suite
+4) Migratie-checks:
+   bash scripts/10_verify_sevensa_migration.sh
+   bash scripts/11_domain_separation_audit.sh
+5) Veiligheid:
+   bash scripts/12_db_snapshot.sh rentguy
+   bash scripts/98_backup_compose_state.sh
+# Rollback: bash scripts/99_rollback.sh
+
+[NOTES]
+- RENTGUY_API_URL moet gezet worden bij `15_rentguy_build_and_up.sh` indien anders dan default.
+- Keycloak draait op `auth.sevensa.nl` (dev-mode). Voor productie: configureer externe DB en secrets.
+- WPCTL wordt pas geactiveerd zodra code is aangeleverd.

@@ -1,0 +1,722 @@
+[
+  {
+    "name": "search_started",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "1",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_completed",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "2",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "quote_created",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "3",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_started",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "4",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_completed",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "5",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "payment_succeeded",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "6",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_started",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "7",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_completed",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "8",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "loadout_done",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "9",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "return_checked",
+    "persona": "Renske",
+    "flow": "inventory_to_quote",
+    "properties": {
+      "environment": "staging",
+      "sequence": "10",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_started",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "1",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_completed",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "2",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "quote_created",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "3",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_started",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "4",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_completed",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "5",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "payment_succeeded",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "6",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_started",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "7",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_completed",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "8",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "loadout_done",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "9",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "return_checked",
+    "persona": "Lisa",
+    "flow": "quote_to_payment",
+    "properties": {
+      "environment": "staging",
+      "sequence": "10",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_started",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "1",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_completed",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "2",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "quote_created",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "3",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_started",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "4",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_completed",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "5",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "payment_succeeded",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "6",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_started",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "7",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_completed",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "8",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "loadout_done",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "9",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "return_checked",
+    "persona": "Wouter",
+    "flow": "pick_pack_load",
+    "properties": {
+      "environment": "staging",
+      "sequence": "10",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_started",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "1",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_completed",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "2",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "quote_created",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "3",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_started",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "4",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_completed",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "5",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "payment_succeeded",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "6",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_started",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "7",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_completed",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "8",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "loadout_done",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "9",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "return_checked",
+    "persona": "Said",
+    "flow": "crew_shift",
+    "properties": {
+      "environment": "staging",
+      "sequence": "10",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_started",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "1",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_completed",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "2",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "quote_created",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "3",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_started",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "4",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_completed",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "5",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "payment_succeeded",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "6",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_started",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "7",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_completed",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "8",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "loadout_done",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "9",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "return_checked",
+    "persona": "Inge",
+    "flow": "transport_planning",
+    "properties": {
+      "environment": "staging",
+      "sequence": "10",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_started",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "1",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "search_completed",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "2",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "quote_created",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "3",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_started",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "4",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "booking_completed",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "5",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "payment_succeeded",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "6",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_started",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "7",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "pick_completed",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "8",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "loadout_done",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "9",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  },
+  {
+    "name": "return_checked",
+    "persona": "CFO",
+    "flow": "billing_collections",
+    "properties": {
+      "environment": "staging",
+      "sequence": "10",
+      "ga4_id": "G-RENTGUY000",
+      "matomo_site_id": "7"
+    },
+    "timestamp": "2025-10-11T07:52:27.663385+00:00"
+  }
+]

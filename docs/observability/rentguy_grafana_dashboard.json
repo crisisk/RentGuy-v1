@@ -1,0 +1,55 @@
+{
+  "title": "RentGuy API – Core Observability",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "API latency (p95)",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(rentguy_request_latency_seconds_bucket[5m])) by (le, path))",
+          "legendFormat": "{{path}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "displayName": "Latency" },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Service availability",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "avg(rentguy_service_availability_ratio)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "decimals": 2 },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 }
+    },
+    {
+      "type": "table",
+      "title": "Top 10 slow endpoints",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "topk(10, rentguy_request_latency_seconds_average)",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 18, "x": 0, "y": 9 }
+    }
+  ]
+}

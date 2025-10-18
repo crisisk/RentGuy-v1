@@ -1,0 +1,103 @@
+{
+  "generated_at": "2025-10-11T07:52:25.224827+00:00",
+  "frontends": [
+    {
+      "key": "app",
+      "label": "Backoffice Operations App",
+      "status": "found",
+      "description": "Primary internal operations cockpit used by Renske and team.",
+      "root": "apps/web",
+      "missing_paths": [
+        "app"
+      ],
+      "files_scanned": 14,
+      "components": [
+        "API_BASE",
+        "App",
+        "CountdownBadge",
+        "CredentialHint",
+        "LoadingRows",
+        "Login",
+        "MetricTile",
+        "ObservabilitySummary",
+        "OnboardingOverlay",
+        "PersonaGuidance",
+        "Planner",
+        "RiskBadge",
+        "SNOOZE_DURATION_MS",
+        "STATUS",
+        "StatusBadge",
+        "StepItem",
+        "SummaryMetric",
+        "TipBanner"
+      ],
+      "exported_components": [
+        "App",
+        "CountdownBadge",
+        "Login",
+        "ObservabilitySummary",
+        "OnboardingOverlay",
+        "PersonaGuidance",
+        "Planner",
+        "STATUS",
+        "TipBanner",
+        "useObservabilityStatus"
+      ],
+      "routes": [],
+      "data_testids": [],
+      "files_missing_testids": [
+        "apps/web/src/App.jsx",
+        "apps/web/src/Login.jsx",
+        "apps/web/src/ObservabilitySummary.jsx",
+        "apps/web/src/OnboardingOverlay.jsx",
+        "apps/web/src/Planner.jsx",
+        "apps/web/src/TipBanner.jsx",
+        "apps/web/src/api.js",
+        "apps/web/src/useOnboardingProgress.js"
+      ],
+      "lighthouse_routes": []
+    },
+    {
+      "key": "portal",
+      "label": "Client Booking Portal",
+      "status": "missing",
+      "description": "Customer-facing booking and payment portal for Lisa.",
+      "root": null,
+      "missing_paths": [
+        "apps/portal",
+        "portal"
+      ],
+      "files_scanned": 0,
+      "components": [],
+      "exported_components": [],
+      "routes": [],
+      "data_testids": [],
+      "files_missing_testids": [],
+      "lighthouse_routes": []
+    },
+    {
+      "key": "crew",
+      "label": "Crew PWA Scanner",
+      "status": "found",
+      "description": "Mobile-first PWA for warehouse and crew flows (Wouter & Said).",
+      "root": "apps/pwa-scanner",
+      "missing_paths": [
+        "crew"
+      ],
+      "files_scanned": 3,
+      "components": [
+        "API",
+        "Scanner"
+      ],
+      "exported_components": [
+        "Scanner"
+      ],
+      "routes": [],
+      "data_testids": [],
+      "files_missing_testids": [
+        "apps/pwa-scanner/src/scanner.jsx"
+      ],
+      "lighthouse_routes": []
+    }
+  ]
+}

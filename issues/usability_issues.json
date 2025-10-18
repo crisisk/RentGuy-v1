@@ -1,0 +1,47 @@
+[
+  {
+    "id": "UX-001",
+    "area": "usability",
+    "severity": "high",
+    "location": "OnboardingOverlay.jsx:297-330",
+    "persona": "n/a",
+    "description": "Buttons missen focus styles en sluiten overlay niet via toetsenbord.",
+    "evidence": "<button onClick={() => onSnooze?.()} style={{ background: ... }} />",
+    "impact": "Keyboard gebruikers kunnen overlay niet veilig bedienen; risico op WCAG-fail.",
+    "fix": "Voeg focus-visible styles, rol="button" semantics en Escape handler toe.",
+    "acceptance": [
+      "Buttons tonen duidelijk focus outline",
+      "Escape sluit overlay consistent"
+    ]
+  },
+  {
+    "id": "UX-002",
+    "area": "usability",
+    "severity": "medium",
+    "location": "Login.jsx:139-219",
+    "persona": "Client",
+    "description": "Foutmeldingen zijn niet gekoppeld aan inputs of aria-live region.",
+    "evidence": "{error && (<p style={{ ... }}>{error}</p>)}",
+    "impact": "Screenreader gebruikers horen fout niet en kunnen niet herstellen.",
+    "fix": "Voeg aria-live, role='alert' en id koppeling aan input.",
+    "acceptance": [
+      "Foutmelding wordt uitgesproken door screenreader",
+      "Input verwijst via aria-describedby naar fout"
+    ]
+  },
+  {
+    "id": "UX-003",
+    "area": "usability",
+    "severity": "medium",
+    "location": "Planner.jsx:5-101",
+    "persona": "Sales",
+    "description": "Preset labels gebruiken interne namen i.p.v. rollen.",
+    "evidence": "label: 'Bart de Manager', label: 'Anna de Planner'",
+    "impact": "Nieuwe gebruikers herkennen hun rol niet, verhoogt mentale belasting.",
+    "fix": "Hernoem presets naar zakelijke persona’s en toon beschrijvingen met KPI’s.",
+    "acceptance": [
+      "Preset namen komen overeen met persona lijst",
+      "Tooltip/description benoemt relevante KPI"
+    ]
+  }
+]

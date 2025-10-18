@@ -1,0 +1,42 @@
+[
+  {
+    "module": "projects",
+    "message": "Gebruik de MR-DJ showbuilder om events modulair te plannen en dubbele boekingen te voorkomen.",
+    "cta": "Open de planner"
+  },
+  {
+    "module": "crew",
+    "message": "Activeer automatische briefings zodat technici de MR-DJ draaiboeken per shift ontvangen.",
+    "cta": "Configureer crewbriefing"
+  },
+  {
+    "module": "inventory",
+    "message": "Bundel decks, microfoons en effecten tot MR-DJ kits zodat warehouse scanning sneller gaat.",
+    "cta": "Maak een gear kit"
+  },
+  {
+    "module": "warehouse",
+    "message": "Gebruik de PWA-scanner bij in- en uitgifte voor realtime magazijnstatus.",
+    "cta": "Start mobiele scanner"
+  },
+  {
+    "module": "transport",
+    "message": "Plan ritten met MR-DJ routekaarten en deel de QR-code met chauffeurs.",
+    "cta": "Genereer transportbrief"
+  },
+  {
+    "module": "billing",
+    "message": "Koppel projecten direct aan je MR-DJ factuursjabloon en verstuur met één klik.",
+    "cta": "Maak factuur"
+  },
+  {
+    "module": "templates",
+    "message": "Werk met de MR-DJ branding kit voor offertes, crewbriefings en QR-check-ins.",
+    "cta": "Open templatebeheer"
+  },
+  {
+    "module": "automation",
+    "message": "Gebruik automatiseringen om repetitieve taken te elimineren zodra onboarding mijlpalen zijn bereikt.",
+    "cta": "Open automation studio"
+  }
+]

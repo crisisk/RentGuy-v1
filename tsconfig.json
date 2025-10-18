@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitAny": true,
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": false,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@application/*": [
+        "src/application/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@core/*": [
+        "src/core/*"
+      ],
+      "@domain/*": [
+        "src/domain/*"
+      ],
+      "@hooks": [
+        "src/hooks/index.ts"
+      ],
+      "@hooks/*": [
+        "src/hooks/*"
+      ],
+      "@infra/*": [
+        "src/infrastructure/*"
+      ],
+      "@infra/offline-queue": [
+        "warehouse/offline-queue.js"
+      ],
+      "@errors": [
+        "src/errors/index.ts"
+      ],
+      "@router": [
+        "src/router/index.tsx"
+      ],
+      "@router/*": [
+        "src/router/*"
+      ],
+      "@rg-types/*": [
+        "src/types/*"
+      ],
+      "@stores/*": [
+        "src/stores/*"
+      ],
+      "@ui/*": [
+        "src/ui/*"
+      ],
+      "@fullcalendar/react": [
+        "vendor/fullcalendar/react.tsx"
+      ],
+      "@fullcalendar/daygrid": [
+        "vendor/fullcalendar/daygrid.ts"
+      ],
+      "@fullcalendar/timegrid": [
+        "vendor/fullcalendar/timegrid.ts"
+      ],
+      "@fullcalendar/interaction": [
+        "vendor/fullcalendar/interaction.ts"
+      ],
+      "@fullcalendar/core": [
+        "vendor/fullcalendar/core.ts"
+      ],
+      "react-router-dom": [
+        "src/vendor/react-router-dom.tsx"
+      ],
+      "zustand": [
+        "src/vendor/zustand.ts"
+      ],
+      "zustand/middleware/immer": [
+        "src/vendor/zustand-immer.ts"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "types",
+    "OnboardingOverlay.jsx",
+    "warehouse/offline-queue.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "apps",
+    "analysis",
+    "backend",
+    "ops",
+    "patches",
+    "qa",
+    "rentguy",
+    "rentguyapp_*",
+    "reports",
+    "testing",
+    "tests",
+    "warehouse/__tests__",
+    "**/node_modules"
+  ]
+}

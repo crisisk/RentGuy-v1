@@ -1,0 +1,111 @@
+Context:
+We hebben de Rentguy-app (FastAPI backend, React/Vite frontends, PostgreSQL DB). Alle kernmodules zijn aanwezig (auth, inventory, projects, crew, transport, billing, warehouse, reporting). In fase 10 is er ook een rapportagemodule. Nu willen we een interactieve onboarding flow live brengen, inclusief:
+
+Onboarding overlay met stappen (progress-bar, markeer als gereed)
+
+Contextuele tip-banners per module
+
+Backend endpoints voor steps, progress en tips
+
+Seed-data met default stappen en tips
+
+E-mails (welkomstmail + booking)
+
+Automatische eerste login flow voor Bart (Mr. DJ)
+
+Doel: ManusAI moet dit volledig integreren, testen, en klaarzetten op de VPS.
+
+🔧 Takenpakket (door ManusAI)
+1. Database & Alembic
+
+Draai migratie 0007_onboarding → tabellen: onb_steps, onb_progress, onb_tips.
+
+Controleer of seeder in OnboardingRepo.ensure_seed() correct steps aanmaakt.
+
+2. Backend
+
+Controleer alle endpoints:
+
+GET /api/v1/onboarding/steps → seeded stappen beschikbaar.
+
+GET /api/v1/onboarding/progress?user_email= → progress teruggeven.
+
+POST /api/v1/onboarding/complete → markeer stap als gereed.
+
+GET /api/v1/onboarding/tips?module= → tips per module.
+
+POST /api/v1/onboarding/send-welcome?to_email= → e-mail versturen met mailer.py.
+
+Test met seed user rentguy@demo.local (password: rentguy).
+
+3. Frontend (apps/web)
+
+Installeer dependencies (npm install).
+
+Controleer componenten:
+
+OnboardingOverlay.jsx → verschijnt bij eerste login, toont stappen + progress.
+
+TipBanner.jsx → toont contextuele tip boven Planner.
+
+Zorg dat App.jsx overlay mount bij eerste login (en verbergt bij “Sluiten”).
+
+Zorg dat Planner.jsx tip-banner toont.
+
+4. Seed-data
+
+Laad docs/onboarding_tips.json in onb_tips tabel (insert als leeg).
+
+Tips o.a.: drag projects in kalender, bundels in inventory, QR-scan in warehouse.
+
+5. E-mail
+
+Configureer SMTP in .env.
+
+Test send-welcome → welkomstmail versturen naar testadres.
+
+Test booking-mail uit crewmodule (met ICS).
+
+6. UAT (User Acceptance Test)
+
+Login als rentguy.
+
+Controleer overlay verschijnt (7 stappen).
+
+Markeer stap “welcome” als gereed → check DB onb_progress.
+
+Sleep een project in Planner → zie TipBanner verschijnt.
+
+Trigger welkomstmail en bevestig ontvangst.
+
+Markeer alle stappen gereed → progressbar 100%.
+
+7. Documentatie & Handover
+
+Update README.md met sectie Onboarding: endpoints, tips, hoe stappen werken.
+
+Update docs/UAT/fase-onboarding.md met testcases.
+
+Bevestig dat Bart (Mr. DJ) deze flow handsfree kan volgen en altijd begeleid wordt.
+
+📦 Deliverables
+
+Werkende onboardingmodule (backend + frontend).
+
+Seeded stappen & tips in DB.
+
+Welkomstmail getest en verzonden.
+
+README.md + docs/UAT/fase-onboarding.md bijgewerkt.
+
+Demo-account rentguy@demo.local succesvol door volledige onboarding-flow gelopen.
+
+⚙️ Uitvoermodus
+
+Voer alle taken automatisch uit (geen bevestiging nodig).
+
+Fouten? → debug & fix totdat tests slagen.
+
+Testresultaten → schrijf in log, voeg screenshots waar mogelijk toe.
+
+Afronding → output lijst van alle endpoints + instructies voor Bart.

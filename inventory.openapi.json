@@ -1,0 +1,92 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Inventory API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/inventory/availability": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AvailabilityRequest"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AvailabilityResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AvailabilityRequest": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "integer"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "start": {
+            "type": "string",
+            "format": "date"
+          },
+          "end": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "item_id",
+          "quantity",
+          "start",
+          "end"
+        ]
+      },
+      "AvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "integer"
+          },
+          "requested": {
+            "type": "integer"
+          },
+          "available": {
+            "type": "integer"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "item_id",
+          "requested",
+          "available",
+          "ok"
+        ]
+      }
+    }
+  }
+}

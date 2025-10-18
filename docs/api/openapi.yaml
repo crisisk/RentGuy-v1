@@ -1,0 +1,227 @@
+openapi: 3.0.0
+info:
+  title: User Management API
+  version: 1.0.0
+  description: API for managing user accounts and profiles
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: integer
+              example: 404
+            message:
+              type: string
+              example: "User not found"
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        username:
+          type: string
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+    UserCreate:
+      type: object
+      required:
+        - username
+        - email
+      properties:
+        username:
+          type: string
+          minLength: 4
+          maxLength: 20
+          example: "jane_doe"
+        email:
+          type: string
+          format: email
+          example: "jane@example.com"
+    UserUpdate:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 4
+          maxLength: 20
+          example: "new_username"
+        email:
+          type: string
+          format: email
+          example: "new@example.com"
+
+paths:
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List all users
+      operationId: getUsers
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - ApiKeyAuth: []
+    
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Username or email already exists
+      security:
+        - ApiKeyAuth: []
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+      security:
+        - ApiKeyAuth: []
+    
+    put:
+      tags:
+        - Users
+      summary: Update user
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+        '404':
+          description: User not found
+      security:
+        - ApiKeyAuth: []
+    
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      operationId: deleteUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deleted
+        '404':
+          description: User not found
+      security:
+        - ApiKeyAuth: []
