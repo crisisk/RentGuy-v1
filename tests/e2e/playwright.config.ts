@@ -31,7 +31,7 @@ const config: PlaywrightTestConfig = defineConfig({
   // Shared settings for all projects
   use: {
     // Base URL for all tests
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5175',
     
     // Collect trace on failure
     trace: 'on-first-retry',
@@ -69,8 +69,8 @@ const config: PlaywrightTestConfig = defineConfig({
 
   // Web server for production build testing
   webServer: {
-    command: 'npm run start',
-    url: 'http://localhost:3000',
+    command: process.env.PORT ? `PORT=${process.env.PORT} npm run start:dev` : 'npm run start:dev',
+    url: process.env.E2E_BASE_URL ?? 'http://localhost:5175',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000
   }
