@@ -76,7 +76,7 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.PrimaryKeyConstraint('id'),
-        sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ondelete='CASCADE')
+        sa.ForeignKeyConstraint(['customer_id'], ['customer_profiles.id'], ondelete='CASCADE')
     )
     op.create_index('idx_recurring_templates_customer', 'recurring_invoice_templates', ['customer_id'])
     op.create_index('idx_recurring_templates_status', 'recurring_invoice_templates', ['status'])
@@ -92,7 +92,7 @@ def upgrade():
         sa.Column('error_message', sa.Text(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['template_id'], ['recurring_invoice_templates.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['invoice_id'], ['invoices.id'], ondelete='SET NULL')
+        sa.ForeignKeyConstraint(['invoice_id'], ['bil_invoices.id'], ondelete='SET NULL')
     )
     op.create_index('idx_recurring_history_template', 'recurring_invoice_history', ['template_id'])
 
@@ -116,7 +116,7 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.PrimaryKeyConstraint('id'),
-        sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['project_id'], ['prj_projects.id'], ondelete='SET NULL'),
         sa.ForeignKeyConstraint(['created_by'], ['auth_users.id'], ondelete='CASCADE')
     )
     op.create_index('idx_job_postings_status', 'job_postings', ['status'])
@@ -273,7 +273,7 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['partner_equipment_id'], ['partner_equipment.id'], ondelete='RESTRICT'),
-        sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='SET NULL')
+        sa.ForeignKeyConstraint(['project_id'], ['prj_projects.id'], ondelete='SET NULL')
     )
     op.create_index('idx_subrenting_bookings_equipment', 'subrenting_bookings', ['partner_equipment_id'])
     op.create_index('idx_subrenting_bookings_project', 'subrenting_bookings', ['project_id'])
