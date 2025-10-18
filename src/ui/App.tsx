@@ -3,6 +3,7 @@ import {
   deriveRoleErrorMessage,
   ensureAuthEmail,
   getCurrentUser,
+  isOfflineDemoToken,
   updateRole,
   type AuthUser,
 } from '@application/auth/api'
@@ -106,6 +107,7 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
   const clearAuth = useAuthStore(state => state.clear)
   const markAuthChecking = useAuthStore(state => state.markChecking)
   const markAuthError = useAuthStore(state => state.markError)
+  const markAuthOffline = useAuthStore(state => state.markOffline)
   const syncAuthToken = useAuthStore(state => state.syncToken)
   const {
     shouldShow,
@@ -124,6 +126,13 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
 
   useEffect(() => {
     if (!token) {
+      return
+    }
+
+    if (isOfflineDemoToken(token)) {
+      const storedEmail = ensureAuthEmail(getLocalStorageItem('user_email', ''))
+      setUserEmail(storedEmail)
+      markAuthOffline('Offline demo-modus geactiveerd. Lokale data wordt gebruikt.')
       return
     }
 
@@ -155,7 +164,11 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
         }
         const storedEmail = ensureAuthEmail(getLocalStorageItem('user_email', ''))
         setUserEmail(storedEmail)
-        markAuthError(result.error.message ?? 'Authenticatiecontrole mislukt')
+        if (result.error.code === 'network' || result.error.code === 'timeout') {
+          markAuthOffline('Geen netwerkverbinding. We tonen de laatst bekende demo-data.')
+        } else {
+          markAuthError(result.error.message ?? 'Authenticatiecontrole mislukt')
+        }
       }
     })()
 
@@ -163,7 +176,7 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
       ignore = true
       controller?.abort()
     }
-  }, [markAuthChecking, markAuthError, setAuthCredentials, token, userEmail])
+  }, [markAuthChecking, markAuthError, markAuthOffline, setAuthCredentials, token, userEmail])
 
   useEffect(() => {
     const unsubscribe = subscribeToTokenChanges(nextToken => {
