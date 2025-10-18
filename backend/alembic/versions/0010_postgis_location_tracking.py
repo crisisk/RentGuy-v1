@@ -37,7 +37,13 @@ def upgrade():
     )
 
     # 3. Create a spatial index for performance
-    op.create_index('idx_locations_geom', 'locations', ['geom'], unique=False, postgresql_using='gist')
+    # Wrapped in try/except to handle case where index already exists from previous failed run
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    indexes = [idx['name'] for idx in inspector.get_indexes('locations')]
+    if 'idx_locations_geom' not in indexes:
+        op.create_index('idx_locations_geom', 'locations', ['geom'], unique=False, postgresql_using='gist')
 
 
 def downgrade():
