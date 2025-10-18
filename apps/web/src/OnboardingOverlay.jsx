@@ -188,7 +188,7 @@ function ErrorBanner({ message, onRetry }) {
             Probeer opnieuw
           </button>
         )}
-        <a href="mailto:support@sevensa.com" style={styles.alertLink}>
+        <a href="mailto:support@sevensa.nl" style={styles.alertLink}>
           Contacteer support
         </a>
       </div>

@@ -47,7 +47,7 @@ describe('OnboardingOverlay', () => {
     )
     expect(screen.getByRole('link', { name: 'Contacteer support' })).toHaveAttribute(
       'href',
-      'mailto:support@sevensa.com',
+      'mailto:support@sevensa.nl',
     )
 
     getSteps.mockResolvedValueOnce([
