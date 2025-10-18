@@ -35,7 +35,7 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.PrimaryKeyConstraint('id'),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['user_id'], ['auth_users.id'], ondelete='CASCADE'),
         sa.UniqueConstraint('user_id')
     )
     op.create_index('idx_customer_profiles_user_id', 'customer_profiles', ['user_id'])
@@ -51,7 +51,7 @@ def upgrade():
         sa.Column('mime_type', sa.String(100), nullable=False),
         sa.Column('uploaded_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.PrimaryKeyConstraint('id'),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE')
+        sa.ForeignKeyConstraint(['user_id'], ['auth_users.id'], ondelete='CASCADE')
     )
     op.create_index('idx_customer_documents_user_id', 'customer_documents', ['user_id'])
     op.create_index('idx_customer_documents_type', 'customer_documents', ['document_type'])
@@ -117,7 +117,7 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='SET NULL'),
-        sa.ForeignKeyConstraint(['created_by'], ['users.id'], ondelete='CASCADE')
+        sa.ForeignKeyConstraint(['created_by'], ['auth_users.id'], ondelete='CASCADE')
     )
     op.create_index('idx_job_postings_status', 'job_postings', ['status'])
     op.create_index('idx_job_postings_start_date', 'job_postings', ['start_date'])
@@ -136,7 +136,7 @@ def upgrade():
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['job_id'], ['job_postings.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['crew_member_id'], ['crew_members.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['reviewed_by'], ['users.id'], ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['reviewed_by'], ['auth_users.id'], ondelete='SET NULL'),
         sa.UniqueConstraint('job_id', 'crew_member_id', name='uq_job_application')
     )
     op.create_index('idx_job_applications_job', 'job_applications', ['job_id'])
@@ -205,7 +205,7 @@ def upgrade():
         sa.Column('scanned_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['equipment_id'], ['inv_items.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['scanned_by'], ['users.id'], ondelete='CASCADE')
+        sa.ForeignKeyConstraint(['scanned_by'], ['auth_users.id'], ondelete='CASCADE')
     )
     op.create_index('idx_scan_history_equipment', 'scan_history', ['equipment_id'])
     op.create_index('idx_scan_history_user', 'scan_history', ['scanned_by'])
