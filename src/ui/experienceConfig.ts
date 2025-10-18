@@ -1,16 +1,29 @@
 import { brand } from './branding'
 
-export interface MarketingExperienceConfig {
-  readonly mode: 'marketing'
+const HELP_CENTER_ORIGIN = 'https://help.sevensa.nl'
+const STATUS_PAGE_ORIGIN = 'https://status.sevensa.nl'
+
+export interface SupportConfig {
+  readonly tenantSlug: string
+  readonly helpCenterBaseUrl: string
+  readonly statusPageUrl: string
+}
+
+interface BaseExperienceConfig {
   readonly hostname: string
+  readonly support: SupportConfig
+}
+
+export interface MarketingExperienceConfig extends BaseExperienceConfig {
+  readonly mode: 'marketing'
   readonly primaryCtaHref: string
   readonly secondaryCtaHref: string
+  readonly demoPagePath: string
   readonly demoVideoUrl?: string
 }
 
-export interface TenantExperienceConfig {
+export interface TenantExperienceConfig extends BaseExperienceConfig {
   readonly mode: 'tenant'
-  readonly hostname: string
   readonly tenantKey: string
   readonly routerBasePath: string
   readonly defaultAuthenticatedPath: string
@@ -22,6 +35,38 @@ export interface TenantExperienceConfig {
 
 export type ExperienceConfig = MarketingExperienceConfig | TenantExperienceConfig
 
+function sanitiseTenantSlug(raw: string | undefined): string {
+  if (!raw) {
+    return 'rentguy'
+  }
+  const trimmed = raw.trim().toLowerCase()
+  if (!trimmed) {
+    return 'rentguy'
+  }
+  const slug = trimmed
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return slug || 'rentguy'
+}
+
+function createSupportConfig(tenantKey?: string): SupportConfig {
+  const tenantSlug = sanitiseTenantSlug(tenantKey)
+  const helpCenterBaseUrl = `${HELP_CENTER_ORIGIN}/${tenantSlug}`
+  const statusPageUrl = tenantSlug === 'rentguy'
+    ? `${STATUS_PAGE_ORIGIN}/rentguy`
+    : `${STATUS_PAGE_ORIGIN}/?tenant=${encodeURIComponent(tenantSlug)}`
+
+  return {
+    tenantSlug,
+    helpCenterBaseUrl,
+    statusPageUrl,
+  }
+}
+
+const DEFAULT_SUPPORT = createSupportConfig('rentguy')
+
 const DEFAULT_TENANT_CONFIG: TenantExperienceConfig = {
   mode: 'tenant',
   hostname: 'localhost',
@@ -30,6 +75,7 @@ const DEFAULT_TENANT_CONFIG: TenantExperienceConfig = {
   defaultAuthenticatedPath: '/planner',
   defaultUnauthenticatedPath: '/login',
   postLoginPath: '/planner',
+  support: DEFAULT_SUPPORT,
 }
 
 function normaliseHostname(rawHostname?: string): string {
@@ -52,9 +98,11 @@ export function resolveExperienceConfig(rawHostname?: string): ExperienceConfig 
     return {
       mode: 'marketing',
       hostname,
-      primaryCtaHref: 'https://mr-dj.rentguy.nl/login',
+      primaryCtaHref: '/demo',
       secondaryCtaHref: '#contact',
+      demoPagePath: '/demo',
       demoVideoUrl: 'https://cdn.sevensa.ai/rentguy/demo/rentguy-teaser.mp4',
+      support: DEFAULT_SUPPORT,
     }
   }
 
@@ -69,6 +117,7 @@ export function resolveExperienceConfig(rawHostname?: string): ExperienceConfig 
       postLoginPath: '/dashboard',
       secretsFocusPath: '/dashboard',
       stagingDomainNote: 'Houd er rekening mee dat www.mr-dj.nl momenteel verwijst naar staging.sevensa.nl; update DNS na validatie.',
+      support: createSupportConfig('mr-dj'),
     }
   }
 
@@ -81,10 +130,11 @@ export function resolveExperienceConfig(rawHostname?: string): ExperienceConfig 
       routerBasePath: '',
       postLoginPath: '/planner',
       defaultAuthenticatedPath: '/planner',
+      support: createSupportConfig(subdomain),
     }
   }
 
-  return { ...DEFAULT_TENANT_CONFIG, hostname }
+  return { ...DEFAULT_TENANT_CONFIG, hostname, support: DEFAULT_SUPPORT }
 }
 
 export function describeTenantDisplayName(config: TenantExperienceConfig): string {
@@ -99,4 +149,20 @@ export function describeTenantDisplayName(config: TenantExperienceConfig): strin
     .join(' ')
 
   return capitalised ? `${capitalised} Control Center` : `${brand.shortName} Control Center`
+}
+
+export function resolveSupportConfig(rawHostname?: string): SupportConfig {
+  const experience = resolveExperienceConfig(rawHostname)
+  return experience.support
+}
+
+export function buildHelpCenterUrl(support: SupportConfig, path?: string): string {
+  if (!path) {
+    return support.helpCenterBaseUrl
+  }
+  const trimmed = `${path}`.trim().replace(/^\/+/, '')
+  if (!trimmed) {
+    return support.helpCenterBaseUrl
+  }
+  return `${support.helpCenterBaseUrl}/${trimmed}`
 }

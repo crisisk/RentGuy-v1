@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useMemo, useState, type ChangeEvent, type CSSProperties } from 'react'
 import { login, deriveLoginErrorMessage, ensureAuthEmail, type AuthUser } from '@application/auth/api'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
+import { buildHelpCenterUrl, resolveSupportConfig } from './experienceConfig'
 import FlowExperienceShell from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
@@ -114,6 +115,9 @@ export function Login({ onLogin }: LoginProps) {
   const [password, setPassword] = useState('mr-dj')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const support = useMemo(() => resolveSupportConfig(), [])
+  const helpCenterUrl = support.helpCenterBaseUrl
+  const statusPageUrl = support.statusPageUrl
 
   const handleScrollToForm = useCallback(() => {
     if (typeof document === 'undefined') {
@@ -187,16 +191,16 @@ export function Login({ onLogin }: LoginProps) {
           Bekijk de release notes en FAQ voor de laatste pilotwijzigingen of open een supportticket voor directe hulp.
         </p>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          <a href="https://help.sevensa.nl/rentguy" target="_blank" rel="noreferrer" style={footerLinkStyle}>
+          <a href={helpCenterUrl} target="_blank" rel="noreferrer" style={footerLinkStyle}>
             Helpcenter
           </a>
-          <a href="https://status.sevensa.nl" target="_blank" rel="noreferrer" style={footerLinkStyle}>
+          <a href={statusPageUrl} target="_blank" rel="noreferrer" style={footerLinkStyle}>
             Statuspagina
           </a>
         </div>
       </div>
     ),
-    [],
+    [helpCenterUrl, statusPageUrl],
   )
 
   const credentialList = useMemo(

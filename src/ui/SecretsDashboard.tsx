@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'rea
 import { fetchEmailDiagnostics, fetchManagedSecrets, syncManagedSecrets, updateManagedSecret } from '@application/platform/secrets/api'
 import type { EmailDiagnostics, ManagedSecret } from '@rg-types/platform'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
+import { buildHelpCenterUrl, resolveSupportConfig } from './experienceConfig'
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
 import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
@@ -193,6 +194,8 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   const userFirstName = (user?.first_name ?? '').trim()
   const userLastName = (user?.last_name ?? '').trim()
   const userDisplayName = [userFirstName, userLastName].filter(Boolean).join(' ').trim()
+  const support = useMemo(() => resolveSupportConfig(), [])
+  const complianceUrl = useMemo(() => buildHelpCenterUrl(support, 'compliance'), [support])
 
   const markSaving = useCallback((key: string, saving: boolean) => {
     setSavingKeys(prev => {
@@ -1530,7 +1533,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
           <span>• Authenticatie: {emailDiagnostics?.authConfigured ? 'ingesteld' : 'niet ingesteld'}</span>
         </div>
         <a
-          href="https://help.sevensa.nl/rentguy/compliance"
+          href={complianceUrl}
           target="_blank"
           rel="noreferrer"
           style={{ color: '#ffffff', fontWeight: 600, textDecoration: 'none' }}
@@ -1539,7 +1542,14 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
         </a>
       </div>
     ),
-    [configuredIntegrations, emailDiagnostics?.authConfigured, emailDiagnostics?.nodeReady, integrationCoverage, integrationSecrets.length],
+    [
+      complianceUrl,
+      configuredIntegrations,
+      emailDiagnostics?.authConfigured,
+      emailDiagnostics?.nodeReady,
+      integrationCoverage,
+      integrationSecrets.length,
+    ],
 
     )
 
