@@ -48,24 +48,27 @@ const heroExplainers: FlowExplainerItem[] = [
 ]
 
 function getCredentialExplainers(tenant: ReturnType<typeof getCurrentTenant>): FlowExplainerItem[] {
+  // Determine password based on tenant
+  const password = tenant?.id === 'mrdj' ? 'demo' : (tenant?.id === 'sevensa' ? 'sevensa' : 'demo')
+
   return [
     {
-      id: 'bart',
+      id: 'account1',
       title: 'Operations Manager',
       description: 'Volledige toegang tot planning, teammanagement en onboarding.',
       meta: (
         <span>
-          <strong>Gebruiker:</strong> {tenant?.customContent.demoAccount1 || 'bart'} · <strong>Wachtwoord:</strong> mr-dj
+          <strong>Gebruiker:</strong> {tenant?.customContent.demoAccount1 || 'bart'} · <strong>Wachtwoord:</strong> {password}
         </span>
       ),
     },
     {
-      id: 'rentguy',
+      id: 'account2',
       title: 'Finance Manager',
       description: 'Facturen, voorschotten en KPI-monitoring om cashflow te testen.',
       meta: (
         <span>
-          <strong>Gebruiker:</strong> {tenant?.customContent.demoAccount2 || 'rentguy'} · <strong>Wachtwoord:</strong> rentguy
+          <strong>Gebruiker:</strong> {tenant?.customContent.demoAccount2 || 'rentguy'} · <strong>Wachtwoord:</strong> {password}
         </span>
       ),
     },
@@ -165,8 +168,9 @@ function SimpleLoginForm({
           value={resolveEmail(user)}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
             const email = event.target.value
-            const shorthand = email.split('@')[0] ?? ''
-            onUserChange(shorthand)
+            // If email contains @, use full email; otherwise use shorthand
+            const value = email.includes('@') ? email : (email.split('@')[0] ?? '')
+            onUserChange(value)
           }}
           autoComplete="email"
           required
@@ -251,8 +255,13 @@ function SimpleLoginForm({
 export function Login({ onLogin }: LoginProps) {
   const tenant = getCurrentTenant()
   const brandColor = tenant?.primaryColor || brand.colors.primary
-  const [user, setUser] = useState('bart')
-  const [password, setPassword] = useState('mr-dj')
+
+  // Set default credentials based on tenant
+  const defaultEmail = tenant?.customContent.demoAccount1 || 'bart'
+  const defaultPassword = tenant?.id === 'mrdj' ? 'demo' : (tenant?.id === 'sevensa' ? 'sevensa' : 'demo')
+
+  const [user, setUser] = useState(defaultEmail)
+  const [password, setPassword] = useState(defaultPassword)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [viewMode, setViewMode] = useState<'simple' | 'guided'>('simple')
@@ -595,12 +604,20 @@ export function Login({ onLogin }: LoginProps) {
 }
 
 function resolveEmail(candidate: string): string {
+  // If already an email (contains @), return as-is
+  if (candidate.includes('@')) {
+    return candidate
+  }
+
+  // Legacy shortcuts for backwards compatibility
   if (candidate === 'bart') {
     return 'bart@rentguy.demo'
   }
   if (candidate === 'rentguy') {
     return 'rentguy@demo.local'
   }
+
+  // Default: assume it's a shorthand and add demo domain
   return `${candidate}@demo.local`
 }
 

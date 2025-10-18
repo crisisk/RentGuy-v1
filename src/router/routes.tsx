@@ -14,6 +14,7 @@ function LoginRoute(): JSX.Element {
   const navigate = useNavigate()
   const { isAuthenticated, onLogin, defaultAuthenticatedPath, postLoginPath } = useAppRouterContext()
 
+  // Redirect if already authenticated (page refresh scenario)
   useEffect(() => {
     if (isAuthenticated) {
       navigate(defaultAuthenticatedPath, { replace: true })
@@ -23,9 +24,9 @@ function LoginRoute(): JSX.Element {
   const handleLogin = useCallback(
     (token: string, user: AuthUser) => {
       onLogin(token, user)
-      navigate(postLoginPath, { replace: true })
+      // Navigation will be handled by the useEffect above once auth state updates
     },
-    [navigate, onLogin, postLoginPath],
+    [onLogin],
   )
 
   return (
