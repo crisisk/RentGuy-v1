@@ -14,6 +14,9 @@ export default function Scanner(){
   useEffect(()=>{
     const codeReader = new BrowserMultiFormatReader()
     codeReader.decodeFromVideoDevice(null, videoRef.current, (res, err)=>{
+      if (err && err.name !== 'NotFoundException') {
+        console.error('QR scan error', err)
+      }
       if (res) setResult(res.getText())
     })
     return ()=> codeReader.reset()

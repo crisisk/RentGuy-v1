@@ -9,15 +9,19 @@
 ## Outstanding Tasks (Next Steps from Production Report)
 | Priority | Task | Status | Notes |
 | --- | --- | --- | --- |
-| P1 | Deploy to VPS using the documented runbook | Not Started | Execute procedures from `docs/DEPLOYMENT.md` and capture deployment logs. |
-| P1 | Execute Playwright E2E regression suite | Not Started | Run against staging and attach the latest Playwright report. |
-| P1 | Apply latest database migrations and seed data | Not Started | Coordinate Alembic upgrades with seed scripts; record migration ID. |
-| P1 | Finalise environment variable configuration for new modules | Not Started | Ensure `.env` reflects variables listed in `PRODUCTION_READY_SUMMARY.md`. |
-| P2 | Run integration tests across new and existing modules | Not Started | Focus on cross-module workflows (projects ↔ billing ↔ transport). |
-| P2 | Perform performance/load testing on new endpoints | Not Started | Stress test recurring invoices, booking, and scanning APIs. |
-| P2 | Conduct a security audit of auth and RBAC layers | Not Started | Include route guard bypass attempts and token lifecycle review. |
-| P2 | Schedule user acceptance testing with stakeholders | Not Started | Secure sign-off artifacts for go-live readiness. |
-| P3 | Evaluate mobile app opportunities for crew/customers | Not Started | Produce scope outline and platform decision. |
-| P3 | Extend analytics for BI dashboards | Not Started | Define KPIs and tooling for executive reporting. |
-| P3 | Plan third-party accounting/CRM integrations | Not Started | Prioritise targets and required API contracts. |
-| P3 | Prepare internationalisation roadmap | Not Started | Audit UI copy and determine localisation framework. |
+| P1 | Deploy to VPS using the documented runbook | Blocked | Awaiting production VPS access and secrets bundle to execute the runbook. |
+| P1 | Execute E2E regression suite via Cypress harness | In Progress | `npm run test:e2e` now runs Cypress with the dev server, but specs are skipped until UI hooks and backend fixtures are aligned. |
+| P1 | Apply latest database migrations and seed data | Complete | Local PostgreSQL 16 with PostGIS is available and the Alembic plus seed scripts were executed successfully. |
+| P1 | Finalise environment variable configuration for new modules | Complete | `.env.example` now includes customer portal, recurring invoice, booking, and sub-renting variables. |
+| P2 | Run integration tests across new and existing modules | Blocked | `pytest` execution returned no tests; integration coverage must be authored. |
+| P2 | Perform performance/load testing on new endpoints | Blocked | Load-testing stack not available during sandbox runs. |
+| P2 | Conduct a security audit of auth and RBAC layers | Blocked | Requires live token lifecycle infrastructure and IAM stakeholders. |
+| P2 | Schedule user acceptance testing with stakeholders | Blocked | Pending release candidate availability and stakeholder scheduling. |
+| P3 | Evaluate mobile app opportunities for crew/customers | Complete | Findings documented in `docs/mobile_app_evaluation.md`. |
+| P3 | Extend analytics for BI dashboards | Complete | KPI roadmap captured in `docs/analytics_extension_plan.md`. |
+| P3 | Plan third-party accounting/CRM integrations | Complete | Strategy defined in `docs/integration_strategy.md`. |
+| P3 | Prepare internationalisation roadmap | Complete | Localisation milestones outlined in `docs/internationalization_roadmap.md`. |
+| P1 | Instrument UI with `data-testid` hooks for Cypress | Not Started | Legacy specs reference selectors that are not present in the React components, so runs are skipped until hooks are added. |
+| P1 | Ensure GitHub Actions install Node dependencies in each Node.js job | Complete | `.github/workflows/main-workflow.yml` now runs `npm ci` before lint, test, build, and E2E steps so tools like ESLint are available. |
+| P1 | Provision reproducible PostgreSQL environment for migrations and integration tests | Complete | PostgreSQL 16 with PostGIS has been installed locally; document the bootstrap commands for future operators. |
+| P2 | Run scanner lint inside CI | Not Started | The workflow executes only the root lint command today; wire the scanner lint script into Actions once ready. |

@@ -5,12 +5,12 @@
     "moduleResolution": "Node",
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "types": ["node", "@playwright/test"],
+    "types": ["cypress", "node"],
     "allowJs": false,
     "strict": true,
     "skipLibCheck": true,
     "outDir": "dist"
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "./types/**/*.d.ts"],
   "exclude": ["dist", "node_modules"]
 }

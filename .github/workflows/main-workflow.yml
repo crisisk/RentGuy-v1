@@ -26,7 +26,10 @@ jobs:
         with:
           path: ~/.npm
           key: npm-${{ hashFiles('**/package-lock.json') }}
-      
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Check for lint script
         id: check-lint
         run: |
@@ -61,6 +64,9 @@ jobs:
         with:
           path: ~/.npm
           key: npm-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
       
       - name: Check for test script
         id: check-test
@@ -100,6 +106,9 @@ jobs:
         with:
           path: ~/.npm
           key: npm-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
       
       - name: Build project
         run: npm run build
@@ -128,6 +137,9 @@ jobs:
         with:
           path: ~/.npm
           key: npm-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
       
       - name: Install Playwright
         run: npx playwright install --with-deps
