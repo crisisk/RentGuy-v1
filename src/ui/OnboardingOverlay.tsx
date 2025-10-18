@@ -1206,7 +1206,7 @@ export default function OnboardingOverlay({
               <span>
                 Hulp nodig? Mail{' '}
                 <a
-                  href="mailto:support@sevensa.com"
+                  href="mailto:support@sevensa.nl"
                   style={{ color: brand.colors.secondary, fontWeight: 600 }}
                 >
                   Sevensa Support

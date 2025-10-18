@@ -36,6 +36,62 @@ export type UpdateRoleResult = Result<AuthUser>
 
 const FALLBACK_EMAIL = 'bart@rentguy.demo'
 
+interface OfflineDemoAccount {
+  readonly email: string
+  readonly password: string
+  readonly token: string
+  readonly user: AuthUser
+}
+
+const OFFLINE_DEMO_ACCOUNTS: readonly OfflineDemoAccount[] = [
+  {
+    email: 'bart@rentguy.demo',
+    password: 'mr-dj',
+    token: 'offline-demo-bart',
+    user: {
+      id: 'offline-bart',
+      email: 'bart@rentguy.demo',
+      role: 'planner',
+      first_name: 'Bart',
+      last_name: 'Jansen',
+    },
+  },
+  {
+    email: 'rentguy@demo.local',
+    password: 'rentguy',
+    token: 'offline-demo-rentguy',
+    user: {
+      id: 'offline-rentguy',
+      email: 'rentguy@demo.local',
+      role: 'finance',
+      first_name: 'Rent',
+      last_name: 'Guy',
+    },
+  },
+]
+
+function normaliseEmail(value: string): string {
+  return ensureAuthEmail(value).toLowerCase()
+}
+
+function findOfflineDemoAccount(email: string, password: string): OfflineDemoAccount | undefined {
+  const normalisedEmail = normaliseEmail(email)
+  return OFFLINE_DEMO_ACCOUNTS.find(
+    account => account.email === normalisedEmail && account.password === password,
+  )
+}
+
+export function isOfflineDemoToken(candidate: string | null | undefined): boolean {
+  if (!candidate) {
+    return false
+  }
+  const trimmed = candidate.trim()
+  if (!trimmed) {
+    return false
+  }
+  return OFFLINE_DEMO_ACCOUNTS.some(account => account.token === trimmed)
+}
+
 export function ensureAuthEmail(candidate?: string | null, fallback: string = FALLBACK_EMAIL): string {
   if (typeof candidate === 'string') {
     const trimmed = candidate.trim()
@@ -68,7 +124,17 @@ export async function login(
       user,
     })
   } catch (error) {
-    return err(mapUnknownToApiError(error))
+    const apiError = mapUnknownToApiError(error)
+    if (apiError.code === 'network' || apiError.code === 'timeout') {
+      const offlineAccount = findOfflineDemoAccount(credentials.email, credentials.password)
+      if (offlineAccount) {
+        return ok({
+          token: offlineAccount.token,
+          user: offlineAccount.user,
+        })
+      }
+    }
+    return err(apiError)
   }
 }
 

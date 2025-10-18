@@ -326,7 +326,14 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
     [complianceUrl, helpCenterUrl, statusPageUrl],
   )
 
-  const isInternalLink = (href: string) => href.startsWith('/') && !href.startsWith('//')
+  const isInternalLink = (href: string) => {
+    if (!href) return false
+    const trimmed = href.trim()
+    if (!trimmed) return false
+    if (trimmed.startsWith('#')) return true
+    if (trimmed.startsWith('/')) return !trimmed.startsWith('//')
+    return false
+  }
 
   const handleInternalNavigation = (event: MouseEvent<HTMLAnchorElement>, href: string, options?: { replace?: boolean }) => {
     if (!onNavigate || !isInternalLink(href)) {

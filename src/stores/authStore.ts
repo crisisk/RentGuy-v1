@@ -1,177 +1,159 @@
-import create from 'zustand';
-import { persist } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
-import axios from 'axios';
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
+import type { AuthUser } from '@application/auth/api'
+import { isOfflineDemoToken } from '@application/auth/api'
 
-// Types
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  // Add other user fields
+export type AuthStatus = 'idle' | 'checking' | 'authenticated' | 'offline' | 'error'
+
+interface AuthStoreState {
+  readonly token: string | null
+  readonly user: AuthUser | null
+  readonly status: AuthStatus
+  readonly error: string | null
+  readonly setCredentials: (token: string, user: AuthUser) => void
+  readonly clear: () => void
+  readonly markChecking: () => void
+  readonly markError: (message: string) => void
+  readonly markOffline: (message?: string) => void
+  readonly syncToken: (token: string) => void
 }
 
-interface LoginCredentials {
-  email: string;
-  password: string;
+const INITIAL_STATE: Pick<AuthStoreState, 'token' | 'user' | 'status' | 'error'> = {
+  token: null,
+  user: null,
+  status: 'idle',
+  error: null,
 }
 
-interface UpdateProfileData {
-  name?: string;
-  // Other updatable fields
+const LEGACY_STORAGE_KEY = 'auth-storage'
+const STORE_STORAGE_KEY = 'rg__auth_store_v1'
+
+const noopStorage: Storage = {
+  get length() {
+    return 0
+  },
+  clear() {
+    // noop
+  },
+  getItem(_key: string) {
+    return null
+  },
+  key(_index: number) {
+    return null
+  },
+  removeItem(_key: string) {
+    // noop
+  },
+  setItem(_key: string, _value: string) {
+    // noop
+  },
 }
 
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-  error: string | null;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => void;
-  refreshToken: () => Promise<void>;
-  checkAuth: () => Promise<void>;
-  updateProfile: (data: UpdateProfileData) => Promise<void>;
+function resolveStorage(): Storage {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return noopStorage
+  }
+  try {
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY)
+  } catch (error) {
+    console.warn('Kon legacy auth storage niet verwijderen', error)
+  }
+  return window.localStorage
 }
 
-// Axios instance with interceptors
-const authAxios = axios.create({
-  baseURL: 'http://localhost:8000/api/auth',
-});
+function determineStatusFromToken(token: string | null, hasUser: boolean): AuthStatus {
+  if (!token) {
+    return 'idle'
+  }
+  if (isOfflineDemoToken(token)) {
+    return 'offline'
+  }
+  return hasUser ? 'authenticated' : 'checking'
+}
 
-// Zustand store
-const useAuthStore = create<AuthState>()(
+export const useAuthStore = create<AuthStoreState>()(
   persist(
-    immer((set, get) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      loading: false,
-      error: null,
-
-      login: async (credentials) => {
-        set(state => { 
-          state.loading = true; 
-          state.error = null; 
-        });
-
-        try {
-          const response = await authAxios.post('/login', credentials);
-          
-          set(state => {
-            state.token = response.data.token;
-            state.user = response.data.user;
-            state.isAuthenticated = true;
-            state.loading = false;
-          });
-
-          // Set default auth header
-          authAxios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        } catch (error: any) {
-          set(state => {
-            state.error = error.response?.data?.message || 'Login failed';
-            state.loading = false;
-          });
-          throw error;
-        }
-      },
-
-      logout: () => {
+    immer<AuthStoreState>((set, get) => ({
+      ...INITIAL_STATE,
+      setCredentials: (token, user) => {
+        const trimmed = token.trim()
         set(state => {
-          state.user = null;
-          state.token = null;
-          state.isAuthenticated = false;
-        });
-        
-        // Remove auth header
-        delete authAxios.defaults.headers.common['Authorization'];
+          state.token = trimmed || null
+          state.user = trimmed ? { ...user } : null
+          state.status = determineStatusFromToken(state.token, Boolean(state.user))
+          state.error = null
+        })
       },
-
-      refreshToken: async () => {
-        set(state => { 
-          state.loading = true; 
-          state.error = null; 
-        });
-
-        try {
-          const response = await authAxios.post('/refresh-token');
-          
-          set(state => {
-            state.token = response.data.token;
-            state.loading = false;
-          });
-
-          // Update auth header
-          authAxios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        } catch (error: any) {
-          set(state => {
-            state.error = error.response?.data?.message || 'Token refresh failed';
-            state.loading = false;
-            state.user = null;
-            state.token = null;
-            state.isAuthenticated = false;
-          });
-          throw error;
-        }
+      clear: () => {
+        set(() => ({
+          ...INITIAL_STATE,
+        }))
       },
-
-      checkAuth: async () => {
-        set(state => { 
-          state.loading = true; 
-          state.error = null; 
-        });
-
-        try {
-          const response = await authAxios.get('/me');
-          
-          set(state => {
-            state.user = response.data.user;
-            state.isAuthenticated = true;
-            state.loading = false;
-          });
-        } catch (error: any) {
-          set(state => {
-            state.error = error.response?.data?.message || 'Authentication check failed';
-            state.loading = false;
-            state.user = null;
-            state.token = null;
-            state.isAuthenticated = false;
-          });
-          throw error;
+      markChecking: () => {
+        if (get().token === null) {
+          set(() => ({
+            ...INITIAL_STATE,
+          }))
+          return
         }
+        set(state => {
+          state.status = 'checking'
+          state.error = null
+        })
       },
-
-      updateProfile: async (data) => {
-        set(state => { 
-          state.loading = true; 
-          state.error = null; 
-        });
-
-        try {
-          const response = await authAxios.patch('/profile', data);
-          
-          set(state => {
-            state.user = response.data.user;
-            state.loading = false;
-          });
-        } catch (error: any) {
-          set(state => {
-            state.error = error.response?.data?.message || 'Profile update failed';
-            state.loading = false;
-          });
-          throw error;
-        }
+      markError: (message: string) => {
+        set(state => {
+          state.status = 'error'
+          state.error = message
+        })
+      },
+      markOffline: (message?: string) => {
+        set(state => {
+          state.status = 'offline'
+          state.error = message ?? null
+        })
+      },
+      syncToken: (token: string) => {
+        const trimmed = token.trim()
+        set(state => {
+          if (!trimmed) {
+            state.token = null
+            state.user = null
+            state.status = 'idle'
+            state.error = null
+            return
+          }
+          state.token = trimmed
+          state.status = determineStatusFromToken(trimmed, Boolean(state.user))
+          if (state.status !== 'error') {
+            state.error = null
+          }
+        })
       },
     })),
     {
-      name: 'auth-storage', // localStorage key
-      partialize: (state) => ({ 
+      name: STORE_STORAGE_KEY,
+      storage: createJSONStorage(resolveStorage),
+      partialize: state => ({
         token: state.token,
-        user: state.user 
+        user: state.user,
+        status: state.status === 'error' || state.status === 'checking' ? 'idle' : state.status,
       }),
-    }
-  )
-);
+    },
+  ),
+)
 
-export { useAuthStore };
-export default useAuthStore;
+export function resetAuthStore(): void {
+  useAuthStore.setState({
+    ...INITIAL_STATE,
+  })
+  const persistApi = (useAuthStore as typeof useAuthStore & {
+    persist?: { clearStorage: () => Promise<void> }
+  }).persist
+  if (persistApi?.clearStorage) {
+    void persistApi.clearStorage()
+  }
+}
+
+export default useAuthStore
