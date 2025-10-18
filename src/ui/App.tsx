@@ -20,6 +20,7 @@ import { subscribeToTokenChanges } from '@core/auth-token-storage'
 import { useAuthStore } from '@stores/authStore'
 import AppRouter from '@router/index'
 import MarketingLandingPage from './MarketingLandingPage'
+import MarketingDemoPage from './MarketingDemoPage'
 import {
   resolveExperienceConfig,
   describeTenantDisplayName,
@@ -41,6 +42,61 @@ const BRANDING_CHROME_OPTIONS = {
 
 interface TenantPortalAppProps {
   readonly experience: TenantExperienceConfig
+}
+
+function normaliseMarketingPath(path: string): string {
+  if (!path) {
+    return '/'
+  }
+  const trimmed = path.trim()
+  const [rawPath, rawHash] = trimmed.split('#', 2)
+  const ensuredPath = rawPath ? (rawPath.startsWith('/') ? rawPath : `/${rawPath}`) : '/'
+  const cleanedPath = ensuredPath === '/'
+    ? '/'
+    : ensuredPath
+        .replace(/\/{2,}/g, '/')
+        .replace(/\/+$/, '') || '/'
+  return rawHash ? `${cleanedPath}#${rawHash}` : cleanedPath
+}
+
+function resolveInitialMarketingPath(fallbackPath: string): string {
+  if (typeof window === 'undefined') {
+    return normaliseMarketingPath(fallbackPath)
+  }
+  const { pathname, hash } = window.location
+  const combined = `${pathname || '/'}${hash || ''}`
+  return normaliseMarketingPath(combined || fallbackPath)
+}
+
+function useMarketingNavigation(fallbackPath: string) {
+  const [path, setPath] = useState<string>(() => resolveInitialMarketingPath(fallbackPath))
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const handler = () => {
+      setPath(resolveInitialMarketingPath(fallbackPath))
+    }
+    window.addEventListener('popstate', handler)
+    return () => {
+      window.removeEventListener('popstate', handler)
+    }
+  }, [fallbackPath])
+
+  const navigate = useCallback((target: string, options: { replace?: boolean } = {}) => {
+    const next = normaliseMarketingPath(target || fallbackPath)
+    if (typeof window !== 'undefined') {
+      if (options.replace) {
+        window.history.replaceState({}, '', next)
+      } else {
+        window.history.pushState({}, '', next)
+      }
+    }
+    setPath(next)
+  }, [fallbackPath])
+
+  return { path, navigate }
 }
 
 function TenantPortalApp({ experience }: TenantPortalAppProps) {
@@ -252,8 +308,17 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
 
 function MarketingExperienceApp({ config }: { readonly config: MarketingExperienceConfig }) {
   useBrandingChrome(BRANDING_CHROME_OPTIONS)
-  useDocumentTitle('RentGuy · Alles-in-één verhuurplatform')
-  return <MarketingLandingPage config={config} />
+  const { path, navigate } = useMarketingNavigation(config.demoPagePath)
+  const isDemoRoute = path.startsWith(config.demoPagePath)
+  useDocumentTitle(
+    isDemoRoute ? 'RentGuy · Demo-ervaring voor prospects' : 'RentGuy · Alles-in-één verhuurplatform',
+  )
+
+  if (isDemoRoute) {
+    return <MarketingDemoPage config={config} onNavigate={navigate} currentPath={path} />
+  }
+
+  return <MarketingLandingPage config={config} onNavigate={navigate} currentPath={path} />
 }
 
 export function App(): JSX.Element {

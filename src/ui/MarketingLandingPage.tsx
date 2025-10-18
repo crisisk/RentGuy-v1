@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { brand, brandFontStack, headingFontStack } from './branding'
-import type { MarketingExperienceConfig } from './experienceConfig'
+import { buildHelpCenterUrl, type MarketingExperienceConfig } from './experienceConfig'
 
 const layout = {
   page: {
@@ -53,6 +53,8 @@ function SectionHeader({ eyebrow, title, description }: SectionHeaderProps) {
 
 interface MarketingLandingPageProps {
   readonly config: MarketingExperienceConfig
+  readonly onNavigate?: (path: string, options?: { replace?: boolean }) => void
+  readonly currentPath?: string
 }
 
 const heroHighlights = [
@@ -191,7 +193,7 @@ const contactChannels = [
   { label: 'Mail', value: 'hello@rentguy.nl', href: 'mailto:hello@rentguy.nl' },
 ]
 
-export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX.Element {
+export function MarketingLandingPage({ config, onNavigate, currentPath }: MarketingLandingPageProps): JSX.Element {
   const [activeTestimonial, setActiveTestimonial] = useState(0)
 
   const testimonialItems = useMemo(() => {
@@ -233,6 +235,118 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
     })
   }
 
+  const support = config.support
+  const helpCenterUrl = support.helpCenterBaseUrl
+  const onboardingGuideUrl = buildHelpCenterUrl(support, 'onboarding-checklist')
+  const runbookUrl = buildHelpCenterUrl(support, 'runbook')
+  const complianceUrl = buildHelpCenterUrl(support, 'compliance')
+  const statusPageUrl = support.statusPageUrl
+
+  const salesFunnelStages = useMemo(
+    () => [
+      {
+        id: 'discover',
+        title: '1. Discover → Demo',
+        description:
+          'Bezoekers landen op de hero, bekijken de teaser-video en schakelen naar de interactieve demo voor een guided tour.',
+        metric: 'Gem. 38% hero → demo conversie',
+        actionLabel: 'Open demo-ervaring',
+        actionHref: config.demoPagePath,
+      },
+      {
+        id: 'evaluate',
+        title: '2. Evaluate → Use cases',
+        description:
+          'Prospects exploreren persona-journeys (operations, finance, customer success) en downloaden relevante SLA-assets.',
+        metric: '24 min. gemiddelde dwell time',
+        actionLabel: 'Bekijk journey bibliotheek',
+        actionHref: buildHelpCenterUrl(support, 'customer-journeys'),
+      },
+      {
+        id: 'commit',
+        title: '3. Commit → Onboarding',
+        description:
+          'Via checklist en kickoff-call worden tenantconfiguratie, data-import en governance afgestemd voor een vliegende start.',
+        metric: 'Go-live binnen 10 werkdagen',
+        actionLabel: 'Onboarding checklist',
+        actionHref: onboardingGuideUrl,
+      },
+    ],
+    [config.demoPagePath, onboardingGuideUrl, support],
+  )
+
+  const onboardingMilestones = useMemo(
+    () => [
+      {
+        id: 'kickoff',
+        title: 'Kick-off & scope alignment',
+        description:
+          'In 45 minuten alignen we doelen, datastructuren en persona’s. Je ontvangt direct de provisioning template.',
+        resourceLabel: 'Voorbereidingsdocument',
+        resourceHref: buildHelpCenterUrl(support, 'kickoff-kit'),
+      },
+      {
+        id: 'configure',
+        title: 'Tenant configuratie & data-import',
+        description:
+          'We zetten subdomein, branding en integraties klaar. CSV/ERP-imports worden gecontroleerd op datakwaliteit.',
+        resourceLabel: 'Technische runbook',
+        resourceHref: runbookUrl,
+      },
+      {
+        id: 'launch',
+        title: 'Launch & governance review',
+        description:
+          'Samen lopen we de go-live checklist door, koppelen status monitoring en plannen de eerste retro binnen 30 dagen.',
+        resourceLabel: 'Compliance & status',
+        resourceHref: complianceUrl,
+      },
+    ],
+    [complianceUrl, runbookUrl, support],
+  )
+
+  const trustSignals = useMemo(
+    () => [
+      {
+        label: 'Realtime platformstatus',
+        description: 'Monitor uptime, incidentmeldingen en geplande onderhoudsvensters voor alle tenants.',
+        href: statusPageUrl,
+      },
+      {
+        label: 'Helpcenter per tenant',
+        description: 'Documentatie en journey explainers afgestemd op jouw merk en operating model.',
+        href: helpCenterUrl,
+      },
+      {
+        label: 'Onboarding compliance',
+        description: 'Auditklare checklists en security controls met duidelijke eigenaarschap per stap.',
+        href: complianceUrl,
+      },
+    ],
+    [complianceUrl, helpCenterUrl, statusPageUrl],
+  )
+
+  const isInternalLink = (href: string) => href.startsWith('/') && !href.startsWith('//')
+
+  const handleInternalNavigation = (event: MouseEvent<HTMLAnchorElement>, href: string, options?: { replace?: boolean }) => {
+    if (!onNavigate || !isInternalLink(href)) {
+      return
+    }
+    event.preventDefault()
+    onNavigate(href, options)
+  }
+
+  const isOnDemoPage = Boolean(currentPath && currentPath.startsWith(config.demoPagePath))
+  const demoOnboardingPath = `${config.demoPagePath.replace(/\/+$/, '') || '/demo'}#onboarding`
+  const contactEntries = useMemo(
+    () => [
+      ...contactChannels,
+      { label: 'Helpcenter', value: `${brand.shortName} · ${support.tenantSlug}`, href: helpCenterUrl },
+      { label: 'Status', value: 'status.sevensa.nl', href: statusPageUrl },
+    ],
+    [helpCenterUrl, statusPageUrl, support.tenantSlug],
+  )
+
   return (
     <div style={layout.page}>
       <nav
@@ -267,6 +381,8 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
         <div style={{ display: 'flex', gap: '16px' }}>
           <a
             href={config.primaryCtaHref}
+            onClick={event => handleInternalNavigation(event, config.primaryCtaHref)}
+            aria-current={isOnDemoPage ? 'page' : undefined}
             style={{
               padding: '12px 20px',
               borderRadius: '999px',
@@ -274,12 +390,14 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
               color: '#0B1026',
               fontWeight: 600,
               textDecoration: 'none',
+              boxShadow: isOnDemoPage ? '0 0 0 2px rgba(148, 163, 255, 0.5)' : undefined,
             }}
           >
             Bekijk demo
           </a>
           <a
             href={config.secondaryCtaHref}
+            onClick={event => handleInternalNavigation(event, config.secondaryCtaHref)}
             style={{
               padding: '12px 20px',
               borderRadius: '999px',
@@ -327,6 +445,7 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
                 <a
                   href={config.primaryCtaHref}
+                  onClick={event => handleInternalNavigation(event, config.primaryCtaHref)}
                   style={{
                     padding: '14px 28px',
                     borderRadius: '999px',
@@ -340,7 +459,8 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
                   Start interactieve demo
                 </a>
                 <a
-                  href="https://mr-dj.rentguy.nl/dashboard"
+                  href={demoOnboardingPath}
+                  onClick={event => handleInternalNavigation(event, demoOnboardingPath)}
                   style={{
                     padding: '14px 28px',
                     borderRadius: '999px',
@@ -409,6 +529,64 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
                 }}
               />
             </div>
+          </div>
+        </section>
+
+        <section style={layout.section} aria-label="Sales funnel & journeys">
+          <SectionHeader
+            eyebrow="Sales funnel"
+            title="Van eerste indruk tot onboarding in drie journeys"
+            description="Elke fase bouwt voort op de customer journeys van operations, finance en customer success zodat je team sneller beslist."
+          />
+          <div
+            style={{
+              display: 'grid',
+              gap: '20px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            }}
+          >
+            {salesFunnelStages.map(stage => (
+              <article
+                key={stage.id}
+                style={{
+                  padding: '24px',
+                  borderRadius: '24px',
+                  background: 'linear-gradient(160deg, rgba(15, 23, 42, 0.78) 0%, rgba(59, 130, 246, 0.24) 100%)',
+                  border: '1px solid rgba(148, 163, 184, 0.35)',
+                  display: 'grid',
+                  gap: '12px',
+                  minHeight: '260px',
+                }}
+              >
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <span style={{ color: '#A5B4FC', fontSize: '0.85rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    {stage.metric}
+                  </span>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#F8FAFC', fontFamily: headingFontStack }}>{stage.title}</h3>
+                </div>
+                <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{stage.description}</p>
+                <a
+                  href={stage.actionHref}
+                  onClick={event => handleInternalNavigation(event, stage.actionHref)}
+                  style={{
+                    marginTop: 'auto',
+                    alignSelf: 'start',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '10px 18px',
+                    borderRadius: '999px',
+                    background: 'rgba(148, 163, 255, 0.18)',
+                    border: '1px solid rgba(148, 163, 184, 0.45)',
+                    color: '#F8FAFC',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  {stage.actionLabel} →
+                </a>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -632,6 +810,7 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
                 </ul>
                 <a
                   href={config.primaryCtaHref}
+                  onClick={event => handleInternalNavigation(event, config.primaryCtaHref)}
                   style={{
                     marginTop: '8px',
                     padding: '14px 24px',
@@ -671,6 +850,44 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
               >
                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#F8FAFC' }}>{step.title}</h3>
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={layout.section} aria-label="Onboarding flow">
+          <SectionHeader
+            eyebrow="Onboarding flow"
+            title="Customer success begeleidt elke stap"
+            description="Een dedicated team bewaakt data, governance en adoptie zodat jouw launch voorspelbaar verloopt."
+          />
+          <div style={{ display: 'grid', gap: '18px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+            {onboardingMilestones.map(milestone => (
+              <article
+                key={milestone.id}
+                style={{
+                  padding: '24px',
+                  borderRadius: '24px',
+                  background: 'linear-gradient(180deg, rgba(30, 64, 175, 0.35) 0%, rgba(15, 23, 42, 0.85) 100%)',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                  display: 'grid',
+                  gap: '12px',
+                }}
+              >
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#F8FAFC', fontFamily: headingFontStack }}>{milestone.title}</h3>
+                <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{milestone.description}</p>
+                <a
+                  href={milestone.resourceHref}
+                  onClick={event => handleInternalNavigation(event, milestone.resourceHref)}
+                  style={{
+                    marginTop: 'auto',
+                    color: brand.colors.accent,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  {milestone.resourceLabel} →
+                </a>
               </article>
             ))}
           </div>
@@ -716,6 +933,39 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
           </div>
         </section>
 
+        <section style={layout.section} aria-label="Platform betrouwbaarheid">
+          <SectionHeader
+            eyebrow="Trust & support"
+            title="Transparante status en documentatie voor elk tenant"
+            description="SLA’s, helpcenter en monitoring zijn altijd up-to-date zodat stakeholders direct kunnen handelen."
+          />
+          <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+            {trustSignals.map(signal => (
+              <article
+                key={signal.label}
+                style={{
+                  padding: '22px',
+                  borderRadius: '20px',
+                  background: 'rgba(15, 23, 42, 0.82)',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                  display: 'grid',
+                  gap: '10px',
+                }}
+              >
+                <h3 style={{ margin: 0, color: '#F8FAFC', fontSize: '1.1rem' }}>{signal.label}</h3>
+                <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{signal.description}</p>
+                <a
+                  href={signal.href}
+                  onClick={event => handleInternalNavigation(event, signal.href)}
+                  style={{ color: brand.colors.accent, fontWeight: 600, textDecoration: 'none' }}
+                >
+                  Bekijk details →
+                </a>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section style={layout.section} id="contact">
           <SectionHeader
             eyebrow="Contact"
@@ -729,7 +979,7 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
               gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
             }}
           >
-            {contactChannels.map(channel => (
+            {contactEntries.map(channel => (
               <a
                 key={channel.label}
                 href={channel.href}
@@ -772,7 +1022,11 @@ export function MarketingLandingPage({ config }: MarketingLandingPageProps): JSX
             <a href="https://sevensa.ai/security" style={{ color: '#CBD5F5', textDecoration: 'none' }}>
               Security
             </a>
-            <a href={config.primaryCtaHref} style={{ color: brand.colors.accent, textDecoration: 'none' }}>
+            <a
+              href={config.primaryCtaHref}
+              onClick={event => handleInternalNavigation(event, config.primaryCtaHref)}
+              style={{ color: brand.colors.accent, textDecoration: 'none' }}
+            >
               Start demo
             </a>
           </div>

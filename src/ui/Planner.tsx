@@ -14,6 +14,7 @@ import interactionPlugin, { type EventDropArg } from '@fullcalendar/interaction'
 import type { EventInput } from '@fullcalendar/core'
 import { api } from '@infra/http/api'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
+import { buildHelpCenterUrl, resolveSupportConfig } from './experienceConfig'
 import TipBanner from '@ui/TipBanner'
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
 import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
@@ -487,6 +488,8 @@ export default function Planner({ onLogout }: PlannerProps) {
   const userRole = useAuthStore(state => state.user?.role ?? '')
   const userEmail = useAuthStore(state => state.user?.email ?? '')
   const showSecretsShortcut = userRole === 'admin'
+  const support = useMemo(() => resolveSupportConfig(), [])
+  const runbookUrl = useMemo(() => buildHelpCenterUrl(support, 'runbook'), [support])
 
   const loadProjects = useCallback(async () => {
     setLoading(true)
@@ -1292,7 +1295,7 @@ export default function Planner({ onLogout }: PlannerProps) {
           <li>Plan rollback scenario’s wekelijks; auditlogs staan gekoppeld aan elke wijziging.</li>
         </ul>
         <a
-          href="https://help.sevensa.nl/rentguy/runbook"
+          href={runbookUrl}
           target="_blank"
           rel="noreferrer"
           style={{ color: '#ffffff', fontWeight: 600, textDecoration: 'none' }}
@@ -1301,7 +1304,7 @@ export default function Planner({ onLogout }: PlannerProps) {
         </a>
       </div>
     ),
-    [],
+    [runbookUrl],
   )
 
   const navigationRail = useMemo(() => {
