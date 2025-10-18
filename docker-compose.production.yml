@@ -82,7 +82,8 @@ services:
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_PASS=${SMTP_PASS}
+      - MAIL_FROM=${MAIL_FROM:-admin@sevensa.nl}
       - EMAIL_FROM=${EMAIL_FROM:-noreply@rentguy.nl}
       
       # Customer Portal
@@ -104,6 +105,10 @@ services:
       # Monitoring
       - SENTRY_DSN=${SENTRY_DSN}
       - LOG_LEVEL=INFO
+
+      # AI Integration (OpenRouter)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-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}
+      - USE_AI_GENERATED_EMAILS=${USE_AI_GENERATED_EMAILS:-true}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.rentguy-backend.rule=(Host(`sevensa.rentguy.nl`) || Host(`mr-dj.rentguy.nl`) || Host(`www.rentguy.nl`) || Host(`rentguy.nl`)) && PathPrefix(`/api`)"
@@ -154,8 +159,12 @@ services:
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_PASS=${SMTP_PASS}
       - EMAIL_FROM=${EMAIL_FROM:-noreply@mr-dj.nl}
+
+      # AI Integration (OpenRouter)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-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}
+      - USE_AI_GENERATED_EMAILS=${USE_AI_GENERATED_EMAILS:-true}
 
       # Monitoring
       - SENTRY_DSN=${SENTRY_DSN}
@@ -195,6 +204,10 @@ services:
       # Celery
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+
+      # AI Integration (OpenRouter)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-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}
+      - USE_AI_GENERATED_EMAILS=${USE_AI_GENERATED_EMAILS:-true}
 
       # Monitoring
       - LOG_LEVEL=INFO

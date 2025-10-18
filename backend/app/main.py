@@ -136,6 +136,8 @@ ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
     ),
     ("app.modules.onboarding.routes", "router", "/api/v1", ["onboarding"]),
     ("app.modules.crm.routes", "router", "/api/v1", ["crm"]),
+    ("app.modules.external_leads", "router", "/v1", ["external-api"]),
+    ("app.modules.templates.routes", "router", "/v1/templates", ["templates"]),
     (
         "app.modules.platform.observability.routes",
         "router",

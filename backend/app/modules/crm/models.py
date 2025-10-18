@@ -33,6 +33,12 @@ class CRMLead(Base):
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     source: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="new")
+
+    # Automation fields for lead routing and classification
+    event_type: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    priority: Mapped[str | None] = mapped_column(String(20), nullable=True, default="normal", index=True)
+    assignment_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False, index=True
     )
