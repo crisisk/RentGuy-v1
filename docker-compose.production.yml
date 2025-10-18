@@ -128,6 +128,78 @@ services:
       retries: 3
       start_period: 60s
 
+  # Celery Worker Service (Background Tasks)
+  rentguy-celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=production
+    image: rentguy-backend:${VERSION:-latest}
+    container_name: rentguy-celery-worker-prod
+    restart: unless-stopped
+    command: celery -A app.automation.celery_app worker --loglevel=info --queues=crm,email --concurrency=4
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@rentguy-db:5432/${POSTGRES_DB}
+
+      # Celery
+      - CELERY_BROKER_URL=redis://rentguy-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://rentguy-redis:6379/0
+
+      # Email (for automation workflows)
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@mr-dj.nl}
+
+      # Monitoring
+      - SENTRY_DSN=${SENTRY_DSN}
+      - LOG_LEVEL=INFO
+    networks:
+      - rentguy-internal
+    depends_on:
+      rentguy-db:
+        condition: service_healthy
+      rentguy-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.automation.celery_app inspect ping -d celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Celery Beat Service (Periodic Tasks Scheduler)
+  rentguy-celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=production
+    image: rentguy-backend:${VERSION:-latest}
+    container_name: rentguy-celery-beat-prod
+    restart: unless-stopped
+    command: celery -A app.automation.celery_app beat --loglevel=info
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@rentguy-db:5432/${POSTGRES_DB}
+
+      # Celery
+      - CELERY_BROKER_URL=redis://rentguy-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://rentguy-redis:6379/0
+
+      # Monitoring
+      - LOG_LEVEL=INFO
+    networks:
+      - rentguy-internal
+    depends_on:
+      rentguy-db:
+        condition: service_healthy
+      rentguy-redis:
+        condition: service_healthy
+
   # Database Service (PostgreSQL with PostGIS)
   rentguy-db:
     image: postgis/postgis:16-3.4
