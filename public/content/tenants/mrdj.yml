@@ -1,0 +1,35 @@
+tenantId: mrdj
+name: Mister DJ
+domain: mr-dj.rentguy.nl
+primaryColor: '#FF6B35'
+
+hero:
+  title: Dansgarantie Crew Planner
+  subtitle: Beheer jouw DJ's en evenementen met ease
+  loginWelcome: Welkom bij de Dansgarantie Planner
+
+demoAccounts:
+  account1: dansgarantie1@mr-dj.nl
+  account2: dansgarantie2@mr-dj.nl
+  password: demo
+
+branding:
+  logoUrl: ''
+  faviconUrl: ''
+  backgroundColor: '#FFFFFF'
+  textColor: '#1F2937'
+
+seo:
+  title: Dansgarantie - DJ Crew Planning
+  subtitle: Plan je DJ's en evenementen professioneel
+  keywords: dj planning, evenementen, crew management, dansgarantie
+
+contact:
+  email: info@mr-dj.nl
+  phone: ''
+  address: ''
+
+customContent:
+  extra1: ''
+  extra2: ''
+  extraText: ''

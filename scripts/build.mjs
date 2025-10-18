@@ -26,6 +26,59 @@ async function writeIndexHtml() {
   await fs.writeFile(path.join(outputDir, 'index.html'), rewritten, 'utf8')
 }
 
+async function copyPublicFolder() {
+  const publicDir = path.resolve(projectRoot, 'public')
+
+  try {
+    const publicExists = await fs.access(publicDir).then(() => true).catch(() => false)
+    if (!publicExists) {
+      console.log('No public folder found, skipping copy')
+      return
+    }
+
+    const items = await fs.readdir(publicDir, { withFileTypes: true })
+
+    for (const item of items) {
+      const srcPath = path.join(publicDir, item.name)
+      const destPath = path.join(outputDir, item.name)
+
+      if (item.isDirectory()) {
+        await fs.cp(srcPath, destPath, { recursive: true })
+        // Fix permissions for directories (755)
+        await fs.chmod(destPath, 0o755)
+      } else {
+        await fs.copyFile(srcPath, destPath)
+        // Fix permissions for files (644)
+        await fs.chmod(destPath, 0o644)
+      }
+    }
+
+    // Recursively fix permissions for nested items
+    const fixNestedPermissions = async (dir) => {
+      const entries = await fs.readdir(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          await fs.chmod(fullPath, 0o755)
+          await fixNestedPermissions(fullPath)
+        } else {
+          await fs.chmod(fullPath, 0o644)
+        }
+      }
+    }
+
+    for (const item of items) {
+      if (item.isDirectory()) {
+        await fixNestedPermissions(path.join(outputDir, item.name))
+      }
+    }
+
+    console.log(`✓ Copied public folder to dist/ with correct permissions`)
+  } catch (error) {
+    console.error('Error copying public folder:', error)
+  }
+}
+
 async function build() {
   await ensureOutputDirs()
 
@@ -60,6 +113,7 @@ async function build() {
   })
 
   await writeIndexHtml()
+  await copyPublicFolder()
 
   const clientEnv = createClientEnv('production')
   const manifest = {

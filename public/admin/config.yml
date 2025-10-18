@@ -1,0 +1,100 @@
+backend:
+  name: test-repo
+
+# Git Gateway backend (requires OAuth setup):
+# backend:
+#   name: git-gateway
+#   branch: main
+
+# For local development with git:
+# local_backend: true
+
+media_folder: "public/images/uploads"
+public_folder: "/images/uploads"
+
+# Publish mode: editorial workflow enables draft/review/publish
+publish_mode: editorial_workflow
+
+# Locale configuration
+locale: 'nl'
+
+collections:
+  - name: "tenants"
+    label: "Tenant Content"
+    label_singular: "Tenant"
+    folder: "public/content/tenants"
+    create: true
+    identifier_field: "tenantId"
+    slug: "{{tenantId}}"
+    fields:
+      - {label: "Tenant ID", name: "tenantId", widget: "select", options: ["sevensa", "mrdj"], hint: "Kies de tenant voor deze content"}
+      - {label: "Tenant Naam", name: "name", widget: "string"}
+      - {label: "Domein", name: "domain", widget: "string"}
+      - {label: "Primaire Kleur", name: "primaryColor", widget: "color", allowInput: true}
+
+      - label: "Hero Sectie"
+        name: "hero"
+        widget: "object"
+        fields:
+          - {label: "Titel", name: "title", widget: "string", hint: "Hoofdtitel op de homepage"}
+          - {label: "Subtitel", name: "subtitle", widget: "string", hint: "Ondertitel op de homepage"}
+          - {label: "Login Welkomst Tekst", name: "loginWelcome", widget: "string"}
+
+      - label: "Demo Accounts"
+        name: "demoAccounts"
+        widget: "object"
+        fields:
+          - {label: "Account 1 Email", name: "account1", widget: "string"}
+          - {label: "Account 2 Email", name: "account2", widget: "string"}
+          - {label: "Wachtwoord", name: "password", widget: "string", hint: "Wachtwoord voor demo accounts"}
+
+      - label: "Branding"
+        name: "branding"
+        widget: "object"
+        collapsed: true
+        fields:
+          - {label: "Logo URL", name: "logoUrl", widget: "string", required: false}
+          - {label: "Favicon URL", name: "faviconUrl", widget: "string", required: false}
+          - {label: "Achtergrond Kleur", name: "backgroundColor", widget: "color", required: false, allowInput: true}
+          - {label: "Text Kleur", name: "textColor", widget: "color", required: false, allowInput: true}
+
+      - label: "SEO"
+        name: "seo"
+        widget: "object"
+        collapsed: true
+        fields:
+          - {label: "Meta Titel", name: "title", widget: "string", required: false}
+          - {label: "Meta Beschrijving", name: "description", widget: "text", required: false}
+          - {label: "Meta Keywords", name: "keywords", widget: "string", required: false}
+
+      - label: "Contact Informatie"
+        name: "contact"
+        widget: "object"
+        collapsed: true
+        fields:
+          - {label: "Email", name: "email", widget: "string", required: false}
+          - {label: "Telefoon", name: "phone", widget: "string", required: false}
+          - {label: "Adres", name: "address", widget: "text", required: false}
+
+      - label: "Custom Content"
+        name: "customContent"
+        widget: "object"
+        collapsed: true
+        fields:
+          - {label: "Extra Veld 1", name: "extra1", widget: "string", required: false}
+          - {label: "Extra Veld 2", name: "extra2", widget: "string", required: false}
+          - {label: "Extra Tekst", name: "extraText", widget: "text", required: false}
+
+  - name: "pages"
+    label: "Pagina's"
+    label_singular: "Pagina"
+    folder: "public/content/pages"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Tenant", name: "tenant", widget: "select", options: ["sevensa", "mrdj", "all"], default: "all"}
+      - {label: "Pagina Titel", name: "title", widget: "string"}
+      - {label: "Slug", name: "slug", widget: "string", hint: "URL pad (bijv. 'over-ons')"}
+      - {label: "Inhoud", name: "body", widget: "markdown"}
+      - {label: "Gepubliceerd", name: "published", widget: "boolean", default: true}
+      - {label: "Publicatie Datum", name: "date", widget: "datetime", required: false}

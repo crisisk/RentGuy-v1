@@ -4,7 +4,11 @@
  * Provides custom content, branding, and configuration for each tenant.
  * Tenants are identified by their domain and can have custom colors,
  * logos, and content strings.
+ *
+ * This system now integrates with Decap CMS for dynamic content management.
  */
+
+import { loadTenantContent, type TenantContent } from '@/services/contentLoader'
 
 /**
  * Configuration interface for a single tenant
@@ -23,6 +27,9 @@ export interface TenantConfig {
   /** Custom content key-value pairs for tenant-specific text */
   customContent: Record<string, string>
 }
+
+// CMS content cache
+const cmsContentCache = new Map<string, TenantContent>()
 
 /**
  * Tenant configurations
@@ -96,12 +103,60 @@ export function getCurrentTenant(): TenantConfig {
     const tenant = getTenantByDomain(hostname)
 
     if (tenant) {
+      // Try to enhance with CMS content
+      const cmsContent = cmsContentCache.get(tenant.id)
+      if (cmsContent) {
+        return mergeTenantWithCMS(tenant, cmsContent)
+      }
       return tenant
     }
   }
 
   // Fallback to default tenant
   return defaultTenant
+}
+
+/**
+ * Merge base tenant config with CMS content
+ */
+function mergeTenantWithCMS(base: TenantConfig, cms: TenantContent): TenantConfig {
+  return {
+    ...base,
+    name: cms.name || base.name,
+    primaryColor: cms.primaryColor || base.primaryColor,
+    logoUrl: cms.branding?.logoUrl || base.logoUrl,
+    customContent: {
+      heroTitle: cms.hero.title || base.customContent.heroTitle,
+      heroSubtitle: cms.hero.subtitle || base.customContent.heroSubtitle,
+      loginWelcome: cms.hero.loginWelcome || base.customContent.loginWelcome,
+      demoAccount1: cms.demoAccounts.account1 || base.customContent.demoAccount1,
+      demoAccount2: cms.demoAccounts.account2 || base.customContent.demoAccount2,
+      ...base.customContent,
+    },
+  }
+}
+
+/**
+ * Load CMS content for a tenant (async)
+ * Call this on app initialization to populate CMS content cache
+ */
+export async function loadTenantCMSContent(tenantId: string): Promise<void> {
+  try {
+    const content = await loadTenantContent(tenantId)
+    if (content) {
+      cmsContentCache.set(tenantId, content)
+    }
+  } catch (error) {
+    console.warn(`Failed to load CMS content for ${tenantId}:`, error)
+  }
+}
+
+/**
+ * Preload CMS content for all tenants
+ */
+export async function preloadAllTenantContent(): Promise<void> {
+  const allTenants = getAllTenants()
+  await Promise.all(allTenants.map((t) => loadTenantCMSContent(t.id)))
 }
 
 /**

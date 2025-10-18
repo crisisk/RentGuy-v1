@@ -1,0 +1,35 @@
+tenantId: sevensa
+name: Sevensa
+domain: sevensa.rentguy.nl
+primaryColor: '#2563EB'
+
+hero:
+  title: Sevensa Operations Dashboard
+  subtitle: Professioneel project- en teammanagement
+  loginWelcome: Welkom bij Sevensa RentGuy
+
+demoAccounts:
+  account1: info@sevensa.nl
+  account2: admin@sevensa.nl
+  password: sevensa
+
+branding:
+  logoUrl: ''
+  faviconUrl: ''
+  backgroundColor: '#FFFFFF'
+  textColor: '#1F2937'
+
+seo:
+  title: Sevensa - Professioneel Projectmanagement
+  description: Beheer je projecten en teams efficiënt met het Sevensa Operations Dashboard
+  keywords: projectmanagement, teammanagement, sevensa, operations
+
+contact:
+  email: info@sevensa.nl
+  phone: ''
+  address: ''
+
+customContent:
+  extra1: ''
+  extra2: ''
+  extraText: ''

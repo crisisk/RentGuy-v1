@@ -41,6 +41,11 @@ function PlannerRoute(): JSX.Element {
   const { onLogout, defaultUnauthenticatedPath } = useAppRouterContext()
   const guard = useAuthGuard({ requireAuth: true })
 
+  const handleLogout = useCallback(() => {
+    onLogout()
+    navigate(defaultUnauthenticatedPath, { replace: true })
+  }, [defaultUnauthenticatedPath, navigate, onLogout])
+
   useEffect(() => {
     if (!guard.isAuthenticated && guard.status !== 'checking') {
       navigate(defaultUnauthenticatedPath, { replace: true })
@@ -59,11 +64,6 @@ function PlannerRoute(): JSX.Element {
     )
   }
 
-  const handleLogout = useCallback(() => {
-    onLogout()
-    navigate(defaultUnauthenticatedPath, { replace: true })
-  }, [defaultUnauthenticatedPath, navigate, onLogout])
-
   return (
     <Suspense fallback={<AuthSpinner message="Planner laden…" />}>
       <Planner onLogout={handleLogout} />
@@ -75,6 +75,11 @@ function SecretsDashboardRoute(): JSX.Element {
   const navigate = useNavigate()
   const { onLogout, defaultUnauthenticatedPath } = useAppRouterContext()
   const guard = useAuthGuard({ requireAuth: true, allowedRoles: ['admin'] })
+
+  const handleLogout = useCallback(() => {
+    onLogout()
+    navigate(defaultUnauthenticatedPath, { replace: true })
+  }, [defaultUnauthenticatedPath, navigate, onLogout])
 
   useEffect(() => {
     if (!guard.isAuthenticated && guard.status !== 'checking') {
@@ -95,11 +100,6 @@ function SecretsDashboardRoute(): JSX.Element {
       />
     )
   }
-
-  const handleLogout = useCallback(() => {
-    onLogout()
-    navigate(defaultUnauthenticatedPath, { replace: true })
-  }, [defaultUnauthenticatedPath, navigate, onLogout])
 
   return (
     <Suspense fallback={<AuthSpinner message="Dashboard laden…" />}>

@@ -24,18 +24,18 @@ services:
       - VITE_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-rentguy-app}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rentguy-frontend.rule=Host(`${DOMAIN:-rentguy.sevensa.nl}`)"
-      - "traefik.http.routers.rentguy-frontend.entrypoints=rentguy-8721"
+      - "traefik.http.routers.rentguy-frontend.rule=Host(`sevensa.rentguy.nl`) || Host(`mr-dj.rentguy.nl`) || Host(`www.rentguy.nl`) || Host(`rentguy.nl`)"
+      - "traefik.http.routers.rentguy-frontend.entrypoints=websecure"
       - "traefik.http.routers.rentguy-frontend.tls=true"
       - "traefik.http.routers.rentguy-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.rentguy-frontend.loadbalancer.server.port=80"
       - "traefik.http.middlewares.rentguy-compress.compress=true"
       - "traefik.http.routers.rentguy-frontend.middlewares=rentguy-compress"
     networks:
-      - web
+      - sevensa-edge
       - rentguy-internal
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/healthz"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -106,15 +106,15 @@ services:
       - LOG_LEVEL=INFO
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rentguy-backend.rule=Host(`${DOMAIN:-rentguy.sevensa.nl}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.rentguy-backend.entrypoints=rentguy-8721"
+      - "traefik.http.routers.rentguy-backend.rule=(Host(`sevensa.rentguy.nl`) || Host(`mr-dj.rentguy.nl`) || Host(`www.rentguy.nl`) || Host(`rentguy.nl`)) && PathPrefix(`/api`)"
+      - "traefik.http.routers.rentguy-backend.entrypoints=websecure"
       - "traefik.http.routers.rentguy-backend.tls=true"
       - "traefik.http.routers.rentguy-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.rentguy-backend.loadbalancer.server.port=8000"
       - "traefik.http.middlewares.rentguy-stripprefix.stripprefix.prefixes=/api"
       - "traefik.http.routers.rentguy-backend.middlewares=rentguy-stripprefix"
     networks:
-      - web
+      - sevensa-edge
       - rentguy-internal
     depends_on:
       rentguy-db:
@@ -248,9 +248,9 @@ volumes:
       device: /root/rentguy/data/redis
 
 networks:
-  web:
+  sevensa-edge:
     external: true
-  
+
   rentguy-internal:
     driver: bridge
     internal: false
