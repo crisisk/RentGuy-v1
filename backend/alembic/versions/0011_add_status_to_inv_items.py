@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '0011_add_status_to_inv_items'
-down_revision = '0010_postgis_location_tracking'
+down_revision = '0012'
 branch_labels = None
 depends_on = None
 

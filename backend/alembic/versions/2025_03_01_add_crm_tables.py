@@ -7,7 +7,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "2025_03_01_add_crm_tables"
-down_revision = "0010_postgis_location_tracking"
+down_revision = "0011_add_status_to_inv_items"
 branch_labels = None
 depends_on = None
 
