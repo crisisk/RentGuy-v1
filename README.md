@@ -10,6 +10,37 @@ RentGuy Enterprise Platform is a full-stack solution for professional rental ope
 | Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.tsx`) conditionally renders the planner UI or the scanner UI depending on `VITE_APP_MODE`, validated through a shared runtime schema. |
 | Infrastructure | Docker artefacts, Alembic migrations, seed scripts, and environment configuration helpers sit alongside documentation that captures the enterprise deployment roadmap. |
 
+## Production Readiness Tracker
+
+The automated production report confirms that all implementation phases (routing, new backend modules, business logic, end-to-end testing, and documentation) have shipped and are present in this repository.【F:PRODUCTION_READY_SUMMARY.md†L5-L200】 We validated several representative artefacts while enabling this tracker:
+
+- React Router v6 configuration with lazy-loaded routes and guard metadata lives in `rentguy/frontend/src/router/routes.tsx`, ensuring every console view has a defined path and fallback.【F:rentguy/frontend/src/router/routes.tsx†L1-L134】
+- The navigation experience uses Zustand-driven state for responsive menus in `rentguy/frontend/src/components/Navigation.tsx`, matching the report’s UI requirements.【F:rentguy/frontend/src/components/Navigation.tsx†L1-L135】
+- Global authentication state, persistence, and guard hooks are implemented in `rentguy/frontend/src/stores/authStore.ts`, aligning with the documented state-management scope.【F:rentguy/frontend/src/stores/authStore.ts†L1-L43】
+- Newly delivered backend services cover the customer portal, recurring invoices, booking engine, job board, scanning APIs, and sub-renting partner sync, as evidenced by their FastAPI routers.【F:backend/app/modules/customer_portal/routes.py†L1-L104】【F:backend/app/modules/recurring_invoices/routes.py†L1-L155】【F:backend/app/modules/booking/routes.py†L1-L200】【F:backend/app/modules/jobboard/routes.py†L1-L159】【F:backend/app/modules/scanning/routes.py†L1-L170】【F:backend/app/modules/subrenting/routes.py†L1-L132】
+- Business-logic orchestrators and validation rules for key workflows reside in `rentguy/frontend/src/logic/`, e.g. `projectLogic.ts` with schema-driven rules.【F:rentguy/frontend/src/logic/projectLogic.ts†L1-L137】
+- Playwright test infrastructure is configured for Chromium, Firefox, WebKit, and mobile emulation, matching the E2E coverage described in the report.【F:tests/e2e/playwright.config.ts†L1-L79】
+- Deployment and operations runbooks, along with API documentation, are maintained under `docs/` to support production roll-outs.【F:docs/DEPLOYMENT.md†L1-L120】【F:docs/api/openapi.yaml†L1-L20】
+
+### Outstanding Operational Tasks
+
+The report’s “Next Steps” section highlights work that still needs execution before we can declare the deployment cycle closed. These items are tracked below and should be updated after every multi-agent run.【F:PRODUCTION_READY_SUMMARY.md†L307-L356】【F:PRODUCTION_READY_SUMMARY.md†L360-L393】
+
+| Priority | Task | Status | Notes |
+| --- | --- | --- | --- |
+| P1 | Deploy to VPS using the documented runbook | Not Started | Follow `docs/DEPLOYMENT.md` to complete the rollout. |
+| P1 | Execute Playwright E2E regression suite | Not Started | Run against staging before sign-off. |
+| P1 | Apply latest database migrations and seed data | Not Started | Coordinate with Alembic plan in `backend/`. |
+| P1 | Finalise environment variable configuration for new modules | Not Started | Ensure `.env` mirrors summary requirements. |
+| P2 | Run integration tests across new and existing modules | Not Started | Cover API/UX cross-module flows. |
+| P2 | Perform performance/load testing on new endpoints | Not Started | Stress recurring invoices, booking, and scanning APIs. |
+| P2 | Conduct a security audit of auth and RBAC layers | Not Started | Include pen-test of guards and API tokens. |
+| P2 | Schedule user acceptance testing with stakeholders | Not Started | Capture sign-off artifacts for go-live. |
+| P3 | Evaluate mobile app opportunities for crew/customers | Not Started | Determine scope and platform strategy. |
+| P3 | Extend analytics for BI dashboards | Not Started | Define KPIs and tooling requirements. |
+| P3 | Plan third-party accounting/CRM integrations | Not Started | Prioritise candidate systems and API touchpoints. |
+| P3 | Prepare internationalisation roadmap | Not Started | Audit UI copy and localisation framework. |
+
 ## Nieuw plan van aanpak (Q4 2025)
 
 1. **Stabilisatie & debugging**
