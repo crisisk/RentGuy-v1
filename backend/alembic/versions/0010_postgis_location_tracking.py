@@ -32,7 +32,7 @@ def upgrade():
         sa.Column('accuracy', sa.Float, nullable=True),
         sa.Column('speed', sa.Float, nullable=True),
         sa.Column('heading', sa.Float, nullable=True),
-        sa.Column('project_id', sa.Integer, sa.ForeignKey('projects.id'), nullable=True),
+        sa.Column('project_id', sa.Integer, sa.ForeignKey('prj_projects.id'), nullable=True),
         sa.UniqueConstraint('user_id', name='uq_locations_user_id')
     )
 
