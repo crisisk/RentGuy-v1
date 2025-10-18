@@ -22,4 +22,6 @@
 | P3 | Plan third-party accounting/CRM integrations | Complete | Strategy defined in `docs/integration_strategy.md`. |
 | P3 | Prepare internationalisation roadmap | Complete | Localisation milestones outlined in `docs/internationalization_roadmap.md`. |
 | P1 | Instrument UI with `data-testid` hooks for Cypress | Not Started | Legacy specs reference selectors that are not present in the React components, so runs are skipped until hooks are added. |
+| P1 | Ensure GitHub Actions install Node dependencies in each Node.js job | Complete | `.github/workflows/main-workflow.yml` now runs `npm ci` before lint, test, build, and E2E steps so tools like ESLint are available. |
 | P1 | Provision reproducible PostgreSQL environment for migrations and integration tests | Complete | PostgreSQL 16 with PostGIS has been installed locally; document the bootstrap commands for future operators. |
+| P2 | Run scanner lint inside CI | Not Started | The workflow executes only the root lint command today; wire the scanner lint script into Actions once ready. |
