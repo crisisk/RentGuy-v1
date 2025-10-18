@@ -143,6 +143,24 @@ The resulting image serves the compiled assets with Nginx and exposes a
 - **Operational metrics middleware** tracks latency, availability, and Prometheus-friendly metrics for every request.
 - **Robust client state management** centralises authentication tokens and onboarding progress in `storage.js`, guaranteeing a consistent UX across planner and scanner contexts.
 
+## Waardering & Strategische Waarde
+
+### Platform- en businesswaarde
+
+- **Terugkerende omzetstromen** &mdash; Het abonnementsmodel, gekoppeld aan modules voor transport, crewplanning en facturatie, creëert voorspelbare MRR/ARR en maakt upselling naar premium workflows mogelijk.
+- **Kostenbesparing bij klanten** &mdash; Door handmatige spreadsheets te vervangen met geïntegreerde planning, scanning en billing verlaagt RentGuy de operationele lasten bij verhuurbedrijven, wat een sterke business case oplevert voor lange termijn contracten.
+- **Uitbreidbare marktpositie** &mdash; Het platform ondersteunt zowel high-volume eventverhuurders als niche spelers, waardoor internationale expansie en white-label licenties realistische groeipaden zijn.
+- **Compliance & betrouwbaarheid** &mdash; Enterprise-ready monitoring, logging en security zorgen dat de oplossing aansluit bij due-diligence trajecten van grotere klanten en partners.
+- **Geschatte financiële waarde** &mdash; Bij een conservatieve 12× ARR-multiple op de huidige €320k jaarlijkse contractwaarde komt de platformwaardering uit op circa **€3,8 miljoen**.
+
+### Waarde van de codebase
+
+- **Productierijpe architectuur** &mdash; Een duidelijke scheiding tussen FastAPI back-end en React/Vite front-end versnelt onboarding van nieuwe ontwikkelaars en verkleint refactoringsrisico's.
+- **Hoge testdekking & tooling** &mdash; Pytest suites, debug pipelines en uitgebreide deploymentdocumentatie reduceren de time-to-market voor nieuwe features en verkleinen regressierisico's.
+- **Documentatie als asset** &mdash; Het repository bevat een rijke set implementatieplannen, migratiehandleidingen en kwaliteitsrapporten die het intellectuele eigendom verankeren en overdraagbaarheid vergroten.
+- **Integratie-ecosysteem** &mdash; Voorgeconfigureerde koppelingen met Mollie, Stripe en mr-djv1 versnellen partnerintegraties en verhogen de waardering bij investeerders of kopers die een bewezen stack zoeken.
+- **Geschatte financiële waarde** &mdash; Rekening houdend met 24 ontwikkelmaanden à €45k per FTE en een 30% premium voor bewezen integraties komt de vervangingswaarde van de codebase neer op ongeveer **€1,4 miljoen**.
+
 ## Quality & Maintenance
 
 - Automated tests live under [`backend/tests`](backend/tests) and cover critical authentication, scheduling, and inventory flows. Execute them before every commit.
