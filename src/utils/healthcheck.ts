@@ -60,36 +60,65 @@ const checkDatabaseHealth = async (): Promise<CheckResult> => {
 const checkAPIEndpoints = async (): Promise<CheckResult> => {
   const endpoints = ['/api/users', '/api/products', '/api/orders'];
   const startTime = Date.now();
-  
+
   try {
     const results = await Promise.allSettled(
-      endpoints.map(endpoint => axios.get(`/api${endpoint}`))
+      endpoints.map(endpoint => axios.get(endpoint))
     );
 
-    const successful = results.filter(result => 
-      result.status === 'fulfilled' && 
-      result.value.status >= 200 && 
-      result.value.status < 300
-    ).length;
+    const failures = results.flatMap((result, index) => {
+      const endpoint = endpoints[index];
 
+      if (result.status === 'fulfilled') {
+        const { status, data } = result.value;
+        const isSuccess = status >= 200 && status < 300;
+
+        if (!isSuccess) {
+          return [{
+            endpoint,
+            details: {
+              type: 'http',
+              status,
+              data,
+            },
+          }];
+        }
+
+        return [];
+      }
+
+      return [{
+        endpoint,
+        details: {
+          type: 'network',
+          reason: result.reason,
+        },
+      }];
+    });
+
+    const successful = endpoints.length - failures.length;
     const latency = Date.now() - startTime;
-    let status: CheckStatus = 'healthy';
 
+    let status: CheckStatus = 'healthy';
     if (successful === 0) {
       status = 'down';
-    } else if (successful < endpoints.length) {
+    } else if (failures.length > 0) {
       status = 'degraded';
     }
 
-    const errors = results
-      .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-      .map(result => result.reason);
+    const firstFailure = failures[0];
+    const error = firstFailure
+      ? {
+          endpoint: firstFailure.endpoint,
+          ...firstFailure.details,
+        }
+      : undefined;
 
     return {
       name: 'api_endpoints',
       status,
       latency,
-      error: errors.length > 0 ? errors[0] : undefined
+      error,
     };
   } catch (error) {
     const latency = Date.now() - startTime;
