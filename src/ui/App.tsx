@@ -70,6 +70,40 @@ function resolveInitialMarketingPath(fallbackPath: string): string {
   return normaliseMarketingPath(combined || fallbackPath)
 }
 
+function scrollToPathAnchor(targetPath: string): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.requestAnimationFrame(() => {
+    const hashIndex = targetPath.indexOf('#')
+    if (hashIndex < 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
+    const rawHash = targetPath.slice(hashIndex + 1).trim()
+    if (!rawHash) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
+    let decodedHash: string
+    try {
+      decodedHash = decodeURIComponent(rawHash)
+    } catch (error) {
+      console.warn('Kon hash-fragment niet decoderen', error)
+      decodedHash = rawHash
+    }
+    const element = document.getElementById(decodedHash)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  })
+}
+
 function useMarketingNavigation(fallbackPath: string) {
   const [path, setPath] = useState<string>(() => resolveInitialMarketingPath(fallbackPath))
 
@@ -86,6 +120,10 @@ function useMarketingNavigation(fallbackPath: string) {
     }
   }, [fallbackPath])
 
+  useEffect(() => {
+    scrollToPathAnchor(path)
+  }, [path])
+
   const navigate = useCallback((target: string, options: { replace?: boolean } = {}) => {
     const next = normaliseMarketingPath(target || fallbackPath)
     if (typeof window !== 'undefined') {
@@ -96,6 +134,7 @@ function useMarketingNavigation(fallbackPath: string) {
       }
     }
     setPath(next)
+    scrollToPathAnchor(next)
   }, [fallbackPath])
 
   return { path, navigate }
