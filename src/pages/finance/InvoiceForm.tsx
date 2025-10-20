@@ -1,149 +1,195 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import financeStore from '../../stores/financeStore';
+import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-}
+import { useFinanceStore } from '@stores/financeStore'
+import type { InvoiceDraft, InvoiceLineItem } from '@rg-types/financeTypes'
+
+const generateId = () =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2, 11)
+
+const createEmptyLineItem = (): InvoiceLineItem => ({
+  id: generateId(),
+  description: '',
+  quantity: 1,
+  unitPrice: 0,
+})
+
+const normaliseDateInput = (value?: string) =>
+  value ? new Date(value).toISOString().slice(0, 10) : ''
 
 const InvoiceForm: React.FC = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>()
+  const navigate = useNavigate()
 
-  const [clientName, setClientName] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [clientName, setClientName] = useState('')
+  const [invoiceDate, setInvoiceDate] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([createEmptyLineItem()])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const generateUniqueId = () => Math.random().toString(36).substr(2, 9);
-
-  const addLineItem = () => {
-    const newLineItem: LineItem = {
-      id: generateUniqueId(),
-      description: '',
-      quantity: 1,
-      unitPrice: 0
-    };
-    setLineItems([...lineItems, newLineItem]);
-  };
-
-  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
-    const updatedItems = lineItems.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    );
-    setLineItems(updatedItems);
-  };
-
-  const removeLineItem = (id: string) => {
-    setLineItems(lineItems.filter(item => item.id !== id));
-  };
-
-  const calculateTotal = () => {
-    return lineItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const invoiceData = {
-        clientName,
-        invoiceDate: new Date(invoiceDate),
-        dueDate: new Date(dueDate),
-        lineItems,
-        total: calculateTotal()
-      };
-
-      if (id) {
-        await financeStore.updateInvoice(id, invoiceData);
-      } else {
-        await financeStore.createInvoice(invoiceData);
-      }
-      navigate('/invoices');
-    } catch (err) {
-      setError('Failed to save invoice');
-    }
-  };
+  const createInvoice = useFinanceStore((state) => state.createInvoice)
+  const updateInvoice = useFinanceStore((state) => state.updateInvoice)
+  const getInvoiceById = useFinanceStore((state) => state.getInvoiceById)
 
   useEffect(() => {
-    const fetchInvoice = async () => {
-      try {
-        if (id) {
-          const invoice = await financeStore.getInvoiceById(id);
-          setClientName(invoice.clientName);
-          setInvoiceDate(invoice.invoiceDate.toISOString().split('T')[0]);
-          setDueDate(invoice.dueDate.toISOString().split('T')[0]);
-          setLineItems(invoice.lineItems);
-        }
-      } catch (err) {
-        setError('Failed to load invoice');
-      } finally {
-        setLoading(false);
+    if (!id) {
+      setLoading(false)
+      return
+    }
+
+    getInvoiceById(id)
+      .then((invoice) => {
+        setClientName(invoice.clientName)
+        setInvoiceDate(normaliseDateInput(invoice.invoiceDate))
+        setDueDate(normaliseDateInput(invoice.dueDate))
+        setLineItems(
+          invoice.lineItems.length > 0
+            ? invoice.lineItems.map((item) => ({
+                id: item.id ?? generateId(),
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+              }))
+            : [createEmptyLineItem()],
+        )
+      })
+      .catch(() => setLoadError('Failed to load invoice'))
+      .finally(() => setLoading(false))
+  }, [id, getInvoiceById])
+
+  const addLineItem = () => {
+    setLineItems((current) => [...current, createEmptyLineItem()])
+  }
+
+  const updateLineItem = (itemId: string, field: keyof InvoiceLineItem, value: string | number) => {
+    setLineItems((current) =>
+      current.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              [field]: field === 'description' ? value : Number(value),
+            }
+          : item,
+      ),
+    )
+  }
+
+  const removeLineItem = (itemId: string) => {
+    setLineItems((current) => {
+      const updated = current.filter((item) => item.id !== itemId)
+      return updated.length > 0 ? updated : [createEmptyLineItem()]
+    })
+  }
+
+  const total = useMemo(
+    () =>
+      lineItems.reduce(
+        (accumulator, item) => accumulator + Number(item.quantity) * Number(item.unitPrice),
+        0,
+      ),
+    [lineItems],
+  )
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSubmitError(null)
+    setIsSubmitting(true)
+
+    if (!invoiceDate || !dueDate) {
+      setSubmitError('Invoice and due dates are required.')
+      setIsSubmitting(false)
+      return
+    }
+
+    const payload: InvoiceDraft = {
+      clientName,
+      invoiceDate: new Date(invoiceDate).toISOString(),
+      dueDate: new Date(dueDate).toISOString(),
+      lineItems: lineItems.map((item) => ({
+        ...item,
+        total: item.total ?? Number(item.quantity) * Number(item.unitPrice),
+      })),
+      total,
+    }
+
+    try {
+      if (id) {
+        await updateInvoice(id, payload)
+      } else {
+        await createInvoice(payload)
       }
-    };
+      navigate('/invoices')
+    } catch {
+      setSubmitError('Failed to save invoice')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
-    fetchInvoice();
-  }, [id]);
+  if (loading) {
+    return <div className="p-4">Loading...</div>
+  }
 
-  if (loading) return <div className="p-4">Loading...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
+  if (loadError) {
+    return <div className="p-4 text-red-500">{loadError}</div>
+  }
 
   return (
     <div className="container mx-auto p-4">
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+      <form onSubmit={handleSubmit} className="mb-4 rounded bg-white px-8 pt-6 pb-8 shadow-md">
         <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">
+          <label className="mb-2 block text-sm font-bold text-gray-700">
             Client Name
             <input
               type="text"
               value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+              onChange={(event) => setClientName(event.target.value)}
+              className="mt-1 w-full rounded border px-3 py-2 text-gray-700 shadow"
               required
             />
           </label>
         </div>
 
-        <div className="flex mb-4">
-          <div className="w-1/2 mr-2">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Invoice Date
-              <input
-                type="date"
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-                required
-              />
-            </label>
-          </div>
-          <div className="w-1/2 ml-2">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Due Date
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-                required
-              />
-            </label>
-          </div>
+        <div className="mb-4 flex flex-col gap-4 md:flex-row">
+          <label className="flex-1 text-sm font-bold text-gray-700">
+            Invoice Date
+            <input
+              type="date"
+              value={invoiceDate}
+              onChange={(event) => setInvoiceDate(event.target.value)}
+              className="mt-1 w-full rounded border px-3 py-2 text-gray-700 shadow"
+              required
+            />
+          </label>
+          <label className="flex-1 text-sm font-bold text-gray-700">
+            Due Date
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(event) => setDueDate(event.target.value)}
+              className="mt-1 w-full rounded border px-3 py-2 text-gray-700 shadow"
+              required
+            />
+          </label>
         </div>
 
         <div className="mb-4">
-          <h3 className="text-lg font-bold mb-2">Line Items</h3>
-          <button 
-            type="button" 
-            onClick={addLineItem}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2"
-          >
-            Add Line Item
-          </button>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-lg font-bold">Line Items</h3>
+            <button
+              type="button"
+              onClick={addLineItem}
+              className="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
+            >
+              Add Line Item
+            </button>
+          </div>
 
           <table className="w-full border-collapse border border-gray-300">
             <thead>
@@ -162,7 +208,7 @@ const InvoiceForm: React.FC = () => {
                     <input
                       type="text"
                       value={item.description}
-                      onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                      onChange={(event) => updateLineItem(item.id!, 'description', event.target.value)}
                       className="w-full"
                       required
                     />
@@ -171,7 +217,7 @@ const InvoiceForm: React.FC = () => {
                     <input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => updateLineItem(item.id, 'quantity', Number(e.target.value))}
+                      onChange={(event) => updateLineItem(item.id!, 'quantity', Number(event.target.value))}
                       className="w-full"
                       min="1"
                       required
@@ -181,20 +227,18 @@ const InvoiceForm: React.FC = () => {
                     <input
                       type="number"
                       value={item.unitPrice}
-                      onChange={(e) => updateLineItem(item.id, 'unitPrice', Number(e.target.value))}
+                      onChange={(event) => updateLineItem(item.id!, 'unitPrice', Number(event.target.value))}
                       className="w-full"
                       min="0"
                       step="0.01"
                       required
                     />
                   </td>
-                  <td className="border p-2">
-                    ${(item.quantity * item.unitPrice).toFixed(2)}
-                  </td>
+                  <td className="border p-2">${(item.quantity * item.unitPrice).toFixed(2)}</td>
                   <td className="border p-2">
                     <button
                       type="button"
-                      onClick={() => removeLineItem(item.id)}
+                      onClick={() => removeLineItem(item.id!)}
                       className="text-red-500 hover:text-red-700"
                     >
                       Remove
@@ -207,20 +251,25 @@ const InvoiceForm: React.FC = () => {
         </div>
 
         <div className="mb-4 text-right">
-          <strong>Total: ${calculateTotal().toFixed(2)}</strong>
+          <strong>Total: ${total.toFixed(2)}</strong>
         </div>
+
+        {submitError && <div className="mb-4 text-red-500">{submitError}</div>}
 
         <div className="flex items-center justify-between">
           <button
             type="submit"
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+            disabled={isSubmitting}
+            className={`rounded bg-green-500 px-4 py-2 font-bold text-white hover:bg-green-700 ${
+              isSubmitting ? 'opacity-75' : ''
+            }`}
           >
-            {id ? 'Update Invoice' : 'Create Invoice'}
+            {isSubmitting ? 'Saving…' : id ? 'Update Invoice' : 'Create Invoice'}
           </button>
         </div>
       </form>
     </div>
-  );
-};
+  )
+}
 
-export default InvoiceForm;
+export default InvoiceForm

@@ -1,54 +1,54 @@
-Here's a comprehensive `financeTypes.ts` file with the specified requirements:
+export type InvoiceStatus =
+  | 'draft'
+  | 'sent'
+  | 'pending'
+  | 'paid'
+  | 'overdue'
+  | 'cancelled';
 
-```typescript
-// financeTypes.ts
+export type QuoteStatus = 'draft' | 'sent' | 'converted';
 
-export enum InvoiceStatus {
-  DRAFT = 'DRAFT',
-  SENT = 'SENT',
-  PAID = 'PAID',
-  OVERDUE = 'OVERDUE',
-  CANCELLED = 'CANCELLED'
-}
+export type PaymentMethod = 'cash' | 'bank_transfer' | 'card' | 'mollie';
 
-export enum PaymentMethod {
-  CASH = 'CASH',
-  BANK_TRANSFER = 'BANK_TRANSFER',
-  CARD = 'CARD',
-  MOLLIE = 'MOLLIE'
-}
-
-export interface InvoiceItem {
+export interface InvoiceLineItem {
   id?: string;
   description: string;
   quantity: number;
   unitPrice: number;
-  total: number;
+  total?: number;
 }
 
-export interface Invoice {
+export interface InvoiceSummary {
   id: string;
-  customerId: string;
-  projectId?: string;
-  number: string;
-  date: Date;
-  dueDate: Date;
+  number?: string;
+  clientName: string;
   amount: number;
-  tax: number;
-  total: number;
   status: InvoiceStatus;
-  items: InvoiceItem[];
+  dueDate: string;
+  invoiceDate?: string;
+}
+
+export interface InvoiceDetails extends InvoiceSummary {
+  lineItems: InvoiceLineItem[];
+  total: number;
+  notes?: string;
+}
+
+export interface InvoiceDraft {
+  clientName: string;
+  invoiceDate: string;
+  dueDate: string;
+  lineItems: InvoiceLineItem[];
+  total: number;
 }
 
 export interface Quote {
   id: string;
-  customerId: string;
   number: string;
-  date: Date;
-  validUntil: Date;
+  client: string;
   amount: number;
-  status: InvoiceStatus;
-  items: InvoiceItem[];
+  date: string;
+  status: QuoteStatus;
 }
 
 export interface Payment {
@@ -56,34 +56,33 @@ export interface Payment {
   invoiceId: string;
   amount: number;
   method: PaymentMethod;
-  date: Date;
-  reference?: string;
   status: string;
+  date: string;
+  reference?: string;
 }
 
-export interface FinanceDashboard {
-  totalRevenue: number;
-  pendingInvoices: number;
-  overdueInvoices: number;
-  recentPayments: Payment[];
+export interface FinanceStats {
+  monthlyRevenue: number;
+  pendingInvoicesTotal: number;
+  paidInvoicesTotal: number;
 }
 
-// Optional: Type guard for type checking
-export function isInvoice(obj: any): obj is Invoice {
+export interface DashboardData {
+  invoices: InvoiceSummary[];
+  stats: FinanceStats | null;
+}
+
+export const isInvoiceDetails = (value: unknown): value is InvoiceDetails => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<InvoiceDetails>;
   return (
-    obj &&
-    typeof obj.id === 'string' &&
-    typeof obj.customerId === 'string' &&
-    obj.date instanceof Date &&
-    obj.dueDate instanceof Date &&
-    Array.isArray(obj.items)
+    typeof candidate.id === 'string' &&
+    typeof candidate.clientName === 'string' &&
+    typeof candidate.dueDate === 'string' &&
+    typeof candidate.total === 'number' &&
+    Array.isArray(candidate.lineItems)
   );
-}
-```
-
-This TypeScript file provides:
-- Comprehensive interfaces for financial entities
-- Enums for statuses and payment methods
-- Optional type guard for Invoice validation
-- Strongly typed properties with appropriate types
-- Flexibility with optional fields (e.g., `projectId`, `reference`)
+};

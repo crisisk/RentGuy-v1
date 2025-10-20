@@ -1,82 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import store from '../../stores/financeStore';
+import React, { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  date: string;
-  status: 'paid' | 'pending' | 'overdue';
+import { useFinanceStore } from '@stores/financeStore'
+import type { InvoiceSummary } from '@rg-types/financeTypes'
+
+const statusClasses: Record<string, string> = {
+  paid: 'bg-green-100 text-green-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  overdue: 'bg-red-100 text-red-800',
+}
+
+const formatDate = (dateString: string | undefined) => {
+  if (!dateString) {
+    return '—'
+  }
+
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 const InvoiceOverview: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [clientNameFilter, setClientNameFilter] = useState<string>('');
-  const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [clientNameFilter, setClientNameFilter] = useState<string>('')
+  const navigate = useNavigate()
+
+  const { invoices, isLoading, error } = useFinanceStore((state) => ({
+    invoices: state.invoices,
+    isLoading: state.loading,
+    error: state.error,
+  }))
+  const fetchInvoices = useFinanceStore((state) => state.fetchInvoices)
 
   useEffect(() => {
-    store.fetchInvoices()
-      .then((data: Invoice[]) => {
-        setInvoices(data);
-        setIsLoading(false);
-      })
-      .catch((err: Error) => {
-        setError(err.message);
-        setIsLoading(false);
-      });
-  }, []);
+    fetchInvoices().catch(() => {
+      /* error handled via store */
+    })
+  }, [fetchInvoices])
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-    const matchesName = invoice.clientName.toLowerCase().includes(clientNameFilter.toLowerCase());
-    return matchesStatus && matchesName;
-  });
+  const filteredInvoices = useMemo(() => {
+    const normalisedFilter = clientNameFilter.trim().toLowerCase()
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-  };
+    return invoices.filter((invoice: InvoiceSummary) => {
+      const matchesStatus =
+        statusFilter === 'all' || invoice.status.toLowerCase() === statusFilter.toLowerCase()
+      const matchesName =
+        normalisedFilter.length === 0 ||
+        invoice.clientName.toLowerCase().includes(normalisedFilter)
+      return matchesStatus && matchesName
+    })
+  }, [invoices, statusFilter, clientNameFilter])
 
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  if (isLoading && invoices.length === 0) {
+    return <div className="p-4 text-center">Loading invoices...</div>
+  }
 
-  if (isLoading) return <div className="p-4 text-center">Loading invoices...</div>;
-  if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
+  if (error) {
+    return <div className="p-4 text-red-500">Error: {error}</div>
+  }
 
   return (
     <div className="p-4 md:p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Invoice Overview</h1>
-        <Link
-          to="/invoices/new"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
+        <Link to="/invoices/new" className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
           New Invoice
         </Link>
       </div>
 
-      <div className="mb-6 flex flex-col md:flex-row gap-4">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row">
         <input
           type="text"
           placeholder="Filter by client name..."
-          className="p-2 border rounded flex-grow"
+          className="flex-grow rounded border p-2"
           value={clientNameFilter}
-          onChange={(e) => setClientNameFilter(e.target.value)}
+          onChange={(event) => setClientNameFilter(event.target.value)}
         />
         <select
-          className="p-2 border rounded"
+          className="rounded border p-2"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(event) => setStatusFilter(event.target.value)}
         >
           <option value="all">All Statuses</option>
           <option value="paid">Paid</option>
@@ -85,14 +91,15 @@ const InvoiceOverview: React.FC = () => {
         </select>
       </div>
 
-      <div className="rounded-lg border overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-lg border shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Client</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Invoice Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Due Date</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
               </tr>
@@ -102,9 +109,10 @@ const InvoiceOverview: React.FC = () => {
                 <tr key={invoice.id}>
                   <td className="px-4 py-3">{invoice.clientName}</td>
                   <td className="px-4 py-3">${invoice.amount.toFixed(2)}</td>
-                  <td className="px-4 py-3">{formatDate(invoice.date)}</td>
+                  <td className="px-4 py-3">{formatDate(invoice.invoiceDate)}</td>
+                  <td className="px-4 py-3">{formatDate(invoice.dueDate)}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded text-sm ${getStatusClass(invoice.status)}`}>
+                    <span className={`rounded px-2 py-1 text-sm ${statusClasses[invoice.status] ?? 'bg-gray-100 text-gray-800'}`}>
                       {invoice.status}
                     </span>
                   </td>
@@ -127,7 +135,7 @@ const InvoiceOverview: React.FC = () => {
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default InvoiceOverview;
+export default InvoiceOverview
