@@ -134,6 +134,12 @@ ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
         "/api/v1",
         ["recurring-invoices"],
     ),
+    (
+        "app.modules.subrenting.routes",
+        "router",
+        "/api/v1",
+        ["subrenting"],
+    ),
     ("app.modules.onboarding.routes", "router", "/api/v1", ["onboarding"]),
     ("app.modules.crm.routes", "router", "/api/v1", ["crm"]),
     (

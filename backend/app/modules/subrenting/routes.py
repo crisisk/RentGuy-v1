@@ -1,132 +1,167 @@
-"""
-FastAPI routes for sub-renting module
-Handles partner management, capacity and availability operations
-"""
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
-from uuid import UUID
-from datetime import datetime
+"""FastAPI routes for the sub-renting module."""
 
-from app.database import get_db
-from app.authStore import get_current_user
-from . import schemas, models
-from .partner_api import PartnerAPIClient
+from __future__ import annotations
+
+from typing import Iterable
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.modules.auth.deps import get_db, require_role
+from .models import PartnerAvailability, PartnerCapacity, SubRentingPartner
+from .partner_api import PartnerAPIClient, PartnerAPIClientError
+from .schemas import (
+    AvailabilityBase,
+    AvailabilityCreate,
+    AvailabilityResponse,
+    CapacityCreate,
+    CapacityResponse,
+    PartnerCreate,
+    PartnerResponse,
+)
 
 router = APIRouter(prefix="/subrenting", tags=["subrenting"])
 
-@router.post("/partners", response_model=schemas.PartnerResponse)
-async def create_partner(
-    partner: schemas.PartnerCreate,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user)
-):
-    """Create new sub-renting partner with API credentials"""
+
+def _get_partner(db: Session, partner_id: UUID) -> SubRentingPartner:
+    partner = db.get(SubRentingPartner, str(partner_id))
+    if partner is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Partner niet gevonden")
+    return partner
+
+
+def _sync_partner_availability(partner: SubRentingPartner, records: Iterable[PartnerAvailability]) -> None:
+    if not partner.api_endpoint or not partner.api_key:
+        return
+
+    client = PartnerAPIClient(partner.api_endpoint, partner.api_key)
     try:
-        db_partner = models.SubRentingPartner(**partner.dict())
-        db.add(db_partner)
-        await db.commit()
-        await db.refresh(db_partner)
-        return db_partner
-    except Exception as e:
-        await db.rollback()
+        client.sync_availability(records)
+    except PartnerAPIClientError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Partner synchronisatie mislukt: {exc}") from exc
+
+
+@router.post("/partners", response_model=PartnerResponse, status_code=status.HTTP_201_CREATED)
+def create_partner(
+    payload: PartnerCreate,
+    db: Session = Depends(get_db),
+    _: object = Depends(require_role("admin")),
+) -> PartnerResponse:
+    partner = SubRentingPartner(
+        name=payload.name,
+        api_endpoint=payload.api_endpoint,
+        api_key=payload.api_key,
+        contact_email=payload.contact_email,
+        location=payload.location,
+    )
+    db.add(partner)
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error creating partner: {str(e)}"
-        )
+            status.HTTP_400_BAD_REQUEST,
+            "Kon subrenting-partner niet opslaan",
+        ) from exc
 
-@router.get("/partners", response_model=List[schemas.PartnerResponse])
-async def get_partners(
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user)
-):
-    """List all sub-renting partners"""
-    result = await db.execute(models.SubRentingPartner.select())
-    return result.scalars().all()
+    db.refresh(partner)
+    return PartnerResponse.model_validate(partner)
 
-@router.post("/partners/{partner_id}/capacities", response_model=schemas.CapacityResponse)
-async def add_capacity(
+
+@router.get("/partners", response_model=list[PartnerResponse])
+def list_partners(
+    db: Session = Depends(get_db),
+    _: object = Depends(require_role("admin", "planner")),
+) -> list[PartnerResponse]:
+    partners = db.query(SubRentingPartner).order_by(SubRentingPartner.name).all()
+    return [PartnerResponse.model_validate(partner) for partner in partners]
+
+
+@router.post(
+    "/partners/{partner_id}/capacities",
+    response_model=CapacityResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_capacity(
     partner_id: UUID,
-    capacity: schemas.CapacityCreate,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user)
-):
-    """Add capacity entry for a partner"""
+    payload: CapacityCreate,
+    db: Session = Depends(get_db),
+    _: object = Depends(require_role("admin", "planner")),
+) -> CapacityResponse:
+    partner = _get_partner(db, partner_id)
+    capacity = PartnerCapacity(
+        partner_id=partner.id,
+        vehicle_type=payload.vehicle_type,
+        quantity=payload.quantity,
+        price_per_unit=payload.price_per_unit,
+        currency=payload.currency.upper(),
+        valid_from=payload.valid_from,
+        valid_to=payload.valid_to,
+    )
+    db.add(capacity)
     try:
-        partner = await db.get(models.SubRentingPartner, partner_id)
-        if not partner:
-            raise HTTPException(status_code=404, detail="Partner not found")
-        
-        db_capacity = models.PartnerCapacity(**capacity.dict(), partner_id=partner_id)
-        db.add(db_capacity)
-        await db.commit()
-        await db.refresh(db_capacity)
-        return db_capacity
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error adding capacity: {str(e)}"
-        )
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kon capaciteit niet opslaan") from exc
 
-@router.post("/partners/{partner_id}/availability", response_model=schemas.AvailabilityResponse)
-async def create_availability(
+    db.refresh(capacity)
+    return CapacityResponse.model_validate(capacity)
+
+
+@router.post(
+    "/partners/{partner_id}/availability",
+    response_model=AvailabilityResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_availability(
     partner_id: UUID,
-    availability: schemas.AvailabilityCreate,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user)
-):
-    """Create new availability slot for a partner"""
+    payload: AvailabilityCreate,
+    db: Session = Depends(get_db),
+    _: object = Depends(require_role("admin", "planner")),
+) -> AvailabilityResponse:
+    partner = _get_partner(db, partner_id)
+    availability = PartnerAvailability(
+        partner_id=partner.id,
+        start_time=payload.start_time,
+        end_time=payload.end_time,
+        status=payload.status,
+    )
+    db.add(availability)
     try:
-        partner = await db.get(models.SubRentingPartner, partner_id)
-        if not partner:
-            raise HTTPException(status_code=404, detail="Partner not found")
-        
-        db_availability = models.PartnerAvailability(**availability.dict(), partner_id=partner_id)
-        db.add(db_availability)
-        await db.commit()
-        await db.refresh(db_availability)
-        
-        # Sync with partner API
-        client = PartnerAPIClient(partner.api_endpoint, partner.api_key)
-        await client.sync_availability([db_availability])
-        
-        return db_availability
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error creating availability: {str(e)}"
-        )
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kon beschikbaarheid niet opslaan") from exc
 
-@router.put("/availability/{availability_id}", response_model=schemas.AvailabilityResponse)
-async def update_availability(
+    db.refresh(availability)
+    _sync_partner_availability(partner, [availability])
+    return AvailabilityResponse.model_validate(availability)
+
+
+@router.put("/availability/{availability_id}", response_model=AvailabilityResponse)
+def update_availability(
     availability_id: UUID,
-    availability: schemas.AvailabilityBase,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user)
-):
-    """Update availability slot status"""
+    payload: AvailabilityBase,
+    db: Session = Depends(get_db),
+    _: object = Depends(require_role("admin", "planner")),
+) -> AvailabilityResponse:
+    record = db.get(PartnerAvailability, str(availability_id))
+    if record is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Beschikbaarheid niet gevonden")
+
+    for field, value in payload.model_dump().items():
+        setattr(record, field, value)
+
     try:
-        db_availability = await db.get(models.PartnerAvailability, availability_id)
-        if not db_availability:
-            raise HTTPException(status_code=404, detail="Availability not found")
-        
-        for key, value in availability.dict().items():
-            setattr(db_availability, key, value)
-        
-        await db.commit()
-        await db.refresh(db_availability)
-        
-        # Sync update with partner
-        partner = await db.get(models.SubRentingPartner, db_availability.partner_id)
-        client = PartnerAPIClient(partner.api_endpoint, partner.api_key)
-        await client.sync_availability([db_availability])
-        
-        return db_availability
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error updating availability: {str(e)}"
-        )
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kon beschikbaarheid niet bijwerken") from exc
+
+    db.refresh(record)
+    partner = _get_partner(db, UUID(record.partner_id))
+    _sync_partner_availability(partner, [record])
+    return AvailabilityResponse.model_validate(record)
