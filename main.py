@@ -6,6 +6,7 @@ Provides mock API endpoints for onboarding demo
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import jwt
+from jwt import ExpiredSignatureError, InvalidTokenError
 import datetime
 import json
 
@@ -26,6 +27,15 @@ USERS = {
         "role": "admin"
     }
 }
+
+ASSIGNABLE_ROLES = (
+    "planner",
+    "crew",
+    "warehouse",
+    "finance",
+    "viewer",
+    "admin",
+)
 
 ONBOARDING_STEPS = [
     {"id": 1, "code": "welcome", "title": "Welkom bij RentGuy", "description": "Leer de basis van het systeem kennen"},
@@ -78,17 +88,48 @@ def get_current_user():
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'detail': 'Missing token'}), 401
-    
+
     token = auth_header.split(' ')[1]
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
         email = payload.get('sub')
         if email in USERS:
             return jsonify(USERS[email])
-    except:
-        pass
-    
+    except ExpiredSignatureError:
+        return jsonify({'detail': 'Token expired'}), 401
+    except InvalidTokenError:
+        return jsonify({'detail': 'Invalid token'}), 401
+
     return jsonify({'detail': 'Invalid token'}), 401
+
+
+@app.route('/api/v1/auth/role', methods=['POST'])
+def update_role():
+    """Allow a pending user to select a role"""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'detail': 'Missing token'}), 401
+
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        email = payload.get('sub')
+    except ExpiredSignatureError:
+        return jsonify({'detail': 'Token expired'}), 401
+    except InvalidTokenError:
+        return jsonify({'detail': 'Invalid token'}), 401
+
+    if not email or email not in USERS:
+        return jsonify({'detail': 'User not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    role = data.get('role')
+    if not isinstance(role, str) or role.strip() not in ASSIGNABLE_ROLES:
+        return jsonify({'detail': 'Invalid role selection'}), 400
+
+    USERS[email]['role'] = role.strip()
+
+    return jsonify(USERS[email])
 
 @app.route('/api/v1/onboarding/steps', methods=['GET'])
 def get_onboarding_steps():
