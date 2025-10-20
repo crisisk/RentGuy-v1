@@ -1,6 +1,8 @@
-import { create } from 'zustand';
-import { produce } from 'immer';
-import axios from 'axios';
+import { create } from 'zustand'
+import { produce } from 'immer'
+import { api } from '@infra/http/api'
+import { mapUnknownToApiError } from '@errors'
+
 interface AdminState {
     users: any[];
     roles: any[];
@@ -14,6 +16,13 @@ interface AdminState {
     fetchRoles: () => Promise<void>;
     updateSettings: (settings: Record<string, any>) => Promise<void>;
 }
+
+const ADMIN_BASE_PATH = '/api/v1/admin'
+
+function resolveError(error: unknown): string {
+  return mapUnknownToApiError(error).message
+}
+
 export const adminStore = create<AdminState>((set) => ({
     users: [],
     roles: [],
@@ -23,10 +32,10 @@ export const adminStore = create<AdminState>((set) => ({
     fetchUsers: async () => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.get('http://localhost:8000/api/v1/admin/users');
-            set(produce((state: AdminState) => { state.users = response.data; }));
-        } catch (error: any) {
-            set(produce((state: AdminState) => { state.error = error.message; }));
+            const response = await api.get(`${ADMIN_BASE_PATH}/users`);
+            set(produce((state: AdminState) => { state.users = Array.isArray(response.data) ? response.data : []; }));
+        } catch (error: unknown) {
+            set(produce((state: AdminState) => { state.error = resolveError(error); }));
         } finally {
             set(produce((state: AdminState) => { state.loading = false; }));
         }
@@ -34,10 +43,14 @@ export const adminStore = create<AdminState>((set) => ({
     createUser: async (user) => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.post('http://localhost:8000/api/v1/admin/users', user);
-            set(produce((state: AdminState) => { state.users.push(response.data); }));
-        } catch (error: any) {
-            set(produce((state: AdminState) => { state.error = error.message; }));
+            const response = await api.post(`${ADMIN_BASE_PATH}/users`, user);
+            set(produce((state: AdminState) => {
+                if (response.data) {
+                    state.users.push(response.data);
+                }
+            }));
+        } catch (error: unknown) {
+            set(produce((state: AdminState) => { state.error = resolveError(error); }));
         } finally {
             set(produce((state: AdminState) => { state.loading = false; }));
         }
@@ -45,12 +58,12 @@ export const adminStore = create<AdminState>((set) => ({
     updateUser: async (id, userData) => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.put(`http://localhost:8000/api/v1/admin/users/${id}`, userData);
+            const response = await api.put(`${ADMIN_BASE_PATH}/users/${id}`, userData);
             set(produce((state: AdminState) => {
-                state.users = state.users.map((u: any) => u.id === id ? response.data : u);
+                state.users = state.users.map((u: any) => (u.id === id && response.data ? response.data : u));
             }));
-        } catch (error: any) {
-            set(produce((state: AdminState) => { state.error = error.message; }));
+        } catch (error: unknown) {
+            set(produce((state: AdminState) => { state.error = resolveError(error); }));
         } finally {
             set(produce((state: AdminState) => { state.loading = false; }));
         }
@@ -58,12 +71,12 @@ export const adminStore = create<AdminState>((set) => ({
     deleteUser: async (id) => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            await axios.delete(`http://localhost:8000/api/v1/admin/users/${id}`);
+            await api.delete(`${ADMIN_BASE_PATH}/users/${id}`);
             set(produce((state: AdminState) => {
                 state.users = state.users.filter((u: any) => u.id !== id);
             }));
-        } catch (error: any) {
-            set(produce((state: AdminState) => { state.error = error.message; }));
+        } catch (error: unknown) {
+            set(produce((state: AdminState) => { state.error = resolveError(error); }));
         } finally {
             set(produce((state: AdminState) => { state.loading = false; }));
         }
@@ -71,10 +84,10 @@ export const adminStore = create<AdminState>((set) => ({
     fetchRoles: async () => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.get('http://localhost:8000/api/v1/admin/roles');
-            set(produce((state: AdminState) => { state.roles = response.data; }));
-        } catch (error: any) {
-            set(produce((state: AdminState) => { state.error = error.message; }));
+            const response = await api.get(`${ADMIN_BASE_PATH}/roles`);
+            set(produce((state: AdminState) => { state.roles = Array.isArray(response.data) ? response.data : []; }));
+        } catch (error: unknown) {
+            set(produce((state: AdminState) => { state.error = resolveError(error); }));
         } finally {
             set(produce((state: AdminState) => { state.loading = false; }));
         }
@@ -82,13 +95,16 @@ export const adminStore = create<AdminState>((set) => ({
     updateSettings: async (settings) => {
         set(produce((state: AdminState) => { state.loading = true; }));
         try {
-            const response = await axios.patch('http://localhost:8000/api/v1/admin/settings', settings);
-            set(produce((state: AdminState) => { state.settings = response.data; }));
-        } catch (error: any) {
-            set(produce((state: AdminState) => { state.error = error.message; }));
+            const response = await api.patch(`${ADMIN_BASE_PATH}/settings`, settings);
+            set(produce((state: AdminState) => {
+                state.settings = response.data ?? state.settings;
+            }));
+        } catch (error: unknown) {
+            set(produce((state: AdminState) => { state.error = resolveError(error); }));
         } finally {
             set(produce((state: AdminState) => { state.loading = false; }));
         }
     }
 }));
+
 export default adminStore;
