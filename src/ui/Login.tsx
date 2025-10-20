@@ -7,8 +7,17 @@ import {
   type ChangeEvent,
   type CSSProperties,
 } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { login, deriveLoginErrorMessage, ensureAuthEmail, type AuthUser } from '@application/auth/api'
+import {
+  confirmPasswordReset,
+  deriveLoginErrorMessage,
+  derivePasswordResetErrorMessage,
+  deriveRegisterErrorMessage,
+  ensureAuthEmail,
+  login,
+  registerUser,
+  requestPasswordReset,
+  type AuthUser,
+} from '@application/auth/api'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import { resolveSupportConfig } from './experienceConfig'
 import FlowExperienceShell from '@ui/FlowExperienceShell'
@@ -18,8 +27,27 @@ import { createFlowNavigation } from '@ui/flowNavigation'
 import useAuthStore from '@stores/authStore'
 import { setLocalStorageItem } from '@core/storage'
 
+type AuthView = 'login' | 'register' | 'reset-request' | 'reset-confirm'
+
 export interface LoginProps {
   onLogin: (token: string, user: AuthUser) => void
+  initialMode?: AuthView
+  initialResetToken?: string
+}
+
+type AuthMode = 'login' | 'register' | 'forgot' | 'resetConfirm'
+
+type FeedbackTone = 'success' | 'error'
+
+interface FeedbackState {
+  type: FeedbackTone
+  message: string
+}
+
+interface InitialAuthState {
+  mode: AuthMode
+  resetToken?: string
+  notice: FeedbackState | null
 }
 
 const linkStyle: CSSProperties = {
@@ -121,101 +149,178 @@ const loginPersona = {
   meta: 'Kies een persona na succesvolle login',
 }
 
-type AuthView = 'login' | 'register' | 'forgot' | 'reset-confirm' | 'verify'
+function resolveInitialAuthState(): InitialAuthState {
+  if (typeof window === 'undefined') {
+    return { mode: 'login', notice: null }
+  }
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const { pathname, search } = window.location
 
-const SESSION_SUCCESS_MESSAGES: Record<AuthView, string> = {
-  login: 'Welkom bij de pilotomgeving',
-  register: 'Maak een account aan om toegang te krijgen tot de pilotflows.',
-  forgot: 'Vraag een resetlink aan om je wachtwoord opnieuw in te stellen.',
-  'reset-confirm': 'Kies een nieuw wachtwoord om je sessie te herstellen.',
-  verify: 'Controleer je inbox om je account te activeren.',
+  if (pathname.startsWith('/password-reset/confirm')) {
+    return {
+      mode: 'resetConfirm',
+      resetToken: readResetToken(search),
+      notice: null,
+    }
+  }
+
+  if (pathname.startsWith('/verify-email')) {
+    return {
+      mode: 'login',
+      notice: {
+        type: 'success',
+        message: 'Account succesvol aangemaakt. Controleer je e-mail om je account te bevestigen.',
+      },
+    }
+  }
+
+  if (pathname.startsWith('/forgot-password') || pathname.startsWith('/password-reset')) {
+    return { mode: 'forgot', notice: null }
+  }
+
+  if (pathname.startsWith('/register')) {
+    return { mode: 'register', notice: null }
+  }
+
+  return { mode: 'login', notice: null }
+}
+
+function readResetToken(search: string): string {
+  try {
+    const params = new URLSearchParams(search)
+    return params.get('token')?.trim() ?? ''
+  } catch (error) {
+    console.warn('Kon reset-token niet lezen', error)
+    return ''
+  }
+}
+
+function isValidEmail(value: string): boolean {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return false
+  }
+  if (!trimmed.includes('@')) {
+    return true
+  }
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)
 }
 
 export function Login({ onLogin }: LoginProps) {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const authErrorMessage = useAuthStore(state => state.error)
-  const [user, setUser] = useState('bart')
-  const [password, setPassword] = useState('mr-dj')
-  const [error, setError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [activeView, setActiveView] = useState<AuthView>('login')
-  const [globalNotice, setGlobalNotice] = useState<{ tone: 'info' | 'success' | 'warning'; message: string } | null>(null)
-  const [registerEmail, setRegisterEmail] = useState('')
-  const [registerPassword, setRegisterPassword] = useState('')
-  const [registerErrors, setRegisterErrors] = useState<string[]>([])
-  const [registerTermsAccepted, setRegisterTermsAccepted] = useState(false)
-  const [forgotEmail, setForgotEmail] = useState('')
-  const [forgotError, setForgotError] = useState('')
-  const [forgotMessage, setForgotMessage] = useState('')
-  const [resetToken, setResetToken] = useState('')
-  const [resetPassword, setResetPassword] = useState('')
-  const [resetPasswordConfirm, setResetPasswordConfirm] = useState('')
-  const [resetError, setResetError] = useState('')
-  const [resetMessage, setResetMessage] = useState('')
-  useEffect(() => {
-    const nextView = resolveViewFromPath(location.pathname)
-    setActiveView(nextView)
-    if (nextView !== 'login') {
-      setError('')
-    }
-    if (nextView !== 'register') {
-      setRegisterErrors([])
-    }
-    if (nextView !== 'forgot') {
-      setForgotError('')
-      if (nextView !== 'reset-confirm') {
-        setForgotMessage('')
-      }
-    }
-    if (nextView === 'reset-confirm') {
-      const params = new URLSearchParams(location.search)
-      setResetToken(params.get('token') ?? '')
-    } else {
-      setResetToken('')
-      setResetPassword('')
-      setResetPasswordConfirm('')
-      setResetError('')
-    }
-    if (nextView !== 'reset-confirm') {
-      setResetMessage('')
-    }
-    if (nextView !== 'verify' && globalNotice?.message === 'Account succesvol aangemaakt') {
-      setGlobalNotice(null)
-    }
-    if (nextView === 'verify') {
-      setGlobalNotice(prev => prev ?? { tone: 'success', message: 'Account succesvol aangemaakt' })
-    }
-  }, [globalNotice, location.pathname, location.search])
-  useEffect(() => {
-    if (authErrorMessage && activeView === 'login') {
-      if (authErrorMessage.toLowerCase().includes('sessie verlopen')) {
-        setGlobalNotice({ tone: 'warning', message: 'Sessie verlopen. Log opnieuw in om verder te gaan.' })
-      } else {
-        setGlobalNotice({ tone: 'warning', message: authErrorMessage })
-      }
-    }
-    if (!authErrorMessage && globalNotice?.tone === 'warning') {
-      setGlobalNotice(null)
-    }
-  }, [activeView, authErrorMessage, globalNotice])
   const support = useMemo(() => resolveSupportConfig(), [])
   const helpCenterUrl = support.helpCenterBaseUrl
   const statusPageUrl = support.statusPageUrl
+  const initialAuthState = useMemo(() => resolveInitialAuthState(), [])
+
+  const [mode, setMode] = useState<AuthMode>(initialAuthState.mode)
+  const [user, setUser] = useState('')
+  const [password, setPassword] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [authNotice, setAuthNotice] = useState<FeedbackState | null>(initialAuthState.notice)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [registerEmail, setRegisterEmail] = useState('')
+  const [registerPassword, setRegisterPassword] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [registerErrors, setRegisterErrors] = useState<string[]>([])
+  const [isRegistering, setIsRegistering] = useState(false)
+
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetFeedback, setResetFeedback] = useState<FeedbackState | null>(null)
+  const [isRequestingReset, setIsRequestingReset] = useState(false)
+
+  const [resetToken, setResetToken] = useState(initialAuthState.resetToken ?? '')
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState('')
+  const [resetError, setResetError] = useState('')
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false)
+
+  useEffect(() => {
+    setView(initialMode)
+  }, [initialMode])
+
+  useEffect(() => {
+    setResetToken(initialResetToken)
+  }, [initialResetToken])
 
   const handleScrollToForm = useCallback(() => {
     if (typeof document === 'undefined') {
       return
     }
-    const form = document.getElementById('login-form')
-    form?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    const userField = document.getElementById('login-user') as HTMLInputElement | null
-    if (userField && typeof userField.focus === 'function') {
-      userField.focus({ preventScroll: true })
+
+    const targetId =
+      mode === 'register'
+        ? 'register-form'
+        : mode === 'forgot'
+          ? 'reset-request-form'
+          : mode === 'resetConfirm'
+            ? 'reset-confirm-form'
+            : 'login-form'
+
+    document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    const focusId =
+      mode === 'register'
+        ? 'register-email'
+        : mode === 'forgot'
+          ? 'reset-email'
+          : mode === 'resetConfirm'
+            ? 'new-password'
+            : 'login-email'
+
+    const input = document.getElementById(focusId) as HTMLInputElement | null
+    if (input && typeof input.focus === 'function') {
+      input.focus({ preventScroll: true })
     }
-  }, [])
+  }, [mode])
+
+  const handleModeChange = useCallback(
+    (nextMode: AuthMode, path?: string) => {
+      setMode(nextMode)
+      setAuthError('')
+      setResetFeedback(null)
+      setResetError('')
+      setAuthNotice(nextMode === 'login' ? authNotice : null)
+
+      if (nextMode !== 'register') {
+        setRegisterErrors([])
+      }
+
+      if (nextMode !== 'resetConfirm') {
+        setResetPassword('')
+        setResetPasswordConfirm('')
+      }
+
+      if (typeof window !== 'undefined' && path) {
+        window.history.pushState({}, '', path)
+      }
+    },
+    [authNotice],
+  )
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const handlePopState = () => {
+      const next = resolveInitialAuthState()
+      setMode(next.mode)
+      setAuthNotice(next.notice)
+      setResetToken(next.resetToken ?? '')
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [view])
+
+  useEffect(() => {
+    if (mode === 'resetConfirm' && typeof window !== 'undefined') {
+      setResetToken(readResetToken(window.location.search))
+    }
+  }, [mode])
 
   const goToLogin = useCallback(() => {
     setGlobalNotice(null)
@@ -236,47 +341,46 @@ export function Login({ onLogin }: LoginProps) {
     () => ({
       label: 'Authenticatie & toegang',
       status: 'in-progress' as const,
-      detail: error ? 'Controleer je gegevens en probeer opnieuw.' : 'Gebruik SSO of een demo-account om verder te gaan.',
+      detail: authError ? 'Controleer je gegevens en probeer opnieuw.' : 'Gebruik SSO of een demo-account om verder te gaan.',
     }),
-    [error],
+    [authError],
   )
 
   const statusMessage = useMemo(() => {
-    if (error) {
+    if (authError) {
       return {
         tone: 'danger' as const,
         title: 'Login mislukt',
         description: (
           <>
-            {error}
+            {authError}
             <br />
             Controleer gebruikersnaam en wachtwoord of kies een ander demoprofiel.
           </>
         ),
       }
     }
-    if (globalNotice) {
+
+    if (authNotice) {
       return {
-        tone: globalNotice.tone,
-        title: globalNotice.tone === 'success' ? 'Actie geslaagd' : 'Let op',
-        description: globalNotice.message,
+        tone: authNotice.type === 'success' ? ('success' as const) : ('warning' as const),
+        title: authNotice.type === 'success' ? 'Klaar om te starten' : 'Let op',
+        description: authNotice.message,
       }
     }
-    const defaultDescription = activeView === 'login'
-      ? 'Toegang tot de pilot activeert automatisch explainers, auditlogs en monitoring voor alle persona\'s.'
-      : SESSION_SUCCESS_MESSAGES[activeView]
+
     return {
       tone: 'info' as const,
       title: 'Welkom bij de pilotomgeving',
-      description: defaultDescription,
+      description: 'Toegang tot de pilot activeert automatisch explainers, auditlogs en monitoring voor alle persona\'s.',
     }
-  }, [activeView, error, globalNotice])
+  }, [authError, authNotice])
 
   const actions = useMemo(
     () => [
       {
         id: 'scroll-to-form',
-        label: 'Ga naar loginformulier',
+        label: 'Ga naar formulier',
         variant: 'primary' as const,
         onClick: handleScrollToForm,
         icon: '🔐',
@@ -317,18 +421,25 @@ export function Login({ onLogin }: LoginProps) {
     [],
   )
 
+  const activeEmail = useMemo(() => {
+    const trimmed = user.trim()
+    if (!trimmed) {
+      return 'bart@rentguy.demo'
+    }
+    return resolveEmail(trimmed)
+  }, [user])
+
   const navigationRail = useMemo(
     () => ({
       title: 'Pilot gebruikersflows',
-      caption:
-        'Doorloop de flows in volgorde om explainers, dashboards en go-live checks automatisch te activeren.',
+      caption: 'Doorloop de flows in volgorde om explainers, dashboards en go-live checks automatisch te activeren.',
       items: createFlowNavigation(
         'login',
         { secrets: 'blocked' },
         {
           login: (
             <span>
-              Actieve demo: <strong>{resolveEmail(user)}</strong>
+              Actieve demo: <strong>{activeEmail}</strong>
             </span>
           ),
           role: 'Kies je persona zodra de login is gelukt.',
@@ -343,18 +454,73 @@ export function Login({ onLogin }: LoginProps) {
         </span>
       ),
     }),
-    [user],
+    [activeEmail],
   )
+
+  const validateEmail = useCallback((value: string) => {
+    if (!value || value.trim().length === 0) {
+      return 'E-mail is verplicht'
+    }
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!pattern.test(value.trim())) {
+      return 'Ongeldig e-mailadres'
+    }
+    return ''
+  }, [])
+
+  const validatePassword = useCallback((value: string, { allowEmpty = false }: { allowEmpty?: boolean } = {}) => {
+    if (!value || value.trim().length === 0) {
+      return allowEmpty ? '' : 'Wachtwoord is verplicht'
+    }
+    if (value.trim().length < 8) {
+      return 'Wachtwoord moet minimaal 8 tekens bevatten'
+    }
+    return ''
+  }, [])
+
+  const showLoginView = useCallback((options: { preserveResetStatus?: boolean } = {}) => {
+    setView('login')
+    setRegisterErrors([])
+    setRegisterSuccess('')
+    if (!options.preserveResetStatus) {
+      setResetStatus('')
+    }
+    setResetError('')
+    setConfirmError('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [])
+
+  const showRegisterView = useCallback(() => {
+    setView('register')
+    setRegisterErrors([])
+    setRegisterSuccess('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/register')
+    }
+  }, [])
+
+  const showResetRequestView = useCallback(() => {
+    setView('reset-request')
+    setResetStatus('')
+    setResetError('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/password-reset')
+    }
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError('')
-    setGlobalNotice(null)
+    setAuthError('')
+    setAuthNotice(null)
     setIsSubmitting(true)
+
     try {
       const email = resolveEmail(user)
       void notifyTestHarness('/api/login', { email, password })
       const result = await login({ email, password })
+
       if (result.ok) {
         const { token, user: payloadUser } = result.value
         const ensuredEmail = ensureAuthEmail(payloadUser.email ?? email)
@@ -365,135 +531,597 @@ export function Login({ onLogin }: LoginProps) {
         onLogin(token, nextUser)
         setLocalStorageItem('sessionToken', token)
       } else {
-        console.warn('Login mislukt', result.error)
-        setError(deriveLoginErrorMessage(result.error))
+        setAuthError(deriveLoginErrorMessage(result.error))
       }
-    } catch (err) {
-      console.error('Onverwachte loginfout', err)
-      setError('Login mislukt. Controleer gegevens.')
+    } catch (error) {
+      console.error('Onverwachte loginfout', error)
+      setAuthError('Login mislukt. Controleer gegevens.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  async function handleRegisterSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setIsSubmitting(true)
-    setRegisterErrors([])
-    setGlobalNotice(null)
+    const trimmedEmail = registerEmail.trim()
+    const trimmedPassword = registerPassword.trim()
+    const errors: string[] = []
+
+    if (!trimmedEmail) {
+      errors.push('E-mail is verplicht')
+    } else if (!isValidEmail(trimmedEmail)) {
+      errors.push('Ongeldig e-mailadres')
+    }
+
+    if (!trimmedPassword) {
+      errors.push('Wachtwoord is verplicht')
+    } else if (trimmedPassword.length < 8) {
+      errors.push('Wachtwoord moet minimaal 8 tekens bevatten')
+    }
+
+    if (!acceptTerms) {
+      errors.push('Accepteer de voorwaarden om verder te gaan')
+    }
+
+    setRegisterErrors(errors)
+    if (errors.length > 0) {
+      return
+    }
+
+    setIsRegistering(true)
+
     try {
-      const trimmedEmail = registerEmail.trim()
-      const trimmedPassword = registerPassword.trim()
-      const validationErrors: string[] = []
-      if (!trimmedEmail) {
-        validationErrors.push('E-mail is verplicht')
-      } else if (!emailPattern.test(trimmedEmail)) {
-        validationErrors.push('Ongeldig e-mailadres')
-      }
-      if (!trimmedPassword) {
-        validationErrors.push('Wachtwoord is verplicht')
-      } else if (trimmedPassword.length < 8) {
-        validationErrors.push('Wachtwoord moet minimaal 8 tekens bevatten')
-      }
-      if (!registerTermsAccepted) {
-        validationErrors.push('Je moet de voorwaarden accepteren')
-      }
-      if (validationErrors.length > 0) {
-        setRegisterErrors(validationErrors)
-        setIsSubmitting(false)
-        return
-      }
-      const ok = await notifyTestHarness('/api/register', {
+      const result = await registerUser({
         email: trimmedEmail,
         password: trimmedPassword,
-        termsAccepted: registerTermsAccepted,
+        acceptTerms: true,
       })
-      if (!ok) {
-        setRegisterErrors(['Registratie mislukt. Probeer het opnieuw.'])
-        return
-      }
-      setRegisterEmail('')
-      setRegisterPassword('')
-      setRegisterTermsAccepted(false)
-      setGlobalNotice({ tone: 'success', message: 'Account succesvol aangemaakt' })
-      navigate('/verify-email', { replace: true })
-    } catch (err) {
-      console.warn('Onverwachte fout bij registratie', err)
-      setRegisterErrors(['Registratie mislukt. Probeer het opnieuw.'])
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
-  async function handleForgotPasswordSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setIsSubmitting(true)
-    setForgotError('')
-    setForgotMessage('')
-    setGlobalNotice(null)
-    try {
-      const trimmedEmail = forgotEmail.trim()
-      if (!trimmedEmail) {
-        setForgotError('E-mail is verplicht')
-        return
-      }
-      if (!emailPattern.test(trimmedEmail)) {
-        setForgotError('Ongeldig e-mailadres')
-        return
-      }
-      const ok = await notifyTestHarness('/api/password-reset', { email: trimmedEmail })
-      if (ok) {
-        setForgotMessage('Reset link verzonden')
+      if (result.ok) {
+        setRegisterEmail('')
+        setRegisterPassword('')
+        setAcceptTerms(false)
+        setRegisterErrors([])
+        setAuthNotice({
+          type: 'success',
+          message: 'Account succesvol aangemaakt. Controleer je e-mail om je account te bevestigen.',
+        })
+        setMode('login')
+        if (typeof window !== 'undefined') {
+          window.history.pushState({}, '', '/verify-email')
+        }
       } else {
-        setForgotError('Reset aanvragen mislukt. Probeer opnieuw.')
+        setRegisterErrors([deriveRegisterErrorMessage(result.error)])
       }
-    } catch (err) {
-      console.warn('Onverwachte fout bij resetaanvraag', err)
-      setForgotError('Reset aanvragen mislukt. Probeer opnieuw.')
+    } catch (error) {
+      console.error('Registratie mislukt', error)
+      setRegisterErrors(['Account aanmaken is mislukt. Probeer het opnieuw.'])
     } finally {
-      setIsSubmitting(false)
+      setIsRegistering(false)
     }
   }
 
-  async function handleResetConfirmSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleResetRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setIsSubmitting(true)
-    setResetError('')
-    setResetMessage('')
-    setGlobalNotice(null)
+    setResetFeedback(null)
+
+    const trimmedEmail = resetEmail.trim()
+    if (!trimmedEmail) {
+      setResetFeedback({ type: 'error', message: 'E-mail is verplicht' })
+      return
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      setResetFeedback({ type: 'error', message: 'Ongeldig e-mailadres' })
+      return
+    }
+
+    setIsRequestingReset(true)
+
     try {
-      if (!resetToken) {
-        setResetError('Resetlink is ongeldig of verlopen')
-        return
+      const result = await requestPasswordReset({ email: trimmedEmail })
+      if (result.ok) {
+        setResetFeedback({ type: 'success', message: 'Reset link verzonden' })
+        setResetEmail('')
+      } else {
+        setResetFeedback({ type: 'error', message: derivePasswordResetErrorMessage(result.error) })
       }
-      const trimmedPassword = resetPassword.trim()
-      const trimmedConfirm = resetPasswordConfirm.trim()
-      if (!trimmedPassword || trimmedPassword.length < 8) {
-        setResetError('Wachtwoord moet minimaal 8 tekens bevatten')
-        return
-      }
-      if (trimmedPassword !== trimmedConfirm) {
-        setResetError('Wachtwoorden komen niet overeen')
-        return
-      }
-      const ok = await notifyTestHarness('/api/password-reset/confirm', {
+    } catch (error) {
+      console.error('Reset-aanvraag mislukt', error)
+      setResetFeedback({ type: 'error', message: 'Resetaanvraag mislukt. Probeer het opnieuw.' })
+    } finally {
+      setIsRequestingReset(false)
+    }
+  }
+
+  async function handleResetConfirm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setResetError('')
+
+    const trimmedPassword = resetPassword.trim()
+    const trimmedConfirm = resetPasswordConfirm.trim()
+
+    if (!resetToken) {
+      setResetError('Deze resetlink is ongeldig of verlopen.')
+      return
+    }
+
+    if (!trimmedPassword) {
+      setResetError('Wachtwoord is verplicht')
+      return
+    }
+
+    if (trimmedPassword.length < 8) {
+      setResetError('Wachtwoord moet minimaal 8 tekens bevatten')
+      return
+    }
+
+    if (trimmedPassword !== trimmedConfirm) {
+      setResetError('Wachtwoorden komen niet overeen')
+      return
+    }
+
+    setIsConfirmingReset(true)
+
+    try {
+      const result = await confirmPasswordReset({
         token: resetToken,
         password: trimmedPassword,
+        confirmPassword: trimmedConfirm,
       })
-      if (ok) {
-        setResetMessage('Wachtwoord succesvol gewijzigd')
-        setGlobalNotice({ tone: 'success', message: 'Wachtwoord succesvol gewijzigd' })
-        navigate('/login', { replace: true })
+
+      if (result.ok) {
+        setAuthNotice({ type: 'success', message: 'Wachtwoord succesvol gewijzigd' })
+        setMode('login')
+        setResetPassword('')
+        setResetPasswordConfirm('')
+        setResetToken('')
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', '/login')
+        }
       } else {
-        setResetError('Wachtwoord reset mislukt. Probeer opnieuw.')
+        setResetError(derivePasswordResetErrorMessage(result.error))
       }
-    } catch (err) {
-      console.warn('Onverwachte fout bij wachtwoord reset', err)
-      setResetError('Wachtwoord reset mislukt. Probeer opnieuw.')
+    } catch (error) {
+      console.error('Reset bevestigen mislukt', error)
+      setResetError('Wachtwoord resetten is mislukt. Probeer het opnieuw.')
     } finally {
-      setIsSubmitting(false)
+      setIsConfirmingReset(false)
     }
   }
+
+  const loginForm = (
+    <form id="login-form" style={{ display: 'grid', gap: 18 }} onSubmit={handleSubmit}>
+      <div style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Demo login</h2>
+        <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
+          Gebruik de demo-accounts om flows te testen. Tokens, onboardingprogressie en audit logs worden automatisch gevuld.
+        </p>
+      </div>
+      <label htmlFor="login-email" style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>E-mailadres of gebruikersnaam</span>
+        <input
+          id="login-email"
+          data-testid="email-input"
+          value={user}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setUser(event.target.value)
+            setAuthError('')
+            setAuthNotice(null)
+          }}
+          placeholder="bijv. bart of bart@rentguy.demo"
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <label htmlFor="login-password" style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Wachtwoord</span>
+        <input
+          type="password"
+          id="login-password"
+          data-testid="password-input"
+          value={password}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setPassword(event.target.value)
+            setAuthError('')
+            setAuthNotice(null)
+          }}
+          placeholder="bijv. mr-dj"
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          type="submit"
+          data-testid="login-button"
+          disabled={isSubmitting}
+          style={{
+            marginTop: 4,
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: 'none',
+            backgroundImage: brand.colors.gradient,
+            color: '#0F172A',
+            fontWeight: 700,
+            cursor: isSubmitting ? 'wait' : 'pointer',
+            boxShadow: isSubmitting ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
+            opacity: isSubmitting ? 0.75 : 1,
+          }}
+        >
+          {isSubmitting ? 'Inloggen…' : 'Inloggen'}
+        </button>
+        <button
+          type="button"
+          data-testid="register-link"
+          onClick={() => handleModeChange('register', '/register')}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.35)}`,
+            background: 'transparent',
+            color: '#ffffff',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Account aanmaken
+        </button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <button
+          type="button"
+          data-testid="forgot-password-link"
+          onClick={() => handleModeChange('forgot', '/forgot-password')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: withOpacity('#ffffff', 0.82),
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Wachtwoord vergeten?
+        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => {
+              setUser('bart')
+              setPassword('mr-dj')
+              setAuthError('')
+            }}
+            style={{
+              background: withOpacity('#FFFFFF', 0.12),
+              border: 'none',
+              color: '#ffffff',
+              padding: '6px 12px',
+              borderRadius: 999,
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+            }}
+          >
+            Vul Bart in
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setUser('rentguy')
+              setPassword('rentguy')
+              setAuthError('')
+            }}
+            style={{
+              background: withOpacity('#FFFFFF', 0.12),
+              border: 'none',
+              color: '#ffffff',
+              padding: '6px 12px',
+              borderRadius: 999,
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+            }}
+          >
+            Vul RentGuy in
+          </button>
+        </div>
+      </div>
+    </form>
+  )
+
+  const registerForm = (
+    <form id="register-form" style={{ display: 'grid', gap: 16 }} onSubmit={handleRegister}>
+      <div style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Nieuw account aanmaken</h2>
+        <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
+          Maak een proefaccount aan om de pilotflows te volgen. We sturen een bevestiging naar je e-mailadres.
+        </p>
+      </div>
+      <label htmlFor="register-email" style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>E-mailadres</span>
+        <input
+          id="register-email"
+          data-testid="email-input"
+          value={registerEmail}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setRegisterEmail(event.target.value)
+            setRegisterErrors([])
+          }}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <label htmlFor="register-password" style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Wachtwoord</span>
+        <input
+          type="password"
+          id="register-password"
+          data-testid="password-input"
+          value={registerPassword}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setRegisterPassword(event.target.value)
+            setRegisterErrors([])
+          }}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <input
+          type="checkbox"
+          data-testid="terms-checkbox"
+          checked={acceptTerms}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setAcceptTerms(event.target.checked)
+            setRegisterErrors([])
+          }}
+          style={{ width: 18, height: 18, marginTop: 4 }}
+        />
+        <span style={{ color: withOpacity('#ffffff', 0.85), fontSize: '0.85rem' }}>
+          Ik ga akkoord met de Sevensa voorwaarden en ontvang updates over de pilot.
+        </span>
+      </label>
+      {registerErrors.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 20, color: brand.colors.warning, fontSize: '0.85rem', display: 'grid', gap: 4 }}>
+          {registerErrors.map(error => (
+            <li key={error}>{error}</li>
+          ))}
+        </ul>
+      )}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          type="submit"
+          data-testid="register-button"
+          disabled={isRegistering}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: 'none',
+            backgroundImage: brand.colors.gradient,
+            color: '#0F172A',
+            fontWeight: 700,
+            cursor: isRegistering ? 'wait' : 'pointer',
+            boxShadow: isRegistering ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
+            opacity: isRegistering ? 0.75 : 1,
+          }}
+        >
+          {isRegistering ? 'Registreren…' : 'Account registreren'}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange('login', '/login')}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.35)}`,
+            background: 'transparent',
+            color: '#ffffff',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Terug naar inloggen
+        </button>
+      </div>
+    </form>
+  )
+
+  const resetRequestForm = (
+    <form id="reset-request-form" style={{ display: 'grid', gap: 16 }} onSubmit={handleResetRequest}>
+      <div style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Wachtwoord vergeten</h2>
+        <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
+          We sturen een e-mail met een resetlink zodat je een nieuw wachtwoord kunt instellen.
+        </p>
+      </div>
+      <label htmlFor="reset-email" style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>E-mailadres</span>
+        <input
+          id="reset-email"
+          data-testid="email-input"
+          value={resetEmail}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setResetEmail(event.target.value)
+            setResetFeedback(null)
+          }}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      {resetFeedback && (
+        <p
+          role={resetFeedback.type === 'error' ? 'alert' : 'status'}
+          style={{
+            margin: 0,
+            color: resetFeedback.type === 'success' ? brand.colors.success : brand.colors.warning,
+            fontSize: '0.9rem',
+            fontWeight: 600,
+          }}
+        >
+          {resetFeedback.message}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          type="submit"
+          data-testid="reset-request-button"
+          disabled={isRequestingReset}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: 'none',
+            backgroundImage: brand.colors.gradient,
+            color: '#0F172A',
+            fontWeight: 700,
+            cursor: isRequestingReset ? 'wait' : 'pointer',
+            boxShadow: isRequestingReset ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
+            opacity: isRequestingReset ? 0.75 : 1,
+          }}
+        >
+          {isRequestingReset ? 'Verzenden…' : 'Reset link versturen'}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange('login', '/login')}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.35)}`,
+            background: 'transparent',
+            color: '#ffffff',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Terug naar inloggen
+        </button>
+      </div>
+    </form>
+  )
+
+  const resetConfirmForm = (
+    <form id="reset-confirm-form" style={{ display: 'grid', gap: 16 }} onSubmit={handleResetConfirm}>
+      <div style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Nieuw wachtwoord instellen</h2>
+        <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
+          Kies een sterk wachtwoord. Na bevestiging sturen we je terug naar het login-scherm.
+        </p>
+      </div>
+      <label htmlFor="new-password" style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Nieuw wachtwoord</span>
+        <input
+          type="password"
+          id="new-password"
+          data-testid="new-password-input"
+          value={resetPassword}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setResetPassword(event.target.value)
+            setResetError('')
+          }}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <label htmlFor="confirm-password" style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Bevestig wachtwoord</span>
+        <input
+          type="password"
+          id="confirm-password"
+          data-testid="confirm-password-input"
+          value={resetPasswordConfirm}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setResetPasswordConfirm(event.target.value)
+            setResetError('')
+          }}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      {resetError && (
+        <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.9rem', fontWeight: 600 }}>
+          {resetError}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          type="submit"
+          data-testid="reset-confirm-button"
+          disabled={isConfirmingReset}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: 'none',
+            backgroundImage: brand.colors.gradient,
+            color: '#0F172A',
+            fontWeight: 700,
+            cursor: isConfirmingReset ? 'wait' : 'pointer',
+            boxShadow: isConfirmingReset ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
+            opacity: isConfirmingReset ? 0.75 : 1,
+          }}
+        >
+          {isConfirmingReset ? 'Opslaan…' : 'Wachtwoord bijwerken'}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange('login', '/login')}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.35)}`,
+            background: 'transparent',
+            color: '#ffffff',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  )
 
   const heroAside = (
     <div style={{ display: 'grid', gap: 20 }}>
@@ -535,382 +1163,10 @@ export function Login({ onLogin }: LoginProps) {
         </div>
       )}
 
-      {(() => {
-        switch (activeView) {
-          case 'register':
-            return (
-              <form id="register-form" style={{ display: 'grid', gap: 18 }} onSubmit={handleRegisterSubmit}>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Account registreren</h2>
-                  <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
-                    Vul je gegevens in om toegang te krijgen tot de pilotomgeving. We sturen je direct een verificatie e-mail.
-                  </p>
-                </div>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontWeight: 600 }}>E-mailadres</span>
-                  <input
-                    data-testid="email-input"
-                    type="email"
-                    value={registerEmail}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setRegisterEmail(event.target.value)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-                      background: withOpacity('#000000', 0.25),
-                      color: '#ffffff',
-                      fontSize: '0.95rem',
-                    }}
-                  />
-                </label>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontWeight: 600 }}>Wachtwoord</span>
-                  <input
-                    data-testid="password-input"
-                    type="password"
-                    value={registerPassword}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setRegisterPassword(event.target.value)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-                      background: withOpacity('#000000', 0.25),
-                      color: '#ffffff',
-                      fontSize: '0.95rem',
-                    }}
-                  />
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    data-testid="terms-checkbox"
-                    type="checkbox"
-                    checked={registerTermsAccepted}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setRegisterTermsAccepted(event.target.checked)}
-                    style={{ width: 18, height: 18 }}
-                  />
-                  <span style={{ fontSize: '0.85rem' }}>
-                    Ik ga akkoord met de voorwaarden en bevestig dat ik namens Mister DJ toegang vraag.
-                  </span>
-                </label>
-                {registerErrors.length > 0 && (
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    {registerErrors.map(message => (
-                      <p key={message} role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.82rem' }}>
-                        {message}
-                      </p>
-                    ))}
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  data-testid="register-button"
-                  disabled={isSubmitting}
-                  style={{
-                    padding: '12px 18px',
-                    borderRadius: 999,
-                    border: 'none',
-                    backgroundImage: brand.colors.gradient,
-                    color: '#0F172A',
-                    fontWeight: 700,
-                    cursor: isSubmitting ? 'wait' : 'pointer',
-                    boxShadow: isSubmitting ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
-                    opacity: isSubmitting ? 0.75 : 1,
-                  }}
-                >
-                  {isSubmitting ? 'Registreren…' : 'Registreren'}
-                </button>
-                <button
-                  type="button"
-                  onClick={goToLogin}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: withOpacity('#FFFFFF', 0.85),
-                    textDecoration: 'underline',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    justifySelf: 'flex-start',
-                  }}
-                >
-                  Terug naar login
-                </button>
-              </form>
-            )
-          case 'forgot':
-            return (
-              <form id="forgot-password-form" style={{ display: 'grid', gap: 18 }} onSubmit={handleForgotPasswordSubmit}>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Wachtwoord vergeten</h2>
-                  <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
-                    Vul je e-mailadres in om een resetlink te ontvangen. We sturen je direct een bevestiging.
-                  </p>
-                </div>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontWeight: 600 }}>E-mailadres</span>
-                  <input
-                    data-testid="email-input"
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setForgotEmail(event.target.value)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-                      background: withOpacity('#000000', 0.25),
-                      color: '#ffffff',
-                      fontSize: '0.95rem',
-                    }}
-                  />
-                </label>
-                {forgotError && (
-                  <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.82rem' }}>
-                    {forgotError}
-                  </p>
-                )}
-                {forgotMessage && (
-                  <p role="status" style={{ margin: 0, color: withOpacity('#FFFFFF', 0.85), fontSize: '0.82rem' }}>
-                    {forgotMessage}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  data-testid="reset-request-button"
-                  disabled={isSubmitting}
-                  style={{
-                    padding: '12px 18px',
-                    borderRadius: 999,
-                    border: 'none',
-                    backgroundImage: brand.colors.gradient,
-                    color: '#0F172A',
-                    fontWeight: 700,
-                    cursor: isSubmitting ? 'wait' : 'pointer',
-                    boxShadow: isSubmitting ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
-                    opacity: isSubmitting ? 0.75 : 1,
-                  }}
-                >
-                  {isSubmitting ? 'Versturen…' : 'Verstuur resetlink'}
-                </button>
-                <button
-                  type="button"
-                  onClick={goToLogin}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: withOpacity('#FFFFFF', 0.85),
-                    textDecoration: 'underline',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    justifySelf: 'flex-start',
-                  }}
-                >
-                  Terug naar login
-                </button>
-              </form>
-            )
-          case 'reset-confirm':
-            return (
-              <form id="reset-confirm-form" style={{ display: 'grid', gap: 18 }} onSubmit={handleResetConfirmSubmit}>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Nieuw wachtwoord instellen</h2>
-                  <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
-                    Kies een nieuw wachtwoord voor je account. Gebruik een sterk wachtwoord van minimaal acht tekens.
-                  </p>
-                </div>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontWeight: 600 }}>Nieuw wachtwoord</span>
-                  <input
-                    data-testid="new-password-input"
-                    type="password"
-                    value={resetPassword}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setResetPassword(event.target.value)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-                      background: withOpacity('#000000', 0.25),
-                      color: '#ffffff',
-                      fontSize: '0.95rem',
-                    }}
-                  />
-                </label>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontWeight: 600 }}>Bevestig wachtwoord</span>
-                  <input
-                    data-testid="confirm-password-input"
-                    type="password"
-                    value={resetPasswordConfirm}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setResetPasswordConfirm(event.target.value)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-                      background: withOpacity('#000000', 0.25),
-                      color: '#ffffff',
-                      fontSize: '0.95rem',
-                    }}
-                  />
-                </label>
-                {resetError && (
-                  <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.82rem' }}>
-                    {resetError}
-                  </p>
-                )}
-                {resetMessage && (
-                  <p role="status" style={{ margin: 0, color: withOpacity('#FFFFFF', 0.85), fontSize: '0.82rem' }}>
-                    {resetMessage}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  data-testid="reset-confirm-button"
-                  disabled={isSubmitting}
-                  style={{
-                    padding: '12px 18px',
-                    borderRadius: 999,
-                    border: 'none',
-                    backgroundImage: brand.colors.gradient,
-                    color: '#0F172A',
-                    fontWeight: 700,
-                    cursor: isSubmitting ? 'wait' : 'pointer',
-                    boxShadow: isSubmitting ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
-                    opacity: isSubmitting ? 0.75 : 1,
-                  }}
-                >
-                  {isSubmitting ? 'Opslaan…' : 'Wachtwoord opslaan'}
-                </button>
-              </form>
-            )
-          case 'verify':
-            return (
-              <div style={{ display: 'grid', gap: 16 }}>
-                <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Bevestig je e-mailadres</h2>
-                <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.85) }}>
-                  Account succesvol aangemaakt. Controleer je inbox voor de verificatielink en activeer je account om verder te
-                  gaan.
-                </p>
-                <button
-                  type="button"
-                  onClick={goToLogin}
-                  style={{
-                    padding: '12px 18px',
-                    borderRadius: 999,
-                    border: 'none',
-                    backgroundImage: brand.colors.gradient,
-                    color: '#0F172A',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: '0 18px 36px rgba(79, 70, 229, 0.32)',
-                  }}
-                >
-                  Ga naar login
-                </button>
-              </div>
-            )
-          default:
-            return (
-              <form id="login-form" style={{ display: 'grid', gap: 18 }} onSubmit={handleSubmit}>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Demo login</h2>
-                  <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
-                    Gebruik de demo-accounts om flows te testen. Tokens, onboardingprogressie en audit logs worden automatisch
-                    gevuld.
-                  </p>
-                </div>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontWeight: 600 }}>E-mailadres of gebruikersnaam</span>
-                  <input
-                    id="login-user"
-                    data-testid="email-input"
-                    value={user}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setUser(event.target.value)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-                      background: withOpacity('#000000', 0.25),
-                      color: '#ffffff',
-                      fontSize: '0.95rem',
-                    }}
-                  />
-                </label>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontWeight: 600 }}>Wachtwoord</span>
-                  <input
-                    type="password"
-                    id="login-password"
-                    data-testid="password-input"
-                    value={password}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-                      background: withOpacity('#000000', 0.25),
-                      color: '#ffffff',
-                      fontSize: '0.95rem',
-                    }}
-                  />
-                </label>
-                {error && (
-                  <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.85rem' }}>
-                    {error}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  data-testid="login-button"
-                  disabled={isSubmitting}
-                  style={{
-                    marginTop: 4,
-                    padding: '12px 18px',
-                    borderRadius: 999,
-                    border: 'none',
-                    backgroundImage: brand.colors.gradient,
-                    color: '#0F172A',
-                    fontWeight: 700,
-                    cursor: isSubmitting ? 'wait' : 'pointer',
-                    boxShadow: isSubmitting ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
-                    opacity: isSubmitting ? 0.75 : 1,
-                  }}
-                >
-                  {isSubmitting ? 'Inloggen…' : 'Inloggen'}
-                </button>
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.85rem' }}>
-                  <button
-                    type="button"
-                    data-testid="register-link"
-                    onClick={goToRegister}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: withOpacity('#FFFFFF', 0.85),
-                      textDecoration: 'underline',
-                      cursor: 'pointer',
-                      padding: 0,
-                    }}
-                  >
-                    Account aanmaken
-                  </button>
-                  <button
-                    type="button"
-                    data-testid="forgot-password-link"
-                    onClick={goToForgotPassword}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: withOpacity('#FFFFFF', 0.85),
-                      textDecoration: 'underline',
-                      cursor: 'pointer',
-                      padding: 0,
-                    }}
-                  >
-                    Wachtwoord vergeten?
-                  </button>
-                </div>
-              </form>
-            )
-        }
-      })()}
+      {mode === 'login' && loginForm}
+      {mode === 'register' && registerForm}
+      {mode === 'forgot' && resetRequestForm}
+      {mode === 'resetConfirm' && resetConfirmForm}
 
       {activeView === 'login' && credentialList}
 
@@ -998,9 +1254,9 @@ async function notifyTestHarness(url: string, payload: Record<string, unknown>):
 }
 
 function resolveEmail(candidate: string): string {
-  const trimmed = candidate.trim().toLowerCase()
+  const trimmed = candidate.trim()
   if (!trimmed) {
-    return 'demo@rentguy.local'
+    return 'info@rentguy.nl'
   }
   if (trimmed.includes('@')) {
     return trimmed

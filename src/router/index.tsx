@@ -1,5 +1,5 @@
 import { Suspense, useMemo, type ReactNode } from 'react'
-import { createBrowserRouter, RouterProvider, Navigate, type RouteObject } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useLocation, type RouteObject } from 'react-router-dom'
 import type { AuthUser } from '@application/auth/api'
 import Login from '@ui/Login'
 import { createAppRoutes } from './routes'
@@ -111,6 +111,26 @@ function withSuspense(node: ReactNode): JSX.Element {
   return <Suspense fallback={<RouteLoadingFallback />}>{node}</Suspense>
 }
 
+function PasswordResetConfirmRoute({
+  onLogin,
+  isAuthenticated,
+  redirectPath,
+}: {
+  onLogin: AppRouterProps['onLogin']
+  isAuthenticated: boolean
+  redirectPath: string
+}): JSX.Element {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  const token = params.get('token') ?? ''
+
+  if (isAuthenticated) {
+    return <Navigate to={redirectPath} replace />
+  }
+
+  return <Login onLogin={onLogin} initialMode="reset-confirm" initialResetToken={token} />
+}
+
 export function AppRouter({
   isAuthenticated,
   onLogin,
@@ -163,8 +183,48 @@ export function AppRouter({
         element: resolveLoginElement(),
       },
       {
+        path: '/register',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} initialMode="register" />,
+      },
+      {
+        path: '/password-reset',
+        element: isAuthenticated
+          ? <Navigate to={postLoginTarget} replace />
+          : <Login onLogin={onLogin} initialMode="reset-request" />,
+      },
+      {
+        path: '/password-reset/confirm',
+        element: (
+          <PasswordResetConfirmRoute
+            onLogin={onLogin}
+            isAuthenticated={isAuthenticated}
+            redirectPath={postLoginTarget}
+          />
+        ),
+      },
+      {
         path: '/',
         element: isAuthenticated ? <Navigate to={authedHomePath} replace /> : <Navigate to={loginPath} replace />,
+      },
+      {
+        path: '/register',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
+      {
+        path: '/forgot-password',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
+      {
+        path: '/password-reset',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
+      {
+        path: '/password-reset/confirm',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
+      {
+        path: '/verify-email',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
       },
       ...guardedApplicationRoutes,
       {
