@@ -1,135 +1,173 @@
-Here's a comprehensive NotFoundPage.tsx implementation:
+import { useMemo, type CSSProperties } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { brand, headingFontStack, withOpacity } from '@ui/branding'
 
-```typescript
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Container, 
-  Stack, 
-  useMediaQuery, 
-  useTheme 
-} from '@mui/material';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import HomeIcon from '@mui/icons-material/Home';
-import ReplyIcon from '@mui/icons-material/Reply';
+type Suggestion = {
+  label: string
+  description: string
+  href: string
+}
 
-const NotFoundPage: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+const containerStyle: CSSProperties = {
+  minHeight: '100vh',
+  padding: '64px 18px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: `radial-gradient(circle at top, ${withOpacity(brand.colors.primary, 0.12)} 0%, transparent 52%) ${brand.colors.appBackground}`,
+  fontFamily: brand.fontStack,
+  color: brand.colors.secondary,
+}
 
-  const handleGoHome = () => {
-    navigate('/');
-  };
+const cardStyle: CSSProperties = {
+  width: 'min(640px, 100%)',
+  display: 'grid',
+  gap: 28,
+  padding: '40px clamp(20px, 5vw, 44px)',
+  borderRadius: 32,
+  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.85) 100%)',
+  border: `1px solid ${withOpacity('#FFFFFF', 0.14)}`,
+  color: '#ffffff',
+  boxShadow: '0 38px 68px rgba(15, 23, 42, 0.45)',
+}
 
-  const handleGoBack = () => {
-    navigate(-1);
-  };
+const buttonBase: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 10,
+  padding: '12px 20px',
+  borderRadius: 999,
+  fontWeight: 600,
+  fontSize: '0.95rem',
+  cursor: 'pointer',
+  textDecoration: 'none',
+}
+
+export default function NotFoundPage(): JSX.Element {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const suggestions: Suggestion[] = useMemo(
+    () => [
+      {
+        label: 'Dashboard',
+        description: 'Bekijk de planner en AI-suggesties voor openstaande projecten.',
+        href: '/planner',
+      },
+      {
+        label: 'Facturen',
+        description: 'Controleer openstaande facturen en recente betalingen.',
+        href: '/finance',
+      },
+      {
+        label: 'Secrets-dashboard',
+        description: 'Beheer API-keys, SMTP en andere omgevingsvariabelen.',
+        href: '/secrets',
+      },
+    ],
+    [],
+  )
 
   return (
-    <Container 
-      maxWidth="sm" 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        height: '100vh',
-        textAlign: 'center',
-        p: 3
-      }}
-    >
-      <ErrorOutlineIcon 
-        sx={{ 
-          fontSize: isMobile ? 120 : 200, 
-          color: 'error.main', 
-          mb: 3 
-        }} 
-      />
-      
-      <Typography variant="h3" gutterBottom>
-        404 - Page Not Found
-      </Typography>
-      
-      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
-        The page at <strong>{location.pathname}</strong> does not exist.
-      </Typography>
-      
-      <Stack 
-        direction={isMobile ? 'column' : 'row'} 
-        spacing={2} 
-        sx={{ width: '100%', maxWidth: 400 }}
-      >
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<HomeIcon />}
-          onClick={handleGoHome}
-          fullWidth
-        >
-          Go Home
-        </Button>
-        
-        <Button
-          variant="outlined"
-          color="secondary"
-          startIcon={<ReplyIcon />}
-          onClick={handleGoBack}
-          fullWidth
-        >
-          Go Back
-        </Button>
-      </Stack>
-      
-      {/* Optional: Search Suggestions Section */}
-      <Box sx={{ mt: 4, width: '100%', maxWidth: 400 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Suggested Pages
-        </Typography>
-        <Stack spacing={1}>
-          <Button 
-            variant="text" 
-            color="primary" 
-            onClick={() => navigate('/dashboard')}
-          >
-            Dashboard
-          </Button>
-          <Button 
-            variant="text" 
-            color="primary" 
-            onClick={() => navigate('/products')}
-          >
-            Products
-          </Button>
-          <Button 
-            variant="text" 
-            color="primary" 
-            onClick={() => navigate('/contact')}
-          >
-            Contact
-          </Button>
-        </Stack>
-      </Box>
-    </Container>
-  );
-};
+    <div style={containerStyle}>
+      <article style={cardStyle} role="status" aria-live="polite">
+        <header style={{ display: 'grid', gap: 12 }}>
+          <span aria-hidden style={{ fontSize: '2.8rem', lineHeight: 1 }}>🧭</span>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span
+              style={{
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                fontSize: '0.78rem',
+                color: withOpacity('#FFFFFF', 0.75),
+                fontWeight: 600,
+              }}
+            >
+              404 · Niet gevonden
+            </span>
+            <h1
+              style={{
+                margin: 0,
+                fontFamily: headingFontStack,
+                fontSize: '2.35rem',
+                lineHeight: 1.1,
+              }}
+            >
+              De gevraagde pagina bestaat niet
+            </h1>
+            <p style={{ margin: 0, color: withOpacity('#FFFFFF', 0.82) }}>
+              We konden <code style={{ fontSize: '0.95rem' }}>{location.pathname || '/'}</code> niet vinden. Kies een volgende stap
+              of ga terug naar het dashboard.
+            </p>
+          </div>
+        </header>
 
-export default NotFoundPage;
-```
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            style={{
+              ...buttonBase,
+              background: '#ffffff',
+              color: brand.colors.secondary,
+              border: 'none',
+            }}
+            data-testid="not-found-back"
+          >
+            ⬅️ Ga terug
+          </button>
+          <Link
+            to="/"
+            style={{
+              ...buttonBase,
+              border: `1px solid ${withOpacity('#FFFFFF', 0.28)}`,
+              color: '#ffffff',
+              background: 'transparent',
+            }}
+            data-testid="not-found-home"
+          >
+            🏠 Naar start
+          </Link>
+        </div>
 
-Key Features:
-- Uses React with TypeScript
-- Leverages Material-UI for responsive design
-- Displays current path
-- Responsive layout with mobile/desktop variants
-- Go Home and Go Back buttons
-- Optional search suggestions section
-- Error icon and clear messaging
-- Uses react-router-dom hooks
-- Fully typed component
-
-Note: This assumes you have @mui/material and @mui/icons-material installed. Adjust imports if using a different UI library.
+        <section aria-label="Aanbevolen bestemmingen" style={{ display: 'grid', gap: 16 }}>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Misschien zocht je dit</h2>
+          <ul
+            style={{
+              listStyle: 'none',
+              margin: 0,
+              padding: 0,
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            {suggestions.map(suggestion => (
+              <li key={suggestion.href}>
+                <Link
+                  to={suggestion.href}
+                  style={{
+                    display: 'grid',
+                    gap: 6,
+                    padding: '14px 16px',
+                    borderRadius: 16,
+                    background: withOpacity('#FFFFFF', 0.08),
+                    border: `1px solid ${withOpacity('#FFFFFF', 0.16)}`,
+                    color: '#ffffff',
+                    textDecoration: 'none',
+                  }}
+                  data-testid={`suggestion-${suggestion.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                >
+                  <span style={{ fontWeight: 600 }}>{suggestion.label}</span>
+                  <span style={{ fontSize: '0.9rem', color: withOpacity('#FFFFFF', 0.8) }}>
+                    {suggestion.description}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </article>
+    </div>
+  )
+}
