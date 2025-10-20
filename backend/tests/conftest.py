@@ -200,6 +200,7 @@ os.environ.setdefault('MRDJ_LEAD_CAPTURE_CAPTCHA_SECRET', 'dummy-secret')
 # Ensure models are imported so metadata is populated before accessing the FastAPI app
 import app.modules.auth.models  # noqa: F401
 import app.modules.chat.models  # noqa: F401
+import app.modules.booking.models  # noqa: F401
 import app.modules.crew.models  # noqa: F401
 import app.modules.inventory.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
@@ -235,12 +236,14 @@ def db_session() -> Generator[Session, None, None]:
 class DummyUser:
     role: str
     email: str = 'test@rentguy.local'
+    id: int = 1
 
 
 @pytest.fixture()
 def client(db_session: Session) -> Generator[TestClient, None, None]:
     from app.main import app
     from app.modules.auth import deps as auth_deps
+    from app.modules.auth.models import User
 
     def override_get_db() -> Generator[Session, None, None]:
         try:
@@ -250,6 +253,12 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 
     app.dependency_overrides[auth_deps.get_db] = override_get_db
     app.dependency_overrides[auth_deps.get_current_user] = lambda: DummyUser(role='admin')
+
+    if not db_session.query(User).filter_by(id=1).first():
+        db_session.add(
+            User(id=1, email='test@rentguy.local', password_hash='secret', role='admin')
+        )
+        db_session.commit()
 
     with TestClient(app) as test_client:
         yield test_client

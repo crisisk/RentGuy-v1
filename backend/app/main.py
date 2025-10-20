@@ -120,6 +120,7 @@ def metrics() -> PlainTextResponse:
 ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
     ("app.modules.auth.routes", "router", "/api/v1/auth", ["auth"]),
     ("app.modules.inventory.routes", "router", "/api/v1/inventory", ["inventory"]),
+    ("app.modules.booking.routes", "router", "/api/v1", ["booking"]),
     ("app.modules.projects.routes", "router", "/api/v1", ["projects"]),
     ("app.modules.calendar_sync.routes", "router", "/api/v1", ["calendar"]),
     ("app.modules.crew.routes", "router", "/api/v1", ["crew"]),
