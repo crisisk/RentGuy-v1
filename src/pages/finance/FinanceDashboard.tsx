@@ -1,24 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import financeStore from '../../stores/financeStore';
-
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  status: 'pending' | 'paid';
-  dueDate: string;
-}
-
-interface RevenueStats {
-  monthlyRevenue: number;
-  pendingInvoicesTotal: number;
-  paidInvoicesTotal: number;
-}
+import financeStore, { type FinanceStats, type InvoiceRecord } from '../../stores/financeStore';
 
 const FinanceDashboard: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [stats, setStats] = useState<RevenueStats | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,8 +15,8 @@ const FinanceDashboard: React.FC = () => {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+  const formatDate = (value: Date): string => {
+    const date = new Date(value);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -42,12 +28,13 @@ const FinanceDashboard: React.FC = () => {
     const fetchFinanceData = async () => {
       try {
         setLoading(true);
-        const financeData = await financeStore.getDashboardData();
-        setInvoices(financeData.invoices);
-        setStats(financeData.stats);
-        setLoading(false);
+        const { invoices: invoiceList, stats: dashboardStats } = await financeStore.getDashboardData();
+        setInvoices(invoiceList);
+        setStats(dashboardStats);
+        setError(null);
       } catch (err) {
-        setError('Failed to load finance data');
+        setError(err instanceof Error ? err.message : 'Failed to load finance data');
+      } finally {
         setLoading(false);
       }
     };
@@ -116,11 +103,13 @@ const FinanceDashboard: React.FC = () => {
                 <td className="px-4 py-3">{formatCurrency(invoice.amount)}</td>
                 <td className="px-4 py-3">{formatDate(invoice.dueDate)}</td>
                 <td className="px-4 py-3">
-                  <span 
+                  <span
                     className={`px-2 py-1 rounded text-xs ${
-                      invoice.status === 'pending' 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-green-100 text-green-800'
+                      invoice.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : invoice.status === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
                     }`}
                   >
                     {invoice.status}

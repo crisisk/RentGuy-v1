@@ -1,17 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import store from '../../stores/financeStore';
-
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  date: string;
-  status: 'paid' | 'pending' | 'overdue';
-}
+import financeStore, { type InvoiceRecord } from '../../stores/financeStore';
 
 const InvoiceOverview: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -19,15 +11,19 @@ const InvoiceOverview: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    store.fetchInvoices()
-      .then((data: Invoice[]) => {
+    const loadInvoices = async () => {
+      try {
+        const data = await financeStore.getInvoices();
         setInvoices(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load invoices');
+      } finally {
         setIsLoading(false);
-      })
-      .catch((err: Error) => {
-        setError(err.message);
-        setIsLoading(false);
-      });
+      }
+    };
+
+    loadInvoices();
   }, []);
 
   const filteredInvoices = invoices.filter(invoice => {
@@ -36,8 +32,8 @@ const InvoiceOverview: React.FC = () => {
     return matchesStatus && matchesName;
   });
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (value: Date) => {
+    const date = new Date(value);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
@@ -102,7 +98,7 @@ const InvoiceOverview: React.FC = () => {
                 <tr key={invoice.id}>
                   <td className="px-4 py-3">{invoice.clientName}</td>
                   <td className="px-4 py-3">${invoice.amount.toFixed(2)}</td>
-                  <td className="px-4 py-3">{formatDate(invoice.date)}</td>
+                  <td className="px-4 py-3">{formatDate(invoice.invoiceDate)}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded text-sm ${getStatusClass(invoice.status)}`}>
                       {invoice.status}
