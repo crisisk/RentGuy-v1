@@ -1199,7 +1199,7 @@ export function Login({ onLogin }: LoginProps) {
 function resolveEmail(candidate: string): string {
   const trimmed = candidate.trim()
   if (!trimmed) {
-    return 'bart@rentguy.demo'
+    return 'info@rentguy.nl'
   }
   if (trimmed.includes('@')) {
     return trimmed

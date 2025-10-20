@@ -192,7 +192,11 @@ export default function FlowExperienceShell({
         </nav>
       )}
       {persona && (
-        <div
+        <button
+          type="button"
+          data-testid="user-menu"
+          aria-haspopup="menu"
+          aria-label={`Gebruikersmenu voor ${persona.name}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -201,11 +205,14 @@ export default function FlowExperienceShell({
             borderRadius: 999,
             background: withOpacity('#FFFFFF', 0.12),
             color: '#ffffff',
+            border: 'none',
+            cursor: 'pointer',
           }}
         >
           <span
             data-testid="user-avatar"
             aria-hidden
+            data-testid="user-avatar"
             style={{
               display: 'flex',
               alignItems: 'center',
