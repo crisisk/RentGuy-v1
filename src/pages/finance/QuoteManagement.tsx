@@ -1,43 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FinanceStore from '../../stores/financeStore';
-
-interface Quote {
-  id: string;
-  number: string;
-  client: string;
-  amount: number;
-  date: string;
-  status: 'draft' | 'sent' | 'converted';
-}
+import useFinanceStore from '../../stores/financeStore';
 
 const QuoteManagement = () => {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const store = FinanceStore();
+  const quotes = useFinanceStore((state) => state.quotes);
+  const loading = useFinanceStore((state) => state.loading);
+  const error = useFinanceStore((state) => state.error);
+  const fetchQuotes = useFinanceStore((state) => state.fetchQuotes);
+  const convertQuoteToInvoice = useFinanceStore((state) => state.convertQuoteToInvoice);
+  const clearError = useFinanceStore((state) => state.clearError);
 
   useEffect(() => {
-    const loadQuotes = async () => {
-      try {
-        const data = await store.getQuotes();
-        setQuotes(data);
-      } catch (err) {
-        setError('Failed to load quotes');
-      } finally {
-        setLoading(false);
-      }
+    fetchQuotes().catch(() => {
+      /* error state handled in store */
+    });
+
+    return () => {
+      clearError();
     };
-    loadQuotes();
-  }, []);
+  }, [fetchQuotes, clearError]);
 
   const handleConvert = async (quoteId: string) => {
     try {
-      const invoiceId = await store.convertQuoteToInvoice(quoteId);
+      const invoiceId = await convertQuoteToInvoice(quoteId);
       navigate(`/invoices/${invoiceId}`);
-    } catch (err) {
-      setError('Failed to convert quote to invoice');
+    } catch {
+      /* error already reflected in store state */
     }
   };
 
