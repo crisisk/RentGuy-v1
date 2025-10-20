@@ -1,30 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import financeStore, { type InvoiceRecord } from '../../stores/financeStore';
+import useFinanceStore from '../../stores/financeStore';
 
 const InvoiceOverview: React.FC = () => {
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [clientNameFilter, setClientNameFilter] = useState<string>('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const loadInvoices = async () => {
-      try {
-        const data = await financeStore.getInvoices();
-        setInvoices(data);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load invoices');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const invoices = useFinanceStore((state) => state.invoices);
+  const loading = useFinanceStore((state) => state.loading);
+  const error = useFinanceStore((state) => state.error);
+  const fetchInvoices = useFinanceStore((state) => state.fetchInvoices);
+  const clearError = useFinanceStore((state) => state.clearError);
 
-    loadInvoices();
-  }, []);
+  useEffect(() => {
+    fetchInvoices().catch(() => {
+      /* handled via store error state */
+    });
+
+    return () => {
+      clearError();
+    };
+  }, [fetchInvoices, clearError]);
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
@@ -32,7 +29,7 @@ const InvoiceOverview: React.FC = () => {
     return matchesStatus && matchesName;
   });
 
-  const formatDate = (value: Date) => {
+  const formatDate = (value: string) => {
     const date = new Date(value);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
@@ -46,7 +43,7 @@ const InvoiceOverview: React.FC = () => {
     }
   };
 
-  if (isLoading) return <div className="p-4 text-center">Loading invoices...</div>;
+  if (loading) return <div className="p-4 text-center">Loading invoices...</div>;
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (

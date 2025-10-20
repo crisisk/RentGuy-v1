@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import financeStore from '../../stores/financeStore';
+import useFinanceStore from '../../stores/financeStore';
+import type { InvoiceLineItem } from '../../stores/financeStore';
 
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-}
+const generateUniqueId = () => Math.random().toString(36).substr(2, 9);
+const createEmptyLineItem = (): InvoiceLineItem => ({
+  id: generateUniqueId(),
+  description: '',
+  quantity: 1,
+  unitPrice: 0,
+});
 
 const InvoiceForm: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
@@ -16,31 +18,29 @@ const InvoiceForm: React.FC = () => {
   const [clientName, setClientName] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([createEmptyLineItem()]);
+  const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const generateUniqueId = () => Math.random().toString(36).substr(2, 9);
+  const createInvoice = useFinanceStore((state) => state.createInvoice);
+  const updateInvoice = useFinanceStore((state) => state.updateInvoice);
+  const getInvoiceById = useFinanceStore((state) => state.getInvoiceById);
+  const loading = useFinanceStore((state) => state.loading);
+  const clearError = useFinanceStore((state) => state.clearError);
 
   const addLineItem = () => {
-    const newLineItem: LineItem = {
-      id: generateUniqueId(),
-      description: '',
-      quantity: 1,
-      unitPrice: 0
-    };
-    setLineItems([...lineItems, newLineItem]);
+    setLineItems([...lineItems, createEmptyLineItem()]);
   };
 
-  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
-    const updatedItems = lineItems.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
+  const updateLineItem = (lineId: string, field: keyof InvoiceLineItem, value: string | number) => {
+    const updatedItems = lineItems.map(item =>
+      item.id === lineId ? { ...item, [field]: value } : item
     );
     setLineItems(updatedItems);
   };
 
-  const removeLineItem = (id: string) => {
-    setLineItems(lineItems.filter(item => item.id !== id));
+  const removeLineItem = (lineId: string) => {
+    setLineItems(lineItems.filter(item => item.id !== lineId));
   };
 
   const calculateTotal = () => {
@@ -59,12 +59,13 @@ const InvoiceForm: React.FC = () => {
       };
 
       if (id) {
-        await financeStore.updateInvoice(id, invoiceData);
+        await updateInvoice(id, invoiceData);
       } else {
-        await financeStore.createInvoice(invoiceData);
+        await createInvoice(invoiceData);
       }
+      clearError();
       navigate('/invoices');
-    } catch (err) {
+    } catch {
       setError('Failed to save invoice');
     }
   };
@@ -73,23 +74,30 @@ const InvoiceForm: React.FC = () => {
     const fetchInvoice = async () => {
       try {
         if (id) {
-          const invoice = await financeStore.getInvoiceById(id);
+          const invoice = await getInvoiceById(id);
+          if (!invoice) {
+            setError('Invoice not found');
+            return;
+          }
           setClientName(invoice.clientName);
-          setInvoiceDate(invoice.invoiceDate.toISOString().split('T')[0]);
-          setDueDate(invoice.dueDate.toISOString().split('T')[0]);
-          setLineItems(invoice.lineItems);
+          setInvoiceDate(new Date(invoice.date).toISOString().split('T')[0]);
+          setDueDate(invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : '');
+          setLineItems(invoice.lineItems.length ? invoice.lineItems : [createEmptyLineItem()]);
         }
-      } catch (err) {
+      } catch {
         setError('Failed to load invoice');
       } finally {
-        setLoading(false);
+        setInitializing(false);
       }
     };
 
     fetchInvoice();
-  }, [id]);
+    return () => {
+      clearError();
+    };
+  }, [id, getInvoiceById, clearError]);
 
-  if (loading) return <div className="p-4">Loading...</div>;
+  if (initializing) return <div className="p-4">Loading...</div>;
   if (error) return <div className="p-4 text-red-500">{error}</div>;
 
   return (
@@ -213,7 +221,8 @@ const InvoiceForm: React.FC = () => {
         <div className="flex items-center justify-between">
           <button
             type="submit"
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-60"
+            disabled={loading}
           >
             {id ? 'Update Invoice' : 'Create Invoice'}
           </button>
