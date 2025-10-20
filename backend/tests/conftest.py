@@ -120,10 +120,12 @@ def _install_geoalchemy_stubs() -> None:
         def get_col_spec(self, **kwargs):  # pragma: no cover - trivial stub
             return "GEOMETRY"
 
-    class _WKBElement:
-        def __init__(self, data=None, srid: int | None = None) -> None:  # pragma: no cover - trivial stub
-            self.data = data
-            self.srid = srid
+    class _WKBElement(str):
+        def __new__(cls, data=None, srid: int | None = None):  # pragma: no cover - trivial stub
+            text = data if data is not None else ""
+            obj = str.__new__(cls, text)
+            obj.srid = srid
+            return obj
 
     geoalchemy_module.Geometry = _Geometry
     geoalchemy_module.WKBElement = _WKBElement
@@ -137,10 +139,27 @@ def _install_geoalchemy_stubs() -> None:
 
     shape_module = types.ModuleType('geoalchemy2.shape')
 
-    def _from_shape(shape, srid=None):  # pragma: no cover - trivial stub
-        return shape
+    try:  # pragma: no cover - optional dependency
+        from shapely.geometry import shape as shapely_shape  # type: ignore
+        from shapely import wkt as shapely_wkt  # type: ignore
+    except Exception:  # pragma: no cover - best effort fallback
+        shapely_shape = None  # type: ignore
+        shapely_wkt = None  # type: ignore
+
+    def _from_shape(value, srid=None):  # pragma: no cover - trivial stub
+        if hasattr(value, 'wkt'):
+            return value.wkt
+        if shapely_shape is not None:
+            return shapely_shape(value).wkt
+        return value
+
+    def _to_shape(value):  # pragma: no cover - trivial stub
+        if shapely_wkt is not None and isinstance(value, str):
+            return shapely_wkt.loads(value)
+        return value
 
     shape_module.from_shape = _from_shape
+    shape_module.to_shape = _to_shape
 
     sys.modules['geoalchemy2'] = geoalchemy_module
     sys.modules['geoalchemy2.elements'] = elements_module
@@ -205,6 +224,7 @@ import app.modules.inventory.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
 import app.modules.platform.secrets.models  # noqa: F401
 import app.modules.crm.models  # noqa: F401
+import app.modules.scanning.models  # noqa: F401
 
 from app.core.db import Base
 
