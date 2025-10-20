@@ -21,9 +21,9 @@ const FinanceDashboard: React.FC = () => {
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
-    });
-  };
+      year: 'numeric',
+    })
+  }
 
   useEffect(() => {
     const fetchFinanceData = async () => {

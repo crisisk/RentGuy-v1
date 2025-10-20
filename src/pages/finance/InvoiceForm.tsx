@@ -44,11 +44,24 @@ const InvoiceForm: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    return lineItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
-  };
+    return lineItems.reduce((total, item) => total + item.quantity * item.unitPrice, 0)
+  }
+
+  const buildPayload = (): InvoiceUpsertPayload => ({
+    clientName,
+    invoiceDate,
+    dueDate,
+    lineItems: lineItems.map(item => ({
+      id: item.id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    })),
+    total: calculateTotal(),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
       const invoiceData = {
         clientName,

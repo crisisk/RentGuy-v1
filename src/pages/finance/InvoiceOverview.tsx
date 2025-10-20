@@ -24,10 +24,10 @@ const InvoiceOverview: React.FC = () => {
   }, [fetchInvoices, clearError]);
 
   const filteredInvoices = invoices.filter(invoice => {
-    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-    const matchesName = invoice.clientName.toLowerCase().includes(clientNameFilter.toLowerCase());
-    return matchesStatus && matchesName;
-  });
+    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter
+    const matchesName = invoice.clientName.toLowerCase().includes(clientNameFilter.toLowerCase())
+    return matchesStatus && matchesName
+  })
 
   const formatDate = (value: string) => {
     const date = new Date(value);
