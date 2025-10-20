@@ -8,6 +8,7 @@ import {
   type AuthUser,
 } from '@application/auth/api'
 import { setToken as setApiToken } from '@infra/http/api'
+import { env } from '@config/env'
 import { brand, brandFontStack } from '@ui/branding'
 import { useBrandingChrome, useDocumentTitle, useOnboardingPreferences } from '@hooks'
 import OnboardingOverlay from './OnboardingOverlay'
@@ -339,7 +340,9 @@ function MarketingExperienceApp({ config }: { readonly config: MarketingExperien
 }
 
 export function App(): JSX.Element {
-  const experience = resolveExperienceConfig()
+  const experience = resolveExperienceConfig(undefined, {
+    modeOverride: env.isMarketingMode ? 'marketing' : undefined,
+  })
   if (experience.mode === 'marketing') {
     return <MarketingExperienceApp config={experience} />
   }
