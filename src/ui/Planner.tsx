@@ -23,6 +23,7 @@ import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { createFlowNavigation, type FlowNavigationStatus } from '@ui/flowNavigation'
 import { defaultProjectPresets } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
+import InventorySnapshot from '@ui/InventorySnapshot'
 import type {
   PersonaKey,
   PersonaPreset,
@@ -1460,6 +1461,10 @@ export default function Planner({ onLogout }: PlannerProps) {
             tone={summary.critical ? 'danger' : summary.warning ? 'warning' : 'neutral'}
           />
         </div>
+
+        {viewMode !== 'calendar' && (
+          <InventorySnapshot />
+        )}
 
         <FlowGuidancePanel
           eyebrow="User flows"

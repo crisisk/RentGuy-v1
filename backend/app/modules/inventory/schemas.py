@@ -26,6 +26,7 @@ class ItemIn(BaseModel):
 class ItemOut(BaseModel):
     id: int
     name: str
+    status: str
     category_id: int
     quantity_total: int
     min_stock: int
