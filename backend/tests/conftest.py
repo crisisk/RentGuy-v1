@@ -205,6 +205,8 @@ import app.modules.inventory.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
 import app.modules.platform.secrets.models  # noqa: F401
 import app.modules.crm.models  # noqa: F401
+import app.modules.jobboard.models  # noqa: F401
+import app.modules.subrenting.models  # noqa: F401
 
 from app.core.db import Base
 
@@ -255,3 +257,10 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
         yield test_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def anyio_backend():
+    """Force AnyIO-based tests to run on asyncio only during unit tests."""
+
+    return "asyncio"
