@@ -1,17 +1,14 @@
-Here's a comprehensive TypeScript error tracking utility:
-
-
 import { v4 as uuidv4 } from 'uuid';
 
 export enum ErrorLevel {
   INFO = 'info',
   WARNING = 'warning',
   ERROR = 'error',
-  FATAL = 'fatal'
+  FATAL = 'fatal',
 }
 
 export interface ErrorContext {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface User {
@@ -27,85 +24,131 @@ export interface Breadcrumb {
   timestamp?: number;
 }
 
+type StoredError = {
+  id: string;
+  message: string;
+  stack: string[];
+  context?: ErrorContext;
+  timestamp: number;
+};
+
+const STORAGE_KEYS = {
+  errors: 'error_tracking_errors',
+  breadcrumbs: 'error_tracking_breadcrumbs',
+} as const;
+
+const isBrowserEnvironment = (): boolean =>
+  typeof window !== 'undefined' && typeof window.addEventListener === 'function';
+
+const ensureStorageAvailability = (): boolean => {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return false;
+  }
+
+  try {
+    const testKey = '__error_tracking__';
+    window.localStorage.setItem(testKey, 'ok');
+    window.localStorage.removeItem(testKey);
+    return true;
+  } catch (error) {
+    console.warn('[ErrorTracking] Local storage unavailable', error);
+    return false;
+  }
+};
+
 class ErrorTrackingService {
-  private initialized: boolean = false;
+  private initialized = false;
   private user: User | null = null;
   private breadcrumbs: Breadcrumb[] = [];
+  private storageAvailable = false;
 
   initErrorTracking(): void {
-    try {
-      // Mock initialization
-      console.log('[ErrorTracking] Initializing error tracking');
-      this.initialized = true;
+    if (this.initialized) {
+      console.debug('[ErrorTracking] Initialization skipped – already initialized');
+      return;
+    }
 
-      // Setup global error handler
+    if (!isBrowserEnvironment()) {
+      console.warn('[ErrorTracking] Initialization skipped – browser APIs unavailable');
+      return;
+    }
+
+    try {
+      console.log('[ErrorTracking] Initializing error tracking');
+      this.storageAvailable = ensureStorageAvailability();
       window.addEventListener('error', this.handleGlobalError);
       window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+      this.initialized = true;
     } catch (error) {
       console.error('[ErrorTracking] Initialization failed', error);
     }
   }
 
-  private handleGlobalError = (event: ErrorEvent): void => {
-    this.captureError(
-      new Error(event.message),
-      { 
-        filename: event.filename, 
-        lineno: event.lineno, 
-        colno: event.colno 
-      }
-    );
+  teardown(): void {
+    if (!this.initialized || !isBrowserEnvironment()) {
+      return;
+    }
+
+    window.removeEventListener('error', this.handleGlobalError);
+    window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+    this.initialized = false;
+    this.storageAvailable = false;
   }
 
-  private handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
-    this.captureError(
-      event.reason instanceof Error 
-        ? event.reason 
-        : new Error(String(event.reason))
-    );
-  }
+  captureError(error: unknown, context?: ErrorContext): void {
+    if (!this.initialized) {
+      return;
+    }
 
-  captureError(error: Error, context?: ErrorContext): void {
-    if (!this.initialized) return;
-
+    const normalizedError = this.normalizeError(error);
     const errorId = uuidv4();
-    const stackTrace = this.parseErrorStack(error);
+    const stackTrace = this.parseErrorStack(normalizedError);
+    const payloadContext: ErrorContext = {
+      ...context,
+      user: this.user ?? undefined,
+    };
 
-    console.error(`[ErrorTracking] Error (${errorId}):`, error.message, {
+    console.error(`[ErrorTracking] Error (${errorId}):`, normalizedError.message, {
       stack: stackTrace,
-      context: context || {}
+      context: payloadContext,
     });
 
     this.addBreadcrumb({
-      message: `Error: ${error.message}`,
+      message: `Error: ${normalizedError.message}`,
       category: 'error',
-      level: ErrorLevel.ERROR
+      level: ErrorLevel.ERROR,
     });
 
-    // Mock remote error logging
-    this.persistErrorToLocalStorage(errorId, error, context);
+    this.persistErrorToLocalStorage({
+      id: errorId,
+      message: normalizedError.message,
+      stack: stackTrace,
+      context: payloadContext,
+      timestamp: Date.now(),
+    });
   }
 
   captureMessage(message: string, level: ErrorLevel = ErrorLevel.INFO): void {
-    if (!this.initialized) return;
+    if (!this.initialized) {
+      return;
+    }
 
     console.log(`[ErrorTracking] ${level.toUpperCase()}: ${message}`);
 
     this.addBreadcrumb({
       message,
-      level
+      level,
     });
   }
 
   addBreadcrumb(crumb: Breadcrumb): void {
     const enrichedCrumb: Breadcrumb = {
       ...crumb,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     this.breadcrumbs.push(enrichedCrumb);
 
-    // Limit breadcrumbs to last 100
     if (this.breadcrumbs.length > 100) {
       this.breadcrumbs.shift();
     }
@@ -118,6 +161,34 @@ class ErrorTrackingService {
     console.log('[ErrorTracking] User context set:', user);
   }
 
+  private handleGlobalError = (event: ErrorEvent): void => {
+    this.captureError(new Error(event.message), {
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    });
+  };
+
+  private handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
+    this.captureError(event.reason);
+  };
+
+  private normalizeError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+
+    if (typeof error === 'string') {
+      return new Error(error);
+    }
+
+    try {
+      return new Error(JSON.stringify(error));
+    } catch {
+      return new Error('Unknown error');
+    }
+  }
+
   private parseErrorStack(error: Error): string[] {
     return (error.stack || '')
       .split('\n')
@@ -126,26 +197,29 @@ class ErrorTrackingService {
       .filter(line => line.length > 0);
   }
 
-  private persistErrorToLocalStorage(
-    errorId: string, 
-    error: Error, 
-    context?: ErrorContext
-  ): void {
-    try {
-      const errors = JSON.parse(
-        localStorage.getItem('error_tracking_errors') || '[]'
-      );
-      
-      errors.push({
-        id: errorId,
-        message: error.message,
-        stack: this.parseErrorStack(error),
-        context,
-        timestamp: Date.now()
-      });
+  private readStoredErrors(): StoredError[] {
+    if (!this.storageAvailable) {
+      return [];
+    }
 
-      localStorage.setItem(
-        'error_tracking_errors', 
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEYS.errors);
+      return raw ? (JSON.parse(raw) as StoredError[]) : [];
+    } catch (storageError) {
+      console.warn('[ErrorTracking] Failed to read stored errors', storageError);
+      return [];
+    }
+  }
+
+  private persistErrorToLocalStorage(error: StoredError): void {
+    if (!this.storageAvailable) {
+      return;
+    }
+
+    try {
+      const errors = [...this.readStoredErrors(), error];
+      window.localStorage.setItem(
+        STORAGE_KEYS.errors,
         JSON.stringify(errors.slice(-50))
       );
     } catch (storageError) {
@@ -154,9 +228,13 @@ class ErrorTrackingService {
   }
 
   private persistBreadcrumbsToLocalStorage(): void {
+    if (!this.storageAvailable) {
+      return;
+    }
+
     try {
-      localStorage.setItem(
-        'error_tracking_breadcrumbs', 
+      window.localStorage.setItem(
+        STORAGE_KEYS.breadcrumbs,
         JSON.stringify(this.breadcrumbs)
       );
     } catch (storageError) {
@@ -166,30 +244,3 @@ class ErrorTrackingService {
 }
 
 export const ErrorTracking = new ErrorTrackingService();
-
-
-This implementation provides a robust mock error tracking service with:
-- Initialization with global error handlers
-- Error and message capturing
-- Breadcrumb tracking
-- User context management
-- Local storage persistence
-- UUIDs for error tracking
-- TypeScript typing
-- Console logging
-- Error stack parsing
-
-Usage example:
-
-import { ErrorTracking, ErrorLevel } from './errorTracking';
-
-ErrorTracking.initErrorTracking();
-ErrorTracking.setUser({ id: '123', email: 'user@example.com' });
-
-try {
-  throw new Error('Test error');
-} catch (error) {
-  ErrorTracking.captureError(error, { component: 'LoginForm' });
-}
-
-ErrorTracking.captureMessage('User logged in', ErrorLevel.INFO);
