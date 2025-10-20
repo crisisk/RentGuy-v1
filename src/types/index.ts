@@ -1,51 +1,29 @@
-Here's a comprehensive TypeScript types index file that meets the requirements:
+export * from './adminTypes'
+export * from './crmTypes'
+export * from './crewTypes'
+export * from './financeTypes'
+export * from './projectTypes'
+export * from './equipmentTypes'
 
-```typescript
-// src/types/index.ts
+export interface ApiResponse<T> {
+  readonly data: T
+  readonly message?: string
+  readonly success: boolean
+}
 
-// Admin Types
-export * from './adminTypes';
+export interface PaginatedResponse<T> {
+  readonly items: T[]
+  readonly total: number
+  readonly page: number
+  readonly pageSize: number
+  readonly totalPages: number
+}
 
-// CRM Types
-export * from './crmTypes';
+export interface ErrorResponse {
+  readonly code: string
+  readonly message: string
+  readonly details?: Record<string, unknown>
+}
 
-// Crew Types
-export * from './crewTypes';
-
-// Finance Types
-export * from './financeTypes';
-
-// Project Types
-export * from './projectTypes';
-
-// Common Utility Types
-export type ApiResponse<T> = {
-  data: T;
-  message?: string;
-  success: boolean;
-};
-
-export type PaginatedResponse<T> = {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
-
-export type ErrorResponse = {
-  code: string;
-  message: string;
-  details?: Record<string, unknown>;
-};
-
-// Optional: Generic type for optional properties
-export type Nullable<T> = T | null;
-export type Optional<T> = T | undefined;
-```
-
-This index file:
-- Exports all types from specified modules
-- Includes common utility types for API responses
-- Provides generic types for optional and nullable values
-- Uses TypeScript best practices for type definitions
+export type Nullable<T> = T | null
+export type Optional<T> = T | undefined
