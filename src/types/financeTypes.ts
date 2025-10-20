@@ -1,88 +1,75 @@
-export type InvoiceStatus =
-  | 'draft'
-  | 'sent'
-  | 'pending'
-  | 'paid'
-  | 'overdue'
-  | 'cancelled';
-
-export type QuoteStatus = 'draft' | 'sent' | 'converted';
-
-export type PaymentMethod = 'cash' | 'bank_transfer' | 'card' | 'mollie';
+export type InvoiceStatus = 'draft' | 'pending' | 'sent' | 'paid' | 'overdue' | 'cancelled'
 
 export interface InvoiceLineItem {
-  id?: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total?: number;
+  id: string
+  description: string
+  quantity: number
+  unitPrice: number
 }
 
-export interface InvoiceSummary {
-  id: string;
-  number?: string;
-  clientName: string;
-  amount: number;
-  status: InvoiceStatus;
-  dueDate: string;
-  invoiceDate?: string;
+export interface InvoiceRecord {
+  id: string
+  clientName: string
+  issuedAt: string
+  dueAt: string
+  status: InvoiceStatus
+  currency: string
+  lineItems: InvoiceLineItem[]
+  totalNet: number
+  totalVat: number
+  totalGross: number
+  reference?: string | null
+  projectId?: number | null
 }
 
-export interface InvoiceDetails extends InvoiceSummary {
-  lineItems: InvoiceLineItem[];
-  total: number;
-  notes?: string;
+export interface InvoiceDraftInput {
+  clientName: string
+  invoiceDate: string
+  dueDate: string
+  lineItems: InvoiceLineItem[]
+  total: number
+  reference?: string | null
+  projectId?: number | null
+  currency?: string
 }
 
-export interface InvoiceDraft {
-  clientName: string;
-  invoiceDate: string;
-  dueDate: string;
-  lineItems: InvoiceLineItem[];
-  total: number;
+export type QuoteStatus = 'draft' | 'sent' | 'converted'
+
+export interface QuoteRecord {
+  id: string
+  number: string
+  clientName: string
+  amount: number
+  issuedAt: string
+  status: QuoteStatus
 }
 
-export interface Quote {
-  id: string;
-  number: string;
-  client: string;
-  amount: number;
-  date: string;
-  status: QuoteStatus;
+export type PaymentMethod = 'bank_transfer' | 'card' | 'cash'
+
+export interface PaymentRecord {
+  id: string
+  invoiceId: string
+  amount: number
+  method: PaymentMethod
+  processedAt: string
+  status: 'pending' | 'settled'
+  reference?: string | null
 }
 
-export interface Payment {
-  id: string;
-  invoiceId: string;
-  amount: number;
-  method: PaymentMethod;
-  status: string;
-  date: string;
-  reference?: string;
+export interface PaymentDraft {
+  invoiceId: string
+  amount: number
+  method: PaymentMethod
+  reference?: string | null
 }
 
-export interface FinanceStats {
-  monthlyRevenue: number;
-  pendingInvoicesTotal: number;
-  paidInvoicesTotal: number;
+export interface FinanceDashboardMetrics {
+  monthlyRevenue: number
+  pendingInvoicesTotal: number
+  paidInvoicesTotal: number
 }
 
-export interface DashboardData {
-  invoices: InvoiceSummary[];
-  stats: FinanceStats | null;
+export interface FinanceDashboardData {
+  invoices: InvoiceRecord[]
+  metrics: FinanceDashboardMetrics
 }
-
-export const isInvoiceDetails = (value: unknown): value is InvoiceDetails => {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const candidate = value as Partial<InvoiceDetails>;
-  return (
-    typeof candidate.id === 'string' &&
-    typeof candidate.clientName === 'string' &&
-    typeof candidate.dueDate === 'string' &&
-    typeof candidate.total === 'number' &&
-    Array.isArray(candidate.lineItems)
-  );
-};

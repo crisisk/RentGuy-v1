@@ -1,177 +1,182 @@
-import axios from 'axios'
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
+import axios from 'axios';
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
 
-import { env } from '@config/env'
-import type {
-  DashboardData,
-  FinanceStats,
-  InvoiceDetails,
-  InvoiceDraft,
-  InvoiceLineItem,
-  InvoiceStatus,
-  InvoiceSummary,
-  Payment,
-  Quote,
-  QuoteStatus,
-} from '@rg-types/financeTypes'
+type InvoiceStatus = 'pending' | 'paid' | 'overdue' | 'draft' | string;
 
-const API_BASE = `${env.apiUrl}/api/v1/finance`
-
-type InvoiceLike = {
-  id: string
-  clientName?: string
-  customerName?: string
-  customer?: { name?: string }
-  amount?: number
-  total?: number
-  status?: string
-  dueDate?: string
-  due_date?: string
-  invoiceDate?: string
-  invoice_date?: string
-  date?: string
-  number?: string
-  lineItems?: InvoiceLineItem[]
-  items?: Array<Partial<InvoiceLineItem> & { description?: string; name?: string; qty?: number; quantity?: number; unitPrice?: number; price?: number; total?: number }>
-  notes?: string
+export interface InvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
 }
 
-type QuoteLike = {
-  id: string
-  number?: string
-  client?: string
-  clientName?: string
-  customerName?: string
-  amount?: number
-  total?: number
-  date?: string
-  createdAt?: string
-  status?: string
+export interface Invoice {
+  id: string;
+  clientName: string;
+  amount: number;
+  date: string;
+  dueDate?: string;
+  status: InvoiceStatus;
+  description?: string;
+  lineItems: InvoiceLineItem[];
 }
 
-type PaymentLike = {
-  id: string
-  invoiceId?: string
-  invoice_id?: string
-  amount?: number
-  method?: string
-  status?: string
-  date?: string
-  createdAt?: string
-  reference?: string
+export interface Quote {
+  id: string;
+  number: string;
+  client: string;
+  amount: number;
+  date: string;
+  status: 'draft' | 'sent' | 'converted' | string;
+  converted: boolean;
+}
+
+export interface Payment {
+  id: string;
+  amount: number;
+  invoiceId: string;
+  method: string;
+  processedAt?: string;
+}
+
+export interface FinanceStats {
+  monthlyRevenue: number;
+  pendingInvoicesTotal: number;
+  paidInvoicesTotal: number;
+}
+
+export interface InvoiceInput {
+  clientName: string;
+  invoiceDate: string | Date;
+  dueDate?: string | Date;
+  lineItems: InvoiceLineItem[];
+  total?: number;
+  description?: string;
 }
 
 interface FinanceState {
-  invoices: InvoiceSummary[]
-  quotes: Quote[]
-  payments: Payment[]
-  stats: FinanceStats | null
-  loading: boolean
-  error: string | null
-  fetchDashboardData: () => Promise<DashboardData>
-  fetchInvoices: () => Promise<InvoiceSummary[]>
-  getInvoiceById: (id: string) => Promise<InvoiceDetails>
-  createInvoice: (invoice: InvoiceDraft) => Promise<InvoiceDetails>
-  updateInvoice: (id: string, invoice: InvoiceDraft) => Promise<InvoiceDetails>
-  deleteInvoice: (id: string) => Promise<void>
-  getQuotes: () => Promise<Quote[]>
-  convertQuoteToInvoice: (quoteId: string) => Promise<string>
-  fetchPayments: () => Promise<Payment[]>
-  recordPayment: (payment: Omit<Payment, 'id'>) => Promise<Payment>
-  fetchStats: () => Promise<FinanceStats>
-  resetError: () => void
+  invoices: Invoice[];
+  quotes: Quote[];
+  payments: Payment[];
+  stats: FinanceStats | null;
+  loading: boolean;
+  error: string | null;
+  fetchInvoices: () => Promise<Invoice[]>;
+  getInvoiceById: (id: string) => Promise<Invoice | null>;
+  createInvoice: (invoice: InvoiceInput) => Promise<Invoice>;
+  updateInvoice: (id: string, invoice: InvoiceInput) => Promise<Invoice>;
+  deleteInvoice: (id: string) => Promise<void>;
+  fetchQuotes: () => Promise<Quote[]>;
+  getQuotes: () => Promise<Quote[]>;
+  convertQuoteToInvoice: (quoteId: string) => Promise<string>;
+  fetchPayments: () => Promise<Payment[]>;
+  recordPayment: (payment: Omit<Payment, 'id' | 'processedAt'>) => Promise<Payment>;
+  getFinanceStats: () => Promise<FinanceStats>;
+  getDashboardData: () => Promise<{ invoices: Invoice[]; stats: FinanceStats | null }>;
+  clearError: () => void;
 }
 
-const fallbackDate = () => new Date().toISOString()
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const FINANCE_BASE = `${API_BASE.replace(/\/$/, '')}/finance`;
 
-const normaliseStatus = (status?: string): InvoiceStatus => {
-  const candidate = status?.toLowerCase() as InvoiceStatus | undefined
-  return candidate && ['draft', 'sent', 'pending', 'paid', 'overdue', 'cancelled'].includes(candidate)
-    ? candidate
-    : 'draft'
-}
+const generateId = () => Math.random().toString(36).slice(2, 11);
 
-const normaliseInvoiceLineItem = (item: Partial<InvoiceLineItem> & { description?: string; name?: string; qty?: number; quantity?: number; unitPrice?: number; price?: number; total?: number }): InvoiceLineItem => {
-  const quantity = Number(item.quantity ?? item.qty ?? 0)
-  const unitPrice = Number(item.unitPrice ?? item.price ?? 0)
-  const total = Number(item.total ?? quantity * unitPrice)
+const ensureLineItems = (items: InvoiceLineItem[] = []): InvoiceLineItem[] =>
+  items.map((item) => ({
+    id: item.id || generateId(),
+    description: item.description,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+  }));
+
+const mapInvoiceResponse = (payload: any): Invoice => ({
+  id: String(payload.id ?? payload.invoice_id ?? generateId()),
+  clientName: payload.clientName ?? payload.client ?? payload.client_name ?? 'Unknown client',
+  amount: Number(
+    payload.amount ?? payload.total_gross ?? payload.total_net ?? payload.total ?? 0,
+  ),
+  date: new Date(payload.date ?? payload.issued_at ?? Date.now()).toISOString(),
+  dueDate: payload.dueDate
+    ? new Date(payload.dueDate).toISOString()
+    : payload.due_at
+    ? new Date(payload.due_at).toISOString()
+    : undefined,
+  status: (payload.status ?? (payload.converted ? 'converted' : 'pending')) as InvoiceStatus,
+  description: payload.description ?? payload.reference ?? undefined,
+  lineItems: ensureLineItems(payload.lineItems ?? payload.line_items ?? []),
+});
+
+const mapQuoteResponse = (payload: any): Quote => {
+  const id = String(payload.id ?? generateId());
+  const status: Quote['status'] =
+    (payload.status ?? (payload.converted ? 'converted' : 'draft')) ?? 'draft';
 
   return {
-    id: item.id,
-    description: item.description ?? item.name ?? '',
-    quantity,
-    unitPrice,
-    total,
-  }
-}
+    id,
+    number:
+      payload.number ??
+      (payload.reference ? String(payload.reference) : `Q-${id.slice(-6).toUpperCase()}`),
+    client: payload.client ?? payload.clientName ?? payload.client_name ?? 'Unknown client',
+    amount: Number(payload.amount ?? payload.total ?? 0),
+    date: new Date(payload.date ?? payload.valid_until ?? Date.now()).toISOString(),
+    status,
+    converted: Boolean(payload.converted ?? status === 'converted'),
+  };
+};
 
-const normaliseInvoiceSummary = (invoice: InvoiceLike): InvoiceSummary => {
-  const clientName = invoice.clientName ?? invoice.customerName ?? invoice.customer?.name ?? 'Unknown client'
-  const amount = Number(invoice.total ?? invoice.amount ?? 0)
-  const dueDate = invoice.dueDate ?? invoice.due_date ?? invoice.invoiceDate ?? invoice.invoice_date ?? fallbackDate()
-  const invoiceDate = invoice.invoiceDate ?? invoice.invoice_date ?? invoice.date
+const mapPaymentResponse = (payload: any): Payment => ({
+  id: String(payload.id ?? generateId()),
+  amount: Number(payload.amount ?? 0),
+  invoiceId: String(payload.invoice_id ?? payload.invoiceId ?? ''),
+  method: payload.method ?? payload.provider ?? 'unknown',
+  processedAt: payload.processed_at
+    ? new Date(payload.processed_at).toISOString()
+    : payload.created_at
+    ? new Date(payload.created_at).toISOString()
+    : undefined,
+});
+
+const deriveStatsFromInvoices = (invoices: Invoice[]): FinanceStats => {
+  const pendingInvoicesTotal = invoices
+    .filter((invoice) => invoice.status === 'pending')
+    .reduce((total, invoice) => total + invoice.amount, 0);
+
+  const paidInvoicesTotal = invoices
+    .filter((invoice) => invoice.status === 'paid' || invoice.status === 'completed')
+    .reduce((total, invoice) => total + invoice.amount, 0);
+
+  const monthlyRevenue = paidInvoicesTotal;
 
   return {
-    id: invoice.id,
-    number: invoice.number,
-    clientName,
-    amount,
-    status: normaliseStatus(invoice.status),
-    dueDate,
-    invoiceDate,
-  }
-}
+    monthlyRevenue,
+    pendingInvoicesTotal,
+    paidInvoicesTotal,
+  };
+};
 
-const normaliseInvoiceDetails = (invoice: InvoiceLike): InvoiceDetails => {
-  const summary = normaliseInvoiceSummary(invoice)
-  const lineItemsSource = invoice.lineItems ?? invoice.items ?? []
-  const lineItems = lineItemsSource.map((item) => normaliseInvoiceLineItem(item))
-  const total = Number(invoice.total ?? invoice.amount ?? lineItems.reduce((sum, item) => sum + (item.total ?? 0), 0))
-
+const toInvoiceRequest = (invoice: InvoiceInput) => {
+  const totalFromItems = invoice.lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0,
+  );
+  const total = invoice.total ?? totalFromItems;
   return {
-    ...summary,
-    lineItems,
-    total,
-    notes: invoice.notes,
-  }
-}
-
-const normaliseQuoteStatus = (status?: string): QuoteStatus => {
-  const candidate = status?.toLowerCase() as QuoteStatus | undefined
-  return candidate && ['draft', 'sent', 'converted'].includes(candidate) ? candidate : 'draft'
-}
-
-const normaliseQuote = (quote: QuoteLike): Quote => ({
-  id: quote.id,
-  number: quote.number ?? '',
-  client: quote.client ?? quote.clientName ?? quote.customerName ?? 'Unknown client',
-  amount: Number(quote.amount ?? quote.total ?? 0),
-  date: quote.date ?? quote.createdAt ?? fallbackDate(),
-  status: normaliseQuoteStatus(quote.status),
-})
-
-const normalisePayment = (payment: PaymentLike): Payment => ({
-  id: payment.id,
-  invoiceId: payment.invoiceId ?? payment.invoice_id ?? '',
-  amount: Number(payment.amount ?? 0),
-  method: (payment.method?.toLowerCase() ?? 'cash') as Payment['method'],
-  status: payment.status ?? 'pending',
-  date: payment.date ?? payment.createdAt ?? fallbackDate(),
-  reference: payment.reference,
-})
-
-const extractErrorMessage = (error: unknown): string => {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string } | undefined
-    return data?.message ?? error.message ?? 'Unable to communicate with the finance service.'
-  }
-
-  return error instanceof Error ? error.message : 'Unable to communicate with the finance service.'
-}
+    amount: total,
+    client: invoice.clientName,
+    date: new Date(invoice.invoiceDate).toISOString(),
+    description:
+      invoice.description ||
+      (invoice.lineItems.length
+        ? invoice.lineItems
+            .map((item) => `${item.quantity}x ${item.description}`)
+            .join(', ')
+        : undefined),
+  };
+};
 
 export const useFinanceStore = create<FinanceState>()(
-  immer((set) => ({
+  immer((set, get) => ({
     invoices: [],
     quotes: [],
     payments: [],
@@ -179,253 +184,228 @@ export const useFinanceStore = create<FinanceState>()(
     loading: false,
     error: null,
 
-    resetError: () => {
-      set({ error: null })
+    clearError: () => {
+      set({ error: null });
     },
 
-    async fetchDashboardData() {
-      set({ loading: true, error: null })
+    fetchInvoices: async () => {
+      set({ loading: true, error: null });
       try {
-        const [invoicesResponse, statsResponse] = await Promise.all([
-          axios.get<InvoiceLike[]>(`${API_BASE}/invoices`, { params: { limit: 10 } }),
-          axios.get<FinanceStats>(`${API_BASE}/stats`),
-        ])
-
-        const invoices = invoicesResponse.data.map((invoice) => normaliseInvoiceSummary(invoice))
-        const stats = statsResponse.data
-
-        set((state) => {
-          state.invoices = invoices
-          state.stats = stats
-          state.loading = false
-        })
-
-        return { invoices, stats }
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+        const response = await axios.get(`${FINANCE_BASE}/invoices`);
+        const invoices = (Array.isArray(response.data) ? response.data : []).map(mapInvoiceResponse);
+        set({ invoices, loading: false });
+        return invoices;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to fetch invoices';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async fetchInvoices() {
-      set({ loading: true, error: null })
-      try {
-        const response = await axios.get<InvoiceLike[]>(`${API_BASE}/invoices`)
-        const invoices = response.data.map((invoice) => normaliseInvoiceSummary(invoice))
-        set((state) => {
-          state.invoices = invoices
-          state.loading = false
-        })
-        return invoices
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+    getInvoiceById: async (id: string) => {
+      const existing = get().invoices.find((invoice) => invoice.id === id);
+      if (existing) {
+        return existing;
       }
-    },
 
-    async getInvoiceById(id) {
-      set({ loading: true, error: null })
+      set({ loading: true, error: null });
       try {
-        const response = await axios.get<InvoiceLike>(`${API_BASE}/invoices/${id}`)
-        const invoice = normaliseInvoiceDetails(response.data)
+        const response = await axios.get(`${FINANCE_BASE}/invoices/${id}`);
+        const invoice = mapInvoiceResponse(response.data);
         set((state) => {
-          const index = state.invoices.findIndex((existing) => existing.id === invoice.id)
-          if (index >= 0) {
-            state.invoices[index] = invoice
-          } else {
-            state.invoices.push(invoice)
+          state.invoices.push(invoice);
+          state.loading = false;
+        });
+        return invoice;
+      } catch (error: any) {
+        if (error?.response?.status === 404) {
+          try {
+            const invoices = await get().fetchInvoices();
+            return invoices.find((invoice) => invoice.id === id) ?? null;
+          } finally {
+            set((state) => {
+              state.loading = false;
+            });
           }
-          state.loading = false
-        })
-        return invoice
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+        }
+
+        const message = error?.response?.data?.message || 'Failed to load invoice';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async createInvoice(invoiceDraft) {
-      set({ loading: true, error: null })
+    createInvoice: async (invoice) => {
+      set({ loading: true, error: null });
       try {
-        const response = await axios.post<InvoiceLike>(`${API_BASE}/invoices`, invoiceDraft)
-        const invoice = normaliseInvoiceDetails(response.data)
+        const payload = toInvoiceRequest(invoice);
+        const response = await axios.post(`${FINANCE_BASE}/invoices`, payload);
+        const created = mapInvoiceResponse(response.data);
+        created.lineItems = ensureLineItems(invoice.lineItems);
         set((state) => {
-          state.invoices.push(invoice)
-          state.loading = false
-        })
-        return invoice
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+          state.invoices.push(created);
+          state.loading = false;
+        });
+        return created;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to create invoice';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async updateInvoice(id, invoiceDraft) {
-      set({ loading: true, error: null })
+    updateInvoice: async (id, invoice) => {
+      set({ loading: true, error: null });
       try {
-        const response = await axios.put<InvoiceLike>(`${API_BASE}/invoices/${id}`, invoiceDraft)
-        const invoice = normaliseInvoiceDetails(response.data)
+        const payload = toInvoiceRequest(invoice);
+        const response = await axios.put(`${FINANCE_BASE}/invoices/${id}`, payload);
+        const updated = mapInvoiceResponse(response.data);
+        updated.lineItems = ensureLineItems(invoice.lineItems);
         set((state) => {
-          const index = state.invoices.findIndex((existing) => existing.id === id)
+          const index = state.invoices.findIndex((item) => item.id === id);
           if (index >= 0) {
-            state.invoices[index] = invoice
+            state.invoices[index] = updated;
           } else {
-            state.invoices.push(invoice)
+            state.invoices.push(updated);
           }
-          state.loading = false
-        })
-        return invoice
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+          state.loading = false;
+        });
+        return updated;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to update invoice';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async deleteInvoice(id) {
-      set({ loading: true, error: null })
+    deleteInvoice: async (id) => {
+      set({ loading: true, error: null });
       try {
-        await axios.delete(`${API_BASE}/invoices/${id}`)
+        await axios.delete(`${FINANCE_BASE}/invoices/${id}`);
         set((state) => {
-          state.invoices = state.invoices.filter((invoice) => invoice.id !== id)
-          state.loading = false
-        })
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+          state.invoices = state.invoices.filter((invoice) => invoice.id !== id);
+          state.loading = false;
+        });
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to delete invoice';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async getQuotes() {
-      set({ loading: true, error: null })
+    fetchQuotes: async () => {
+      set({ loading: true, error: null });
       try {
-        const response = await axios.get<QuoteLike[]>(`${API_BASE}/quotes`)
-        const quotes = response.data.map((quote) => normaliseQuote(quote))
-        set((state) => {
-          state.quotes = quotes
-          state.loading = false
-        })
-        return quotes
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+        const response = await axios.get(`${FINANCE_BASE}/quotes`);
+        const quotes = (Array.isArray(response.data) ? response.data : []).map(mapQuoteResponse);
+        set({ quotes, loading: false });
+        return quotes;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to fetch quotes';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async convertQuoteToInvoice(quoteId) {
-      set({ loading: true, error: null })
+    getQuotes: async () => {
+      const quotes = await get().fetchQuotes();
+      return quotes;
+    },
+
+    convertQuoteToInvoice: async (quoteId) => {
+      set({ loading: true, error: null });
       try {
-        const response = await axios.post<InvoiceLike>(`${API_BASE}/quotes/${quoteId}/convert`)
-        const invoice = normaliseInvoiceDetails(response.data)
+        const response = await axios.post(`${FINANCE_BASE}/quotes/${quoteId}/convert`);
+        const invoice = mapInvoiceResponse(response.data);
         set((state) => {
-          state.invoices.push(invoice)
+          state.invoices.push(invoice);
           state.quotes = state.quotes.map((quote) =>
-            quote.id === quoteId ? { ...quote, status: 'converted' } : quote,
-          )
-          state.loading = false
-        })
-        return invoice.id
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+            quote.id === quoteId
+              ? { ...quote, status: 'converted', converted: true }
+              : quote,
+          );
+          state.loading = false;
+        });
+        return invoice.id;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to convert quote';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async fetchPayments() {
-      set({ loading: true, error: null })
+    fetchPayments: async () => {
+      set({ loading: true, error: null });
       try {
-        const response = await axios.get<PaymentLike[]>(`${API_BASE}/payments`)
-        const payments = response.data.map((payment) => normalisePayment(payment))
-        set((state) => {
-          state.payments = payments
-          state.loading = false
-        })
-        return payments
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+        const response = await axios.get(`${FINANCE_BASE}/payments`);
+        const payments = (Array.isArray(response.data) ? response.data : []).map(mapPaymentResponse);
+        set({ payments, loading: false });
+        return payments;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to fetch payments';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async recordPayment(paymentData) {
-      set({ loading: true, error: null })
+    recordPayment: async (payment) => {
+      set({ loading: true, error: null });
       try {
-        const response = await axios.post<PaymentLike>(`${API_BASE}/payments`, paymentData)
-        const payment = normalisePayment(response.data)
+        const response = await axios.post(`${FINANCE_BASE}/payments`, {
+          amount: payment.amount,
+          invoice_id: payment.invoiceId,
+          method: payment.method,
+        });
+        const created = mapPaymentResponse(response.data);
         set((state) => {
-          state.payments.push(payment)
-          const invoiceIndex = state.invoices.findIndex((invoice) => invoice.id === payment.invoiceId)
-          if (invoiceIndex >= 0) {
-            state.invoices[invoiceIndex].status = 'paid'
-          }
-          state.loading = false
-        })
-        return payment
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+          state.payments.push(created);
+          state.loading = false;
+        });
+        return created;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to record payment';
+        set({ error: message, loading: false });
+        throw new Error(message);
       }
     },
 
-    async fetchStats() {
-      set({ loading: true, error: null })
+    getFinanceStats: async () => {
+      set({ loading: true, error: null });
       try {
-        const response = await axios.get<FinanceStats>(`${API_BASE}/stats`)
-        const stats = response.data
-        set((state) => {
-          state.stats = stats
-          state.loading = false
-        })
-        return stats
-      } catch (error) {
-        const message = extractErrorMessage(error)
-        set((state) => {
-          state.error = message
-          state.loading = false
-        })
-        throw new Error(message)
+        const response = await axios.get(`${FINANCE_BASE}/stats`);
+        const invoices = get().invoices;
+        const stats = deriveStatsFromInvoices(invoices);
+        const revenue = Number(response.data?.revenue ?? stats.monthlyRevenue);
+        const enrichedStats: FinanceStats = {
+          monthlyRevenue: revenue,
+          pendingInvoicesTotal: stats.pendingInvoicesTotal,
+          paidInvoicesTotal: stats.paidInvoicesTotal,
+        };
+        set({ stats: enrichedStats, loading: false });
+        return enrichedStats;
+      } catch {
+        const invoices = get().invoices;
+        const stats = deriveStatsFromInvoices(invoices);
+        set({ stats, loading: false });
+        return stats;
+      }
+    },
+
+    getDashboardData: async () => {
+      set({ loading: true, error: null });
+      try {
+        const invoices = await get().fetchInvoices();
+        const stats = await get().getFinanceStats();
+        set({ loading: false });
+        return { invoices, stats };
+      } catch {
+        const invoices = get().invoices;
+        const stats = deriveStatsFromInvoices(invoices);
+        set({ stats, loading: false });
+        return { invoices, stats };
       }
     },
   })),
-)
+);
 
-export type FinanceStore = typeof useFinanceStore
+export default useFinanceStore;
