@@ -23,6 +23,7 @@ import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { createFlowNavigation, type FlowNavigationStatus } from '@ui/flowNavigation'
 import { defaultProjectPresets } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
+import InventorySnapshot from '@ui/InventorySnapshot'
 import type {
   PersonaKey,
   PersonaPreset,
@@ -61,6 +62,7 @@ interface SummaryMetricProps {
   value: string | number
   tone?: SummaryTone
   helpText?: string
+  testId?: string
 }
 
 interface RiskBadgeProps {
@@ -398,7 +400,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
   )
 }
 
-function SummaryMetric({ label, value, tone = 'neutral', helpText }: SummaryMetricProps) {
+function SummaryMetric({ label, value, tone = 'neutral', helpText, testId }: SummaryMetricProps) {
   const accent =
     tone === 'success'
       ? brand.colors.success
@@ -410,6 +412,7 @@ function SummaryMetric({ label, value, tone = 'neutral', helpText }: SummaryMetr
 
   return (
     <div
+      data-testid={testId ?? undefined}
       style={{
         background: cardPalette[tone] ?? cardPalette.neutral,
         padding: '16px 18px',
@@ -1384,6 +1387,7 @@ export default function Planner({ onLogout }: PlannerProps) {
         <TipBanner module="projects" />
 
         <div
+          data-testid="planner-view-toggle"
           style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -1413,6 +1417,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                     type="button"
                     onClick={() => setViewMode(option.key)}
                     aria-pressed={active}
+                    data-testid={`planner-view-${option.key}`}
                     style={{
                       padding: '8px 16px',
                       borderRadius: 999,
@@ -1451,15 +1456,26 @@ export default function Planner({ onLogout }: PlannerProps) {
           }}
           aria-live="polite"
         >
-          <SummaryMetric label="Actief" value={summary.active} tone="success" helpText="Inclusief risicoprojecten" />
-          <SummaryMetric label="Komend" value={summary.upcoming} />
-          <SummaryMetric label="Afgerond" value={summary.completed} />
+          <SummaryMetric
+            label="Actief"
+            value={summary.active}
+            tone="success"
+            helpText="Inclusief risicoprojecten"
+            testId="planner-metric-active"
+          />
+          <SummaryMetric label="Komend" value={summary.upcoming} testId="planner-metric-upcoming" />
+          <SummaryMetric label="Afgerond" value={summary.completed} testId="planner-metric-completed" />
           <SummaryMetric
             label="Voorraadrisico"
             value={`${summary.critical} kritisch / ${summary.warning} waarschuwing`}
             tone={summary.critical ? 'danger' : summary.warning ? 'warning' : 'neutral'}
+            testId="planner-metric-inventory-risk"
           />
         </div>
+
+        {viewMode !== 'calendar' && (
+          <InventorySnapshot />
+        )}
 
         <FlowGuidancePanel
           eyebrow="User flows"
@@ -1489,6 +1505,7 @@ export default function Planner({ onLogout }: PlannerProps) {
             <button
               type="button"
               onClick={openGovernanceHandoff}
+              data-testid="planner-open-governance"
               style={{
                 padding: '10px 18px',
                 borderRadius: 999,
@@ -1604,6 +1621,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                     applyPersonaPreset(nextValue)
                   }
                 }}
+                data-testid="planner-filter-persona"
                 style={filterControlStyle}
               >
                 {Object.entries(personaPresets).map(([key, value]) => (
@@ -1622,6 +1640,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                   const nextValue = event.target.value
                   setStatusFilter(isStatusFilter(nextValue) ? nextValue : 'all')
                 }}
+                data-testid="planner-filter-status"
                 style={filterControlStyle}
               >
                 <option value="all">Alle</option>
@@ -1640,6 +1659,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                   const nextValue = event.target.value
                   setRiskFilter(isRiskFilter(nextValue) ? nextValue : 'all')
                 }}
+                data-testid="planner-filter-risk"
                 style={filterControlStyle}
               >
                 <option value="all">Alle</option>
@@ -1665,6 +1685,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                 placeholder="Zoek op project, klant of notitie"
                 value={searchTerm}
                 onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value)}
+                data-testid="planner-filter-search"
                 style={filterControlStyle}
               />
             </label>
@@ -1674,6 +1695,7 @@ export default function Planner({ onLogout }: PlannerProps) {
               onClick={() => {
                 applyPersonaPreset('all')
               }}
+              data-testid="planner-reset-filters"
               style={{
                 alignSelf: 'flex-end',
                 padding: '10px 18px',
@@ -1693,6 +1715,7 @@ export default function Planner({ onLogout }: PlannerProps) {
 
         {viewMode === 'calendar' && (
           <div
+            data-testid="planner-calendar-wrapper"
             style={{
               background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
               borderRadius: 28,
@@ -1716,6 +1739,7 @@ export default function Planner({ onLogout }: PlannerProps) {
         {feedback?.type === 'success' && (
           <div
             role="alert"
+            data-testid="planner-feedback-success"
             style={{
               padding: '14px 18px',
               borderRadius: 14,
@@ -1733,6 +1757,7 @@ export default function Planner({ onLogout }: PlannerProps) {
 
         {viewMode !== 'calendar' && (
           <div
+            data-testid="planner-projects-table-container"
             style={{
               overflowX: 'auto',
               background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.8) 100%)',
@@ -1742,7 +1767,7 @@ export default function Planner({ onLogout }: PlannerProps) {
               padding: '12px',
             }}
           >
-            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+            <table data-testid="planner-projects-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead>
                 <tr>
                   {['Project', 'Klant', 'Status', 'Planning', 'Voorraad', 'Start', 'Einde', 'Acties'].map(label => {
@@ -1864,6 +1889,7 @@ export default function Planner({ onLogout }: PlannerProps) {
         {viewMode !== 'calendar' && editing && (
           <form
             onSubmit={submitUpdate}
+            data-testid="planner-editor-form"
             style={{
               marginTop: 32,
               display: 'grid',
@@ -1878,7 +1904,7 @@ export default function Planner({ onLogout }: PlannerProps) {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <h3 style={{ margin: 0, color: brand.colors.secondary }}>Project herplannen</h3>
-              <button type="button" onClick={closeEditor} style={secondaryActionStyle}>
+              <button type="button" onClick={closeEditor} data-testid="planner-editor-close" style={secondaryActionStyle}>
                 Sluiten
               </button>
             </div>
@@ -1895,6 +1921,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                   setFormState(current => ({ ...current, name: event.target.value }))
                 }
                 required
+                data-testid="planner-editor-name"
                 style={{ ...filterControlStyle, width: '100%' }}
               />
             </label>
@@ -1908,6 +1935,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                   setFormState(current => ({ ...current, client: event.target.value }))
                 }
                 required
+                data-testid="planner-editor-client"
                 style={{ ...filterControlStyle, width: '100%' }}
               />
             </label>
@@ -1922,6 +1950,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                     setFormState(current => ({ ...current, start: event.target.value }))
                   }
                   required
+                  data-testid="planner-editor-start"
                   style={{ ...filterControlStyle, width: '100%' }}
                 />
               </label>
@@ -1934,16 +1963,17 @@ export default function Planner({ onLogout }: PlannerProps) {
                     setFormState(current => ({ ...current, end: event.target.value }))
                   }
                   required
+                  data-testid="planner-editor-end"
                   style={{ ...filterControlStyle, width: '100%' }}
                 />
               </label>
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <button type="button" onClick={() => shiftRange(-1)} style={tertiaryActionStyle}>
+              <button type="button" onClick={() => shiftRange(-1)} data-testid="planner-editor-shift-back" style={tertiaryActionStyle}>
                 Vervroeg beide data 1 dag
               </button>
-              <button type="button" onClick={() => shiftRange(1)} style={tertiaryActionStyle}>
+              <button type="button" onClick={() => shiftRange(1)} data-testid="planner-editor-shift-forward" style={tertiaryActionStyle}>
                 Verleng beide data 1 dag
               </button>
               <button
@@ -1957,6 +1987,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                     notes: editing?.notes ?? '',
                   })
                 }
+                data-testid="planner-editor-reset"
                 style={tertiaryActionStyle}
               >
                 Herstel oorspronkelijke waarden
@@ -1971,6 +2002,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                   setFormState(current => ({ ...current, notes: event.target.value }))
                 }
                 rows={3}
+                data-testid="planner-editor-notes"
                 style={{
                   ...filterControlStyle,
                   width: '100%',
@@ -1981,10 +2013,10 @@ export default function Planner({ onLogout }: PlannerProps) {
             </label>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button type="submit" style={primaryActionStyle}>
+              <button type="submit" data-testid="planner-editor-save" style={primaryActionStyle}>
                 Opslaan
               </button>
-              <button type="button" onClick={closeEditor} style={secondaryActionStyle}>
+              <button type="button" onClick={closeEditor} data-testid="planner-editor-cancel" style={secondaryActionStyle}>
                 Annuleren
               </button>
             </div>

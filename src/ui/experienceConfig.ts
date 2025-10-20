@@ -35,6 +35,13 @@ export interface TenantExperienceConfig extends BaseExperienceConfig {
 
 export type ExperienceConfig = MarketingExperienceConfig | TenantExperienceConfig
 
+type ExperienceModeOverride = 'marketing' | 'tenant'
+
+interface ResolveExperienceOptions {
+  readonly search?: string
+  readonly modeOverride?: ExperienceModeOverride
+}
+
 function sanitiseTenantSlug(raw: string | undefined): string {
   if (!raw) {
     return 'rentguy'
@@ -91,19 +98,56 @@ function normaliseHostname(rawHostname?: string): string {
   return hostname
 }
 
-export function resolveExperienceConfig(rawHostname?: string): ExperienceConfig {
-  const hostname = normaliseHostname(rawHostname ?? (typeof window !== 'undefined' ? window.location.hostname : undefined))
-
-  if (hostname === 'rentguy.nl' || hostname === 'www.rentguy.nl' || hostname === 'rentguy.sevensa.nl') {
-    return {
-      mode: 'marketing',
-      hostname,
-      primaryCtaHref: '/demo',
-      secondaryCtaHref: '#contact',
-      demoPagePath: '/demo',
-      demoVideoUrl: 'https://cdn.sevensa.ai/rentguy/demo/rentguy-teaser.mp4',
-      support: DEFAULT_SUPPORT,
+function readModeOverrideFromSearch(search: string | undefined): ExperienceModeOverride | undefined {
+  if (!search) {
+    return undefined
+  }
+  try {
+    const params = new URLSearchParams(search)
+    const mode = params.get('mode')?.trim().toLowerCase()
+    if (!mode) {
+      return undefined
     }
+    if (mode === 'marketing') {
+      return 'marketing'
+    }
+    if (mode === 'tenant' || mode === 'planner' || mode === 'app' || mode === 'portal') {
+      return 'tenant'
+    }
+    return undefined
+  } catch (error) {
+    console.warn('Kon query-parameter "mode" niet lezen', error)
+    return undefined
+  }
+}
+
+function createMarketingExperience(hostname: string): MarketingExperienceConfig {
+  return {
+    mode: 'marketing',
+    hostname,
+    primaryCtaHref: '/demo',
+    secondaryCtaHref: '#contact',
+    demoPagePath: '/demo',
+    demoVideoUrl: 'https://cdn.sevensa.ai/rentguy/demo/rentguy-teaser.mp4',
+    support: DEFAULT_SUPPORT,
+  }
+}
+
+export function resolveExperienceConfig(
+  rawHostname?: string,
+  options: ResolveExperienceOptions = {},
+): ExperienceConfig {
+  const hostname = normaliseHostname(rawHostname ?? (typeof window !== 'undefined' ? window.location.hostname : undefined))
+  const search = options.search ?? (typeof window !== 'undefined' ? window.location.search : '')
+  const queryOverride = readModeOverrideFromSearch(search)
+  const forcedMode = options.modeOverride ?? queryOverride
+
+  if (forcedMode === 'marketing') {
+    return createMarketingExperience(hostname)
+  }
+
+  if (forcedMode !== 'tenant' && (hostname === 'rentguy.nl' || hostname === 'www.rentguy.nl' || hostname === 'rentguy.sevensa.nl')) {
+    return createMarketingExperience(hostname)
   }
 
   if (hostname === 'mr-dj.rentguy.nl') {
@@ -151,8 +195,11 @@ export function describeTenantDisplayName(config: TenantExperienceConfig): strin
   return capitalised ? `${capitalised} Control Center` : `${brand.shortName} Control Center`
 }
 
-export function resolveSupportConfig(rawHostname?: string): SupportConfig {
-  const experience = resolveExperienceConfig(rawHostname)
+export function resolveSupportConfig(
+  rawHostname?: string,
+  options: ResolveExperienceOptions = {},
+): SupportConfig {
+  const experience = resolveExperienceConfig(rawHostname, options)
   return experience.support
 }
 

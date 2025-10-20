@@ -49,13 +49,19 @@ Gebruik het zijmenu om tussen modules te wisselen. Contextuele tips verschijnen 
 
 ---
 
-## 5. Communicatie en e-mail
+## 5. Marketing demo
+1. Open `https://app.your-domain.com?mode=marketing` om de publieke landing page en demo-ervaring zonder subdomein-switch te tonen.
+2. Gebruik `?mode=planner` om terug te keren naar het standaard tenantdashboard wanneer je klaar bent met presenteren.
+
+---
+
+## 6. Communicatie en e-mail
 - Welkomstmails worden automatisch verstuurd wanneer een onboardingstap dat vereist. Controleer je inbox (en spam) na het afronden van de onboarding.
 - Gebruik **Instellingen → E-mail** om je afzenderadres te personaliseren of alternatieve SMTP-gegevens in te voeren (adminrechten nodig).
 
 ---
 
-## 6. Veelgestelde vragen
+## 7. Veelgestelde vragen
 | Vraag | Antwoord |
 |-------|----------|
 | Hoe wijzig ik mijn wachtwoord? | Ga naar **Profiel → Beveiliging** en kies **Wachtwoord resetten**. |
@@ -65,7 +71,7 @@ Gebruik het zijmenu om tussen modules te wisselen. Contextuele tips verschijnen 
 
 ---
 
-## 7. Support
+## 8. Support
 - **E-mail:** support@rentguy.com
 - **Documentatie:** bekijk `docs/DEPLOYMENT.md` voor technische details en `docs/UAT/` voor testscenario’s.
 - **Incident melden:** gebruik het ticketportaal of neem telefonisch contact op met het operations-team.

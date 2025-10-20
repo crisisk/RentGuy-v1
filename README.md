@@ -7,7 +7,7 @@ RentGuy Enterprise Platform is a full-stack solution for professional rental ope
 | Area | Description |
 | ---- | ----------- |
 | Backend | `backend/` contains a FastAPI service with modular routers per domain (auth, inventory, projects, crew, transport, billing, warehouse, reporting, observability). Metrics, structured logging, and rich error handling are enabled out of the box. |
-| Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.tsx`) conditionally renders the planner UI or the scanner UI depending on `VITE_APP_MODE`, validated through a shared runtime schema. |
+| Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.tsx`) conditionally renders the planner UI, marketing experience, or scanner UI depending on `VITE_APP_MODE`, validated through a shared runtime schema. |
 | Infrastructure | Docker artefacts, Alembic migrations, seed scripts, and environment configuration helpers sit alongside documentation that captures the enterprise deployment roadmap. |
 
 ## Production Readiness Tracker
@@ -30,7 +30,7 @@ The report’s “Next Steps” section highlights work that still needs executi
 | --- | --- | --- | --- |
 | P1 | Deploy to VPS using the documented runbook | Blocked | Infrastructure access to the target VPS is required before the runbook in `docs/DEPLOYMENT.md` can be executed.【F:docs/production_readiness_round_2025-10-18.md†L6-L15】【F:docs/DEPLOYMENT.md†L1-L120】 |
 | P1 | Execute E2E regression suite via Cypress harness | In Progress | `npm run test:e2e` now boots the esbuild dev server and executes the existing specs with Cypress, but the suites are temporarily skipped until UI selectors and backend stubs are aligned.【F:package.json†L18-L36】【F:tests/e2e/cypress.config.ts†L1-L24】 |
-| P1 | Instrument UI with `data-testid` hooks for Cypress | In Progress | Core auth and planner shells now expose stable selectors for Cypress while the remaining flows are being instrumented.【F:src/ui/Login.tsx†L207-L293】【F:src/ui/FlowExperienceShell.tsx†L82-L146】 |
+| P1 | Instrument UI with `data-testid` hooks for Cypress | In Progress | Core auth, planner shell, and operations planner dashboard now expose stable selectors for Cypress while the remaining flows are being instrumented.【F:src/ui/Login.tsx†L207-L293】【F:src/ui/FlowExperienceShell.tsx†L82-L146】【F:src/ui/Planner.tsx†L140-L210】 |
 | P1 | Ensure GitHub Actions install Node dependencies in each Node.js job | Complete | `.github/workflows/main-workflow.yml` now runs `npm ci` ahead of lint, test, build, and E2E steps so required toolchains are always available.【F:.github/workflows/main-workflow.yml†L22-L101】 |
 | P1 | Apply latest database migrations and seed data | Complete | Local PostgreSQL 16 with PostGIS was provisioned, `alembic upgrade head` ran successfully, and the admin/bart seed scripts populated demo users.【54a533†L1-L28】【fa306e†L1-L2】【75a1ee†L1-L2】 |
 | P1 | Finalise environment variable configuration for new modules | Complete | `.env.example` now includes customer portal, recurring invoice, booking, and sub-renting variables.【F:docs/production_readiness_round_2025-10-18.md†L29-L32】【F:.env.example†L18-L34】 |
@@ -127,7 +127,7 @@ test runner. No additional binaries are required at runtime.
 Configuration is handled through standard Vite-style environment variables:
 
 - `VITE_API_URL` &mdash; Base URL of the FastAPI service (defaults to `http://localhost:8000`).
-- `VITE_APP_MODE` &mdash; Set to `scanner` to boot directly into the barcode scanner view. Any other value renders the planner dashboard.
+- `VITE_APP_MODE` &mdash; Accepts `planner` (default), `scanner`, or `marketing`. You can temporarily override the mode at runtime with a query parameter such as `?mode=scanner` or `?mode=marketing`.
 
 Duplicate [`.env.example`](.env.example) to `.env` (or `.env.local`) and adjust the values for your target environment before running the container build.
 

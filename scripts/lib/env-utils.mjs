@@ -1,6 +1,12 @@
 function normaliseAppMode(value) {
   const candidate = (value ?? '').toString().toLowerCase()
-  return candidate === 'scanner' ? 'scanner' : 'planner'
+  if (candidate === 'scanner') {
+    return 'scanner'
+  }
+  if (candidate === 'marketing') {
+    return 'marketing'
+  }
+  return 'planner'
 }
 
 function ensureUrl(value, fallback) {

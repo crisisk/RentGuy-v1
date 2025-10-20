@@ -3,25 +3,26 @@ export * from './crmTypes'
 export * from './crewTypes'
 export * from './financeTypes'
 export * from './projectTypes'
+export * from './equipmentTypes'
 
-export type ApiResponse<T> = {
-  data: T
-  message?: string
-  success: boolean
+export interface ApiResponse<T> {
+  readonly data: T
+  readonly message?: string
+  readonly success: boolean
 }
 
-export type PaginatedResponse<T> = {
-  items: T[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
+export interface PaginatedResponse<T> {
+  readonly items: T[]
+  readonly total: number
+  readonly page: number
+  readonly pageSize: number
+  readonly totalPages: number
 }
 
-export type ErrorResponse = {
-  code: string
-  message: string
-  details?: Record<string, unknown>
+export interface ErrorResponse {
+  readonly code: string
+  readonly message: string
+  readonly details?: Record<string, unknown>
 }
 
 export type Nullable<T> = T | null
