@@ -1,14 +1,26 @@
-import { FormEvent, useCallback, useMemo, useState, type ChangeEvent, type CSSProperties } from 'react'
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+} from 'react'
 import { login, deriveLoginErrorMessage, ensureAuthEmail, type AuthUser } from '@application/auth/api'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
-import { buildHelpCenterUrl, resolveSupportConfig } from './experienceConfig'
+import { resolveSupportConfig } from './experienceConfig'
 import FlowExperienceShell from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { createFlowNavigation } from '@ui/flowNavigation'
 
+type AuthView = 'login' | 'register' | 'reset-request' | 'reset-confirm'
+
 export interface LoginProps {
   onLogin: (token: string, user: AuthUser) => void
+  initialMode?: AuthView
+  initialResetToken?: string
 }
 
 const linkStyle: CSSProperties = {
@@ -110,14 +122,38 @@ const loginPersona = {
   meta: 'Kies een persona na succesvolle login',
 }
 
-export function Login({ onLogin }: LoginProps) {
+export function Login({ onLogin, initialMode = 'login', initialResetToken = '' }: LoginProps) {
   const [user, setUser] = useState('bart')
   const [password, setPassword] = useState('mr-dj')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [view, setView] = useState<AuthView>(initialMode)
+  const [registerEmail, setRegisterEmail] = useState('')
+  const [registerPassword, setRegisterPassword] = useState('')
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false)
+  const [registerErrors, setRegisterErrors] = useState<string[]>([])
+  const [registerSuccess, setRegisterSuccess] = useState('')
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetStatus, setResetStatus] = useState('')
+  const [resetError, setResetError] = useState('')
+  const [isRequestingReset, setIsRequestingReset] = useState(false)
+  const [resetToken, setResetToken] = useState(initialResetToken)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [confirmError, setConfirmError] = useState('')
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false)
   const support = useMemo(() => resolveSupportConfig(), [])
   const helpCenterUrl = support.helpCenterBaseUrl
   const statusPageUrl = support.statusPageUrl
+
+  useEffect(() => {
+    setView(initialMode)
+  }, [initialMode])
+
+  useEffect(() => {
+    setResetToken(initialResetToken)
+  }, [initialResetToken])
 
   const handleScrollToForm = useCallback(() => {
     if (typeof document === 'undefined') {
@@ -125,11 +161,19 @@ export function Login({ onLogin }: LoginProps) {
     }
     const form = document.getElementById('login-form')
     form?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    const userField = document.getElementById('login-user') as HTMLInputElement | null
-    if (userField && typeof userField.focus === 'function') {
-      userField.focus({ preventScroll: true })
+    const fieldId =
+      view === 'register'
+        ? 'register-email'
+        : view === 'reset-request'
+          ? 'reset-email'
+          : view === 'reset-confirm'
+            ? 'new-password'
+            : 'login-user'
+    const targetField = document.getElementById(fieldId) as HTMLInputElement | null
+    if (targetField && typeof targetField.focus === 'function') {
+      targetField.focus({ preventScroll: true })
     }
-  }, [])
+  }, [view])
 
   const stage = useMemo(
     () => ({
@@ -237,6 +281,59 @@ export function Login({ onLogin }: LoginProps) {
     [user],
   )
 
+  const validateEmail = useCallback((value: string) => {
+    if (!value || value.trim().length === 0) {
+      return 'E-mail is verplicht'
+    }
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!pattern.test(value.trim())) {
+      return 'Ongeldig e-mailadres'
+    }
+    return ''
+  }, [])
+
+  const validatePassword = useCallback((value: string, { allowEmpty = false }: { allowEmpty?: boolean } = {}) => {
+    if (!value || value.trim().length === 0) {
+      return allowEmpty ? '' : 'Wachtwoord is verplicht'
+    }
+    if (value.trim().length < 8) {
+      return 'Wachtwoord moet minimaal 8 tekens bevatten'
+    }
+    return ''
+  }, [])
+
+  const showLoginView = useCallback((options: { preserveResetStatus?: boolean } = {}) => {
+    setView('login')
+    setRegisterErrors([])
+    setRegisterSuccess('')
+    if (!options.preserveResetStatus) {
+      setResetStatus('')
+    }
+    setResetError('')
+    setConfirmError('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [])
+
+  const showRegisterView = useCallback(() => {
+    setView('register')
+    setRegisterErrors([])
+    setRegisterSuccess('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/register')
+    }
+  }, [])
+
+  const showResetRequestView = useCallback(() => {
+    setView('reset-request')
+    setResetStatus('')
+    setResetError('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/password-reset')
+    }
+  }, [])
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -254,7 +351,7 @@ export function Login({ onLogin }: LoginProps) {
         onLogin(token, nextUser)
       } else {
         console.warn('Login mislukt', result.error)
-        setError(deriveLoginErrorMessage(result.error))
+        setError(result.error.message || deriveLoginErrorMessage(result.error))
       }
     } catch (err) {
       console.error('Onverwachte loginfout', err)
@@ -263,6 +360,521 @@ export function Login({ onLogin }: LoginProps) {
       setIsSubmitting(false)
     }
   }
+
+  const handleRegisterSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      const errors: string[] = []
+      const emailError = validateEmail(registerEmail)
+      const passwordError = validatePassword(registerPassword)
+      if (emailError) {
+        errors.push(emailError)
+      }
+      if (passwordError) {
+        errors.push(passwordError)
+      }
+      if (!hasAcceptedTerms) {
+        errors.push('Je moet de voorwaarden accepteren')
+      }
+      if (errors.length > 0) {
+        setRegisterErrors(errors)
+        setRegisterSuccess('')
+        return
+      }
+      setRegisterErrors([])
+      setIsRegistering(true)
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: registerEmail.trim(), password: registerPassword.trim() }),
+        })
+        if (!response.ok) {
+          throw new Error('Registratie mislukt')
+        }
+        setRegisterSuccess('Account succesvol aangemaakt')
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', '/verify-email')
+        }
+      } catch (registerError) {
+        console.error('Registratie mislukt', registerError)
+        setRegisterErrors(['Registratie mislukt. Probeer het opnieuw.'])
+      } finally {
+        setIsRegistering(false)
+      }
+    },
+    [hasAcceptedTerms, registerEmail, registerPassword, validateEmail, validatePassword],
+  )
+
+  const handleResetSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      const emailError = validateEmail(resetEmail)
+      if (emailError) {
+        setResetError(emailError)
+        setResetStatus('')
+        return
+      }
+      setResetError('')
+      setIsRequestingReset(true)
+      try {
+        const response = await fetch('/api/password-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resetEmail.trim() }),
+        })
+        if (!response.ok) {
+          throw new Error('Reset mislukt')
+        }
+        setResetStatus('Reset link verzonden')
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', '/password-reset/sent')
+        }
+      } catch (resetErrorCause) {
+        console.error('Reset verzoek mislukt', resetErrorCause)
+        setResetError('Kon geen resetlink versturen. Probeer het opnieuw.')
+      } finally {
+        setIsRequestingReset(false)
+      }
+    },
+    [resetEmail, validateEmail],
+  )
+
+  const handleConfirmSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      if (!resetToken) {
+        setConfirmError('Reset token ontbreekt. Vraag een nieuwe link aan.')
+        return
+      }
+      const passwordError = validatePassword(newPassword)
+      if (passwordError) {
+        setConfirmError(passwordError)
+        return
+      }
+      if (newPassword.trim() !== confirmPassword.trim()) {
+        setConfirmError('Wachtwoorden komen niet overeen')
+        return
+      }
+      setConfirmError('')
+      setIsConfirmingReset(true)
+      try {
+        const response = await fetch('/api/password-reset/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: resetToken, password: newPassword.trim() }),
+        })
+        if (!response.ok) {
+          throw new Error('Reset bevestigen mislukt')
+        }
+        setResetStatus('Wachtwoord succesvol gewijzigd')
+        showLoginView({ preserveResetStatus: true })
+      } catch (confirmErrorCause) {
+        console.error('Reset bevestigen mislukt', confirmErrorCause)
+        setConfirmError('Kon wachtwoord niet wijzigen. Probeer het opnieuw.')
+      } finally {
+        setIsConfirmingReset(false)
+      }
+    },
+    [confirmPassword, newPassword, resetToken, showLoginView, validatePassword],
+  )
+
+  useEffect(() => {
+    if (view === 'reset-confirm' && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tokenParam = params.get('token') ?? ''
+      if (tokenParam && tokenParam !== resetToken) {
+        setResetToken(tokenParam)
+      }
+    }
+  }, [resetToken, view])
+
+  const renderLoginForm = () => (
+    <>
+      <div style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Demo login</h2>
+        <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
+          Gebruik de demo-accounts om flows te testen. Tokens, onboardingprogressie en audit logs worden automatisch gevuld.
+        </p>
+      </div>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Gebruiker</span>
+        <input
+          id="login-user"
+          data-testid="email-input"
+          value={user}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setUser(event.target.value)}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Wachtwoord</span>
+        <input
+          type="password"
+          id="login-password"
+          data-testid="password-input"
+          value={password}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      {error && (
+        <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.85rem' }}>
+          {error}
+        </p>
+      )}
+      {!error && resetStatus && (
+        <p role="status" style={{ margin: 0, color: brand.colors.success, fontSize: '0.9rem' }}>
+          {resetStatus}
+        </p>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          data-testid="register-link"
+          onClick={showRegisterView}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: withOpacity('#ffffff', 0.85),
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Nieuw account aanmaken
+        </button>
+        <button
+          type="button"
+          data-testid="forgot-password-link"
+          onClick={showResetRequestView}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: withOpacity('#ffffff', 0.75),
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Wachtwoord vergeten?
+        </button>
+      </div>
+      <button
+        type="submit"
+        data-testid="login-button"
+        disabled={isSubmitting}
+        style={{
+          marginTop: 4,
+          padding: '12px 18px',
+          borderRadius: 999,
+          border: 'none',
+          backgroundImage: brand.colors.gradient,
+          color: '#0F172A',
+          fontWeight: 700,
+          cursor: isSubmitting ? 'wait' : 'pointer',
+          boxShadow: isSubmitting ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
+          opacity: isSubmitting ? 0.75 : 1,
+        }}
+      >
+        {isSubmitting ? 'Inloggen…' : 'Inloggen'}
+      </button>
+    </>
+  )
+
+  const renderRegisterForm = () => (
+    <>
+      <div style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Registreren</h2>
+        <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
+          Maak een nieuw account aan voor toegang tot de pilotomgeving.
+        </p>
+      </div>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>E-mailadres</span>
+        <input
+          id="register-email"
+          data-testid="email-input"
+          value={registerEmail}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setRegisterEmail(event.target.value)}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Wachtwoord</span>
+        <input
+          type="password"
+          data-testid="password-input"
+          value={registerPassword}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setRegisterPassword(event.target.value)}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <input
+          type="checkbox"
+          data-testid="terms-checkbox"
+          checked={hasAcceptedTerms}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setHasAcceptedTerms(event.target.checked)}
+        />
+        <span>Ik ga akkoord met de voorwaarden</span>
+      </label>
+      {registerErrors.length > 0 && (
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: 18,
+            color: brand.colors.warning,
+            fontSize: '0.85rem',
+            display: 'grid',
+            gap: 4,
+          }}
+        >
+          {registerErrors.map(message => (
+            <li key={message}>{message}</li>
+          ))}
+        </ul>
+      )}
+      {registerSuccess && (
+        <p role="status" style={{ margin: 0, color: brand.colors.success, fontSize: '0.9rem' }}>
+          {registerSuccess}
+        </p>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          onClick={showLoginView}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: withOpacity('#ffffff', 0.8),
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Terug naar login
+        </button>
+        <button
+          type="submit"
+          data-testid="register-button"
+          disabled={isRegistering}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: 'none',
+            backgroundImage: brand.colors.gradient,
+            color: '#0F172A',
+            fontWeight: 700,
+            cursor: isRegistering ? 'wait' : 'pointer',
+            boxShadow: isRegistering ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
+            opacity: isRegistering ? 0.75 : 1,
+          }}
+        >
+          {isRegistering ? 'Registreren…' : 'Account aanmaken'}
+        </button>
+      </div>
+    </>
+  )
+
+  const renderResetRequestForm = () => (
+    <>
+      <div style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Reset wachtwoord</h2>
+        <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
+          Vul je e-mailadres in en we sturen je een link om je wachtwoord opnieuw in te stellen.
+        </p>
+      </div>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>E-mailadres</span>
+        <input
+          id="reset-email"
+          data-testid="email-input"
+          value={resetEmail}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setResetEmail(event.target.value)}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      {resetError && (
+        <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.85rem' }}>
+          {resetError}
+        </p>
+      )}
+      {resetStatus && (
+        <p role="status" style={{ margin: 0, color: brand.colors.success, fontSize: '0.9rem' }}>
+          {resetStatus}
+        </p>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          onClick={showLoginView}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: withOpacity('#ffffff', 0.8),
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Terug naar login
+        </button>
+        <button
+          type="submit"
+          data-testid="reset-request-button"
+          disabled={isRequestingReset}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: 'none',
+            backgroundImage: brand.colors.gradient,
+            color: '#0F172A',
+            fontWeight: 700,
+            cursor: isRequestingReset ? 'wait' : 'pointer',
+            boxShadow: isRequestingReset ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
+            opacity: isRequestingReset ? 0.75 : 1,
+          }}
+        >
+          {isRequestingReset ? 'Versturen…' : 'Stuur resetlink'}
+        </button>
+      </div>
+    </>
+  )
+
+  const renderResetConfirmForm = () => (
+    <>
+      <div style={{ display: 'grid', gap: 12 }}>
+        <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Nieuw wachtwoord instellen</h2>
+        <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
+          Kies een nieuw wachtwoord voor je account.
+        </p>
+      </div>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Nieuw wachtwoord</span>
+        <input
+          type="password"
+          id="new-password"
+          data-testid="new-password-input"
+          value={newPassword}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setNewPassword(event.target.value)}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      <label style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontWeight: 600 }}>Bevestig wachtwoord</span>
+        <input
+          type="password"
+          data-testid="confirm-password-input"
+          value={confirmPassword}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setConfirmPassword(event.target.value)}
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
+            background: withOpacity('#000000', 0.25),
+            color: '#ffffff',
+            fontSize: '0.95rem',
+          }}
+        />
+      </label>
+      {confirmError && (
+        <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.85rem' }}>
+          {confirmError}
+        </p>
+      )}
+      {resetStatus && (
+        <p role="status" style={{ margin: 0, color: brand.colors.success, fontSize: '0.9rem' }}>
+          {resetStatus}
+        </p>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          onClick={showLoginView}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: withOpacity('#ffffff', 0.8),
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Terug naar login
+        </button>
+        <button
+          type="submit"
+          data-testid="reset-confirm-button"
+          disabled={isConfirmingReset}
+          style={{
+            padding: '12px 18px',
+            borderRadius: 999,
+            border: 'none',
+            backgroundImage: brand.colors.gradient,
+            color: '#0F172A',
+            fontWeight: 700,
+            cursor: isConfirmingReset ? 'wait' : 'pointer',
+            boxShadow: isConfirmingReset ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
+            opacity: isConfirmingReset ? 0.75 : 1,
+          }}
+        >
+          {isConfirmingReset ? 'Opslaan…' : 'Wachtwoord opslaan'}
+        </button>
+      </div>
+    </>
+  )
+
+  const formSubmitHandler =
+    view === 'login'
+      ? handleSubmit
+      : view === 'register'
+        ? handleRegisterSubmit
+        : view === 'reset-request'
+          ? handleResetSubmit
+          : handleConfirmSubmit
 
   const heroAside = (
     <div style={{ display: 'grid', gap: 20 }}>
@@ -302,70 +914,14 @@ export function Login({ onLogin }: LoginProps) {
         </div>
       </div>
 
-      <form id="login-form" style={{ display: 'grid', gap: 18 }} onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gap: 12 }}>
-          <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Demo login</h2>
-          <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
-            Gebruik de demo-accounts om flows te testen. Tokens, onboardingprogressie en audit logs worden automatisch
-            gevuld.
-          </p>
-        </div>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontWeight: 600 }}>Gebruiker</span>
-          <input
-            id="login-user"
-            value={user}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setUser(event.target.value)}
-            style={{
-              padding: '12px 14px',
-              borderRadius: 12,
-              border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-              background: withOpacity('#000000', 0.25),
-              color: '#ffffff',
-              fontSize: '0.95rem',
-            }}
-          />
-        </label>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontWeight: 600 }}>Wachtwoord</span>
-          <input
-            type="password"
-            id="login-password"
-            value={password}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)}
-            style={{
-              padding: '12px 14px',
-              borderRadius: 12,
-              border: `1px solid ${withOpacity('#FFFFFF', 0.25)}`,
-              background: withOpacity('#000000', 0.25),
-              color: '#ffffff',
-              fontSize: '0.95rem',
-            }}
-          />
-        </label>
-        {error && (
-          <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.85rem' }}>
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{
-            marginTop: 4,
-            padding: '12px 18px',
-            borderRadius: 999,
-            border: 'none',
-            backgroundImage: brand.colors.gradient,
-            color: '#0F172A',
-            fontWeight: 700,
-            cursor: isSubmitting ? 'wait' : 'pointer',
-            boxShadow: isSubmitting ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.32)',
-            opacity: isSubmitting ? 0.75 : 1,
-          }}
-        >
-          {isSubmitting ? 'Inloggen…' : 'Inloggen'}
-        </button>
+      <form id="login-form" style={{ display: 'grid', gap: 18 }} onSubmit={formSubmitHandler}>
+        {view === 'login'
+          ? renderLoginForm()
+          : view === 'register'
+            ? renderRegisterForm()
+            : view === 'reset-request'
+              ? renderResetRequestForm()
+              : renderResetConfirmForm()}
       </form>
 
       {credentialList}
