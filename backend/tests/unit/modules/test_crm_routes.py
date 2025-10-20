@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.modules.crm import models
 from app.modules.crm import deps as crm_deps
+from app.modules.crm.schemas import DashboardSummary
 
 TENANT_ID = "mrdj"
 
@@ -291,3 +292,83 @@ def test_dashboard_metrics_endpoint(client: TestClient, db_session: Session) -> 
         assert source_performance["referral_partner"]["ga_sessions"] == 0
     finally:
         settings.CRM_ANALYTICS_SOURCES = original_sources
+
+
+def test_dashboard_metrics_schema_and_invalid_lookback(
+    client: TestClient, db_session: Session
+) -> None:
+    pipeline_id, stage_intake, _stage_proposal = _seed_pipeline(db_session)
+    now = datetime.utcnow()
+
+    lead = models.CRMLead(
+        tenant_id=TENANT_ID,
+        name="Schema Lead",
+        email="schema@example.com",
+        source="paid_search",
+        created_at=now - timedelta(days=2),
+        updated_at=now - timedelta(days=2),
+    )
+    db_session.add(lead)
+    db_session.commit()
+    db_session.refresh(lead)
+
+    deal = models.CRMDeal(
+        tenant_id=TENANT_ID,
+        lead_id=lead.id,
+        pipeline_id=pipeline_id,
+        stage_id=stage_intake,
+        title="Schema Deal",
+        value=1500,
+        probability=40,
+        status="open",
+        expected_close=(now + timedelta(days=5)).date(),
+        created_at=now - timedelta(days=4),
+        updated_at=now - timedelta(days=1),
+    )
+    db_session.add(deal)
+    db_session.commit()
+
+    acquisition_metric = models.CRMAcquisitionMetric(
+        tenant_id=TENANT_ID,
+        channel="Paid Search",
+        source="google",
+        medium="cpc",
+        captured_date=now.date(),
+        sessions=75,
+        new_users=50,
+        engaged_sessions=60,
+        ga_conversions=8,
+        ga_conversion_value=Decimal("2500.00"),
+        gtm_conversions=2,
+        gtm_conversion_value=Decimal("600.00"),
+    )
+    db_session.add(acquisition_metric)
+    db_session.commit()
+
+    default_response = client.get(
+        "/api/v1/crm/analytics/dashboard",
+        headers={"X-Tenant-ID": TENANT_ID},
+    )
+    assert default_response.status_code == 200
+
+    summary = DashboardSummary.model_validate(default_response.json())
+    configured_default = getattr(settings, "CRM_ANALYTICS_LOOKBACK_DAYS", 30) or 30
+    if configured_default <= 0:
+        configured_default = 30
+    assert summary.acquisition.lookback_days == configured_default
+
+    custom_response = client.get(
+        "/api/v1/crm/analytics/dashboard",
+        params={"lookback_days": 45},
+        headers={"X-Tenant-ID": TENANT_ID},
+    )
+    assert custom_response.status_code == 200
+    custom_summary = DashboardSummary.model_validate(custom_response.json())
+    assert custom_summary.acquisition.lookback_days == 45
+
+    invalid_response = client.get(
+        "/api/v1/crm/analytics/dashboard",
+        params={"lookback_days": 0},
+        headers={"X-Tenant-ID": TENANT_ID},
+    )
+    assert invalid_response.status_code == 422

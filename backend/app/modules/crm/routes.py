@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.modules.auth.deps import get_db, require_role
@@ -139,7 +141,15 @@ def list_automation_runs(
 
 @router.get("/crm/analytics/dashboard", response_model=DashboardSummary)
 def crm_dashboard_metrics(
+    lookback_days: Annotated[
+        int | None,
+        Query(
+            ge=1,
+            le=365,
+            description="Optional lookback window for marketing metrics in days.",
+        ),
+    ] = None,
     svc: CRMService = Depends(service),
     user=Depends(require_role("admin", "planner", "sales", "viewer")),
 ):
-    return svc.dashboard_metrics()
+    return svc.dashboard_metrics(lookback_days=lookback_days)
