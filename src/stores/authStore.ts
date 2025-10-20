@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { AuthUser } from '@application/auth/api'
 import { isOfflineDemoToken } from '@application/auth/api'
+import { removeLocalStorageItem } from '@core/storage'
 
 export type AuthStatus = 'idle' | 'checking' | 'authenticated' | 'offline' | 'error'
 
@@ -28,6 +29,38 @@ const INITIAL_STATE: Pick<AuthStoreState, 'token' | 'user' | 'status' | 'error'>
 
 const LEGACY_STORAGE_KEY = 'auth-storage'
 const STORE_STORAGE_KEY = 'rg__auth_store_v1'
+const MANUAL_LOGOUT_FLAG_KEY = 'rg__manual_logout_flag'
+
+function isSessionStorageAvailable(): boolean {
+  return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined'
+}
+
+function markManualLogoutFlag(): void {
+  if (!isSessionStorageAvailable()) {
+    return
+  }
+  try {
+    window.sessionStorage.setItem(MANUAL_LOGOUT_FLAG_KEY, '1')
+  } catch (error) {
+    console.warn('Kon logout-flag niet opslaan', error)
+  }
+}
+
+function consumeManualLogoutFlag(): boolean {
+  if (!isSessionStorageAvailable()) {
+    return false
+  }
+  try {
+    const flag = window.sessionStorage.getItem(MANUAL_LOGOUT_FLAG_KEY)
+    if (flag) {
+      window.sessionStorage.removeItem(MANUAL_LOGOUT_FLAG_KEY)
+      return true
+    }
+  } catch (error) {
+    console.warn('Kon logout-flag niet lezen', error)
+  }
+  return false
+}
 
 const noopStorage: Storage = {
   get length() {
@@ -118,10 +151,19 @@ export const useAuthStore = create<AuthStoreState>()(
         const trimmed = token.trim()
         set(state => {
           if (!trimmed) {
+            const previousStatus = state.status
             state.token = null
             state.user = null
             state.status = 'idle'
-            state.error = null
+            removeLocalStorageItem('sessionToken')
+            const manualLogout = consumeManualLogoutFlag()
+            if (state.error && manualLogout) {
+              state.error = null
+            } else if (!manualLogout && (previousStatus === 'authenticated' || previousStatus === 'offline' || previousStatus === 'checking')) {
+              state.error = 'Sessie verlopen. Log opnieuw in om verder te gaan.'
+            } else if (manualLogout) {
+              state.error = null
+            }
             return
           }
           state.token = trimmed
@@ -154,6 +196,10 @@ export function resetAuthStore(): void {
   if (persistApi?.clearStorage) {
     void persistApi.clearStorage()
   }
+}
+
+export function signalManualLogout(): void {
+  markManualLogoutFlag()
 }
 
 export default useAuthStore

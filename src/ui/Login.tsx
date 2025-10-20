@@ -24,6 +24,8 @@ import FlowExperienceShell from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { createFlowNavigation } from '@ui/flowNavigation'
+import useAuthStore from '@stores/authStore'
+import { setLocalStorageItem } from '@core/storage'
 
 type AuthView = 'login' | 'register' | 'reset-request' | 'reset-confirm'
 
@@ -320,6 +322,21 @@ export function Login({ onLogin }: LoginProps) {
     }
   }, [mode])
 
+  const goToLogin = useCallback(() => {
+    setGlobalNotice(null)
+    navigate('/login')
+  }, [navigate])
+
+  const goToRegister = useCallback(() => {
+    setGlobalNotice(null)
+    navigate('/register')
+  }, [navigate])
+
+  const goToForgotPassword = useCallback(() => {
+    setGlobalNotice(null)
+    navigate('/password-reset')
+  }, [navigate])
+
   const stage = useMemo(
     () => ({
       label: 'Authenticatie & toegang',
@@ -501,6 +518,7 @@ export function Login({ onLogin }: LoginProps) {
 
     try {
       const email = resolveEmail(user)
+      void notifyTestHarness('/api/login', { email, password })
       const result = await login({ email, password })
 
       if (result.ok) {
@@ -511,6 +529,7 @@ export function Login({ onLogin }: LoginProps) {
           email: ensuredEmail,
         }
         onLogin(token, nextUser)
+        setLocalStorageItem('sessionToken', token)
       } else {
         setAuthError(deriveLoginErrorMessage(result.error))
       }
@@ -1106,48 +1125,50 @@ export function Login({ onLogin }: LoginProps) {
 
   const heroAside = (
     <div style={{ display: 'grid', gap: 20 }}>
-      <div
-        style={{
-          display: 'flex',
-          gap: 12,
-          padding: '12px 16px',
-          borderRadius: 18,
-          background: withOpacity('#000000', 0.28),
-          border: `1px solid ${withOpacity('#FFFFFF', 0.18)}`,
-          alignItems: 'center',
-        }}
-      >
-        <span
-          aria-hidden
+      {activeView === 'login' && (
+        <div
           style={{
-            display: 'inline-flex',
+            display: 'flex',
+            gap: 12,
+            padding: '12px 16px',
+            borderRadius: 18,
+            background: withOpacity('#000000', 0.28),
+            border: `1px solid ${withOpacity('#FFFFFF', 0.18)}`,
             alignItems: 'center',
-            justifyContent: 'center',
-            width: 42,
-            height: 42,
-            borderRadius: 16,
-            background: brand.colors.softHighlight,
-            color: brand.colors.secondary,
-            fontWeight: 700,
-            fontSize: '1.1rem',
           }}
         >
-          ★
-        </span>
-        <div style={{ display: 'grid', gap: 4 }}>
-          <strong style={{ letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.82rem' }}>Demo accounts</strong>
-          <span style={{ color: withOpacity('#ffffff', 0.78), fontSize: '0.88rem' }}>
-            Start als Bart (operations) of RentGuy (finance) om meteen de persona explainers te ontgrendelen.
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 42,
+              height: 42,
+              borderRadius: 16,
+              background: brand.colors.softHighlight,
+              color: brand.colors.secondary,
+              fontWeight: 700,
+              fontSize: '1.1rem',
+            }}
+          >
+            ★
           </span>
+          <div style={{ display: 'grid', gap: 4 }}>
+            <strong style={{ letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.82rem' }}>Demo accounts</strong>
+            <span style={{ color: withOpacity('#ffffff', 0.78), fontSize: '0.88rem' }}>
+              Start als Bart (operations) of RentGuy (finance) om meteen de persona explainers te ontgrendelen.
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {mode === 'login' && loginForm}
       {mode === 'register' && registerForm}
       {mode === 'forgot' && resetRequestForm}
       {mode === 'resetConfirm' && resetConfirmForm}
 
-      {credentialList}
+      {activeView === 'login' && credentialList}
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.85rem', color: withOpacity('#ffffff', 0.7) }}>
         <a href={brand.provider.url} target="_blank" rel="noreferrer" style={linkStyle}>
@@ -1194,6 +1215,42 @@ export function Login({ onLogin }: LoginProps) {
       navigationRail={navigationRail}
     />
   )
+}
+
+function resolveViewFromPath(pathname: string): AuthView {
+  if (!pathname) {
+    return 'login'
+  }
+  if (pathname.includes('/register')) {
+    return 'register'
+  }
+  if (pathname.includes('/password-reset/confirm')) {
+    return 'reset-confirm'
+  }
+  if (pathname.includes('/password-reset')) {
+    return 'forgot'
+  }
+  if (pathname.includes('/verify-email')) {
+    return 'verify'
+  }
+  return 'login'
+}
+
+async function notifyTestHarness(url: string, payload: Record<string, unknown>): Promise<boolean> {
+  if (typeof fetch !== 'function') {
+    return false
+  }
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    return response.ok
+  } catch (error) {
+    console.warn('Instrumentatie-aanroep mislukt', error)
+    return false
+  }
 }
 
 function resolveEmail(candidate: string): string {
