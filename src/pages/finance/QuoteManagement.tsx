@@ -22,22 +22,23 @@ const QuoteManagement = () => {
   }, [fetchQuotes, clearError]);
 
   const handleConvert = async (quoteId: string) => {
+    setError(null)
     try {
       const invoiceId = await convertQuoteToInvoice(quoteId);
       navigate(`/invoices/${invoiceId}`);
     } catch {
       /* error already reflected in store state */
     }
-  };
+  }
 
   const formatDate = (value: Date) => {
     const date = new Date(value);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
-    });
-  };
+      day: 'numeric',
+    })
+  }
 
   if (loading) {
     return (

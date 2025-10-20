@@ -8,12 +8,13 @@ const FinanceDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
   const formatDate = (value: Date): string => {
     const date = new Date(value);
@@ -70,7 +71,7 @@ const FinanceDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-8">
-      <h1 className="text-3xl font-bold mb-6">Finance Dashboard</h1>
+      <h1 className="mb-6 text-3xl font-bold">Finance Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white shadow rounded-lg p-6">
@@ -93,12 +94,13 @@ const FinanceDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
+      <div className="overflow-hidden rounded-lg bg-white shadow">
         <table className="w-full">
           <thead className="bg-gray-100">
             <tr>
               <th className="px-4 py-3 text-left">Client</th>
               <th className="px-4 py-3 text-left">Amount</th>
+              <th className="px-4 py-3 text-left">Invoice Date</th>
               <th className="px-4 py-3 text-left">Due Date</th>
               <th className="px-4 py-3 text-left">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
@@ -124,10 +126,7 @@ const FinanceDashboard: React.FC = () => {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link 
-                    to={`/invoices/${invoice.id}`} 
-                    className="text-blue-500 hover:underline"
-                  >
+                  <Link to={`/invoices/${invoice.id}`} className="text-blue-500 hover:underline">
                     View
                   </Link>
                 </td>

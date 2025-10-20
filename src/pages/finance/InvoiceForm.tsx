@@ -12,8 +12,8 @@ const createEmptyLineItem = (): InvoiceLineItem => ({
 });
 
 const InvoiceForm: React.FC = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>()
+  const navigate = useNavigate()
 
   const [clientName, setClientName] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
