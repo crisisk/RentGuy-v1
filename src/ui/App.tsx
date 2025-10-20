@@ -297,6 +297,7 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
         postLoginPath={experience.postLoginPath}
         defaultAuthenticatedPath={experience.defaultAuthenticatedPath}
         defaultUnauthenticatedPath={experience.defaultUnauthenticatedPath}
+        secretsFocusPath={experience.secretsFocusPath}
       />
       {isRoleModalOpen && (
         <RoleSelection
