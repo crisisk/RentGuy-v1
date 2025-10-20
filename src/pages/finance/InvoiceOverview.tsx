@@ -34,60 +34,60 @@ const InvoiceOverview: React.FC = () => {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  if (loading) {
+    return <div className="p-6 text-center text-sm text-slate-500">Facturen worden geladen…</div>
+  }
 
   if (loading) return <div className="p-4 text-center">Loading invoices...</div>;
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
     <div className="p-4 md:p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Invoice Overview</h1>
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Facturen</h1>
+          <p className="text-sm text-slate-500">Filter op klantnaam of status om snel de juiste factuur te vinden.</p>
+        </div>
         <Link
           to="/invoices/new"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
         >
-          New Invoice
+          Nieuwe factuur
         </Link>
       </div>
 
-      <div className="mb-6 flex flex-col md:flex-row gap-4">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
         <input
           type="text"
-          placeholder="Filter by client name..."
-          className="p-2 border rounded flex-grow"
+          placeholder="Zoek op klantnaam"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={clientNameFilter}
-          onChange={(e) => setClientNameFilter(e.target.value)}
+          onChange={event => setClientNameFilter(event.target.value)}
         />
         <select
-          className="p-2 border rounded"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm md:w-56"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={event => setStatusFilter(event.target.value as typeof statusFilter)}
         >
-          <option value="all">All Statuses</option>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-          <option value="overdue">Overdue</option>
+          <option value="all">Alle statussen</option>
+          <option value="paid">Betaald</option>
+          <option value="pending">Openstaand</option>
+          <option value="overdue">Achterstallig</option>
+          <option value="sent">Verzonden</option>
+          <option value="draft">Concept</option>
         </select>
       </div>
 
-      <div className="rounded-lg border overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+          <table className="w-full divide-y divide-slate-100">
+            <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Client</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Klant</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Bedrag</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Factuurdatum</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Acties</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -101,26 +101,30 @@ const InvoiceOverview: React.FC = () => {
                       {invoice.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm">
                     <button
+                      type="button"
                       onClick={() => navigate(`/invoices/${invoice.id}`)}
-                      className="text-blue-500 hover:underline"
+                      className="font-semibold text-blue-600 hover:underline"
                     >
-                      View
+                      Bekijken
                     </button>
                   </td>
                 </tr>
               ))}
+              {filteredInvoices.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
+                    Geen facturen gevonden voor de huidige filters.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-
-        {filteredInvoices.length === 0 && (
-          <div className="p-4 text-center text-gray-500">No invoices found</div>
-        )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default InvoiceOverview;
+export default InvoiceOverview

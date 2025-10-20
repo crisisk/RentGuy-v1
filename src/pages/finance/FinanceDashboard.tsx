@@ -47,20 +47,23 @@ const FinanceDashboard: React.FC = () => {
     return calculateFallbackStats(invoices);
   }, [stats, invoices]);
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
+      <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-blue-500" />
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+      <div
+        className="mx-auto mt-10 max-w-2xl rounded-lg border border-red-200 bg-red-50 p-4 text-red-700"
+        role="alert"
+      >
         {error}
       </div>
-    );
+    )
   }
 
   const visibleInvoices = invoices.slice(0, 10);
@@ -129,12 +132,43 @@ const FinanceDashboard: React.FC = () => {
                   </Link>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {recentInvoices.map(invoice => {
+                const badgeClass = statusPalette[invoice.status] ?? 'bg-slate-100 text-slate-700'
+                return (
+                  <tr key={invoice.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm text-slate-700">{invoice.clientName}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-slate-900">
+                      {formatCurrency(invoice.totalGross)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(invoice.dueAt)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+                        {invoice.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm">
+                      <Link to={`/invoices/${invoice.id}`} className="font-semibold text-blue-600 hover:underline">
+                        Details
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+              {recentInvoices.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
+                    Er zijn nog geen facturen beschikbaar.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
-  );
-};
+  )
+}
 
-export default FinanceDashboard;
+export default FinanceDashboard
