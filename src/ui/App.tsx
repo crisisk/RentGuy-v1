@@ -18,7 +18,7 @@ import {
   setLocalStorageItem,
 } from '@core/storage'
 import { subscribeToTokenChanges } from '@core/auth-token-storage'
-import { useAuthStore } from '@stores/authStore'
+import { useAuthStore, signalManualLogout } from '@stores/authStore'
 import AppRouter from '@router/index'
 import MarketingLandingPage from './MarketingLandingPage'
 import MarketingDemoPage from './MarketingDemoPage'
@@ -203,6 +203,7 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
       setLocalStorageItem('user_email', normalisedEmail)
       removeLocalStorageItem('user_role')
       setApiToken(nextToken)
+      setLocalStorageItem('sessionToken', nextToken)
       const normalizedUser: AuthUser = {
         ...authenticatedUser,
         email: normalisedEmail,
@@ -234,8 +235,10 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
   }, [user, token])
 
   const handleLogout = useCallback(() => {
+    signalManualLogout()
     removeLocalStorageItem('user_email')
     removeLocalStorageItem('user_role')
+    removeLocalStorageItem('sessionToken')
     setApiToken('')
     clearAuth()
     setUserEmail('')

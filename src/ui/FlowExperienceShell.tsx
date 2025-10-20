@@ -145,6 +145,10 @@ export default function FlowExperienceShell({
       )}
       {persona && (
         <div
+          data-testid="user-menu"
+          role="button"
+          tabIndex={0}
+          aria-haspopup="menu"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -153,10 +157,18 @@ export default function FlowExperienceShell({
             borderRadius: 999,
             background: withOpacity('#FFFFFF', 0.12),
             color: '#ffffff',
+            cursor: 'pointer',
+            outline: 'none',
+          }}
+          onKeyDown={event => {
+            if (event.key === ' ') {
+              event.preventDefault()
+            }
           }}
         >
           <span
             aria-hidden
+            data-testid="user-avatar"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -252,6 +264,7 @@ export default function FlowExperienceShell({
               <button
                 key={action.id}
                 type="button"
+                data-testid={action.id === 'logout' ? 'logout-button' : undefined}
                 onClick={action.onClick}
                 disabled={action.disabled}
                 style={baseStyle}

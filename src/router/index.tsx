@@ -138,10 +138,29 @@ export function AppRouter({
         : withSuspense(route.element),
     }))
 
+    const resolveLoginElement = () =>
+      isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />
+
     const baseRoutes: RouteObject[] = [
       {
         path: loginPath,
-        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+        element: resolveLoginElement(),
+      },
+      {
+        path: '/register',
+        element: resolveLoginElement(),
+      },
+      {
+        path: '/password-reset',
+        element: resolveLoginElement(),
+      },
+      {
+        path: '/password-reset/confirm',
+        element: resolveLoginElement(),
+      },
+      {
+        path: '/verify-email',
+        element: resolveLoginElement(),
       },
       {
         path: '/',
