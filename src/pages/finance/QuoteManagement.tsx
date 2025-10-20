@@ -1,27 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FinanceStore from '../../stores/financeStore';
-
-interface Quote {
-  id: string;
-  number: string;
-  client: string;
-  amount: number;
-  date: string;
-  status: 'draft' | 'sent' | 'converted';
-}
+import financeStore, { type QuoteRecord } from '../../stores/financeStore';
 
 const QuoteManagement = () => {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const store = FinanceStore();
 
   useEffect(() => {
     const loadQuotes = async () => {
       try {
-        const data = await store.getQuotes();
+        const data = await financeStore.getQuotes();
         setQuotes(data);
       } catch (err) {
         setError('Failed to load quotes');
@@ -34,15 +24,22 @@ const QuoteManagement = () => {
 
   const handleConvert = async (quoteId: string) => {
     try {
-      const invoiceId = await store.convertQuoteToInvoice(quoteId);
+      const invoiceId = await financeStore.convertQuoteToInvoice(quoteId);
+      setQuotes(prev =>
+        prev.map(quote =>
+          quote.id === quoteId
+            ? { ...quote, status: 'converted', invoiceId }
+            : quote
+        )
+      );
       navigate(`/invoices/${invoiceId}`);
     } catch (err) {
       setError('Failed to convert quote to invoice');
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (value: Date) => {
+    const date = new Date(value);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
