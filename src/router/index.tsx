@@ -187,6 +187,26 @@ export function AppRouter({
         path: '/',
         element: isAuthenticated ? <Navigate to={authedHomePath} replace /> : <Navigate to={loginPath} replace />,
       },
+      {
+        path: '/register',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
+      {
+        path: '/forgot-password',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
+      {
+        path: '/password-reset',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
+      {
+        path: '/password-reset/confirm',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
+      {
+        path: '/verify-email',
+        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
+      },
       ...guardedApplicationRoutes,
       {
         path: '*',

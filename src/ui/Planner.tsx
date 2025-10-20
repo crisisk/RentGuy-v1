@@ -1270,9 +1270,22 @@ export default function Planner({ onLogout }: PlannerProps) {
   const actions = useMemo(() => {
     const items: FlowExperienceAction[] = []
     if (showSecretsShortcut) {
-      items.push({ id: 'secrets', label: 'Secrets-dashboard', variant: 'secondary', href: '/dashboard', icon: '🗝️' })
+      items.push({
+        id: 'secrets',
+        label: 'Secrets-dashboard',
+        variant: 'secondary',
+        href: '/dashboard',
+        icon: '🗝️',
+      })
     }
-    items.push({ id: 'logout', label: 'Uitloggen', variant: 'ghost', onClick: onLogout, icon: '🚪' })
+    items.push({
+      id: 'logout',
+      label: 'Uitloggen',
+      variant: 'ghost',
+      onClick: onLogout,
+      icon: '🚪',
+      testId: 'logout-button',
+    })
     return items
   }, [onLogout, showSecretsShortcut])
 

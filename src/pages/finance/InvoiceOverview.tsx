@@ -1,34 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import store from '../../stores/financeStore';
-
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  date: string;
-  status: 'paid' | 'pending' | 'overdue';
-}
+import useFinanceStore from '../../stores/financeStore';
 
 const InvoiceOverview: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [clientNameFilter, setClientNameFilter] = useState<string>('');
   const navigate = useNavigate();
 
+  const invoices = useFinanceStore((state) => state.invoices);
+  const loading = useFinanceStore((state) => state.loading);
+  const error = useFinanceStore((state) => state.error);
+  const fetchInvoices = useFinanceStore((state) => state.fetchInvoices);
+  const clearError = useFinanceStore((state) => state.clearError);
+
   useEffect(() => {
-    store.fetchInvoices()
-      .then((data: Invoice[]) => {
-        setInvoices(data);
-        setIsLoading(false);
-      })
-      .catch((err: Error) => {
-        setError(err.message);
-        setIsLoading(false);
-      });
-  }, []);
+    fetchInvoices().catch(() => {
+      /* handled via store error state */
+    });
+
+    return () => {
+      clearError();
+    };
+  }, [fetchInvoices, clearError]);
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
@@ -36,8 +29,8 @@ const InvoiceOverview: React.FC = () => {
     return matchesStatus && matchesName;
   });
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (value: string) => {
+    const date = new Date(value);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
@@ -50,7 +43,7 @@ const InvoiceOverview: React.FC = () => {
     }
   };
 
-  if (isLoading) return <div className="p-4 text-center">Loading invoices...</div>;
+  if (loading) return <div className="p-4 text-center">Loading invoices...</div>;
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
@@ -102,7 +95,7 @@ const InvoiceOverview: React.FC = () => {
                 <tr key={invoice.id}>
                   <td className="px-4 py-3">{invoice.clientName}</td>
                   <td className="px-4 py-3">${invoice.amount.toFixed(2)}</td>
-                  <td className="px-4 py-3">{formatDate(invoice.date)}</td>
+                  <td className="px-4 py-3">{formatDate(invoice.invoiceDate)}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded text-sm ${getStatusClass(invoice.status)}`}>
                       {invoice.status}

@@ -1,24 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import financeStore from '../../stores/financeStore';
-
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  status: 'pending' | 'paid';
-  dueDate: string;
-}
-
-interface RevenueStats {
-  monthlyRevenue: number;
-  pendingInvoicesTotal: number;
-  paidInvoicesTotal: number;
-}
+import financeStore, { type FinanceStats, type InvoiceRecord } from '../../stores/financeStore';
 
 const FinanceDashboard: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [stats, setStats] = useState<RevenueStats | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,8 +15,8 @@ const FinanceDashboard: React.FC = () => {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+  const formatDate = (value: Date): string => {
+    const date = new Date(value);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -42,18 +28,24 @@ const FinanceDashboard: React.FC = () => {
     const fetchFinanceData = async () => {
       try {
         setLoading(true);
-        const financeData = await financeStore.getDashboardData();
-        setInvoices(financeData.invoices);
-        setStats(financeData.stats);
-        setLoading(false);
+        const { invoices: invoiceList, stats: dashboardStats } = await financeStore.getDashboardData();
+        setInvoices(invoiceList);
+        setStats(dashboardStats);
+        setError(null);
       } catch (err) {
-        setError('Failed to load finance data');
+        setError(err instanceof Error ? err.message : 'Failed to load finance data');
+      } finally {
         setLoading(false);
       }
     };
+  }, [getDashboardData, clearError]);
 
-    fetchFinanceData();
-  }, []);
+  const resolvedStats = useMemo<FinanceStats>(() => {
+    if (stats) {
+      return stats;
+    }
+    return calculateFallbackStats(invoices);
+  }, [stats, invoices]);
 
   if (loading) {
     return (
@@ -71,32 +63,32 @@ const FinanceDashboard: React.FC = () => {
     );
   }
 
+  const visibleInvoices = invoices.slice(0, 10);
+
   return (
     <div className="container mx-auto px-4 py-8 md:px-8">
       <h1 className="text-3xl font-bold mb-6">Finance Dashboard</h1>
 
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-2">Monthly Revenue</h2>
-            <p className="text-2xl font-bold text-green-600">
-              {formatCurrency(stats.monthlyRevenue)}
-            </p>
-          </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-2">Pending Invoices</h2>
-            <p className="text-2xl font-bold text-yellow-600">
-              {formatCurrency(stats.pendingInvoicesTotal)}
-            </p>
-          </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-2">Paid Invoices</h2>
-            <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(stats.paidInvoicesTotal)}
-            </p>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-2">Monthly Revenue</h2>
+          <p className="text-2xl font-bold text-green-600">
+            {formatCurrency(resolvedStats.monthlyRevenue)}
+          </p>
         </div>
-      )}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-2">Pending Invoices</h2>
+          <p className="text-2xl font-bold text-yellow-600">
+            {formatCurrency(resolvedStats.pendingInvoicesTotal)}
+          </p>
+        </div>
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-2">Paid Invoices</h2>
+          <p className="text-2xl font-bold text-blue-600">
+            {formatCurrency(resolvedStats.paidInvoicesTotal)}
+          </p>
+        </div>
+      </div>
 
       <div className="bg-white shadow rounded-lg overflow-x-auto">
         <table className="w-full">
@@ -110,17 +102,19 @@ const FinanceDashboard: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {invoices.map((invoice) => (
+            {visibleInvoices.map((invoice) => (
               <tr key={invoice.id} className="border-b">
                 <td className="px-4 py-3">{invoice.clientName}</td>
                 <td className="px-4 py-3">{formatCurrency(invoice.amount)}</td>
-                <td className="px-4 py-3">{formatDate(invoice.dueDate)}</td>
+                <td className="px-4 py-3">{formatDate(invoice.dueDate ?? invoice.date)}</td>
                 <td className="px-4 py-3">
-                  <span 
+                  <span
                     className={`px-2 py-1 rounded text-xs ${
-                      invoice.status === 'pending' 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-green-100 text-green-800'
+                      invoice.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : invoice.status === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
                     }`}
                   >
                     {invoice.status}
