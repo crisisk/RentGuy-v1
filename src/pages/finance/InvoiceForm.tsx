@@ -1,275 +1,418 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import useFinanceStore from '../../stores/financeStore';
-import type { InvoiceLineItem } from '../../stores/financeStore';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { brand, headingFontStack, withOpacity } from '@ui/branding'
+import {
+  useFinanceStore,
+  type InvoiceInput,
+  type InvoiceLineItem,
+} from '@stores/financeStore'
 
-const generateUniqueId = () => Math.random().toString(36).substr(2, 9);
-const createEmptyLineItem = (): InvoiceLineItem => ({
-  id: generateUniqueId(),
+const createLineItem = (): InvoiceLineItem => ({
+  id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `line-${Math.random().toString(36).slice(2, 9)}`,
   description: '',
   quantity: 1,
   unitPrice: 0,
-});
+})
 
-const InvoiceForm: React.FC = () => {
+const toInputDate = (value: string | Date | undefined): string => {
+  if (!value) {
+    return ''
+  }
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  return date.toISOString().slice(0, 10)
+}
+
+export default function InvoiceForm(): JSX.Element {
   const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
 
-  const [clientName, setClientName] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([createEmptyLineItem()]);
-  const [initializing, setInitializing] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const createInvoice = useFinanceStore(state => state.createInvoice)
+  const updateInvoice = useFinanceStore(state => state.updateInvoice)
+  const getInvoiceById = useFinanceStore(state => state.getInvoiceById)
+  const loading = useFinanceStore(state => state.loading)
+  const clearError = useFinanceStore(state => state.clearError)
 
-  const createInvoice = useFinanceStore((state) => state.createInvoice);
-  const updateInvoice = useFinanceStore((state) => state.updateInvoice);
-  const getInvoiceById = useFinanceStore((state) => state.getInvoiceById);
-  const loading = useFinanceStore((state) => state.loading);
-  const clearError = useFinanceStore((state) => state.clearError);
-
-  const addLineItem = () => {
-    setLineItems([...lineItems, createEmptyLineItem()]);
-  };
-
-  const updateLineItem = (lineId: string, field: keyof InvoiceLineItem, value: string | number) => {
-    const updatedItems = lineItems.map(item =>
-      item.id === lineId ? { ...item, [field]: value } : item
-    );
-    setLineItems(updatedItems);
-  };
-
-  const removeLineItem = (lineId: string) => {
-    setLineItems(lineItems.filter(item => item.id !== lineId));
-  };
-
-  const calculateTotal = () => {
-    return lineItems.reduce((total, item) => total + item.quantity * item.unitPrice, 0)
-  }
-
-  const buildPayload = (): InvoiceUpsertPayload => ({
-    clientName,
-    invoiceDate,
-    dueDate,
-    lineItems: lineItems.map(item => ({
-      id: item.id,
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-    })),
-    total: calculateTotal(),
-  })
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      const invoiceData = {
-        clientName,
-        invoiceDate: new Date(invoiceDate),
-        dueDate: new Date(dueDate),
-        lineItems,
-        total: calculateTotal()
-      };
-
-    const payload = {
-      clientName,
-      invoiceDate,
-      dueDate,
-      lineItems,
-      total: totalAmount,
-    }
-
-    try {
-      if (id) {
-        await updateInvoice(id, invoiceData);
-      } else {
-        await createInvoice(invoiceData);
-      }
-      clearError();
-      navigate('/invoices');
-    } catch {
-      setError('Failed to save invoice');
-    }
-  }, [clientName, invoiceDate, dueDate, lineItems, totalAmount, id, updateInvoice, createInvoice, navigate])
+  const [clientName, setClientName] = useState('')
+  const [invoiceDate, setInvoiceDate] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([createLineItem()])
+  const [initialising, setInitialising] = useState(Boolean(id))
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let mounted = true
+    let cancelled = false
+
     const loadInvoice = async () => {
       if (!id) {
-        setLoading(false)
+        setInitialising(false)
         return
       }
+
       try {
-        if (id) {
-          const invoice = await getInvoiceById(id);
-          if (!invoice) {
-            setError('Invoice not found');
-            return;
-          }
-          setClientName(invoice.clientName);
-          setInvoiceDate(new Date(invoice.date).toISOString().split('T')[0]);
-          setDueDate(invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : '');
-          setLineItems(invoice.lineItems.length ? invoice.lineItems : [createEmptyLineItem()]);
+        const invoice = await getInvoiceById(id)
+        if (!invoice || cancelled) {
+          setError('Factuur niet gevonden')
+          return
         }
-      } catch {
-        setError('Failed to load invoice');
+
+        setClientName(invoice.clientName)
+        setInvoiceDate(toInputDate(invoice.date))
+        setDueDate(toInputDate(invoice.dueDate))
+        setLineItems(
+          invoice.lineItems.length ? invoice.lineItems.map(item => ({ ...item })) : [createLineItem()],
+        )
+        setError(null)
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('Kon factuur niet laden', err)
+          setError('Het ophalen van de factuur is mislukt')
+        }
       } finally {
-        setInitializing(false);
+        if (!cancelled) {
+          setInitialising(false)
+        }
       }
     }
 
-    fetchInvoice();
-    return () => {
-      clearError();
-    };
-  }, [id, getInvoiceById, clearError]);
+    loadInvoice()
 
-  if (initializing) return <div className="p-4">Loading...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
+    return () => {
+      cancelled = true
+      clearError()
+    }
+  }, [id, getInvoiceById, clearError])
+
+  const handleLineItemChange = useCallback((lineId: string, field: keyof InvoiceLineItem, value: string) => {
+    setLineItems(previous =>
+      previous.map(item =>
+        item.id === lineId
+          ? {
+              ...item,
+              [field]: field === 'description' ? value : Number(value) || 0,
+            }
+          : item,
+      ),
+    )
+  }, [])
+
+  const handleRemoveLineItem = useCallback((lineId: string) => {
+    setLineItems(previous => {
+      const next = previous.filter(item => item.id !== lineId)
+      return next.length ? next : [createLineItem()]
+    })
+  }, [])
+
+  const handleAddLineItem = useCallback(() => {
+    setLineItems(previous => [...previous, createLineItem()])
+  }, [])
+
+  const total = useMemo(
+    () => lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+    [lineItems],
+  )
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      if (!clientName || !invoiceDate) {
+        setError('Vul de verplichte velden in')
+        return
+      }
+
+      const payload: InvoiceInput = {
+        clientName,
+        invoiceDate,
+        dueDate: dueDate || undefined,
+        lineItems,
+        total,
+      }
+
+      try {
+        if (id) {
+          await updateInvoice(id, payload)
+        } else {
+          const created = await createInvoice(payload)
+          navigate(`/invoices/${created.id}`)
+          return
+        }
+        navigate('/invoices')
+      } catch (err) {
+        console.error('Opslaan van factuur mislukt', err)
+        setError('Opslaan van de factuur is mislukt. Probeer het opnieuw.')
+      }
+    },
+    [clientName, invoiceDate, dueDate, lineItems, total, id, updateInvoice, createInvoice, navigate],
+  )
+
+  if (initialising) {
+    return (
+      <div
+        style={{
+          minHeight: '70vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: brand.fontStack,
+        }}
+        role="status"
+        aria-live="polite"
+      >
+        <span>Laden…</span>
+      </div>
+    )
+  }
 
   return (
-    <div className="container mx-auto max-w-4xl p-4">
-      <form onSubmit={handleSubmit} className="rounded-xl bg-white px-8 py-6 shadow-sm">
-        <div className="mb-6 grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+    <div
+      style={{
+        padding: '32px clamp(16px, 4vw, 48px)',
+        fontFamily: brand.fontStack,
+        color: brand.colors.secondary,
+      }}
+    >
+      <header style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
+        <span
+          style={{
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            fontSize: '0.75rem',
+            color: withOpacity(brand.colors.secondary, 0.68),
+            fontWeight: 600,
+          }}
+        >
+          Facturen
+        </span>
+        <h1 style={{ margin: 0, fontFamily: headingFontStack, fontSize: '2rem' }}>
+          {id ? 'Factuur bijwerken' : 'Nieuwe factuur'}
+        </h1>
+        <p style={{ margin: 0, color: withOpacity(brand.colors.secondary, 0.75) }}>
+          Vul klantgegevens in, voeg regels toe en valideer het totaalbedrag voordat je de factuur opslaat.
+        </p>
+      </header>
+
+      {error && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 24,
+            padding: '14px 18px',
+            borderRadius: 16,
+            background: withOpacity(brand.colors.danger, 0.12),
+            border: `1px solid ${withOpacity(brand.colors.danger, 0.3)}`,
+            color: brand.colors.danger,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'grid',
+          gap: 24,
+          padding: '24px clamp(16px, 4vw, 36px)',
+          borderRadius: 28,
+          background: '#ffffff',
+          border: `1px solid ${withOpacity(brand.colors.primary, 0.1)}`,
+          boxShadow: brand.colors.shadow,
+        }}
+      >
+        <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+          <label style={{ display: 'grid', gap: 8, fontSize: '0.9rem', fontWeight: 600 }}>
             Klantnaam
             <input
               type="text"
               value={clientName}
               onChange={event => setClientName(event.target.value)}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               required
+              style={{
+                padding: '10px 14px',
+                borderRadius: 14,
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                fontSize: '0.95rem',
+              }}
             />
           </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-              Factuurdatum
-              <input
-                type="date"
-                value={invoiceDate}
-                onChange={event => setInvoiceDate(event.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                required
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-              Vervaldatum
-              <input
-                type="date"
-                value={dueDate}
-                onChange={event => setDueDate(event.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                required
-              />
-            </label>
-          </div>
+          <label style={{ display: 'grid', gap: 8, fontSize: '0.9rem', fontWeight: 600 }}>
+            Factuurdatum
+            <input
+              type="date"
+              value={invoiceDate}
+              onChange={event => setInvoiceDate(event.target.value)}
+              required
+              style={{
+                padding: '10px 14px',
+                borderRadius: 14,
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                fontSize: '0.95rem',
+              }}
+            />
+          </label>
+          <label style={{ display: 'grid', gap: 8, fontSize: '0.9rem', fontWeight: 600 }}>
+            Vervaldatum
+            <input
+              type="date"
+              value={dueDate}
+              onChange={event => setDueDate(event.target.value)}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 14,
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                fontSize: '0.95rem',
+              }}
+            />
+          </label>
         </div>
 
-        <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">Regels</h3>
+        <section style={{ display: 'grid', gap: 16 }}>
+          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Regels</h2>
             <button
               type="button"
-              onClick={addLineItem}
-              className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              onClick={handleAddLineItem}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 999,
+                border: `1px solid ${withOpacity(brand.colors.primary, 0.3)}`,
+                background: 'transparent',
+                color: brand.colors.primary,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
             >
-              Regel toevoegen
+              + Regel toevoegen
             </button>
-          </div>
-          <div className="overflow-hidden rounded-lg border border-slate-100">
-            <table className="min-w-full divide-y divide-slate-100">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Omschrijving</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Aantal</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tarief</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Totaal</th>
-                  <th className="px-4 py-2" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {lineItems.map(item => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-2">
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={event => updateLineItem(item.id, 'description', event.target.value)}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        required
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={item.quantity}
-                        onChange={event => updateLineItem(item.id, 'quantity', Number(event.target.value))}
-                        className="w-24 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        required
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={item.unitPrice}
-                        onChange={event => updateLineItem(item.id, 'unitPrice', Number(event.target.value))}
-                        className="w-32 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        required
-                      />
-                    </td>
-                    <td className="px-4 py-2 text-sm font-semibold text-slate-900">
-                      {(item.quantity * item.unitPrice).toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeLineItem(item.id)}
-                        className="text-sm font-semibold text-red-600 hover:text-red-700"
-                      >
-                        Verwijder
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {lineItems.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
-                      Voeg een of meerdere regels toe om een factuur op te bouwen.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          </header>
+
+          <div style={{ display: 'grid', gap: 12 }}>
+            {lineItems.map(item => (
+              <div
+                key={item.id}
+                style={{
+                  display: 'grid',
+                  gap: 12,
+                  gridTemplateColumns: 'minmax(0, 3fr) repeat(2, minmax(0, 1fr)) auto',
+                  alignItems: 'center',
+                }}
+              >
+                <label style={{ display: 'grid', gap: 6, fontSize: '0.85rem', fontWeight: 600 }}>
+                  Omschrijving
+                  <input
+                    type="text"
+                    value={item.description}
+                    onChange={event => handleLineItemChange(item.id, 'description', event.target.value)}
+                    required
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                      fontSize: '0.9rem',
+                    }}
+                  />
+                </label>
+                <label style={{ display: 'grid', gap: 6, fontSize: '0.85rem', fontWeight: 600 }}>
+                  Aantal
+                  <input
+                    type="number"
+                    min={0}
+                    value={item.quantity}
+                    onChange={event => handleLineItemChange(item.id, 'quantity', event.target.value)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                      fontSize: '0.9rem',
+                    }}
+                  />
+                </label>
+                <label style={{ display: 'grid', gap: 6, fontSize: '0.85rem', fontWeight: 600 }}>
+                  Prijs per eenheid
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={item.unitPrice}
+                    onChange={event => handleLineItemChange(item.id, 'unitPrice', event.target.value)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                      fontSize: '0.9rem',
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveLineItem(item.id)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 12,
+                    border: 'none',
+                    background: withOpacity(brand.colors.danger, 0.12),
+                    color: brand.colors.danger,
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Regel verwijderen"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
           </div>
         </section>
 
-        <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-          <span className="text-sm font-semibold uppercase tracking-wide text-slate-500">Totaal exclusief btw</span>
-          <span className="text-2xl font-bold text-slate-900">{totalAmount.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}</span>
-        </div>
-
-        <div className="mt-6 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/invoices')}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-          >
-            Annuleren
-          </button>
-          <button
-            type="submit"
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-60"
-            disabled={loading}
-          >
-            {id ? 'Factuur bijwerken' : 'Factuur opslaan'}
-          </button>
-        </div>
+        <footer
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 16,
+          }}
+        >
+          <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+            Totaal: {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(total)}
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => navigate('/invoices')}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: `1px solid ${withOpacity(brand.colors.secondary, 0.25)}`,
+                background: 'transparent',
+                color: brand.colors.secondary,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Annuleren
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: 'none',
+                background: loading
+                  ? withOpacity(brand.colors.primary, 0.45)
+                  : brand.colors.primary,
+                color: '#ffffff',
+                fontWeight: 700,
+                cursor: loading ? 'wait' : 'pointer',
+              }}
+            >
+              {loading ? 'Bezig met opslaan…' : id ? 'Factuur bijwerken' : 'Factuur opslaan'}
+            </button>
+          </div>
+        </footer>
       </form>
     </div>
   )
 }
-
-export default InvoiceForm
