@@ -26,6 +26,7 @@ import { useAuthStore } from '@stores/authStore'
 import InventorySnapshot from '@ui/InventorySnapshot'
 import type {
   PersonaKey,
+  PersonaKpiConfig,
   PersonaPreset,
   PlannerEvent,
   PlannerProjectDto,
@@ -351,6 +352,14 @@ const secondaryActionStyle: React.CSSProperties = {
   cursor: 'pointer',
 }
 
+const linkActionStyle: React.CSSProperties = {
+  ...secondaryActionStyle,
+  textDecoration: 'none',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
 const tertiaryActionStyle: React.CSSProperties = {
   padding: '8px 14px',
   borderRadius: 999,
@@ -359,6 +368,18 @@ const tertiaryActionStyle: React.CSSProperties = {
   color: brand.colors.secondary,
   fontWeight: 600,
   cursor: 'pointer',
+}
+
+const personaKpiCardStyle: React.CSSProperties = {
+  padding: '16px 18px',
+  borderRadius: 18,
+  border: `1px solid ${withOpacity(brand.colors.primary, 0.16)}`,
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(227, 232, 255, 0.82) 100%)',
+  display: 'grid',
+  gap: 6,
+  minWidth: 180,
+  color: brand.colors.secondary,
+  boxShadow: '0 16px 32px rgba(79, 70, 229, 0.14)',
 }
 
 function RiskBadge({ risk }: RiskBadgeProps) {
@@ -864,6 +885,31 @@ export default function Planner({ onLogout }: PlannerProps) {
     [events],
   )
 
+  const personaMetricValues = useMemo(
+    () => ({
+      totalProjects: summary.total,
+      activeProjects: summary.active,
+      criticalProjects: summary.critical,
+      warningProjects: summary.warning,
+      upcoming7Days: upcomingWithin7,
+      upcoming14Days: upcomingWithin14,
+      completed30Days: completedLast30,
+      eventsWithAlerts,
+      atRiskProjects: summary.atRisk,
+    }),
+    [
+      completedLast30,
+      eventsWithAlerts,
+      summary.active,
+      summary.atRisk,
+      summary.critical,
+      summary.total,
+      summary.warning,
+      upcomingWithin14,
+      upcomingWithin7,
+    ],
+  )
+
   const focusPersona = useCallback(
     (persona: PersonaKey) => {
       applyPersonaPreset(persona)
@@ -911,6 +957,17 @@ export default function Planner({ onLogout }: PlannerProps) {
     setSearchTerm('')
   }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
 
+  const focusSalesView = useCallback(() => {
+    setViewMode('dashboard')
+    setExpandedRow(null)
+    setStatusFilter('upcoming')
+    setRiskFilter('all')
+    setTimeFilter('next14')
+    setSortKey('start')
+    setSortDir('asc')
+    setSearchTerm('')
+  }, [setRiskFilter, setSearchTerm, setSortDir, setSortKey, setStatusFilter, setTimeFilter])
+
   const openCrewHandoff = useCallback(() => {
     if (typeof window !== 'undefined') {
       window.open('/dashboard?focus=integration&action=sync&handoff=crew', '_blank', 'noopener,noreferrer')
@@ -923,35 +980,53 @@ export default function Planner({ onLogout }: PlannerProps) {
     }
   }, [])
 
+  const openSalesHandoff = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.open('/dashboard?focus=pipeline&handoff=sales', '_blank', 'noopener,noreferrer')
+    }
+  }, [])
+
   const openGovernanceHandoff = useCallback(() => {
     if (typeof window !== 'undefined') {
       window.open('/dashboard?focus=changelog&handoff=admin', '_blank', 'noopener,noreferrer')
     }
   }, [])
 
+  const openImportWizard = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.open('/dashboard?focus=integration&handoff=import', '_blank', 'noopener,noreferrer')
+    }
+  }, [])
+
   const startOperationsFlow = useCallback(() => {
-    focusPersona('bart')
+    focusPersona('operations')
     focusRiskView()
     openCrewHandoff()
   }, [focusPersona, focusRiskView, openCrewHandoff])
 
   const startPlanningFlow = useCallback(() => {
-    focusPersona('anna')
+    focusPersona('support')
     openCalendarView()
     openCrewHandoff()
   }, [focusPersona, openCalendarView, openCrewHandoff])
 
   const startFinanceFlow = useCallback(() => {
-    focusPersona('frank')
+    focusPersona('cfo')
     focusCompletedView()
     openBillingHandoff()
   }, [focusCompletedView, focusPersona, openBillingHandoff])
 
   const startAdminFlow = useCallback(() => {
-    focusPersona('sven')
+    focusPersona('compliance')
     focusEscalationView()
     openGovernanceHandoff()
   }, [focusEscalationView, focusPersona, openGovernanceHandoff])
+
+  const startSalesFlow = useCallback(() => {
+    focusPersona('sales')
+    focusSalesView()
+    openSalesHandoff()
+  }, [focusPersona, focusSalesView, openSalesHandoff])
 
   const personaFlows = useMemo<FlowItem[]>(() => {
     const upcomingBeyond7 = Math.max(0, upcomingWithin14 - upcomingWithin7)
@@ -969,35 +1044,49 @@ export default function Planner({ onLogout }: PlannerProps) {
         metricLabel: 'Voorraadbewaking',
         metricValue: `${summary.critical} kritisch • ${eventsWithAlerts} alerts`,
         description:
-          'Controleer kritieke voorraadmeldingen voordat crew onderweg gaat. Dit voorkomt showstoppers en volgt de "visibility of system status" richtlijn.',
+          'Gebruik de operations preset om blokkades weg te werken voordat crew of transport vertrekt. Zo houd je grip op voorraad en uptime.',
         helperText:
           'De hand-off opent direct het secrets-dashboard met sync-acties. De risicolog blijft beschikbaar voor aanvullende context.',
-        primaryAction: { label: 'Start operations hand-off', onClick: startOperationsFlow },
+        primaryAction: { label: 'Activeer operations flow', onClick: startOperationsFlow },
         secondaryAction: { label: 'Bekijk risicolog', onClick: focusRiskView, variant: 'secondary' },
       },
       {
         id: 'planning',
-        title: 'Planning & crewbriefings',
+        title: 'Support & crewbriefings',
         icon: '📅',
         status: upcomingWithin7 > 0 ? 'warning' : upcomingWithin14 > 0 ? 'info' : 'success',
         metricLabel: 'Korte termijn shows',
         metricValue: `${upcomingWithin7} binnen 7d • ${upcomingBeyond7} binnen 14d`,
         description:
-          'Bereid het team voor via de Anna preset: sorteer op eerstvolgende shows en deel briefingnotities zodra er minder dan twee weken resteren.',
+          'Zet de support preset aan om crewbriefings, klantupdates en service alerts te combineren in één cockpit.',
         helperText:
           'De hand-off opent een nieuwe tab voor crew sync met integratievariabelen. Kalenderfilter blijft actief voor snelle updates.',
-        primaryAction: { label: 'Open Anna + crew sync', onClick: startPlanningFlow },
+        primaryAction: { label: 'Start support hand-off', onClick: startPlanningFlow },
         secondaryAction: { label: 'Kalenderoverzicht', onClick: openCalendarView, variant: 'secondary' },
       },
       {
+        id: 'sales',
+        title: 'Sales & pipeline',
+        icon: '📈',
+        status: summary.upcoming > 0 ? 'info' : 'success',
+        metricLabel: 'Pipeline',
+        metricValue: `${summary.upcoming} komende projecten`,
+        description:
+          'Met de sales preset monitor je welke deals live gaan binnen twee weken en welke opvolging nodig hebben.',
+        helperText:
+          'De sales hand-off opent de pipeline view in het secrets-dashboard zodat accountteams direct kunnen schakelen.',
+        primaryAction: { label: 'Activeer sales flow', onClick: startSalesFlow },
+        secondaryAction: { label: 'Bekijk pipeline', onClick: focusSalesView, variant: 'secondary' },
+      },
+      {
         id: 'finance',
-        title: 'Facturatie & rapportage',
+        title: 'Finance & rapportage',
         icon: '💳',
         status: completedLast30 > 0 ? 'info' : 'success',
         metricLabel: 'Afrondingen (30 dagen)',
         metricValue: `${completedLast30} projecten`,
         description:
-          'Gebruik de Frank preset om afgeronde projecten te verzamelen, exporteer draaiboeken en start de facturatie-workflow direct.',
+          'Gebruik de finance preset om afgeronde projecten te verzamelen, exporteer draaiboeken en start de facturatie-workflow direct.',
         helperText:
           'De billing hand-off opent het secrets-dashboard met SLA matrix zodat facturatie kan escaleren binnen contractuele kaders.',
         primaryAction: { label: 'Start finance hand-off', onClick: startFinanceFlow },
@@ -1005,13 +1094,13 @@ export default function Planner({ onLogout }: PlannerProps) {
       },
       {
         id: 'admin',
-        title: 'Escalatie & governance',
+        title: 'Compliance & governance',
         icon: '🛡️',
         status: summary.atRisk > 0 || eventsWithAlerts > 0 ? 'warning' : 'info',
         metricLabel: 'Escalatie radar',
         metricValue: `${summary.atRisk} projecten`,
         description:
-          'Met de Sven preset zie je direct welke projecten extra checks nodig hebben. Koppel dit aan het secrets-dashboard voor end-to-end governance.',
+          'Met de compliance preset zie je direct welke projecten extra checks nodig hebben. Audit trails en alerts staan naast elkaar.',
         helperText:
           'Bij de governance hand-off opent de changelog-teaser en supportmatrix zodat escalaties traceerbaar blijven.',
         primaryAction: { label: 'Activeer governance flow', onClick: startAdminFlow },
@@ -1021,10 +1110,12 @@ export default function Planner({ onLogout }: PlannerProps) {
   }, [
     completedLast30,
     eventsWithAlerts,
+    focusSalesView,
     startOperationsFlow,
     startPlanningFlow,
     startFinanceFlow,
     startAdminFlow,
+    startSalesFlow,
     focusCompletedView,
     focusEscalationView,
     focusRiskView,
@@ -1034,12 +1125,29 @@ export default function Planner({ onLogout }: PlannerProps) {
     summary.atRisk,
     summary.critical,
     summary.warning,
+    summary.upcoming,
   ])
 
-  const personaHint = personaPresets[personaPreset]?.description
+  const personaPresetConfig = useMemo(() => personaPresets[personaPreset], [personaPreset])
+
+  const personaKpiCards = useMemo(
+    () => {
+      if (!personaPresetConfig?.kpis?.length) {
+        return [] as Array<PersonaKpiConfig & { value: string }>
+      }
+      return personaPresetConfig.kpis.map(kpi => {
+        const rawValue = personaMetricValues[kpi.metric] ?? 0
+        const formatted = `${kpi.prefix ?? ''}${rawValue}${kpi.suffix ?? ''}`
+        return { ...kpi, value: formatted }
+      })
+    },
+    [personaPresetConfig, personaMetricValues],
+  )
+
+  const personaHint = personaPresetConfig?.description
 
   const heroExplainers = useMemo<FlowExplainerItem[]>(() => {
-    const preset = personaPresets[personaPreset]
+    const preset = personaPresetConfig
     const riskSummary = summary.critical
       ? `Er zijn ${summary.critical} kritieke projecten die directe opvolging nodig hebben.`
       : summary.warning
@@ -1083,7 +1191,7 @@ export default function Planner({ onLogout }: PlannerProps) {
     ] satisfies FlowExplainerItem[]
   }, [
     calendarSyncing,
-    personaPreset,
+    personaPresetConfig?.label,
     riskFilter,
     statusFilter,
     summary.critical,
@@ -1165,19 +1273,15 @@ export default function Planner({ onLogout }: PlannerProps) {
       { id: 'operations', label: 'Operations cockpit', href: '/planner' },
       { id: 'planner', label: 'Projectplanner' },
     ]
-    if (personaPreset !== 'all') {
-      const preset = personaPresets[personaPreset]
-      if (preset) {
-        items.push({ id: 'persona', label: preset.label })
-      }
+    if (personaPreset !== 'all' && personaPresetConfig) {
+      items.push({ id: 'persona', label: personaPresetConfig.label })
     }
     return items
-  }, [personaPreset])
+  }, [personaPreset, personaPresetConfig])
 
   const personaSummary = useMemo<FlowExperiencePersona>(
     () => {
-      const preset = personaPresets[personaPreset]
-      const personaName = preset ? preset.label : 'Alle persona\'s'
+      const personaName = personaPresetConfig ? personaPresetConfig.label : 'Alle persona\'s'
       const normalizedRole = userRole && userRole !== 'pending' ? userRole : 'planner'
       const roleLabel = roleLabelMap[normalizedRole] ?? 'Pilot gebruiker'
       const persona: FlowExperiencePersona = {
@@ -1189,7 +1293,7 @@ export default function Planner({ onLogout }: PlannerProps) {
       }
       return persona
     },
-    [personaPreset, userEmail, userRole],
+    [personaPresetConfig, userEmail, userRole],
   )
 
   const stage = useMemo(
@@ -1368,7 +1472,7 @@ export default function Planner({ onLogout }: PlannerProps) {
       description={
         <>
           <span>
-            Persona-presets, voorraadbewaking en corporate audittrail maken elke flow herkenbaar voor Bart en het Mister DJ-team.
+            Persona-presets voor operations, sales, finance en compliance brengen KPI’s per stakeholder samen in één cockpit.
           </span>
           <span>Gebruik explainers per rol om crew, finance en escalaties vanuit één cockpit te sturen.</span>
         </>
@@ -1480,7 +1584,7 @@ export default function Planner({ onLogout }: PlannerProps) {
         <FlowGuidancePanel
           eyebrow="User flows"
           title="Kies de juiste flow per persona"
-          description="We vatten de belangrijkste taken per rol samen op basis van actuele planningsdata. Zo kun je direct schakelen tussen operaties, crew, finance en escalaties zonder context te verliezen."
+          description="We vatten de belangrijkste taken per rol samen op basis van actuele planningsdata. Schakel direct tussen operations, support, sales, finance en compliance zonder context te verliezen."
           flows={personaFlows}
         />
 
@@ -1711,6 +1815,27 @@ export default function Planner({ onLogout }: PlannerProps) {
             </button>
           </div>
           {personaHint && <div style={{ fontSize: '0.9rem', color: brand.colors.mutedText }}>{personaHint}</div>}
+          {personaKpiCards.length > 0 && (
+            <div
+              role="list"
+              aria-label="Persona KPI overzicht"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: 16,
+              }}
+            >
+              {personaKpiCards.map(card => (
+                <article key={card.id} role="listitem" style={personaKpiCardStyle}>
+                  <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: brand.colors.mutedText }}>
+                    {card.label}
+                  </span>
+                  <strong style={{ fontSize: '1.5rem', color: brand.colors.secondary }}>{card.value}</strong>
+                  {card.hint && <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{card.hint}</span>}
+                </article>
+              ))}
+            </div>
+          )}
         </div>
 
         {viewMode === 'calendar' && (
@@ -1733,6 +1858,30 @@ export default function Planner({ onLogout }: PlannerProps) {
               eventDrop={handleCalendarEventDrop}
               height="auto"
             />
+          </div>
+        )}
+
+        {feedback?.type === 'error' && (
+          <div
+            role="alert"
+            data-testid="planner-feedback-error"
+            style={{
+              padding: '14px 18px',
+              borderRadius: 14,
+              backgroundColor: withOpacity(brand.colors.danger, 0.18),
+              color: brand.colors.danger,
+              border: `1px solid ${withOpacity(brand.colors.danger, 0.35)}`,
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
+            <span>{feedback.message}</span>
+            <button type="button" onClick={loadProjects} style={secondaryActionStyle}>
+              Probeer opnieuw
+            </button>
           </div>
         )}
 
@@ -1801,8 +1950,36 @@ export default function Planner({ onLogout }: PlannerProps) {
               ) : filteredEvents.length === 0 ? (
                 <tbody>
                   <tr>
-                    <td colSpan={8} style={emptyMessageStyles}>
-                      Geen projecten gevonden voor deze filters. Pas de filters aan of reset ze om alles te tonen.
+                    <td colSpan={8} style={{ padding: '36px' }}>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: 12,
+                          justifyItems: 'center',
+                          color: brand.colors.mutedText,
+                        }}
+                      >
+                        <p style={{ margin: 0 }}>Geen projecten gevonden voor deze filters.</p>
+                        <p style={{ margin: 0 }}>Start een importwizard of reset de persona-instellingen.</p>
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={openImportWizard}
+                            style={primaryActionStyle}
+                            data-testid="planner-empty-import"
+                          >
+                            Start importwizard
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyPersonaPreset('all')}
+                            style={secondaryActionStyle}
+                            data-testid="planner-empty-reset"
+                          >
+                            Reset filters
+                          </button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -1838,6 +2015,13 @@ export default function Planner({ onLogout }: PlannerProps) {
                             >
                               {isExpanded ? 'Sluit details' : 'Details'}
                             </button>
+                            <Link
+                              to={`/projects/${eventItem.id}`}
+                              style={linkActionStyle}
+                              data-testid={`planner-project-link-${eventItem.id}`}
+                            >
+                              Bekijk project
+                            </Link>
                             <button type="button" onClick={() => openEditor(eventItem)} style={primaryActionStyle}>
                               Herplan
                             </button>
