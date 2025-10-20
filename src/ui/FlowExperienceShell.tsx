@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import ExperienceLayout, { type ExperienceLayoutProps } from '@ui/ExperienceLayout'
 import FlowExperienceNavRail, { type FlowExperienceNavRailProps } from '@ui/FlowExperienceNavRail'
 import { brand, withOpacity } from '@ui/branding'
@@ -21,6 +21,7 @@ export interface FlowExperienceAction {
   onClick?: () => void
   icon?: ReactNode
   disabled?: boolean
+  testId?: string
 }
 
 export interface FlowExperiencePersona {
@@ -105,6 +106,53 @@ export default function FlowExperienceShell({
   children,
   ...layoutProps
 }: FlowExperienceShellProps) {
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false)
+  const actionMenuRef = useRef<HTMLDivElement | null>(null)
+  const actionMenuId = useMemo(() => `flow-experience-action-menu-${Math.random().toString(36).slice(2)}`, [])
+
+  const closeMenu = useCallback(() => {
+    setIsActionMenuOpen(false)
+  }, [])
+
+  useEffect(() => {
+    if (!isActionMenuOpen) {
+      return
+    }
+
+    const handleClick = (event: MouseEvent) => {
+      if (!actionMenuRef.current) {
+        return
+      }
+      const target = event.target as Node | null
+      if (target && actionMenuRef.current.contains(target)) {
+        return
+      }
+      closeMenu()
+    }
+
+    document.addEventListener('mousedown', handleClick)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+    }
+  }, [closeMenu, isActionMenuOpen])
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMenu()
+      }
+    }
+
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [closeMenu])
+
+  useEffect(() => {
+    closeMenu()
+  }, [actions, closeMenu])
+
   const headerSlot = (
     <div
       style={{
@@ -162,32 +210,92 @@ export default function FlowExperienceShell({
           }}
         >
           <span
+            data-testid="user-avatar"
             aria-hidden
             data-testid="user-avatar"
             style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: withOpacity('#000000', 0.32),
-              fontWeight: 700,
-              fontSize: '0.85rem',
+              gap: 10,
+              padding: '6px 12px',
+              borderRadius: 999,
+              background: withOpacity('#FFFFFF', 0.12),
+              color: '#ffffff',
+              border: 'none',
+              cursor: 'pointer',
             }}
           >
-            {persona.initials ?? persona.name.slice(0, 2).toUpperCase()}
-          </span>
-          <div style={{ display: 'grid', gap: 2, textAlign: 'left' }}>
-            <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: '0.68rem' }}>
-              {persona.role}
+            <span
+              aria-hidden
+              data-testid="user-avatar"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: withOpacity('#000000', 0.32),
+                fontWeight: 700,
+                fontSize: '0.85rem',
+              }}
+            >
+              {persona.initials ?? persona.name.slice(0, 2).toUpperCase()}
             </span>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{persona.name}</span>
-            {persona.meta && (
-              <span style={{ fontSize: '0.7rem', color: withOpacity('#FFFFFF', 0.75) }}>{persona.meta}</span>
-            )}
-          </div>
-        </button>
+            <div style={{ display: 'grid', gap: 2, textAlign: 'left' }}>
+              <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: '0.68rem' }}>
+                {persona.role}
+              </span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{persona.name}</span>
+              {persona.meta && (
+                <span style={{ fontSize: '0.7rem', color: withOpacity('#FFFFFF', 0.75) }}>{persona.meta}</span>
+              )}
+            </div>
+          </button>
+          {isUserMenuOpen && logoutAction && (
+            <div
+              role="menu"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                display: 'grid',
+                gap: 6,
+                padding: '10px 12px',
+                minWidth: 180,
+                borderRadius: 14,
+                background: withOpacity('#0F172A', 0.92),
+                border: `1px solid ${withOpacity('#FFFFFF', 0.18)}`,
+                boxShadow: '0 16px 32px rgba(15, 23, 42, 0.35)',
+              }}
+            >
+              <button
+                type="button"
+                data-testid="logout-button"
+                onClick={() => {
+                  logoutAction.onClick?.()
+                  setIsUserMenuOpen(false)
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  padding: '8px 10px',
+                  borderRadius: 10,
+                  background: 'transparent',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Uitloggen
+                <span aria-hidden>🚪</span>
+              </button>
+            </div>
+          )}
+        </div>
       )}
       {stage && (
         <div
@@ -215,66 +323,53 @@ export default function FlowExperienceShell({
         </div>
       )}
       {actions && actions.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          {actions.map(action => {
-            const variant = action.variant ?? 'secondary'
-            const baseStyle: CSSProperties = {
+        <div ref={actionMenuRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            data-testid="user-menu"
+            onClick={() => setIsActionMenuOpen(open => !open)}
+            aria-haspopup="true"
+            aria-expanded={isActionMenuOpen}
+            aria-controls={actionMenuId}
+            style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
               padding: '8px 16px',
               borderRadius: 999,
+              border: `1px solid ${withOpacity('#FFFFFF', 0.35)}`,
+              background: withOpacity('#FFFFFF', 0.12),
+              color: '#ffffff',
               fontWeight: 600,
-              textDecoration: 'none',
-              cursor: action.disabled ? 'not-allowed' : 'pointer',
-              opacity: action.disabled ? 0.65 : 1,
+              cursor: 'pointer',
               fontSize: '0.85rem',
-              ...actionTone[variant],
-            }
-
-            const content = (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                {action.icon && <span aria-hidden>{action.icon}</span>}
-                {action.label}
-              </span>
-            )
-
-            const testId = `${action.id}-button`
-
-            if (action.href && !action.disabled) {
-              return (
-                <a key={action.id} href={action.href} style={baseStyle} data-testid={testId}>
-                  {content}
-                </a>
-              )
-            }
-
-            if (action.href && action.disabled) {
-              return (
-                <span
-                  key={action.id}
-                  style={{ ...baseStyle, pointerEvents: 'none' }}
-                  aria-disabled="true"
-                  data-testid={testId}
-                >
-                  {content}
-                </span>
-              )
-            }
-
-            return (
-              <button
-                key={action.id}
-                type="button"
-                onClick={action.onClick}
-                disabled={action.disabled}
-                style={baseStyle}
-                data-testid={testId}
-              >
-                {content}
-              </button>
-            )
-          })}
+            }}
+          >
+            <span aria-hidden>👤</span>
+            Acties
+          </button>
+          {isActionMenuOpen && (
+            <div
+              id={actionMenuId}
+              role="menu"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 10px)',
+                right: 0,
+                minWidth: 220,
+                display: 'grid',
+                gap: 8,
+                padding: 12,
+                borderRadius: 18,
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.94) 100%)',
+                border: `1px solid ${withOpacity('#FFFFFF', 0.18)}`,
+                boxShadow: '0 24px 48px rgba(15, 23, 42, 0.45)',
+                zIndex: 30,
+              }}
+            >
+              {actions.map(action => renderActionMenuItem(action, closeMenu))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -344,5 +439,77 @@ function renderStatusMessage(message: FlowExperienceStatusMessage) {
       {message.title && <strong style={{ fontSize: '0.95rem' }}>{message.title}</strong>}
       <div style={{ color: withOpacity(palette.accent, 0.82), fontSize: '0.92rem' }}>{message.description}</div>
     </div>
+  )
+}
+
+function renderActionMenuItem(action: FlowExperienceAction, closeMenu: () => void) {
+  const variant = action.variant ?? 'secondary'
+  const baseStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    padding: '10px 14px',
+    borderRadius: 14,
+    fontWeight: 600,
+    fontSize: '0.85rem',
+    textDecoration: 'none',
+    cursor: action.disabled ? 'not-allowed' : 'pointer',
+    opacity: action.disabled ? 0.65 : 1,
+    width: '100%',
+    ...actionTone[variant],
+  }
+
+  const content = (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+      {action.icon && <span aria-hidden>{action.icon}</span>}
+      {action.label}
+    </span>
+  )
+
+  if (action.href && !action.disabled) {
+    return (
+      <a
+        key={action.id}
+        href={action.href}
+        style={baseStyle}
+        onClick={() => {
+          closeMenu()
+          action.onClick?.()
+        }}
+        data-testid={action.testId}
+      >
+        {content}
+      </a>
+    )
+  }
+
+  if (action.href && action.disabled) {
+    return (
+      <span
+        key={action.id}
+        style={{ ...baseStyle, pointerEvents: 'none' }}
+        aria-disabled="true"
+        data-testid={action.testId}
+      >
+        {content}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      key={action.id}
+      type="button"
+      onClick={() => {
+        closeMenu()
+        action.onClick?.()
+      }}
+      disabled={action.disabled}
+      style={baseStyle}
+      data-testid={action.testId}
+    >
+      {content}
+    </button>
   )
 }

@@ -1515,6 +1515,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
         variant: 'ghost',
         onClick: onLogout,
         icon: '🚪',
+        testId: 'logout-button',
       },
     ]
     return items
