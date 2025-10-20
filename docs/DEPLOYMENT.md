@@ -54,6 +54,7 @@ SMTP_FROM_EMAIL=rentguy@your-domain.com
 
 # Frontend build options
 VITE_API_URL=https://api.your-domain.com
+# Options: planner (default), scanner, marketing
 VITE_APP_MODE=planner
 ```
 
@@ -187,7 +188,7 @@ Expose the web container via Nginx or Traefik with TLS termination.
 2. Ensure the **OnboardingOverlay** appears with all seven steps and can be closed.
 3. Complete a step and confirm the progress bar updates (~14%).
 4. Navigate through core modules: Projects, Inventory, Crew, Transport, Billing, Warehouse.
-5. Use the scanner view by appending `?mode=scanner` (or set `VITE_APP_MODE=scanner`) and complete a mock scan.
+5. Use the scanner view by appending `?mode=scanner` (or set `VITE_APP_MODE=scanner`) and complete a mock scan. Preview the marketing landing by visiting the frontend with `?mode=marketing` when you need to demo the public experience locally.
 6. Trigger `Send welcome email` via the admin panel or `POST /api/v1/onboarding/send-welcome`.
 
 ### 6.2 Observability

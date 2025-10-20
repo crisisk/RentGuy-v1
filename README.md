@@ -7,7 +7,7 @@ RentGuy Enterprise Platform is a full-stack solution for professional rental ope
 | Area | Description |
 | ---- | ----------- |
 | Backend | `backend/` contains a FastAPI service with modular routers per domain (auth, inventory, projects, crew, transport, billing, warehouse, reporting, observability). Metrics, structured logging, and rich error handling are enabled out of the box. |
-| Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.tsx`) conditionally renders the planner UI or the scanner UI depending on `VITE_APP_MODE`, validated through a shared runtime schema. |
+| Frontend | React single-page app components live at the repository root. The Vite entry point (`src/main.tsx`) conditionally renders the planner UI, marketing experience, or scanner UI depending on `VITE_APP_MODE`, validated through a shared runtime schema. |
 | Infrastructure | Docker artefacts, Alembic migrations, seed scripts, and environment configuration helpers sit alongside documentation that captures the enterprise deployment roadmap. |
 
 ## Production Readiness Tracker
@@ -127,7 +127,7 @@ test runner. No additional binaries are required at runtime.
 Configuration is handled through standard Vite-style environment variables:
 
 - `VITE_API_URL` &mdash; Base URL of the FastAPI service (defaults to `http://localhost:8000`).
-- `VITE_APP_MODE` &mdash; Set to `scanner` to boot directly into the barcode scanner view. Any other value renders the planner dashboard.
+- `VITE_APP_MODE` &mdash; Accepts `planner` (default), `scanner`, or `marketing`. You can temporarily override the mode at runtime with a query parameter such as `?mode=scanner` or `?mode=marketing`.
 
 Duplicate [`.env.example`](.env.example) to `.env` (or `.env.local`) and adjust the values for your target environment before running the container build.
 
