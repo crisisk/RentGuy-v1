@@ -1,31 +1,12 @@
 import React, { useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import useFinanceStore from '../../stores/financeStore';
-import type { FinanceStats, Invoice } from '../../stores/financeStore';
-
-const calculateFallbackStats = (items: Invoice[]): FinanceStats => {
-  const pendingInvoicesTotal = items
-    .filter((invoice) => invoice.status === 'pending')
-    .reduce((total, invoice) => total + invoice.amount, 0);
-
-  const paidInvoicesTotal = items
-    .filter((invoice) => invoice.status === 'paid' || invoice.status === 'completed')
-    .reduce((total, invoice) => total + invoice.amount, 0);
-
-  return {
-    monthlyRevenue: paidInvoicesTotal,
-    pendingInvoicesTotal,
-    paidInvoicesTotal,
-  };
-};
+import financeStore, { type FinanceStats, type InvoiceRecord } from '../../stores/financeStore';
 
 const FinanceDashboard: React.FC = () => {
-  const invoices = useFinanceStore((state) => state.invoices);
-  const stats = useFinanceStore((state) => state.stats);
-  const loading = useFinanceStore((state) => state.loading);
-  const error = useFinanceStore((state) => state.error);
-  const getDashboardData = useFinanceStore((state) => state.getDashboardData);
-  const clearError = useFinanceStore((state) => state.clearError);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [stats, setStats] = useState<FinanceStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -34,8 +15,8 @@ const FinanceDashboard: React.FC = () => {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+  const formatDate = (value: Date): string => {
+    const date = new Date(value);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -44,12 +25,18 @@ const FinanceDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    getDashboardData().catch(() => {
-      /* handled via store state */
-    });
-
-    return () => {
-      clearError();
+    const fetchFinanceData = async () => {
+      try {
+        setLoading(true);
+        const { invoices: invoiceList, stats: dashboardStats } = await financeStore.getDashboardData();
+        setInvoices(invoiceList);
+        setStats(dashboardStats);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load finance data');
+      } finally {
+        setLoading(false);
+      }
     };
   }, [getDashboardData, clearError]);
 
@@ -123,9 +110,11 @@ const FinanceDashboard: React.FC = () => {
                 <td className="px-4 py-3">
                   <span
                     className={`px-2 py-1 rounded text-xs ${
-                      invoice.status === 'pending' 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-green-100 text-green-800'
+                      invoice.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : invoice.status === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
                     }`}
                   >
                     {invoice.status}

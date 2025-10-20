@@ -95,7 +95,7 @@ const InvoiceOverview: React.FC = () => {
                 <tr key={invoice.id}>
                   <td className="px-4 py-3">{invoice.clientName}</td>
                   <td className="px-4 py-3">${invoice.amount.toFixed(2)}</td>
-                  <td className="px-4 py-3">{formatDate(invoice.date)}</td>
+                  <td className="px-4 py-3">{formatDate(invoice.invoiceDate)}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded text-sm ${getStatusClass(invoice.status)}`}>
                       {invoice.status}

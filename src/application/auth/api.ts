@@ -34,6 +34,8 @@ export type CurrentUserResult = Result<AuthUser>
 
 export type UpdateRoleResult = Result<AuthUser>
 
+export type VoidResult = Result<void>
+
 const FALLBACK_EMAIL = 'bart@rentguy.demo'
 
 interface OfflineDemoAccount {
@@ -159,6 +161,58 @@ export async function updateRole(
   }
 }
 
+export interface RegisterPayload {
+  readonly email: string
+  readonly password: string
+  readonly acceptTerms: boolean
+}
+
+export interface PasswordResetRequestPayload {
+  readonly email: string
+}
+
+export interface PasswordResetConfirmPayload {
+  readonly token: string
+  readonly password: string
+  readonly confirmPassword: string
+}
+
+export async function registerUser(
+  payload: RegisterPayload,
+  config: RequestConfig = {},
+): Promise<VoidResult> {
+  try {
+    await api.post('/api/register', payload, config)
+    return ok(undefined)
+  } catch (error) {
+    return err(mapUnknownToApiError(error))
+  }
+}
+
+export async function requestPasswordReset(
+  payload: PasswordResetRequestPayload,
+  config: RequestConfig = {},
+): Promise<VoidResult> {
+  try {
+    await api.post('/api/password-reset', payload, config)
+    return ok(undefined)
+  } catch (error) {
+    return err(mapUnknownToApiError(error))
+  }
+}
+
+export async function confirmPasswordReset(
+  payload: PasswordResetConfirmPayload,
+  config: RequestConfig = {},
+): Promise<VoidResult> {
+  try {
+    await api.post('/api/password-reset/confirm', payload, config)
+    return ok(undefined)
+  } catch (error) {
+    return err(mapUnknownToApiError(error))
+  }
+}
+
 export function deriveRoleErrorMessage(error: ApiError): string {
   if (error.meta && typeof error.meta === 'object') {
     const detail = (error.meta as { response?: { detail?: unknown } }).response?.detail
@@ -192,5 +246,42 @@ export function deriveLoginErrorMessage(error: ApiError): string {
       return 'De inlogaanvraag duurde te lang. Probeer het opnieuw.'
     default:
       return error.message || 'Login mislukt. Probeer het opnieuw.'
+  }
+}
+
+export function deriveRegisterErrorMessage(error: ApiError): string {
+  if (error.meta && typeof error.meta === 'object') {
+    const detail = (error.meta as { response?: { detail?: unknown } }).response?.detail
+    if (typeof detail === 'string' && detail.trim().length > 0) {
+      return detail
+    }
+  }
+
+  switch (error.code) {
+    case 'conflict':
+      return 'Dit e-mailadres is al geregistreerd. Gebruik een ander adres of log in.'
+    case 'validation':
+      return 'Registratie mislukt door ongeldige invoer. Controleer de velden en probeer opnieuw.'
+    case 'network':
+      return 'Er kon geen verbinding met de server worden gemaakt. Probeer het later opnieuw.'
+    case 'timeout':
+      return 'De registratieaanvraag duurde te lang. Probeer het opnieuw.'
+    default:
+      return error.message || 'Account aanmaken is mislukt. Probeer het opnieuw.'
+  }
+}
+
+export function derivePasswordResetErrorMessage(error: ApiError): string {
+  switch (error.code) {
+    case 'not_found':
+      return 'We hebben geen account met dit e-mailadres gevonden.'
+    case 'validation':
+      return 'De opgegeven gegevens waren ongeldig. Controleer de velden en probeer opnieuw.'
+    case 'network':
+      return 'Geen netwerkverbinding. Controleer je internetverbinding en probeer opnieuw.'
+    case 'timeout':
+      return 'De aanvraag duurde te lang. Probeer het opnieuw.'
+    default:
+      return error.message || 'Wachtwoord resetten is mislukt. Probeer het opnieuw.'
   }
 }

@@ -30,8 +30,8 @@ const QuoteManagement = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (value: Date) => {
+    const date = new Date(value);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
