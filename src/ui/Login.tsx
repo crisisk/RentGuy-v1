@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useMemo, useState, type ChangeEvent, type CSSProperties } from 'react'
 import { login, deriveLoginErrorMessage, ensureAuthEmail, type AuthUser } from '@application/auth/api'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
-import { buildHelpCenterUrl, resolveSupportConfig } from './experienceConfig'
+import { resolveSupportConfig } from './experienceConfig'
 import FlowExperienceShell from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
@@ -316,6 +316,8 @@ export function Login({ onLogin }: LoginProps) {
             id="login-user"
             value={user}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setUser(event.target.value)}
+            data-testid="email-input"
+            autoComplete="username"
             style={{
               padding: '12px 14px',
               borderRadius: 12,
@@ -333,6 +335,8 @@ export function Login({ onLogin }: LoginProps) {
             id="login-password"
             value={password}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)}
+            data-testid="password-input"
+            autoComplete="current-password"
             style={{
               padding: '12px 14px',
               borderRadius: 12,
@@ -351,6 +355,7 @@ export function Login({ onLogin }: LoginProps) {
         <button
           type="submit"
           disabled={isSubmitting}
+          data-testid="login-button"
           style={{
             marginTop: 4,
             padding: '12px 18px',
@@ -418,13 +423,20 @@ export function Login({ onLogin }: LoginProps) {
 }
 
 function resolveEmail(candidate: string): string {
-  if (candidate === 'bart') {
+  const trimmed = candidate.trim()
+  if (!trimmed) {
     return 'bart@rentguy.demo'
   }
-  if (candidate === 'rentguy') {
+  if (trimmed.includes('@')) {
+    return ensureAuthEmail(trimmed)
+  }
+  if (trimmed === 'bart') {
+    return 'bart@rentguy.demo'
+  }
+  if (trimmed === 'rentguy') {
     return 'rentguy@demo.local'
   }
-  return `${candidate}@demo.local`
+  return `${trimmed}@demo.local`
 }
 
 export default Login

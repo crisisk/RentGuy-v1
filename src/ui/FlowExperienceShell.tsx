@@ -144,7 +144,11 @@ export default function FlowExperienceShell({
         </nav>
       )}
       {persona && (
-        <div
+        <button
+          type="button"
+          data-testid="user-menu"
+          aria-haspopup="menu"
+          aria-label={`Gebruikersmenu voor ${persona.name}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -153,10 +157,13 @@ export default function FlowExperienceShell({
             borderRadius: 999,
             background: withOpacity('#FFFFFF', 0.12),
             color: '#ffffff',
+            border: 'none',
+            cursor: 'pointer',
           }}
         >
           <span
             aria-hidden
+            data-testid="user-avatar"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -171,7 +178,7 @@ export default function FlowExperienceShell({
           >
             {persona.initials ?? persona.name.slice(0, 2).toUpperCase()}
           </span>
-          <div style={{ display: 'grid', gap: 2 }}>
+          <div style={{ display: 'grid', gap: 2, textAlign: 'left' }}>
             <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: '0.68rem' }}>
               {persona.role}
             </span>
@@ -180,7 +187,7 @@ export default function FlowExperienceShell({
               <span style={{ fontSize: '0.7rem', color: withOpacity('#FFFFFF', 0.75) }}>{persona.meta}</span>
             )}
           </div>
-        </div>
+        </button>
       )}
       {stage && (
         <div
@@ -232,9 +239,11 @@ export default function FlowExperienceShell({
               </span>
             )
 
+            const testId = `${action.id}-button`
+
             if (action.href && !action.disabled) {
               return (
-                <a key={action.id} href={action.href} style={baseStyle}>
+                <a key={action.id} href={action.href} style={baseStyle} data-testid={testId}>
                   {content}
                 </a>
               )
@@ -242,7 +251,12 @@ export default function FlowExperienceShell({
 
             if (action.href && action.disabled) {
               return (
-                <span key={action.id} style={{ ...baseStyle, pointerEvents: 'none' }} aria-disabled="true">
+                <span
+                  key={action.id}
+                  style={{ ...baseStyle, pointerEvents: 'none' }}
+                  aria-disabled="true"
+                  data-testid={testId}
+                >
                   {content}
                 </span>
               )
@@ -255,6 +269,7 @@ export default function FlowExperienceShell({
                 onClick={action.onClick}
                 disabled={action.disabled}
                 style={baseStyle}
+                data-testid={testId}
               >
                 {content}
               </button>
