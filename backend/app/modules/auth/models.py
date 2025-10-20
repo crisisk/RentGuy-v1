@@ -11,6 +11,7 @@ from app.core.db import Base
 
 if TYPE_CHECKING:  # pragma: no cover - circular imports for type hints only
     from app.modules.customer_portal.models import Document, Invoice, Order, UserProfile
+    from app.modules.jobboard.models import JobApplication, JobPosting
     from app.modules.recurring_invoices.models import RecurringInvoice
 
 
@@ -51,6 +52,12 @@ class User(Base):
     )
     recurring_invoices: Mapped[list[RecurringInvoice]] = relationship(
         "RecurringInvoice", back_populates="user", cascade="all,delete-orphan"
+    )
+    job_postings: Mapped[list[JobPosting]] = relationship(
+        "JobPosting", back_populates="employer", cascade="all,delete-orphan"
+    )
+    job_applications: Mapped[list[JobApplication]] = relationship(
+        "JobApplication", back_populates="applicant", cascade="all,delete-orphan"
     )
 
 

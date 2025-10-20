@@ -135,6 +135,7 @@ ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
         ["recurring-invoices"],
     ),
     ("app.modules.onboarding.routes", "router", "/api/v1", ["onboarding"]),
+    ("app.modules.jobboard.routes", "router", "/api/v1", ["jobboard"]),
     ("app.modules.crm.routes", "router", "/api/v1", ["crm"]),
     (
         "app.modules.platform.observability.routes",
