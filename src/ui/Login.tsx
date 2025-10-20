@@ -25,8 +25,12 @@ import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { createFlowNavigation } from '@ui/flowNavigation'
 
+type AuthView = 'login' | 'register' | 'reset-request' | 'reset-confirm'
+
 export interface LoginProps {
   onLogin: (token: string, user: AuthUser) => void
+  initialMode?: AuthView
+  initialResetToken?: string
 }
 
 type AuthMode = 'login' | 'register' | 'forgot' | 'resetConfirm'
@@ -229,6 +233,14 @@ export function Login({ onLogin }: LoginProps) {
   const [resetError, setResetError] = useState('')
   const [isConfirmingReset, setIsConfirmingReset] = useState(false)
 
+  useEffect(() => {
+    setView(initialMode)
+  }, [initialMode])
+
+  useEffect(() => {
+    setResetToken(initialResetToken)
+  }, [initialResetToken])
+
   const handleScrollToForm = useCallback(() => {
     if (typeof document === 'undefined') {
       return
@@ -300,7 +312,7 @@ export function Login({ onLogin }: LoginProps) {
     return () => {
       window.removeEventListener('popstate', handlePopState)
     }
-  }, [])
+  }, [view])
 
   useEffect(() => {
     if (mode === 'resetConfirm' && typeof window !== 'undefined') {
@@ -427,6 +439,59 @@ export function Login({ onLogin }: LoginProps) {
     }),
     [activeEmail],
   )
+
+  const validateEmail = useCallback((value: string) => {
+    if (!value || value.trim().length === 0) {
+      return 'E-mail is verplicht'
+    }
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!pattern.test(value.trim())) {
+      return 'Ongeldig e-mailadres'
+    }
+    return ''
+  }, [])
+
+  const validatePassword = useCallback((value: string, { allowEmpty = false }: { allowEmpty?: boolean } = {}) => {
+    if (!value || value.trim().length === 0) {
+      return allowEmpty ? '' : 'Wachtwoord is verplicht'
+    }
+    if (value.trim().length < 8) {
+      return 'Wachtwoord moet minimaal 8 tekens bevatten'
+    }
+    return ''
+  }, [])
+
+  const showLoginView = useCallback((options: { preserveResetStatus?: boolean } = {}) => {
+    setView('login')
+    setRegisterErrors([])
+    setRegisterSuccess('')
+    if (!options.preserveResetStatus) {
+      setResetStatus('')
+    }
+    setResetError('')
+    setConfirmError('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [])
+
+  const showRegisterView = useCallback(() => {
+    setView('register')
+    setRegisterErrors([])
+    setRegisterSuccess('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/register')
+    }
+  }, [])
+
+  const showResetRequestView = useCallback(() => {
+    setView('reset-request')
+    setResetStatus('')
+    setResetError('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/password-reset')
+    }
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

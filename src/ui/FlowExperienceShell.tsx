@@ -207,28 +207,87 @@ export default function FlowExperienceShell({
             data-testid="user-avatar"
             aria-hidden
             style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: withOpacity('#000000', 0.32),
-              fontWeight: 700,
-              fontSize: '0.85rem',
+              gap: 10,
+              padding: '6px 12px',
+              borderRadius: 999,
+              background: withOpacity('#FFFFFF', 0.12),
+              color: '#ffffff',
+              border: 'none',
+              cursor: 'pointer',
             }}
           >
-            {persona.initials ?? persona.name.slice(0, 2).toUpperCase()}
-          </span>
-          <div style={{ display: 'grid', gap: 2 }}>
-            <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: '0.68rem' }}>
-              {persona.role}
+            <span
+              aria-hidden
+              data-testid="user-avatar"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: withOpacity('#000000', 0.32),
+                fontWeight: 700,
+                fontSize: '0.85rem',
+              }}
+            >
+              {persona.initials ?? persona.name.slice(0, 2).toUpperCase()}
             </span>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{persona.name}</span>
-            {persona.meta && (
-              <span style={{ fontSize: '0.7rem', color: withOpacity('#FFFFFF', 0.75) }}>{persona.meta}</span>
-            )}
-          </div>
+            <div style={{ display: 'grid', gap: 2, textAlign: 'left' }}>
+              <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: '0.68rem' }}>
+                {persona.role}
+              </span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{persona.name}</span>
+              {persona.meta && (
+                <span style={{ fontSize: '0.7rem', color: withOpacity('#FFFFFF', 0.75) }}>{persona.meta}</span>
+              )}
+            </div>
+          </button>
+          {isUserMenuOpen && logoutAction && (
+            <div
+              role="menu"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                display: 'grid',
+                gap: 6,
+                padding: '10px 12px',
+                minWidth: 180,
+                borderRadius: 14,
+                background: withOpacity('#0F172A', 0.92),
+                border: `1px solid ${withOpacity('#FFFFFF', 0.18)}`,
+                boxShadow: '0 16px 32px rgba(15, 23, 42, 0.35)',
+              }}
+            >
+              <button
+                type="button"
+                data-testid="logout-button"
+                onClick={() => {
+                  logoutAction.onClick?.()
+                  setIsUserMenuOpen(false)
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  padding: '8px 10px',
+                  borderRadius: 10,
+                  background: 'transparent',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Uitloggen
+                <span aria-hidden>🚪</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
       {stage && (
