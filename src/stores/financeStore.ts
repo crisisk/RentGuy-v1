@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { api } from '@infra/http/api';
+import { mapUnknownToApiError } from '@errors';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
@@ -77,8 +78,7 @@ interface FinanceState {
   clearError: () => void;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
-const FINANCE_BASE = `${API_BASE.replace(/\/$/, '')}/finance`;
+const FINANCE_BASE = '/api/v1/finance';
 
 const generateId = () => Math.random().toString(36).slice(2, 11);
 
@@ -89,6 +89,11 @@ const ensureLineItems = (items: InvoiceLineItem[] = []): InvoiceLineItem[] =>
     quantity: item.quantity,
     unitPrice: item.unitPrice,
   }));
+
+function resolveError(error: unknown, fallback: string): string {
+  const mapped = mapUnknownToApiError(error);
+  return mapped.message || fallback;
+}
 
 const mapInvoiceResponse = (payload: any): Invoice => ({
   id: String(payload.id ?? payload.invoice_id ?? generateId()),
@@ -191,12 +196,12 @@ export const useFinanceStore = create<FinanceState>()(
     fetchInvoices: async () => {
       set({ loading: true, error: null });
       try {
-        const response = await axios.get(`${FINANCE_BASE}/invoices`);
+        const response = await api.get(`${FINANCE_BASE}/invoices`);
         const invoices = (Array.isArray(response.data) ? response.data : []).map(mapInvoiceResponse);
         set({ invoices, loading: false });
         return invoices;
-      } catch (error: any) {
-        const message = error?.response?.data?.message || 'Failed to fetch invoices';
+      } catch (error) {
+        const message = resolveError(error, 'Failed to fetch invoices');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -210,7 +215,7 @@ export const useFinanceStore = create<FinanceState>()(
 
       set({ loading: true, error: null });
       try {
-        const response = await axios.get(`${FINANCE_BASE}/invoices/${id}`);
+        const response = await api.get(`${FINANCE_BASE}/invoices/${id}`);
         const invoice = mapInvoiceResponse(response.data);
         set((state) => {
           state.invoices.push(invoice);
@@ -229,7 +234,7 @@ export const useFinanceStore = create<FinanceState>()(
           }
         }
 
-        const message = error?.response?.data?.message || 'Failed to load invoice';
+        const message = resolveError(error, 'Failed to load invoice');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -239,7 +244,7 @@ export const useFinanceStore = create<FinanceState>()(
       set({ loading: true, error: null });
       try {
         const payload = toInvoiceRequest(invoice);
-        const response = await axios.post(`${FINANCE_BASE}/invoices`, payload);
+        const response = await api.post(`${FINANCE_BASE}/invoices`, payload);
         const created = mapInvoiceResponse(response.data);
         created.lineItems = ensureLineItems(invoice.lineItems);
         set((state) => {
@@ -247,8 +252,8 @@ export const useFinanceStore = create<FinanceState>()(
           state.loading = false;
         });
         return created;
-      } catch (error: any) {
-        const message = error?.response?.data?.message || 'Failed to create invoice';
+      } catch (error) {
+        const message = resolveError(error, 'Failed to create invoice');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -258,7 +263,7 @@ export const useFinanceStore = create<FinanceState>()(
       set({ loading: true, error: null });
       try {
         const payload = toInvoiceRequest(invoice);
-        const response = await axios.put(`${FINANCE_BASE}/invoices/${id}`, payload);
+        const response = await api.put(`${FINANCE_BASE}/invoices/${id}`, payload);
         const updated = mapInvoiceResponse(response.data);
         updated.lineItems = ensureLineItems(invoice.lineItems);
         set((state) => {
@@ -271,8 +276,8 @@ export const useFinanceStore = create<FinanceState>()(
           state.loading = false;
         });
         return updated;
-      } catch (error: any) {
-        const message = error?.response?.data?.message || 'Failed to update invoice';
+      } catch (error) {
+        const message = resolveError(error, 'Failed to update invoice');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -281,13 +286,13 @@ export const useFinanceStore = create<FinanceState>()(
     deleteInvoice: async (id) => {
       set({ loading: true, error: null });
       try {
-        await axios.delete(`${FINANCE_BASE}/invoices/${id}`);
+        await api.delete(`${FINANCE_BASE}/invoices/${id}`);
         set((state) => {
           state.invoices = state.invoices.filter((invoice) => invoice.id !== id);
           state.loading = false;
         });
-      } catch (error: any) {
-        const message = error?.response?.data?.message || 'Failed to delete invoice';
+      } catch (error) {
+        const message = resolveError(error, 'Failed to delete invoice');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -296,12 +301,12 @@ export const useFinanceStore = create<FinanceState>()(
     fetchQuotes: async () => {
       set({ loading: true, error: null });
       try {
-        const response = await axios.get(`${FINANCE_BASE}/quotes`);
+        const response = await api.get(`${FINANCE_BASE}/quotes`);
         const quotes = (Array.isArray(response.data) ? response.data : []).map(mapQuoteResponse);
         set({ quotes, loading: false });
         return quotes;
-      } catch (error: any) {
-        const message = error?.response?.data?.message || 'Failed to fetch quotes';
+      } catch (error) {
+        const message = resolveError(error, 'Failed to fetch quotes');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -315,7 +320,7 @@ export const useFinanceStore = create<FinanceState>()(
     convertQuoteToInvoice: async (quoteId) => {
       set({ loading: true, error: null });
       try {
-        const response = await axios.post(`${FINANCE_BASE}/quotes/${quoteId}/convert`);
+        const response = await api.post(`${FINANCE_BASE}/quotes/${quoteId}/convert`);
         const invoice = mapInvoiceResponse(response.data);
         set((state) => {
           state.invoices.push(invoice);
@@ -327,8 +332,8 @@ export const useFinanceStore = create<FinanceState>()(
           state.loading = false;
         });
         return invoice.id;
-      } catch (error: any) {
-        const message = error?.response?.data?.message || 'Failed to convert quote';
+      } catch (error) {
+        const message = resolveError(error, 'Failed to convert quote');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -337,12 +342,12 @@ export const useFinanceStore = create<FinanceState>()(
     fetchPayments: async () => {
       set({ loading: true, error: null });
       try {
-        const response = await axios.get(`${FINANCE_BASE}/payments`);
+        const response = await api.get(`${FINANCE_BASE}/payments`);
         const payments = (Array.isArray(response.data) ? response.data : []).map(mapPaymentResponse);
         set({ payments, loading: false });
         return payments;
-      } catch (error: any) {
-        const message = error?.response?.data?.message || 'Failed to fetch payments';
+      } catch (error) {
+        const message = resolveError(error, 'Failed to fetch payments');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -351,7 +356,7 @@ export const useFinanceStore = create<FinanceState>()(
     recordPayment: async (payment) => {
       set({ loading: true, error: null });
       try {
-        const response = await axios.post(`${FINANCE_BASE}/payments`, {
+        const response = await api.post(`${FINANCE_BASE}/payments`, {
           amount: payment.amount,
           invoice_id: payment.invoiceId,
           method: payment.method,
@@ -362,8 +367,8 @@ export const useFinanceStore = create<FinanceState>()(
           state.loading = false;
         });
         return created;
-      } catch (error: any) {
-        const message = error?.response?.data?.message || 'Failed to record payment';
+      } catch (error) {
+        const message = resolveError(error, 'Failed to record payment');
         set({ error: message, loading: false });
         throw new Error(message);
       }
@@ -372,7 +377,7 @@ export const useFinanceStore = create<FinanceState>()(
     getFinanceStats: async () => {
       set({ loading: true, error: null });
       try {
-        const response = await axios.get(`${FINANCE_BASE}/stats`);
+        const response = await api.get(`${FINANCE_BASE}/stats`);
         const invoices = get().invoices;
         const stats = deriveStatsFromInvoices(invoices);
         const revenue = Number(response.data?.revenue ?? stats.monthlyRevenue);
@@ -383,7 +388,9 @@ export const useFinanceStore = create<FinanceState>()(
         };
         set({ stats: enrichedStats, loading: false });
         return enrichedStats;
-      } catch {
+      } catch (error) {
+        const message = resolveError(error, 'Failed to load finance stats');
+        set({ error: message, loading: false });
         const invoices = get().invoices;
         const stats = deriveStatsFromInvoices(invoices);
         set({ stats, loading: false });

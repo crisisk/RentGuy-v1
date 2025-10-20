@@ -1,4 +1,5 @@
-import axios from 'axios';
+import { api } from '@infra/http/api';
+import { mapUnknownToApiError } from '@errors';
 import { create } from 'zustand';
 import { produce } from 'immer';
 export interface CrewMember {
@@ -38,6 +39,12 @@ interface CrewActions {
   submitTimeApproval: (data: Omit<TimeApproval, 'id' | 'status' | 'submittedAt'>) => Promise<void>;
   approveTime: (id: string) => Promise<void>;
 }
+const CREW_BASE_PATH = '/api/v1/crew';
+
+function resolveError(error: unknown): string {
+  return mapUnknownToApiError(error).message;
+}
+
 const useCrewStore = create<CrewState & CrewActions>((set) => ({
   crew: [],
   shifts: [],
@@ -51,20 +58,14 @@ const useCrewStore = create<CrewState & CrewActions>((set) => ({
     }));
     
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/crew/members');
+      const response = await api.get(`${CREW_BASE_PATH}/members`);
       set(produce((state: CrewState) => {
-        state.crew = response.data;
+        state.crew = Array.isArray(response.data) ? response.data : [];
         state.loading = false;
       }));
     } catch (error) {
-      let errorMessage = 'Failed to fetch crew';
-      if (axios.isAxiosError(error)) {
-        if (!error.response) errorMessage = error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
       set(produce((state: CrewState) => {
-        state.error = errorMessage;
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -75,20 +76,16 @@ const useCrewStore = create<CrewState & CrewActions>((set) => ({
       state.error = null;
     }));
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/crew/members', data);
+      const response = await api.post(`${CREW_BASE_PATH}/members`, data);
       set(produce((state: CrewState) => {
-        state.crew.push(response.data);
+        if (response.data) {
+          state.crew.push(response.data);
+        }
         state.loading = false;
       }));
     } catch (error) {
-      let errorMessage = 'Failed to create crew member';
-      if (axios.isAxiosError(error)) {
-        if (!error.response) errorMessage = error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
       set(produce((state: CrewState) => {
-        state.error = errorMessage;
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -99,20 +96,16 @@ const useCrewStore = create<CrewState & CrewActions>((set) => ({
       state.error = null;
     }));
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/crew/shifts', data);
+      const response = await api.post(`${CREW_BASE_PATH}/shifts`, data);
       set(produce((state: CrewState) => {
-        state.shifts.push(response.data);
+        if (response.data) {
+          state.shifts.push(response.data);
+        }
         state.loading = false;
       }));
     } catch (error) {
-      let errorMessage = 'Failed to assign shift';
-      if (axios.isAxiosError(error)) {
-        if (!error.response) errorMessage = error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
       set(produce((state: CrewState) => {
-        state.error = errorMessage;
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -123,20 +116,16 @@ const useCrewStore = create<CrewState & CrewActions>((set) => ({
       state.error = null;
     }));
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/crew/time-approvals', data);
+      const response = await api.post(`${CREW_BASE_PATH}/time-approvals`, data);
       set(produce((state: CrewState) => {
-        state.timeApprovals.push(response.data);
+        if (response.data) {
+          state.timeApprovals.push(response.data);
+        }
         state.loading = false;
       }));
     } catch (error) {
-      let errorMessage = 'Failed to submit time approval';
-      if (axios.isAxiosError(error)) {
-        if (!error.response) errorMessage = error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
       set(produce((state: CrewState) => {
-        state.error = errorMessage;
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -147,21 +136,15 @@ const useCrewStore = create<CrewState & CrewActions>((set) => ({
       state.error = null;
     }));
     try {
-      await axios.patch(`http://localhost:8000/api/v1/crew/time-approvals/${id}/approve`);
+      await api.patch(`${CREW_BASE_PATH}/time-approvals/${id}/approve`);
       set(produce((state: CrewState) => {
         const approval = state.timeApprovals.find(a => a.id === id);
         if (approval) approval.status = 'approved';
         state.loading = false;
       }));
     } catch (error) {
-      let errorMessage = 'Failed to approve time';
-      if (axios.isAxiosError(error)) {
-        if (!error.response) errorMessage = error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
       set(produce((state: CrewState) => {
-        state.error = errorMessage;
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
