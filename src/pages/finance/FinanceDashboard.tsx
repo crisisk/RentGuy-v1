@@ -1,146 +1,172 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import financeStore from '../../stores/financeStore';
+import { useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { useFinanceStore } from '@stores/financeStore'
 
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  status: 'pending' | 'paid';
-  dueDate: string;
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('nl-NL', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(value)
 }
 
-interface RevenueStats {
-  monthlyRevenue: number;
-  pendingInvoicesTotal: number;
-  paidInvoicesTotal: number;
+function formatDate(value: string): string {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+  return parsed.toLocaleDateString('nl-NL', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+const statusPalette: Record<string, string> = {
+  paid: 'bg-green-100 text-green-800',
+  pending: 'bg-amber-100 text-amber-800',
+  sent: 'bg-blue-100 text-blue-800',
+  draft: 'bg-slate-100 text-slate-700',
+  overdue: 'bg-red-100 text-red-800',
 }
 
 const FinanceDashboard: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [stats, setStats] = useState<RevenueStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+  const invoices = useFinanceStore(state => state.invoices)
+  const metrics = useFinanceStore(state => state.dashboardMetrics)
+  const dashboardLoading = useFinanceStore(state => state.loading.dashboard)
+  const invoiceLoading = useFinanceStore(state => state.loading.invoices)
+  const error = useFinanceStore(state => state.error)
+  const getDashboardData = useFinanceStore(state => state.getDashboardData)
 
   useEffect(() => {
-    const fetchFinanceData = async () => {
-      try {
-        setLoading(true);
-        const financeData = await financeStore.getDashboardData();
-        setInvoices(financeData.invoices);
-        setStats(financeData.stats);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load finance data');
-        setLoading(false);
-      }
-    };
+    void getDashboardData()
+  }, [getDashboardData])
 
-    fetchFinanceData();
-  }, []);
+  const isLoading = dashboardLoading || invoiceLoading
+  const recentInvoices = useMemo(() => invoices.slice(0, 8), [invoices])
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
+      <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-blue-500" />
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+      <div
+        className="mx-auto mt-10 max-w-2xl rounded-lg border border-red-200 bg-red-50 p-4 text-red-700"
+        role="alert"
+      >
         {error}
       </div>
-    );
+    )
   }
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-8">
-      <h1 className="text-3xl font-bold mb-6">Finance Dashboard</h1>
-
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-2">Monthly Revenue</h2>
-            <p className="text-2xl font-bold text-green-600">
-              {formatCurrency(stats.monthlyRevenue)}
-            </p>
-          </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-2">Pending Invoices</h2>
-            <p className="text-2xl font-bold text-yellow-600">
-              {formatCurrency(stats.pendingInvoicesTotal)}
-            </p>
-          </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-2">Paid Invoices</h2>
-            <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(stats.paidInvoicesTotal)}
-            </p>
-          </div>
+      <header className="mb-8 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Finance Dashboard</h1>
+          <p className="text-sm text-slate-500">
+            Overzicht van facturatieprestaties, lopende omzet en recente betalingen.
+          </p>
         </div>
+        <Link
+          to="/invoices/new"
+          className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          Nieuwe factuur
+        </Link>
+      </header>
+
+      {metrics && (
+        <section className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <article className="rounded-xl bg-white p-6 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Maandelijkse omzet</h2>
+            <p className="mt-3 text-3xl font-bold text-slate-900">{formatCurrency(metrics.monthlyRevenue)}</p>
+            <p className="mt-1 text-xs text-slate-500">Bevestigde betalingen in de huidige kalendermaand.</p>
+          </article>
+          <article className="rounded-xl bg-white p-6 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Openstaand</h2>
+            <p className="mt-3 text-3xl font-bold text-amber-600">{formatCurrency(metrics.pendingInvoicesTotal)}</p>
+            <p className="mt-1 text-xs text-slate-500">Facturen met status concept, verzonden of wachtend op betaling.</p>
+          </article>
+          <article className="rounded-xl bg-white p-6 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Ontvangen</h2>
+            <p className="mt-3 text-3xl font-bold text-emerald-600">{formatCurrency(metrics.paidInvoicesTotal)}</p>
+            <p className="mt-1 text-xs text-slate-500">Som van alle facturen met status betaald.</p>
+          </article>
+        </section>
       )}
 
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left">Client</th>
-              <th className="px-4 py-3 text-left">Amount</th>
-              <th className="px-4 py-3 text-left">Due Date</th>
-              <th className="px-4 py-3 text-left">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((invoice) => (
-              <tr key={invoice.id} className="border-b">
-                <td className="px-4 py-3">{invoice.clientName}</td>
-                <td className="px-4 py-3">{formatCurrency(invoice.amount)}</td>
-                <td className="px-4 py-3">{formatDate(invoice.dueDate)}</td>
-                <td className="px-4 py-3">
-                  <span 
-                    className={`px-2 py-1 rounded text-xs ${
-                      invoice.status === 'pending' 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-green-100 text-green-800'
-                    }`}
-                  >
-                    {invoice.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Link 
-                    to={`/invoices/${invoice.id}`} 
-                    className="text-blue-500 hover:underline"
-                  >
-                    View
-                  </Link>
-                </td>
+      <section className="rounded-xl bg-white shadow-sm">
+        <header className="flex items-center justify-between border-b border-slate-100 px-4 py-4">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Recente facturen</h2>
+            <p className="text-xs text-slate-500">Laatste acht facturen met status- en vervaldatuminformatie.</p>
+          </div>
+          <Link to="/invoices" className="text-sm font-semibold text-blue-600 hover:underline">
+            Bekijk alle facturen
+          </Link>
+        </header>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-100">
+            <thead className="bg-slate-50">
+              <tr>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Klant
+                </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Bedrag
+                </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Vervaldatum
+                </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Status
+                </th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Actie
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {recentInvoices.map(invoice => {
+                const badgeClass = statusPalette[invoice.status] ?? 'bg-slate-100 text-slate-700'
+                return (
+                  <tr key={invoice.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm text-slate-700">{invoice.clientName}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-slate-900">
+                      {formatCurrency(invoice.totalGross)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(invoice.dueAt)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+                        {invoice.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm">
+                      <Link to={`/invoices/${invoice.id}`} className="font-semibold text-blue-600 hover:underline">
+                        Details
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+              {recentInvoices.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
+                    Er zijn nog geen facturen beschikbaar.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
-  );
-};
+  )
+}
 
-export default FinanceDashboard;
+export default FinanceDashboard

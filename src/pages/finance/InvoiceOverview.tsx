@@ -1,133 +1,145 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import store from '../../stores/financeStore';
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useFinanceStore } from '@stores/financeStore'
 
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  date: string;
-  status: 'paid' | 'pending' | 'overdue';
+const statusClasses: Record<string, string> = {
+  paid: 'bg-emerald-100 text-emerald-800',
+  pending: 'bg-amber-100 text-amber-800',
+  overdue: 'bg-red-100 text-red-800',
+  sent: 'bg-blue-100 text-blue-800',
+  draft: 'bg-slate-100 text-slate-700',
+}
+
+function formatDate(value: string): string {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+  return parsed.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const InvoiceOverview: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [clientNameFilter, setClientNameFilter] = useState<string>('');
-  const navigate = useNavigate();
+  const invoices = useFinanceStore(state => state.invoices)
+  const fetchInvoices = useFinanceStore(state => state.fetchInvoices)
+  const loading = useFinanceStore(state => state.loading.invoices)
+  const error = useFinanceStore(state => state.error)
+  const clearError = useFinanceStore(state => state.clearError)
+  const navigate = useNavigate()
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'overdue' | 'sent' | 'draft'>('all')
+  const [clientNameFilter, setClientNameFilter] = useState('')
 
   useEffect(() => {
-    store.fetchInvoices()
-      .then((data: Invoice[]) => {
-        setInvoices(data);
-        setIsLoading(false);
-      })
-      .catch((err: Error) => {
-        setError(err.message);
-        setIsLoading(false);
-      });
-  }, []);
-
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-    const matchesName = invoice.clientName.toLowerCase().includes(clientNameFilter.toLowerCase());
-    return matchesStatus && matchesName;
-  });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-  };
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+    void fetchInvoices()
+    return () => {
+      clearError()
     }
-  };
+  }, [fetchInvoices, clearError])
 
-  if (isLoading) return <div className="p-4 text-center">Loading invoices...</div>;
-  if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
+  const filteredInvoices = useMemo(() => {
+    const lowerCaseFilter = clientNameFilter.trim().toLowerCase()
+    return invoices.filter(invoice => {
+      const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter
+      const matchesClient = lowerCaseFilter
+        ? invoice.clientName.toLowerCase().includes(lowerCaseFilter)
+        : true
+      return matchesStatus && matchesClient
+    })
+  }, [invoices, statusFilter, clientNameFilter])
+
+  if (loading) {
+    return <div className="p-6 text-center text-sm text-slate-500">Facturen worden geladen…</div>
+  }
+
+  if (error) {
+    return <div className="p-6 text-center text-sm text-red-600">Fout bij het laden van facturen: {error}</div>
+  }
 
   return (
     <div className="p-4 md:p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Invoice Overview</h1>
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Facturen</h1>
+          <p className="text-sm text-slate-500">Filter op klantnaam of status om snel de juiste factuur te vinden.</p>
+        </div>
         <Link
           to="/invoices/new"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
         >
-          New Invoice
+          Nieuwe factuur
         </Link>
       </div>
 
-      <div className="mb-6 flex flex-col md:flex-row gap-4">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
         <input
           type="text"
-          placeholder="Filter by client name..."
-          className="p-2 border rounded flex-grow"
+          placeholder="Zoek op klantnaam"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={clientNameFilter}
-          onChange={(e) => setClientNameFilter(e.target.value)}
+          onChange={event => setClientNameFilter(event.target.value)}
         />
         <select
-          className="p-2 border rounded"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm md:w-56"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={event => setStatusFilter(event.target.value as typeof statusFilter)}
         >
-          <option value="all">All Statuses</option>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-          <option value="overdue">Overdue</option>
+          <option value="all">Alle statussen</option>
+          <option value="paid">Betaald</option>
+          <option value="pending">Openstaand</option>
+          <option value="overdue">Achterstallig</option>
+          <option value="sent">Verzonden</option>
+          <option value="draft">Concept</option>
         </select>
       </div>
 
-      <div className="rounded-lg border overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+          <table className="w-full divide-y divide-slate-100">
+            <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Client</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Klant</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Bedrag</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Factuurdatum</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Acties</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
-              {filteredInvoices.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td className="px-4 py-3">{invoice.clientName}</td>
-                  <td className="px-4 py-3">${invoice.amount.toFixed(2)}</td>
-                  <td className="px-4 py-3">{formatDate(invoice.date)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded text-sm ${getStatusClass(invoice.status)}`}>
+            <tbody className="divide-y divide-slate-100">
+              {filteredInvoices.map(invoice => (
+                <tr key={invoice.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-sm text-slate-700">{invoice.clientName}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-slate-900">
+                    {invoice.totalGross.toLocaleString('nl-NL', { style: 'currency', currency: invoice.currency })}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(invoice.issuedAt)}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClasses[invoice.status] ?? 'bg-slate-100 text-slate-700'}`}>
                       {invoice.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm">
                     <button
+                      type="button"
                       onClick={() => navigate(`/invoices/${invoice.id}`)}
-                      className="text-blue-500 hover:underline"
+                      className="font-semibold text-blue-600 hover:underline"
                     >
-                      View
+                      Bekijken
                     </button>
                   </td>
                 </tr>
               ))}
+              {filteredInvoices.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
+                    Geen facturen gevonden voor de huidige filters.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-
-        {filteredInvoices.length === 0 && (
-          <div className="p-4 text-center text-gray-500">No invoices found</div>
-        )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default InvoiceOverview;
+export default InvoiceOverview
