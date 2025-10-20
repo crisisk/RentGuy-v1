@@ -1,96 +1,117 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import financeStore from '../../stores/financeStore';
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import financeStore, {
+  type Invoice,
+  type InvoiceUpsertPayload,
+} from '../../stores/financeStore'
 
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
+type EditableLineItem = {
+  id: string
+  description: string
+  quantity: number
+  unitPrice: number
 }
 
 const InvoiceForm: React.FC = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>()
+  const navigate = useNavigate()
 
-  const [clientName, setClientName] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [clientName, setClientName] = useState('')
+  const [invoiceDate, setInvoiceDate] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [lineItems, setLineItems] = useState<EditableLineItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const generateUniqueId = () => Math.random().toString(36).substr(2, 9);
+  const generateUniqueId = () => Math.random().toString(36).slice(2, 11)
 
   const addLineItem = () => {
-    const newLineItem: LineItem = {
+    const newLineItem: EditableLineItem = {
       id: generateUniqueId(),
       description: '',
       quantity: 1,
-      unitPrice: 0
-    };
-    setLineItems([...lineItems, newLineItem]);
-  };
+      unitPrice: 0,
+    }
+    setLineItems(previous => [...previous, newLineItem])
+  }
 
-  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
-    const updatedItems = lineItems.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    );
-    setLineItems(updatedItems);
-  };
+  const updateLineItem = (lineId: string, field: keyof EditableLineItem, value: string | number) => {
+    setLineItems(previous =>
+      previous.map(item =>
+        item.id === lineId ? { ...item, [field]: field === 'description' ? value : Number(value) } : item,
+      ),
+    )
+  }
 
-  const removeLineItem = (id: string) => {
-    setLineItems(lineItems.filter(item => item.id !== id));
-  };
+  const removeLineItem = (lineId: string) => {
+    setLineItems(previous => previous.filter(item => item.id !== lineId))
+  }
 
   const calculateTotal = () => {
-    return lineItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
-  };
+    return lineItems.reduce((total, item) => total + item.quantity * item.unitPrice, 0)
+  }
+
+  const buildPayload = (): InvoiceUpsertPayload => ({
+    clientName,
+    invoiceDate,
+    dueDate,
+    lineItems: lineItems.map(item => ({
+      id: item.id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    })),
+    total: calculateTotal(),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
-      const invoiceData = {
-        clientName,
-        invoiceDate: new Date(invoiceDate),
-        dueDate: new Date(dueDate),
-        lineItems,
-        total: calculateTotal()
-      };
-
+      const invoiceData = buildPayload()
       if (id) {
-        await financeStore.updateInvoice(id, invoiceData);
+        await financeStore.updateInvoice(id, invoiceData)
       } else {
-        await financeStore.createInvoice(invoiceData);
+        await financeStore.createInvoice(invoiceData)
       }
-      navigate('/invoices');
+      navigate('/invoices')
     } catch (err) {
-      setError('Failed to save invoice');
+      setError(err instanceof Error ? err.message : 'Failed to save invoice')
     }
-  };
+  }
+
+  const applyInvoice = (invoice: Invoice) => {
+    setClientName(invoice.clientName)
+    setInvoiceDate(invoice.invoiceDate.slice(0, 10))
+    setDueDate(invoice.dueDate.slice(0, 10))
+    setLineItems(
+      invoice.lineItems.map(item => ({
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      })),
+    )
+  }
 
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
         if (id) {
-          const invoice = await financeStore.getInvoiceById(id);
-          setClientName(invoice.clientName);
-          setInvoiceDate(invoice.invoiceDate.toISOString().split('T')[0]);
-          setDueDate(invoice.dueDate.toISOString().split('T')[0]);
-          setLineItems(invoice.lineItems);
+          const invoice = await financeStore.getInvoiceById(id)
+          applyInvoice(invoice)
         }
       } catch (err) {
-        setError('Failed to load invoice');
+        setError(err instanceof Error ? err.message : 'Failed to load invoice')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchInvoice();
-  }, [id]);
+    fetchInvoice()
+  }, [id])
 
-  if (loading) return <div className="p-4">Loading...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
+  if (loading) return <div className="p-4">Loading...</div>
+  if (error) return <div className="p-4 text-red-500">{error}</div>
 
   return (
     <div className="container mx-auto p-4">
@@ -101,7 +122,7 @@ const InvoiceForm: React.FC = () => {
             <input
               type="text"
               value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
+              onChange={event => setClientName(event.target.value)}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
               required
             />
@@ -115,7 +136,7 @@ const InvoiceForm: React.FC = () => {
               <input
                 type="date"
                 value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
+                onChange={event => setInvoiceDate(event.target.value)}
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
                 required
               />
@@ -127,7 +148,7 @@ const InvoiceForm: React.FC = () => {
               <input
                 type="date"
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={event => setDueDate(event.target.value)}
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
                 required
               />
@@ -137,8 +158,8 @@ const InvoiceForm: React.FC = () => {
 
         <div className="mb-4">
           <h3 className="text-lg font-bold mb-2">Line Items</h3>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={addLineItem}
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2"
           >
@@ -162,7 +183,7 @@ const InvoiceForm: React.FC = () => {
                     <input
                       type="text"
                       value={item.description}
-                      onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                      onChange={event => updateLineItem(item.id, 'description', event.target.value)}
                       className="w-full"
                       required
                     />
@@ -171,7 +192,7 @@ const InvoiceForm: React.FC = () => {
                     <input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => updateLineItem(item.id, 'quantity', Number(e.target.value))}
+                      onChange={event => updateLineItem(item.id, 'quantity', event.target.value)}
                       className="w-full"
                       min="1"
                       required
@@ -181,7 +202,7 @@ const InvoiceForm: React.FC = () => {
                     <input
                       type="number"
                       value={item.unitPrice}
-                      onChange={(e) => updateLineItem(item.id, 'unitPrice', Number(e.target.value))}
+                      onChange={event => updateLineItem(item.id, 'unitPrice', event.target.value)}
                       className="w-full"
                       min="0"
                       step="0.01"
@@ -220,7 +241,7 @@ const InvoiceForm: React.FC = () => {
         </div>
       </form>
     </div>
-  );
-};
+  )
+}
 
-export default InvoiceForm;
+export default InvoiceForm

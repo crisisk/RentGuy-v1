@@ -1,66 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import financeStore from '../../stores/financeStore';
-
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  status: 'pending' | 'paid';
-  dueDate: string;
-}
-
-interface RevenueStats {
-  monthlyRevenue: number;
-  pendingInvoicesTotal: number;
-  paidInvoicesTotal: number;
-}
+import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import financeStore, { type FinanceDashboardData, type Invoice } from '../../stores/financeStore'
 
 const FinanceDashboard: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [stats, setStats] = useState<RevenueStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [stats, setStats] = useState<FinanceDashboardData['stats'] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+      currency: 'USD',
+    }).format(amount)
+  }
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
-    });
-  };
+      year: 'numeric',
+    })
+  }
 
   useEffect(() => {
     const fetchFinanceData = async () => {
       try {
-        setLoading(true);
-        const financeData = await financeStore.getDashboardData();
-        setInvoices(financeData.invoices);
-        setStats(financeData.stats);
-        setLoading(false);
+        setLoading(true)
+        const financeData = await financeStore.getDashboardData()
+        setInvoices(financeData.invoices)
+        setStats(financeData.stats)
+        setError(null)
       } catch (err) {
-        setError('Failed to load finance data');
-        setLoading(false);
+        setError(err instanceof Error ? err.message : 'Failed to load finance data')
+      } finally {
+        setLoading(false)
       }
-    };
+    }
 
-    fetchFinanceData();
-  }, []);
+    fetchFinanceData()
+  }, [])
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500" />
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -68,7 +55,7 @@ const FinanceDashboard: React.FC = () => {
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
         {error}
       </div>
-    );
+    )
   }
 
   return (
@@ -110,25 +97,27 @@ const FinanceDashboard: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {invoices.map((invoice) => (
+            {invoices.map(invoice => (
               <tr key={invoice.id} className="border-b">
                 <td className="px-4 py-3">{invoice.clientName}</td>
                 <td className="px-4 py-3">{formatCurrency(invoice.amount)}</td>
                 <td className="px-4 py-3">{formatDate(invoice.dueDate)}</td>
                 <td className="px-4 py-3">
-                  <span 
+                  <span
                     className={`px-2 py-1 rounded text-xs ${
-                      invoice.status === 'pending' 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-green-100 text-green-800'
+                      invoice.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : invoice.status === 'overdue'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'
                     }`}
                   >
                     {invoice.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link 
-                    to={`/invoices/${invoice.id}`} 
+                  <Link
+                    to={`/invoices/${invoice.id}`}
                     className="text-blue-500 hover:underline"
                   >
                     View
@@ -140,7 +129,7 @@ const FinanceDashboard: React.FC = () => {
         </table>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default FinanceDashboard;
+export default FinanceDashboard

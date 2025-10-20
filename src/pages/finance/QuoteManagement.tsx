@@ -1,61 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import FinanceStore from '../../stores/financeStore';
-
-interface Quote {
-  id: string;
-  number: string;
-  client: string;
-  amount: number;
-  date: string;
-  status: 'draft' | 'sent' | 'converted';
-}
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import financeStore, { type Quote } from '../../stores/financeStore'
 
 const QuoteManagement = () => {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const store = FinanceStore();
+  const [quotes, setQuotes] = useState<Quote[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const loadQuotes = async () => {
       try {
-        const data = await store.getQuotes();
-        setQuotes(data);
+        const data = await financeStore.getQuotes()
+        setQuotes(data)
+        setError(null)
       } catch (err) {
-        setError('Failed to load quotes');
+        setError(err instanceof Error ? err.message : 'Failed to load quotes')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    loadQuotes();
-  }, []);
+    }
+    loadQuotes()
+  }, [])
 
   const handleConvert = async (quoteId: string) => {
     try {
-      const invoiceId = await store.convertQuoteToInvoice(quoteId);
-      navigate(`/invoices/${invoiceId}`);
+      const invoice = await financeStore.convertQuoteToInvoice(quoteId)
+      navigate(`/invoices/${invoice.id}`)
     } catch (err) {
-      setError('Failed to convert quote to invoice');
+      setError(err instanceof Error ? err.message : 'Failed to convert quote to invoice')
     }
-  };
+  }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
-    });
-  };
+      day: 'numeric',
+    })
+  }
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -63,7 +54,7 @@ const QuoteManagement = () => {
       <div className="p-4 text-red-500 bg-red-100 rounded-lg">
         {error}
       </div>
-    );
+    )
   }
 
   return (
@@ -90,11 +81,9 @@ const QuoteManagement = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{quote.number}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{quote.client}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(quote.date)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                  ${quote.amount.toLocaleString()}
-                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${quote.amount.toLocaleString()}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                     ${quote.status === 'converted' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                     {quote.status}
                   </span>
@@ -103,9 +92,9 @@ const QuoteManagement = () => {
                   <button
                     onClick={() => handleConvert(quote.id)}
                     disabled={quote.status === 'converted'}
-                    className={`px-3 py-1 rounded-md text-sm font-medium 
-                      ${quote.status === 'converted' 
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                    className={`px-3 py-1 rounded-md text-sm font-medium
+                      ${quote.status === 'converted'
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                         : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
                   >
                     Convert
@@ -117,7 +106,7 @@ const QuoteManagement = () => {
         </table>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default QuoteManagement;
+export default QuoteManagement
