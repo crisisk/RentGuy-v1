@@ -211,10 +211,15 @@ class CRMService:
             .all()
         )
 
-    def dashboard_metrics(self) -> dict[str, object]:
+    def dashboard_metrics(self, lookback_days: int | None = None) -> dict[str, object]:
+        configured_lookback = getattr(settings, "CRM_ANALYTICS_LOOKBACK_DAYS", 30) or 30
+        if configured_lookback <= 0:
+            configured_lookback = 30
+
+        active_lookback = lookback_days if lookback_days and lookback_days > 0 else configured_lookback
+
         now = datetime.utcnow()
-        lookback_days = 30
-        window_start = now - timedelta(days=lookback_days)
+        window_start = now - timedelta(days=active_lookback)
         forecast_end = now + timedelta(days=30)
 
         lead_query = (
@@ -403,7 +408,7 @@ class CRMService:
             active_connectors.append("gtm")
 
         acquisition_metrics = {
-            "lookback_days": lookback_days,
+            "lookback_days": active_lookback,
             "ga_sessions": total_ga_sessions,
             "ga_new_users": total_ga_new_users,
             "ga_engaged_sessions": total_ga_engaged,
@@ -421,7 +426,7 @@ class CRMService:
             (total_pipeline_value / Decimal(total_deals)) if total_deals else None
         )
         pipeline_velocity = (
-            (won_value_last_30 / Decimal(lookback_days)) if lookback_days else Decimal(0)
+            (won_value_last_30 / Decimal(active_lookback)) if active_lookback else Decimal(0)
         )
 
         sales_metrics = {
