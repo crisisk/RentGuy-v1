@@ -1,6 +1,7 @@
 import create from 'zustand';
 import { produce } from 'immer';
-import axios, { AxiosError } from 'axios';
+import { api } from '@infra/http/api';
+import { mapUnknownToApiError } from '@errors';
 export interface Customer {
   id?: number;
   name: string;
@@ -27,6 +28,12 @@ export interface CRMState {
   fetchActivities: (customerId?: number) => Promise<void>;
   createActivity: (activity: Activity) => Promise<void>;
 }
+const CRM_BASE_PATH = '/api/v1/crm';
+
+function resolveError(error: unknown): string {
+  return mapUnknownToApiError(error).message;
+}
+
 export const crmStore = create<CRMState>((set) => ({
   customers: [],
   activities: [],
@@ -35,15 +42,14 @@ export const crmStore = create<CRMState>((set) => ({
   fetchCustomers: async () => {
     set(produce((state) => { state.loading = true; state.error = null; }));
     try {
-      const response = await axios.get('http://localhost:8000/api/v1/crm/customers');
-      set(produce((state) => { 
-        state.customers = response.data;
+      const response = await api.get(`${CRM_BASE_PATH}/customers`);
+      set(produce((state) => {
+        state.customers = Array.isArray(response.data) ? response.data : [];
         state.loading = false;
       }));
     } catch (error) {
-      const axiosError = error as AxiosError;
-      set(produce((state) => { 
-        state.error = axiosError.response?.data || axiosError.message || 'Fetch customers failed';
+      set(produce((state) => {
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -51,15 +57,16 @@ export const crmStore = create<CRMState>((set) => ({
   createCustomer: async (customer) => {
     set(produce((state) => { state.loading = true; state.error = null; }));
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/crm/customers', customer);
-      set(produce((state) => { 
-        state.customers.push(response.data);
+      const response = await api.post(`${CRM_BASE_PATH}/customers`, customer);
+      set(produce((state) => {
+        if (response.data) {
+          state.customers.push(response.data as Customer);
+        }
         state.loading = false;
       }));
     } catch (error) {
-      const axiosError = error as AxiosError;
-      set(produce((state) => { 
-        state.error = axiosError.response?.data || axiosError.message || 'Create customer failed';
+      set(produce((state) => {
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -67,16 +74,15 @@ export const crmStore = create<CRMState>((set) => ({
   updateCustomer: async (customer) => {
     set(produce((state) => { state.loading = true; state.error = null; }));
     try {
-      const response = await axios.put(`http://localhost:8000/api/v1/crm/customers/${customer.id}`, customer);
-      set(produce((state) => { 
+      const response = await api.put(`${CRM_BASE_PATH}/customers/${customer.id}`, customer);
+      set(produce((state) => {
         const index = state.customers.findIndex(c => c.id === customer.id);
-        if (index !== -1) state.customers[index] = response.data;
+        if (index !== -1 && response.data) state.customers[index] = response.data as Customer;
         state.loading = false;
       }));
     } catch (error) {
-      const axiosError = error as AxiosError;
-      set(produce((state) => { 
-        state.error = axiosError.response?.data || axiosError.message || 'Update customer failed';
+      set(produce((state) => {
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -84,15 +90,14 @@ export const crmStore = create<CRMState>((set) => ({
   deleteCustomer: async (customerId) => {
     set(produce((state) => { state.loading = true; state.error = null; }));
     try {
-      await axios.delete(`http://localhost:8000/api/v1/crm/customers/${customerId}`);
-      set(produce((state) => { 
+      await api.delete(`${CRM_BASE_PATH}/customers/${customerId}`);
+      set(produce((state) => {
         state.customers = state.customers.filter(c => c.id !== customerId);
         state.loading = false;
       }));
     } catch (error) {
-      const axiosError = error as AxiosError;
-      set(produce((state) => { 
-        state.error = axiosError.response?.data || axiosError.message || 'Delete customer failed';
+      set(produce((state) => {
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -100,18 +105,17 @@ export const crmStore = create<CRMState>((set) => ({
   fetchActivities: async (customerId) => {
     set(produce((state) => { state.loading = true; state.error = null; }));
     try {
-      const url = customerId 
-        ? `http://localhost:8000/api/v1/crm/activities?customerId=${customerId}`
-        : 'http://localhost:8000/api/v1/crm/activities';
-      const response = await axios.get(url);
-      set(produce((state) => { 
-        state.activities = response.data;
+      const url = customerId
+        ? `${CRM_BASE_PATH}/activities?customerId=${customerId}`
+        : `${CRM_BASE_PATH}/activities`;
+      const response = await api.get(url);
+      set(produce((state) => {
+        state.activities = Array.isArray(response.data) ? response.data : [];
         state.loading = false;
       }));
     } catch (error) {
-      const axiosError = error as AxiosError;
-      set(produce((state) => { 
-        state.error = axiosError.response?.data || axiosError.message || 'Fetch activities failed';
+      set(produce((state) => {
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
@@ -119,15 +123,16 @@ export const crmStore = create<CRMState>((set) => ({
   createActivity: async (activity) => {
     set(produce((state) => { state.loading = true; state.error = null; }));
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/crm/activities', activity);
-      set(produce((state) => { 
-        state.activities.push(response.data);
+      const response = await api.post(`${CRM_BASE_PATH}/activities`, activity);
+      set(produce((state) => {
+        if (response.data) {
+          state.activities.push(response.data as Activity);
+        }
         state.loading = false;
       }));
     } catch (error) {
-      const axiosError = error as AxiosError;
-      set(produce((state) => { 
-        state.error = axiosError.response?.data || axiosError.message || 'Create activity failed';
+      set(produce((state) => {
+        state.error = resolveError(error);
         state.loading = false;
       }));
     }
