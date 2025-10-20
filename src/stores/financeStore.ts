@@ -1,464 +1,411 @@
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import type {
-  FinanceDashboardData,
-  FinanceDashboardMetrics,
-  InvoiceDraftInput,
-  InvoiceRecord,
-  PaymentDraft,
-  PaymentRecord,
-  QuoteRecord,
-  InvoiceLineItem,
-} from '@rg-types/financeTypes'
+import axios from 'axios';
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
 
-const VAT_RATE = 0.21
+type InvoiceStatus = 'pending' | 'paid' | 'overdue' | 'draft' | string;
 
-interface FinanceLoadingState {
-  invoices: boolean
-  quotes: boolean
-  dashboard: boolean
-  payments: boolean
+export interface InvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface Invoice {
+  id: string;
+  clientName: string;
+  amount: number;
+  date: string;
+  dueDate?: string;
+  status: InvoiceStatus;
+  description?: string;
+  lineItems: InvoiceLineItem[];
+}
+
+export interface Quote {
+  id: string;
+  number: string;
+  client: string;
+  amount: number;
+  date: string;
+  status: 'draft' | 'sent' | 'converted' | string;
+  converted: boolean;
+}
+
+export interface Payment {
+  id: string;
+  amount: number;
+  invoiceId: string;
+  method: string;
+  processedAt?: string;
+}
+
+export interface FinanceStats {
+  monthlyRevenue: number;
+  pendingInvoicesTotal: number;
+  paidInvoicesTotal: number;
+}
+
+export interface InvoiceInput {
+  clientName: string;
+  invoiceDate: string | Date;
+  dueDate?: string | Date;
+  lineItems: InvoiceLineItem[];
+  total?: number;
+  description?: string;
 }
 
 interface FinanceState {
-  invoices: InvoiceRecord[]
-  quotes: QuoteRecord[]
-  payments: PaymentRecord[]
-  dashboardMetrics: FinanceDashboardMetrics | null
-  loading: FinanceLoadingState
-  error: string | null
-  fetchInvoices: () => Promise<InvoiceRecord[]>
-  getInvoiceById: (id: string) => Promise<InvoiceRecord>
-  createInvoice: (input: InvoiceDraftInput) => Promise<InvoiceRecord>
-  updateInvoice: (id: string, input: InvoiceDraftInput) => Promise<InvoiceRecord>
-  deleteInvoice: (id: string) => Promise<void>
-  fetchQuotes: () => Promise<QuoteRecord[]>
-  getQuotes: () => Promise<QuoteRecord[]>
-  convertQuoteToInvoice: (quoteId: string) => Promise<InvoiceRecord>
-  fetchPayments: () => Promise<PaymentRecord[]>
-  recordPayment: (payload: PaymentDraft) => Promise<PaymentRecord>
-  getDashboardData: () => Promise<FinanceDashboardData>
-  clearError: () => void
+  invoices: Invoice[];
+  quotes: Quote[];
+  payments: Payment[];
+  stats: FinanceStats | null;
+  loading: boolean;
+  error: string | null;
+  fetchInvoices: () => Promise<Invoice[]>;
+  getInvoiceById: (id: string) => Promise<Invoice | null>;
+  createInvoice: (invoice: InvoiceInput) => Promise<Invoice>;
+  updateInvoice: (id: string, invoice: InvoiceInput) => Promise<Invoice>;
+  deleteInvoice: (id: string) => Promise<void>;
+  fetchQuotes: () => Promise<Quote[]>;
+  getQuotes: () => Promise<Quote[]>;
+  convertQuoteToInvoice: (quoteId: string) => Promise<string>;
+  fetchPayments: () => Promise<Payment[]>;
+  recordPayment: (payment: Omit<Payment, 'id' | 'processedAt'>) => Promise<Payment>;
+  getFinanceStats: () => Promise<FinanceStats>;
+  getDashboardData: () => Promise<{ invoices: Invoice[]; stats: FinanceStats | null }>;
+  clearError: () => void;
 }
 
-function roundCurrency(value: number): number {
-  return Math.round(value * 100) / 100
-}
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const FINANCE_BASE = `${API_BASE.replace(/\/$/, '')}/finance`;
 
-function normaliseDate(value: string): string {
-  if (!value) {
-    return new Date().toISOString().slice(0, 10)
-  }
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) {
-    return value
-  }
-  return parsed.toISOString().slice(0, 10)
-}
+const generateId = () => Math.random().toString(36).slice(2, 11);
 
-function generateId(prefix: string): string {
-  const random = typeof globalThis.crypto?.randomUUID === 'function'
-    ? globalThis.crypto.randomUUID()
-    : Math.random().toString(36).slice(2, 10)
-  return `${prefix}-${random}`
-}
+const ensureLineItems = (items: InvoiceLineItem[] = []): InvoiceLineItem[] =>
+  items.map((item) => ({
+    id: item.id || generateId(),
+    description: item.description,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+  }));
 
-function cloneLineItems(items: InvoiceLineItem[]): InvoiceLineItem[] {
-  return items.map(item => ({ ...item }))
-}
+const mapInvoiceResponse = (payload: any): Invoice => ({
+  id: String(payload.id ?? payload.invoice_id ?? generateId()),
+  clientName: payload.clientName ?? payload.client ?? payload.client_name ?? 'Unknown client',
+  amount: Number(
+    payload.amount ?? payload.total_gross ?? payload.total_net ?? payload.total ?? 0,
+  ),
+  date: new Date(payload.date ?? payload.issued_at ?? Date.now()).toISOString(),
+  dueDate: payload.dueDate
+    ? new Date(payload.dueDate).toISOString()
+    : payload.due_at
+    ? new Date(payload.due_at).toISOString()
+    : undefined,
+  status: (payload.status ?? (payload.converted ? 'converted' : 'pending')) as InvoiceStatus,
+  description: payload.description ?? payload.reference ?? undefined,
+  lineItems: ensureLineItems(payload.lineItems ?? payload.line_items ?? []),
+});
 
-function buildInvoiceFromInput(id: string, input: InvoiceDraftInput, status: InvoiceRecord['status']): InvoiceRecord {
-  const issuedAt = normaliseDate(input.invoiceDate)
-  const dueAt = normaliseDate(input.dueDate)
-  const totalNet = roundCurrency(input.total)
-  const totalVat = roundCurrency(totalNet * VAT_RATE)
-  const totalGross = roundCurrency(totalNet + totalVat)
+const mapQuoteResponse = (payload: any): Quote => {
+  const id = String(payload.id ?? generateId());
+  const status: Quote['status'] =
+    (payload.status ?? (payload.converted ? 'converted' : 'draft')) ?? 'draft';
 
   return {
     id,
-    clientName: input.clientName,
-    issuedAt,
-    dueAt,
+    number:
+      payload.number ??
+      (payload.reference ? String(payload.reference) : `Q-${id.slice(-6).toUpperCase()}`),
+    client: payload.client ?? payload.clientName ?? payload.client_name ?? 'Unknown client',
+    amount: Number(payload.amount ?? payload.total ?? 0),
+    date: new Date(payload.date ?? payload.valid_until ?? Date.now()).toISOString(),
     status,
-    currency: input.currency ?? 'EUR',
-    lineItems: cloneLineItems(input.lineItems),
-    totalNet,
-    totalVat,
-    totalGross,
-    reference: input.reference ?? null,
-    projectId: input.projectId ?? null,
-  }
-}
+    converted: Boolean(payload.converted ?? status === 'converted'),
+  };
+};
 
-function computeDashboardMetrics(invoices: InvoiceRecord[], payments: PaymentRecord[]): FinanceDashboardMetrics {
-  const now = new Date()
-  const currentMonth = now.getMonth()
-  const currentYear = now.getFullYear()
+const mapPaymentResponse = (payload: any): Payment => ({
+  id: String(payload.id ?? generateId()),
+  amount: Number(payload.amount ?? 0),
+  invoiceId: String(payload.invoice_id ?? payload.invoiceId ?? ''),
+  method: payload.method ?? payload.provider ?? 'unknown',
+  processedAt: payload.processed_at
+    ? new Date(payload.processed_at).toISOString()
+    : payload.created_at
+    ? new Date(payload.created_at).toISOString()
+    : undefined,
+});
 
-  const monthlyRevenue = payments
-    .filter(payment => {
-      const processed = new Date(payment.processedAt)
-      if (Number.isNaN(processed.getTime())) {
-        return false
-      }
-      return (
-        payment.status === 'settled' &&
-        processed.getMonth() === currentMonth &&
-        processed.getFullYear() === currentYear
-      )
-    })
-    .reduce((total, payment) => total + payment.amount, 0)
-
+const deriveStatsFromInvoices = (invoices: Invoice[]): FinanceStats => {
   const pendingInvoicesTotal = invoices
-    .filter(invoice => invoice.status === 'pending' || invoice.status === 'sent' || invoice.status === 'draft')
-    .reduce((total, invoice) => total + invoice.totalGross, 0)
+    .filter((invoice) => invoice.status === 'pending')
+    .reduce((total, invoice) => total + invoice.amount, 0);
 
   const paidInvoicesTotal = invoices
-    .filter(invoice => invoice.status === 'paid')
-    .reduce((total, invoice) => total + invoice.totalGross, 0)
+    .filter((invoice) => invoice.status === 'paid' || invoice.status === 'completed')
+    .reduce((total, invoice) => total + invoice.amount, 0);
+
+  const monthlyRevenue = paidInvoicesTotal;
 
   return {
-    monthlyRevenue: roundCurrency(monthlyRevenue),
-    pendingInvoicesTotal: roundCurrency(pendingInvoicesTotal),
-    paidInvoicesTotal: roundCurrency(paidInvoicesTotal),
-  }
-}
+    monthlyRevenue,
+    pendingInvoicesTotal,
+    paidInvoicesTotal,
+  };
+};
 
-const initialInvoices: InvoiceRecord[] = [
-  buildInvoiceFromInput('INV-2025-001', {
-    clientName: 'Main Stage Events',
-    invoiceDate: '2025-01-04',
-    dueDate: '2025-01-18',
-    lineItems: [
-      { id: 'line-001', description: 'Stage lighting package', quantity: 4, unitPrice: 150 },
-      { id: 'line-002', description: 'Crew overtime (hours)', quantity: 12, unitPrice: 35 },
-    ],
-    total: 1020,
-    reference: 'PO-4587',
-  }, 'paid'),
-  buildInvoiceFromInput('INV-2025-002', {
-    clientName: 'City Festival BV',
-    invoiceDate: '2025-01-12',
-    dueDate: '2025-01-26',
-    lineItems: [
-      { id: 'line-003', description: 'Sound system rental', quantity: 2, unitPrice: 450 },
-      { id: 'line-004', description: 'Transport logistics', quantity: 1, unitPrice: 180 },
-    ],
-    total: 1080,
-    reference: 'CF-2025-11',
-  }, 'pending'),
-  buildInvoiceFromInput('INV-2024-112', {
-    clientName: 'Creative Expo Group',
-    invoiceDate: '2024-12-20',
-    dueDate: '2025-01-05',
-    lineItems: [
-      { id: 'line-005', description: 'Warehouse prep (hours)', quantity: 8, unitPrice: 60 },
-      { id: 'line-006', description: 'Weekend crew standby', quantity: 6, unitPrice: 55 },
-    ],
-    total: 810,
-    reference: 'EXP-7781',
-  }, 'overdue'),
-]
-
-const initialQuotes: QuoteRecord[] = [
-  {
-    id: 'QUO-2025-031',
-    number: 'QUO-2025-031',
-    clientName: 'Skyline Productions',
-    amount: 2450,
-    issuedAt: '2025-01-08',
-    status: 'sent',
-  },
-  {
-    id: 'QUO-2025-024',
-    number: 'QUO-2025-024',
-    clientName: 'Northern Lights Agency',
-    amount: 1750,
-    issuedAt: '2025-01-03',
-    status: 'draft',
-  },
-  {
-    id: 'QUO-2024-198',
-    number: 'QUO-2024-198',
-    clientName: 'Festival One Europe',
-    amount: 3820,
-    issuedAt: '2024-12-19',
-    status: 'converted',
-  },
-]
-
-const initialPayments: PaymentRecord[] = [
-  {
-    id: 'PAY-2025-001',
-    invoiceId: 'INV-2025-001',
-    amount: roundCurrency(initialInvoices[0].totalGross),
-    method: 'bank_transfer',
-    processedAt: '2025-01-10T10:15:00.000Z',
-    status: 'settled',
-    reference: 'BT-983221',
-  },
-  {
-    id: 'PAY-2024-122',
-    invoiceId: 'INV-2024-112',
-    amount: 450,
-    method: 'card',
-    processedAt: '2024-12-28T08:30:00.000Z',
-    status: 'settled',
-    reference: 'CARD-4422',
-  },
-]
-
-const initialMetrics = computeDashboardMetrics(initialInvoices, initialPayments)
-
-export const useFinanceStore = create<FinanceState>()(immer((set, get) => {
-  const setLoading = (key: keyof FinanceLoadingState, value: boolean) => {
-    set(state => {
-      state.loading[key] = value
-    })
-  }
-
-  const setError = (message: string | null) => {
-    set(state => {
-      state.error = message
-    })
-  }
-
-  const fetchInvoices = async (): Promise<InvoiceRecord[]> => {
-    setError(null)
-    setLoading('invoices', true)
-    try {
-      return get().invoices
-    } finally {
-      setLoading('invoices', false)
-    }
-  }
-
-  const getInvoiceById = async (id: string): Promise<InvoiceRecord> => {
-    const invoice = get().invoices.find(item => item.id === id)
-    if (!invoice) {
-      const error = new Error('Factuur niet gevonden')
-      setError(error.message)
-      throw error
-    }
-    return invoice
-  }
-
-  const createInvoice = async (input: InvoiceDraftInput): Promise<InvoiceRecord> => {
-    setError(null)
-    setLoading('invoices', true)
-    try {
-      const invoice = buildInvoiceFromInput(generateId('INV'), input, 'pending')
-      set(state => {
-        state.invoices.unshift(invoice)
-        state.dashboardMetrics = computeDashboardMetrics(state.invoices, state.payments)
-      })
-      return invoice
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Opslaan van factuur is mislukt'
-      setError(message)
-      throw error
-    } finally {
-      setLoading('invoices', false)
-    }
-  }
-
-  const updateInvoice = async (id: string, input: InvoiceDraftInput): Promise<InvoiceRecord> => {
-    setError(null)
-    setLoading('invoices', true)
-    try {
-      let updated: InvoiceRecord | null = null
-      set(state => {
-        const index = state.invoices.findIndex(invoice => invoice.id === id)
-        if (index === -1) {
-          return
-        }
-        const currentStatus = state.invoices[index].status
-        const nextInvoice = buildInvoiceFromInput(id, input, currentStatus)
-        state.invoices[index] = nextInvoice
-        updated = nextInvoice
-        state.dashboardMetrics = computeDashboardMetrics(state.invoices, state.payments)
-      })
-      if (!updated) {
-        const error = new Error('Factuur niet gevonden')
-        setError(error.message)
-        throw error
-      }
-      return updated
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Bijwerken van factuur is mislukt'
-      setError(message)
-      throw error
-    } finally {
-      setLoading('invoices', false)
-    }
-  }
-
-  const deleteInvoice = async (id: string): Promise<void> => {
-    setError(null)
-    setLoading('invoices', true)
-    try {
-      let removed = false
-      set(state => {
-        const before = state.invoices.length
-        state.invoices = state.invoices.filter(invoice => invoice.id !== id)
-        state.payments = state.payments.filter(payment => payment.invoiceId !== id)
-        removed = state.invoices.length !== before
-        state.dashboardMetrics = computeDashboardMetrics(state.invoices, state.payments)
-      })
-      if (!removed) {
-        const error = new Error('Factuur kon niet worden verwijderd omdat deze niet bestaat')
-        setError(error.message)
-        throw error
-      }
-    } finally {
-      setLoading('invoices', false)
-    }
-  }
-
-  const fetchQuotes = async (): Promise<QuoteRecord[]> => {
-    setError(null)
-    setLoading('quotes', true)
-    try {
-      return get().quotes
-    } finally {
-      setLoading('quotes', false)
-    }
-  }
-
-  const convertQuoteToInvoice = async (quoteId: string): Promise<InvoiceRecord> => {
-    setError(null)
-    setLoading('quotes', true)
-    try {
-      const quote = get().quotes.find(item => item.id === quoteId)
-      if (!quote) {
-        const error = new Error('Offerte niet gevonden')
-        setError(error.message)
-        throw error
-      }
-      if (quote.status === 'converted') {
-        const error = new Error('Offerte is al geconverteerd naar een factuur')
-        setError(error.message)
-        throw error
-      }
-
-      const invoice = buildInvoiceFromInput(generateId('INV'), {
-        clientName: quote.clientName,
-        invoiceDate: quote.issuedAt,
-        dueDate: quote.issuedAt,
-        lineItems: [
-          { id: generateId('line'), description: `Quote ${quote.number}`, quantity: 1, unitPrice: quote.amount },
-        ],
-        total: quote.amount,
-        reference: quote.number,
-      }, 'pending')
-
-      set(state => {
-        const targetQuote = state.quotes.find(item => item.id === quoteId)
-        if (targetQuote) {
-          targetQuote.status = 'converted'
-        }
-        state.invoices.unshift(invoice)
-        state.dashboardMetrics = computeDashboardMetrics(state.invoices, state.payments)
-      })
-
-      return invoice
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error
-      }
-      const wrapped = new Error('Converteren van offerte is mislukt')
-      setError(wrapped.message)
-      throw wrapped
-    } finally {
-      setLoading('quotes', false)
-    }
-  }
-
-  const fetchPayments = async (): Promise<PaymentRecord[]> => {
-    setError(null)
-    setLoading('payments', true)
-    try {
-      return get().payments
-    } finally {
-      setLoading('payments', false)
-    }
-  }
-
-  const recordPayment = async (payload: PaymentDraft): Promise<PaymentRecord> => {
-    setError(null)
-    setLoading('payments', true)
-    try {
-      const payment: PaymentRecord = {
-        id: generateId('PAY'),
-        invoiceId: payload.invoiceId,
-        amount: roundCurrency(payload.amount),
-        method: payload.method,
-        processedAt: new Date().toISOString(),
-        status: 'settled',
-        reference: payload.reference ?? null,
-      }
-
-      set(state => {
-        state.payments.unshift(payment)
-        const invoice = state.invoices.find(item => item.id === payload.invoiceId)
-        if (invoice) {
-          invoice.status = 'paid'
-        }
-        state.dashboardMetrics = computeDashboardMetrics(state.invoices, state.payments)
-      })
-
-      return payment
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Registreren van betaling is mislukt'
-      setError(message)
-      throw error
-    } finally {
-      setLoading('payments', false)
-    }
-  }
-
-  const getDashboardData = async (): Promise<FinanceDashboardData> => {
-    setError(null)
-    setLoading('dashboard', true)
-    try {
-      const invoices = get().invoices
-      const metrics = computeDashboardMetrics(invoices, get().payments)
-      set(state => {
-        state.dashboardMetrics = metrics
-      })
-      return { invoices, metrics }
-    } finally {
-      setLoading('dashboard', false)
-    }
-  }
-
+const toInvoiceRequest = (invoice: InvoiceInput) => {
+  const totalFromItems = invoice.lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0,
+  );
+  const total = invoice.total ?? totalFromItems;
   return {
-    invoices: initialInvoices,
-    quotes: initialQuotes,
-    payments: initialPayments,
-    dashboardMetrics: initialMetrics,
-    loading: {
-      invoices: false,
-      quotes: false,
-      dashboard: false,
-      payments: false,
-    },
+    amount: total,
+    client: invoice.clientName,
+    date: new Date(invoice.invoiceDate).toISOString(),
+    description:
+      invoice.description ||
+      (invoice.lineItems.length
+        ? invoice.lineItems
+            .map((item) => `${item.quantity}x ${item.description}`)
+            .join(', ')
+        : undefined),
+  };
+};
+
+export const useFinanceStore = create<FinanceState>()(
+  immer((set, get) => ({
+    invoices: [],
+    quotes: [],
+    payments: [],
+    stats: null,
+    loading: false,
     error: null,
-    fetchInvoices,
-    getInvoiceById,
-    createInvoice,
-    updateInvoice,
-    deleteInvoice,
-    fetchQuotes,
-    getQuotes: fetchQuotes,
-    convertQuoteToInvoice,
-    fetchPayments,
-    recordPayment,
-    getDashboardData,
-    clearError: () => set(state => {
-      state.error = null
-    }),
-  }
-}))
 
-export default useFinanceStore
+    clearError: () => {
+      set({ error: null });
+    },
+
+    fetchInvoices: async () => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.get(`${FINANCE_BASE}/invoices`);
+        const invoices = (Array.isArray(response.data) ? response.data : []).map(mapInvoiceResponse);
+        set({ invoices, loading: false });
+        return invoices;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to fetch invoices';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    getInvoiceById: async (id: string) => {
+      const existing = get().invoices.find((invoice) => invoice.id === id);
+      if (existing) {
+        return existing;
+      }
+
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.get(`${FINANCE_BASE}/invoices/${id}`);
+        const invoice = mapInvoiceResponse(response.data);
+        set((state) => {
+          state.invoices.push(invoice);
+          state.loading = false;
+        });
+        return invoice;
+      } catch (error: any) {
+        if (error?.response?.status === 404) {
+          try {
+            const invoices = await get().fetchInvoices();
+            return invoices.find((invoice) => invoice.id === id) ?? null;
+          } finally {
+            set((state) => {
+              state.loading = false;
+            });
+          }
+        }
+
+        const message = error?.response?.data?.message || 'Failed to load invoice';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    createInvoice: async (invoice) => {
+      set({ loading: true, error: null });
+      try {
+        const payload = toInvoiceRequest(invoice);
+        const response = await axios.post(`${FINANCE_BASE}/invoices`, payload);
+        const created = mapInvoiceResponse(response.data);
+        created.lineItems = ensureLineItems(invoice.lineItems);
+        set((state) => {
+          state.invoices.push(created);
+          state.loading = false;
+        });
+        return created;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to create invoice';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    updateInvoice: async (id, invoice) => {
+      set({ loading: true, error: null });
+      try {
+        const payload = toInvoiceRequest(invoice);
+        const response = await axios.put(`${FINANCE_BASE}/invoices/${id}`, payload);
+        const updated = mapInvoiceResponse(response.data);
+        updated.lineItems = ensureLineItems(invoice.lineItems);
+        set((state) => {
+          const index = state.invoices.findIndex((item) => item.id === id);
+          if (index >= 0) {
+            state.invoices[index] = updated;
+          } else {
+            state.invoices.push(updated);
+          }
+          state.loading = false;
+        });
+        return updated;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to update invoice';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    deleteInvoice: async (id) => {
+      set({ loading: true, error: null });
+      try {
+        await axios.delete(`${FINANCE_BASE}/invoices/${id}`);
+        set((state) => {
+          state.invoices = state.invoices.filter((invoice) => invoice.id !== id);
+          state.loading = false;
+        });
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to delete invoice';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    fetchQuotes: async () => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.get(`${FINANCE_BASE}/quotes`);
+        const quotes = (Array.isArray(response.data) ? response.data : []).map(mapQuoteResponse);
+        set({ quotes, loading: false });
+        return quotes;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to fetch quotes';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    getQuotes: async () => {
+      const quotes = await get().fetchQuotes();
+      return quotes;
+    },
+
+    convertQuoteToInvoice: async (quoteId) => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.post(`${FINANCE_BASE}/quotes/${quoteId}/convert`);
+        const invoice = mapInvoiceResponse(response.data);
+        set((state) => {
+          state.invoices.push(invoice);
+          state.quotes = state.quotes.map((quote) =>
+            quote.id === quoteId
+              ? { ...quote, status: 'converted', converted: true }
+              : quote,
+          );
+          state.loading = false;
+        });
+        return invoice.id;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to convert quote';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    fetchPayments: async () => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.get(`${FINANCE_BASE}/payments`);
+        const payments = (Array.isArray(response.data) ? response.data : []).map(mapPaymentResponse);
+        set({ payments, loading: false });
+        return payments;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to fetch payments';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    recordPayment: async (payment) => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.post(`${FINANCE_BASE}/payments`, {
+          amount: payment.amount,
+          invoice_id: payment.invoiceId,
+          method: payment.method,
+        });
+        const created = mapPaymentResponse(response.data);
+        set((state) => {
+          state.payments.push(created);
+          state.loading = false;
+        });
+        return created;
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to record payment';
+        set({ error: message, loading: false });
+        throw new Error(message);
+      }
+    },
+
+    getFinanceStats: async () => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.get(`${FINANCE_BASE}/stats`);
+        const invoices = get().invoices;
+        const stats = deriveStatsFromInvoices(invoices);
+        const revenue = Number(response.data?.revenue ?? stats.monthlyRevenue);
+        const enrichedStats: FinanceStats = {
+          monthlyRevenue: revenue,
+          pendingInvoicesTotal: stats.pendingInvoicesTotal,
+          paidInvoicesTotal: stats.paidInvoicesTotal,
+        };
+        set({ stats: enrichedStats, loading: false });
+        return enrichedStats;
+      } catch {
+        const invoices = get().invoices;
+        const stats = deriveStatsFromInvoices(invoices);
+        set({ stats, loading: false });
+        return stats;
+      }
+    },
+
+    getDashboardData: async () => {
+      set({ loading: true, error: null });
+      try {
+        const invoices = await get().fetchInvoices();
+        const stats = await get().getFinanceStats();
+        set({ loading: false });
+        return { invoices, stats };
+      } catch {
+        const invoices = get().invoices;
+        const stats = deriveStatsFromInvoices(invoices);
+        set({ stats, loading: false });
+        return { invoices, stats };
+      }
+    },
+  })),
+);
+
+export default useFinanceStore;

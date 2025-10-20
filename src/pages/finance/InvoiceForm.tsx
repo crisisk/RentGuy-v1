@@ -1,50 +1,62 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useFinanceStore } from '@stores/financeStore'
-import type { InvoiceLineItem } from '@rg-types/financeTypes'
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import useFinanceStore from '../../stores/financeStore';
+import type { InvoiceLineItem } from '../../stores/financeStore';
+
+const generateUniqueId = () => Math.random().toString(36).substr(2, 9);
+const createEmptyLineItem = (): InvoiceLineItem => ({
+  id: generateUniqueId(),
+  description: '',
+  quantity: 1,
+  unitPrice: 0,
+});
 
 const InvoiceForm: React.FC = () => {
-  const { id } = useParams<{ id?: string }>()
-  const navigate = useNavigate()
-  const createInvoice = useFinanceStore(state => state.createInvoice)
-  const updateInvoice = useFinanceStore(state => state.updateInvoice)
-  const getInvoiceById = useFinanceStore(state => state.getInvoiceById)
-  const [clientName, setClientName] = useState('')
-  const [invoiceDate, setInvoiceDate] = useState('')
-  const [dueDate, setDueDate] = useState('')
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
 
-  const generateUniqueId = useCallback(() => Math.random().toString(36).slice(2, 10), [])
+  const [clientName, setClientName] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([createEmptyLineItem()]);
+  const [initializing, setInitializing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addLineItem = useCallback(() => {
-    setLineItems(items => ([
-      ...items,
-      { id: generateUniqueId(), description: '', quantity: 1, unitPrice: 0 },
-    ]))
-  }, [generateUniqueId])
+  const createInvoice = useFinanceStore((state) => state.createInvoice);
+  const updateInvoice = useFinanceStore((state) => state.updateInvoice);
+  const getInvoiceById = useFinanceStore((state) => state.getInvoiceById);
+  const loading = useFinanceStore((state) => state.loading);
+  const clearError = useFinanceStore((state) => state.clearError);
 
-  const updateLineItem = useCallback((itemId: string, field: keyof InvoiceLineItem, value: string | number) => {
-    setLineItems(items => items.map(item => (item.id === itemId ? { ...item, [field]: value } : item)))
-  }, [])
+  const addLineItem = () => {
+    setLineItems([...lineItems, createEmptyLineItem()]);
+  };
 
-  const removeLineItem = useCallback((itemId: string) => {
-    setLineItems(items => items.filter(item => item.id !== itemId))
-  }, [])
+  const updateLineItem = (lineId: string, field: keyof InvoiceLineItem, value: string | number) => {
+    const updatedItems = lineItems.map(item =>
+      item.id === lineId ? { ...item, [field]: value } : item
+    );
+    setLineItems(updatedItems);
+  };
 
-  const totalAmount = useMemo(() => (
-    lineItems.reduce((total, item) => total + item.quantity * item.unitPrice, 0)
-  ), [lineItems])
+  const removeLineItem = (lineId: string) => {
+    setLineItems(lineItems.filter(item => item.id !== lineId));
+  };
 
-  const handleSubmit = useCallback(async (event: React.FormEvent) => {
-    event.preventDefault()
-    setError(null)
+  const calculateTotal = () => {
+    return lineItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
+  };
 
-    if (!invoiceDate || !dueDate) {
-      setError('Selecteer een factuur- en vervaldatum.')
-      return
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const invoiceData = {
+        clientName,
+        invoiceDate: new Date(invoiceDate),
+        dueDate: new Date(dueDate),
+        lineItems,
+        total: calculateTotal()
+      };
 
     const payload = {
       clientName,
@@ -56,14 +68,14 @@ const InvoiceForm: React.FC = () => {
 
     try {
       if (id) {
-        await updateInvoice(id, payload)
+        await updateInvoice(id, invoiceData);
       } else {
-        await createInvoice(payload)
+        await createInvoice(invoiceData);
       }
-      navigate('/invoices')
-    } catch (submitError) {
-      console.warn('Kon factuur niet opslaan', submitError)
-      setError('Opslaan van de factuur is mislukt. Probeer het opnieuw.')
+      clearError();
+      navigate('/invoices');
+    } catch {
+      setError('Failed to save invoice');
     }
   }, [clientName, invoiceDate, dueDate, lineItems, totalAmount, id, updateInvoice, createInvoice, navigate])
 
@@ -75,32 +87,32 @@ const InvoiceForm: React.FC = () => {
         return
       }
       try {
-        const invoice = await getInvoiceById(id)
-        if (!mounted) return
-        setClientName(invoice.clientName)
-        setInvoiceDate(invoice.issuedAt)
-        setDueDate(invoice.dueAt)
-        setLineItems(invoice.lineItems)
-      } catch (loadError) {
-        if (mounted) {
-          setError('Kon factuurgegevens niet laden.')
+        if (id) {
+          const invoice = await getInvoiceById(id);
+          if (!invoice) {
+            setError('Invoice not found');
+            return;
+          }
+          setClientName(invoice.clientName);
+          setInvoiceDate(new Date(invoice.date).toISOString().split('T')[0]);
+          setDueDate(invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : '');
+          setLineItems(invoice.lineItems.length ? invoice.lineItems : [createEmptyLineItem()]);
         }
+      } catch {
+        setError('Failed to load invoice');
       } finally {
-        if (mounted) {
-          setLoading(false)
-        }
+        setInitializing(false);
       }
     }
 
-    void loadInvoice()
-
+    fetchInvoice();
     return () => {
-      mounted = false
-    }
-  }, [id, getInvoiceById])
+      clearError();
+    };
+  }, [id, getInvoiceById, clearError]);
 
-  if (loading) return <div className="p-4 text-sm text-slate-500">Factuurgegevens laden…</div>
-  if (error) return <div className="p-4 text-sm text-red-600">{error}</div>
+  if (initializing) return <div className="p-4">Loading...</div>;
+  if (error) return <div className="p-4 text-red-500">{error}</div>;
 
   return (
     <div className="container mx-auto max-w-4xl p-4">
@@ -236,7 +248,8 @@ const InvoiceForm: React.FC = () => {
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-60"
+            disabled={loading}
           >
             {id ? 'Factuur bijwerken' : 'Factuur opslaan'}
           </button>

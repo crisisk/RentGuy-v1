@@ -1,47 +1,43 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useFinanceStore } from '@stores/financeStore'
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import useFinanceStore from '../../stores/financeStore';
 
-function formatDate(value: string): string {
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) {
-    return value
-  }
-  return parsed.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-const QuoteManagement: React.FC = () => {
-  const quotes = useFinanceStore(state => state.quotes)
-  const fetchQuotes = useFinanceStore(state => state.fetchQuotes)
-  const convertQuoteToInvoice = useFinanceStore(state => state.convertQuoteToInvoice)
-  const loading = useFinanceStore(state => state.loading.quotes)
-  const error = useFinanceStore(state => state.error)
-  const clearError = useFinanceStore(state => state.clearError)
-  const navigate = useNavigate()
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'sent' | 'converted'>('all')
+const QuoteManagement = () => {
+  const navigate = useNavigate();
+  const quotes = useFinanceStore((state) => state.quotes);
+  const loading = useFinanceStore((state) => state.loading);
+  const error = useFinanceStore((state) => state.error);
+  const fetchQuotes = useFinanceStore((state) => state.fetchQuotes);
+  const convertQuoteToInvoice = useFinanceStore((state) => state.convertQuoteToInvoice);
+  const clearError = useFinanceStore((state) => state.clearError);
 
   useEffect(() => {
-    void fetchQuotes()
-    return () => {
-      clearError()
-    }
-  }, [fetchQuotes, clearError])
+    fetchQuotes().catch(() => {
+      /* error state handled in store */
+    });
 
-  const visibleQuotes = useMemo(() => {
-    if (statusFilter === 'all') {
-      return quotes
-    }
-    return quotes.filter(quote => quote.status === statusFilter)
-  }, [quotes, statusFilter])
+    return () => {
+      clearError();
+    };
+  }, [fetchQuotes, clearError]);
 
   const handleConvert = async (quoteId: string) => {
     try {
-      const invoice = await convertQuoteToInvoice(quoteId)
-      navigate(`/invoices/${invoice.id}`)
-    } catch (conversionError) {
-      console.warn('Kon offerte niet converteren', conversionError)
+      const invoiceId = await convertQuoteToInvoice(quoteId);
+      navigate(`/invoices/${invoiceId}`);
+    } catch {
+      /* error already reflected in store state */
     }
-  }
+  };
+
+  const formatDate = (value: Date) => {
+    const date = new Date(value);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   if (loading) {
     return (

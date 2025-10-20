@@ -1,58 +1,45 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useFinanceStore } from '@stores/financeStore'
-
-const statusClasses: Record<string, string> = {
-  paid: 'bg-emerald-100 text-emerald-800',
-  pending: 'bg-amber-100 text-amber-800',
-  overdue: 'bg-red-100 text-red-800',
-  sent: 'bg-blue-100 text-blue-800',
-  draft: 'bg-slate-100 text-slate-700',
-}
-
-function formatDate(value: string): string {
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) {
-    return value
-  }
-  return parsed.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import useFinanceStore from '../../stores/financeStore';
 
 const InvoiceOverview: React.FC = () => {
-  const invoices = useFinanceStore(state => state.invoices)
-  const fetchInvoices = useFinanceStore(state => state.fetchInvoices)
-  const loading = useFinanceStore(state => state.loading.invoices)
-  const error = useFinanceStore(state => state.error)
-  const clearError = useFinanceStore(state => state.clearError)
-  const navigate = useNavigate()
-  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'overdue' | 'sent' | 'draft'>('all')
-  const [clientNameFilter, setClientNameFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [clientNameFilter, setClientNameFilter] = useState<string>('');
+  const navigate = useNavigate();
+
+  const invoices = useFinanceStore((state) => state.invoices);
+  const loading = useFinanceStore((state) => state.loading);
+  const error = useFinanceStore((state) => state.error);
+  const fetchInvoices = useFinanceStore((state) => state.fetchInvoices);
+  const clearError = useFinanceStore((state) => state.clearError);
 
   useEffect(() => {
-    void fetchInvoices()
-    return () => {
-      clearError()
-    }
-  }, [fetchInvoices, clearError])
+    fetchInvoices().catch(() => {
+      /* handled via store error state */
+    });
 
-  const filteredInvoices = useMemo(() => {
-    const lowerCaseFilter = clientNameFilter.trim().toLowerCase()
-    return invoices.filter(invoice => {
-      const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter
-      const matchesClient = lowerCaseFilter
-        ? invoice.clientName.toLowerCase().includes(lowerCaseFilter)
-        : true
-      return matchesStatus && matchesClient
-    })
-  }, [invoices, statusFilter, clientNameFilter])
+    return () => {
+      clearError();
+    };
+  }, [fetchInvoices, clearError]);
+
+  const filteredInvoices = invoices.filter(invoice => {
+    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+    const matchesName = invoice.clientName.toLowerCase().includes(clientNameFilter.toLowerCase());
+    return matchesStatus && matchesName;
+  });
+
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
 
   if (loading) {
     return <div className="p-6 text-center text-sm text-slate-500">Facturen worden geladen…</div>
   }
 
-  if (error) {
-    return <div className="p-6 text-center text-sm text-red-600">Fout bij het laden van facturen: {error}</div>
-  }
+  if (loading) return <div className="p-4 text-center">Loading invoices...</div>;
+  if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
     <div className="p-4 md:p-6">
@@ -103,16 +90,14 @@ const InvoiceOverview: React.FC = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Acties</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredInvoices.map(invoice => (
-                <tr key={invoice.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm text-slate-700">{invoice.clientName}</td>
-                  <td className="px-4 py-3 text-sm font-semibold text-slate-900">
-                    {invoice.totalGross.toLocaleString('nl-NL', { style: 'currency', currency: invoice.currency })}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(invoice.issuedAt)}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClasses[invoice.status] ?? 'bg-slate-100 text-slate-700'}`}>
+            <tbody className="divide-y">
+              {filteredInvoices.map((invoice) => (
+                <tr key={invoice.id}>
+                  <td className="px-4 py-3">{invoice.clientName}</td>
+                  <td className="px-4 py-3">${invoice.amount.toFixed(2)}</td>
+                  <td className="px-4 py-3">{formatDate(invoice.invoiceDate)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-sm ${getStatusClass(invoice.status)}`}>
                       {invoice.status}
                     </span>
                   </td>
