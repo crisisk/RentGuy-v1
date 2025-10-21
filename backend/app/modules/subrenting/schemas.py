@@ -91,3 +91,13 @@ class AvailabilityResponse(AvailabilityBase):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+__all__ = [
+    "PartnerCreate",
+    "PartnerResponse",
+    "CapacityCreate",
+    "CapacityResponse",
+    "AvailabilityCreate",
+    "AvailabilityResponse",
+]
