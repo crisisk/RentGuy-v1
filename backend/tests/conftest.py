@@ -275,3 +275,10 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
         yield test_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def anyio_backend():
+    """Force AnyIO-based tests to run on asyncio only during unit tests."""
+
+    return "asyncio"
