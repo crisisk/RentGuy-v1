@@ -2,19 +2,29 @@
 
 from __future__ import annotations
 
-from typing import Generator
+from collections.abc import AsyncGenerator, Generator
+from typing import Final
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import URL
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import settings
 
-class Base(DeclarativeBase):
-    pass
 
-database_url = settings.database_url
-url = make_url(database_url)
+class Base(DeclarativeBase):
+    """Base declarative class shared across all modules."""
+
+
+database_url: Final[str] = settings.database_url
+url: Final[URL] = make_url(database_url)
 
 engine_kwargs: dict[str, object] = {"pool_pre_ping": True}
 
@@ -36,8 +46,26 @@ else:
         }
     )
 
+
+def _async_drivername(source: URL) -> str:
+    driver = source.drivername
+    if driver.startswith("postgresql"):
+        return driver.replace("postgresql", "postgresql+asyncpg", 1)
+    if driver.startswith("mysql"):
+        return driver.replace("mysql", "mysql+aiomysql", 1)
+    if driver.startswith("sqlite"):
+        return "sqlite+aiosqlite"
+    raise ValueError(f"Unsupported database backend for async engine: {driver}")
+
+
 engine = create_engine(database_url, **engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+async_engine: AsyncEngine = create_async_engine(
+    url.set(drivername=_async_drivername(url)).render_as_string(hide_password=False),
+    **engine_kwargs,
+)
+AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
 
 
 def get_db_session() -> Generator[Session, None, None]:
@@ -45,6 +73,17 @@ def get_db_session() -> Generator[Session, None, None]:
 
     with SessionLocal() as session:
         yield session
+
+
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    """Yield an async session that automatically rolls back on exception."""
+
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:  # pragma: no cover - defensive rollback
+            await session.rollback()
+            raise
 
 
 def database_ready() -> bool:
@@ -56,3 +95,17 @@ def database_ready() -> bool:
         return True
     except Exception:
         return False
+
+
+__all__ = [
+    "AsyncSession",
+    "AsyncSessionLocal",
+    "Base",
+    "Session",
+    "SessionLocal",
+    "async_engine",
+    "database_ready",
+    "engine",
+    "get_async_session",
+    "get_db_session",
+]

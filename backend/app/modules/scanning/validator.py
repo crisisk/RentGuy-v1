@@ -1,121 +1,82 @@
-"""
-Scan validation service with business rules
-"""
-from datetime import datetime, timedelta
-from typing import Optional
-from geoalchemy2 import WKBElement
-from sqlalchemy import select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
+"""Business rule validation for scan submissions."""
 
-from models.asset import Asset
-from models.scan_history import ScanHistory
-from models.user import User
-from .exceptions import (
-    AssetNotFoundException,
-    InvalidScanException,
-    LocationValidationException
-)
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from math import asin, cos, radians, sin, sqrt
+from typing import Tuple
+
+from shapely.geometry import Point
+from sqlalchemy import and_, select
+from sqlalchemy.orm import Session
+
+from app.modules.auth.models import User
+
+from .exceptions import AssetNotFoundException, InvalidScanException, LocationValidationException
+from .models import Asset, ScanHistory
+
 
 class ScanValidator:
-    """Validates scans against business rules and data quality checks"""
-    
-    def __init__(self, db: AsyncSession):
+    """Validates incoming scans against system rules."""
+
+    def __init__(self, db: Session) -> None:
         self.db = db
 
-    async def validate_scan(
-        self,
-        barcode: str,
-        user: User,
-        location: WKBElement
-    ) -> None:
-        """
-        Perform comprehensive scan validation
+    def validate_scan(self, *, barcode: str, user: User, location: Point) -> None:
+        """Run all validation steps for a scan request."""
 
-        Args:
-            barcode: Scanned asset identifier
-            user: Scanning user account
-            location: Geographic point of scan
-
-        Raises:
-            AssetNotFoundException: If asset doesn't exist
-            LocationValidationException: For invalid locations
-            InvalidScanException: For invalid/duplicate scans
-        """
-        # Check asset existence
-        asset_exists = await self._asset_exists(barcode)
-        if not asset_exists:
+        if not self._asset_exists(barcode):
             raise AssetNotFoundException(f"Asset {barcode} not found")
 
-        # Check duplicate scans
-        if await self._is_duplicate_scan(barcode, user.id):
+        if self._is_duplicate_scan(barcode=barcode, user_id=user.id):
             raise InvalidScanException("Duplicate scan within cooldown period")
 
-        # Validate location permissions
-        if not await self._validate_location(user, location):
-            raise LocationValidationException(
-                "User not authorized for this scan location"
-            )
+        if not self._validate_location(user=user, scan_location=location):
+            raise LocationValidationException("User not authorized for this scan location")
 
-    async def _asset_exists(self, barcode: str) -> bool:
-        """Check if asset exists in database"""
-        result = await self.db.execute(
-            select(Asset.id).where(Asset.barcode == barcode)
-        )
+    def _asset_exists(self, barcode: str) -> bool:
+        result = self.db.execute(select(Asset.id).where(Asset.barcode == barcode))
         return result.scalar() is not None
 
-    async def _is_duplicate_scan(
-        self,
-        barcode: str,
-        user_id: int
-    ) -> bool:
-        """Check for duplicate scans in past 5 minutes"""
+    def _is_duplicate_scan(self, *, barcode: str, user_id: int) -> bool:
         time_threshold = datetime.utcnow() - timedelta(minutes=5)
-        
-        result = await self.db.execute(
-            select(ScanHistory.id).where(
-                and_(
-                    ScanHistory.barcode == barcode,
-                    ScanHistory.user_id == user_id,
-                    ScanHistory.scan_time >= time_threshold
-                )
+        statement = select(ScanHistory.id).where(
+            and_(
+                ScanHistory.barcode == barcode,
+                ScanHistory.user_id == user_id,
+                ScanHistory.scan_time >= time_threshold,
             )
         )
+        result = self.db.execute(statement)
         return result.scalar() is not None
 
-    async def _validate_location(
-        self,
-        user: User,
-        scan_location: WKBElement
-    ) -> bool:
-        """
-        Validate user is authorized to scan at this location
-        
-        Simplified example: Check if scan is within user's allowed regions
-        """
-        # In production this would query user's allowed locations
-        # Here we implement a basic 10km radius check from home base
-        home_base = await self._get_user_home_base(user.id)
-        if not home_base:
+    def _validate_location(self, *, user: User, scan_location: Point) -> bool:
+        home_base = self._get_user_home_base(user.id)
+        if home_base is None:
             return False
 
-        # Using PostGIS ST_DWithin in production
-        # Simplified here for demonstration
-        return self._calculate_distance(
+        distance = self._calculate_distance(
             (home_base.x, home_base.y),
-            (scan_location.x, scan_location.y)
-        ) <= 10000  # 10km radius
+            (scan_location.x, scan_location.y),
+        )
+        return distance <= 10_000
 
-    async def _get_user_home_base(self, user_id: int) -> Optional[Point]:
-        """Retrieve user's home base location (simplified)"""
-        # In real implementation this would come from user profile
-        return Point(4.895168, 52.370216)  # Amsterdam coordinates
+    def _get_user_home_base(self, user_id: int) -> Point | None:
+        # Placeholder - eventually this should look up a persisted location
+        return Point(4.895168, 52.370216)
 
-    def _calculate_distance(
-        self,
-        point1: Tuple[float, float],
-        point2: Tuple[float, float]
-    ) -> float:
-        """Simplified distance calculation (Haversine in production)"""
-        # For demo purposes only - use proper geodesic calculation
-        from math import sqrt
-        return sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2) * 111000
+    def _calculate_distance(self, origin: Tuple[float, float], target: Tuple[float, float]) -> float:
+        lon1, lat1 = origin
+        lon2, lat2 = target
+
+        lon1, lat1, lon2, lat2 = map(radians, (lon1, lat1, lon2, lat2))
+
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        c = 2 * asin(sqrt(a))
+        radius_earth_m = 6_371_000
+        return radius_earth_m * c
+
+
+__all__ = ["ScanValidator"]

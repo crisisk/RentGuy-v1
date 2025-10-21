@@ -7,10 +7,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, Field, root_validator, validator
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
-from app.modules.auth.authStore import get_current_user
+from app.core.db import get_async_session
+from app.modules.auth.deps import get_current_user
 from . import availability, themes
 from .models import (
     Equipment,
@@ -52,7 +53,7 @@ class PaymentProcessingError(HTTPException):
 @router.post("/reservations", response_model=ReservationResponse)
 async def create_reservation(
     reservation: ReservationCreate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_session)],
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -114,7 +115,7 @@ async def create_reservation(
 @router.post("/payments", response_model=PaymentResponse)
 async def process_payment(
     payment: PaymentCreate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_session)],
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -242,7 +243,7 @@ async def check_availability(
     equipment_id: int,
     start_time: datetime,
     end_time: datetime,
-    db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_async_session)]
 ):
     """
     Check equipment availability for given time range
@@ -292,7 +293,7 @@ async def check_availability(
 @router.post("/themes", response_model=ThemeCreate)
 async def create_theme(
     theme: ThemeCreate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_session)],
     current_user: dict = Depends(get_current_user),
 ):
     """
