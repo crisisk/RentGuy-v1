@@ -289,5 +289,11 @@ def test_dashboard_metrics_endpoint(client: TestClient, db_session: Session) -> 
         assert source_performance["referral_partner"]["won_value"] == pytest.approx(3000.0)
         assert source_performance["referral_partner"]["deal_count"] == 1
         assert source_performance["referral_partner"]["ga_sessions"] == 0
+
+        provenance = payload["provenance"]
+        assert provenance["source"] == "live"
+        assert "crm" in provenance["upstream_systems"]
+        assert set(provenance["upstream_systems"]).issuperset({"crm", "ga4", "gtm"})
+        assert provenance["last_refreshed_at"]
     finally:
         settings.CRM_ANALYTICS_SOURCES = original_sources
