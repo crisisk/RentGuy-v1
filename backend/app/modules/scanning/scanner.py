@@ -1,87 +1,74 @@
-"""
-Scan processing service layer with business logic
-"""
-from datetime import datetime, timedelta
-from typing import Optional, Tuple
-from geoalchemy2 import WKBElement
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+"""Service layer responsible for processing scans."""
 
-from models.asset import Asset
-from models.scan_history import ScanHistory
-from .exceptions import (
-    AssetNotFoundException,
-    InvalidScanException,
-    LocationValidationException
-)
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+
+from geoalchemy2.shape import from_shape
+from shapely.geometry import Point
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.modules.auth.models import User
+
+from .exceptions import AssetNotFoundException
+from .models import Asset, ScanHistory
+
+
+@dataclass(slots=True)
+class ScanResult:
+    """Simple value object returned after a successful scan."""
+
+    scan_id: int
+    asset_id: int
+
 
 class ScannerService:
-    """Core scanning service handling business logic"""
-    
-    def __init__(self, db: AsyncSession, validator: "ScanValidator"):
+    """Business logic for processing inventory scans."""
+
+    def __init__(self, db: Session, validator: "ScanValidator") -> None:
         self.db = db
         self.validator = validator
 
-    async def process_scan(
+    def process_scan(
         self,
+        *,
         barcode: str,
-        user: "User",
+        user: User,
         scan_time: datetime,
-        location: WKBElement
-    ) -> Tuple[int, int]:
-        """
-        Process a validated scan and update system state
+        location: Point,
+    ) -> ScanResult:
+        """Validate the scan and persist the resulting state changes."""
 
-        Args:
-            barcode: Scanned asset barcode
-            user: Scanning user instance
-            scan_time: Timestamp from client
-            location: Geography point as WKB
+        self.validator.validate_scan(barcode=barcode, user=user, location=location)
 
-        Returns:
-            Tuple[int, int]: (scan_id, asset_id)
+        db_location = from_shape(location, srid=4326)
 
-        Raises:
-            AssetNotFoundException: If no matching asset exists
-            InvalidScanException: For invalid/duplicate scans
-            LocationValidationException: For invalid location scans
-        """
-        # Validate against business rules
-        await self.validator.validate_scan(barcode, user, location)
-        
-        # Get asset details
-        asset = await self._get_asset_by_barcode(barcode)
-        if not asset:
+        asset = self._get_asset_by_barcode(barcode)
+        if asset is None:
             raise AssetNotFoundException(f"Asset {barcode} not registered")
 
-        # Update asset location
-        asset.location = location
+        asset.location = db_location
         self.db.add(asset)
 
-        # Create history record
-        scan_record = ScanHistory(
+        record = ScanHistory(
             barcode=barcode,
             scan_time=scan_time,
-            location=location,
+            location=db_location,
             asset_id=asset.id,
-            user_id=user.id
+            user_id=user.id,
         )
-        self.db.add(scan_record)
-        await self.db.commit()
-        await self.db.refresh(scan_record)
+        self.db.add(record)
+        self.db.commit()
+        self.db.refresh(record)
 
-        return (scan_record.id, asset.id)
+        return ScanResult(scan_id=record.id, asset_id=asset.id)
 
-    async def _get_asset_by_barcode(self, barcode: str) -> Optional[Asset]:
-        """Retrieve asset by barcode with async query"""
-        result = await self.db.execute(
-            select(Asset).where(Asset.barcode == barcode)
-        )
+    def _get_asset_by_barcode(self, barcode: str) -> Asset | None:
+        statement = select(Asset).where(Asset.barcode == barcode)
+        result = self.db.execute(statement)
         return result.scalars().first()
 
-class ScanResult:
-    """Simple data class for scan processing results"""
-    
-    def __init__(self, scan_id: int, asset_id: int):
-        self.scan_id = scan_id
-        self.asset_id = asset_id
+
+__all__ = ["ScannerService", "ScanResult"]
