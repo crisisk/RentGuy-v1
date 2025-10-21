@@ -6,33 +6,33 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class PartnerBase(BaseModel):
     name: str = Field(..., max_length=100)
-    api_endpoint: str = Field(..., max_length=200)
-    contact_email: str = Field(..., max_length=100)
+    api_endpoint: str = Field(..., max_length=255)
+    contact_email: str = Field(..., max_length=120)
     location: str = Field(..., description="WKT format POINT(lon lat)")
 
     @field_validator("location")
     @classmethod
     def validate_location(cls, value: str) -> str:
         if not value.startswith("POINT"):
-            raise ValueError("Invalid location format. Must be WKT POINT")
+            raise ValueError("Invalid location format. Expected WKT POINT string")
         return value
 
 
 class PartnerCreate(PartnerBase):
-    api_key: str = Field(..., max_length=200)
+    api_key: str = Field(..., max_length=255)
 
 
 class PartnerResponse(PartnerBase):
     id: UUID
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapacityBase(BaseModel):
@@ -44,7 +44,7 @@ class CapacityBase(BaseModel):
     valid_to: datetime
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "CapacityBase":
+    def _validate_dates(self) -> "CapacityBase":
         if self.valid_from >= self.valid_to:
             raise ValueError("valid_from must be before valid_to")
         return self
@@ -59,7 +59,7 @@ class CapacityResponse(CapacityBase):
     partner_id: UUID
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AvailabilityBase(BaseModel):
@@ -69,13 +69,13 @@ class AvailabilityBase(BaseModel):
 
     @field_validator("status")
     @classmethod
-    def validate_status(cls, value: str) -> str:
+    def _validate_status(cls, value: str) -> str:
         if value not in {"available", "reserved"}:
             raise ValueError("Invalid status value")
         return value
 
     @model_validator(mode="after")
-    def validate_time_range(self) -> "AvailabilityBase":
+    def _validate_end_time(self) -> "AvailabilityBase":
         if self.end_time <= self.start_time:
             raise ValueError("end_time must be after start_time")
         return self
@@ -90,4 +90,4 @@ class AvailabilityResponse(AvailabilityBase):
     partner_id: UUID
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)

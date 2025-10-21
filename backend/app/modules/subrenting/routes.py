@@ -125,8 +125,13 @@ async def create_availability(
     return db_availability
 
 
-@router.put("/availability/{availability_id}", response_model=schemas.AvailabilityResponse)
-async def update_availability(
+    db.refresh(availability)
+    _sync_partner_availability(partner, [availability])
+    return AvailabilityResponse.model_validate(availability)
+
+
+@router.put("/availability/{availability_id}", response_model=AvailabilityResponse)
+def update_availability(
     availability_id: UUID,
     availability: schemas.AvailabilityBase,
     db: AsyncSession = Depends(get_async_session),
