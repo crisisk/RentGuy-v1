@@ -544,6 +544,12 @@ class CRMService:
             "conversion_rate": round(len(converted_lead_ids) / total_leads, 4) if total_leads else 0.0,
         }
 
+        provenance = {
+            "source": "live",
+            "upstream_systems": list(dict.fromkeys(["crm", *active_connectors])),
+            "last_refreshed_at": now,
+        }
+
         return {
             "generated_at": now,
             "headline": headline,
@@ -553,6 +559,7 @@ class CRMService:
             "sales": sales_metrics,
             "acquisition": acquisition_metrics,
             "source_performance": source_performance,
+            "provenance": provenance,
         }
 
     # Internal helpers ----------------------------------------------------

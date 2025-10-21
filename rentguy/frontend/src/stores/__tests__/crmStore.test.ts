@@ -124,6 +124,11 @@ const sampleDashboard: DashboardSummary = {
       gtm_revenue: 6000,
     },
   ],
+  provenance: {
+    source: 'mock',
+    upstream_systems: ['crm', 'ga4', 'gtm'],
+    last_refreshed_at: new Date().toISOString(),
+  },
 };
 
 beforeEach(() => {

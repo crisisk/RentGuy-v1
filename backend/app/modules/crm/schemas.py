@@ -208,6 +208,14 @@ class SourcePerformanceKPI(BaseModel):
     gtm_revenue: float
 
 
+class DashboardProvenance(BaseModel):
+    """Metadata describing the origin of aggregated dashboard data."""
+
+    source: str = Field(default="mock")
+    upstream_systems: list[str] = Field(default_factory=list)
+    last_refreshed_at: datetime | None = None
+
+
 class DashboardSummary(BaseModel):
     generated_at: datetime
     headline: HeadlineKPIs
@@ -217,3 +225,4 @@ class DashboardSummary(BaseModel):
     sales: SalesKPIs
     acquisition: AcquisitionKPIs
     source_performance: list[SourcePerformanceKPI]
+    provenance: DashboardProvenance = Field(default_factory=DashboardProvenance)
