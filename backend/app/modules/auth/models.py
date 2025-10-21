@@ -11,6 +11,7 @@ from app.core.db import Base
 
 if TYPE_CHECKING:  # pragma: no cover - circular imports for type hints only
     from app.modules.customer_portal.models import Document, Invoice, Order, UserProfile
+    from app.modules.jobboard.models import JobApplication, JobPosting
     from app.modules.recurring_invoices.models import RecurringInvoice
 
 
@@ -52,6 +53,34 @@ class User(Base):
     recurring_invoices: Mapped[list[RecurringInvoice]] = relationship(
         "RecurringInvoice", back_populates="user", cascade="all,delete-orphan"
     )
+    job_postings: Mapped[list["JobPosting"]] = relationship(
+        "app.modules.jobboard.models.JobPosting",
+        back_populates="employer",
+        cascade="all,delete-orphan",
+    )
+    job_applications: Mapped[list["JobApplication"]] = relationship(
+        "app.modules.jobboard.models.JobApplication",
+        back_populates="applicant",
+        cascade="all,delete-orphan",
+    )
+
+    @property
+    def is_admin(self) -> bool:
+        """Return True when the user has administrative privileges."""
+
+        return self.role == "admin"
+
+    @property
+    def is_employer(self) -> bool:
+        """Return True for roles allowed to manage job postings."""
+
+        return self.role in {"admin", "planner"}
+
+    @property
+    def is_applicant(self) -> bool:
+        """Return True for roles that are limited to applying for jobs."""
+
+        return not self.is_employer
 
 
 __all__ = ["User"]

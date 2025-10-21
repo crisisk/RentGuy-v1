@@ -127,6 +127,7 @@ ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
     ("app.modules.transport.routes", "router", "/api/v1", ["transport"]),
     ("app.modules.billing.routes", "router", "/api/v1", ["billing"]),
     ("app.modules.warehouse.routes", "router", "/api/v1", ["warehouse"]),
+    ("app.modules.scanning.routes", "router", "/api/v1", ["scanning"]),
     ("app.modules.reporting.routes", "router", "/api/v1", ["reporting"]),
     ("app.modules.customer_portal.routes", "router", "/api/v1", ["customer-portal"]),
     (
@@ -135,6 +136,8 @@ ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
         "/api/v1",
         ["recurring-invoices"],
     ),
+    ("app.modules.jobboard.routes", "router", "/api/v1", ["jobboard"]),
+    ("app.modules.subrenting.routes", "router", "/api/v1", ["subrenting"]),
     ("app.modules.onboarding.routes", "router", "/api/v1", ["onboarding"]),
     ("app.modules.crm.routes", "router", "/api/v1", ["crm"]),
     (

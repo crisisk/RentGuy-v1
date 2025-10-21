@@ -7,12 +7,13 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel, Field, root_validator, validator
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.deps import get_current_user, get_db, require_role
-from app.modules.auth.models import User
-
+from app.core.db import get_async_session
+from app.modules.auth.deps import get_current_user
 from . import availability, themes
 from .models import Equipment, EquipmentStatus, Payment, PaymentStatus, Reservation
 from .schemas import (
@@ -101,8 +102,8 @@ def list_themes(
 @router.post("/reservations", response_model=ReservationResponse)
 def create_reservation(
     reservation: ReservationCreate,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    db: Annotated[AsyncSession, Depends(get_async_session)],
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Create a new equipment reservation with availability check
@@ -163,8 +164,8 @@ def create_reservation(
 @router.post("/payments", response_model=PaymentResponse)
 def process_payment(
     payment: PaymentCreate,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: User = Depends(get_current_user),
+    db: Annotated[AsyncSession, Depends(get_async_session)],
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Process payment for a reservation and update status
@@ -302,7 +303,7 @@ def check_availability(
     equipment_id: int,
     start_time: datetime,
     end_time: datetime,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_session)]
 ):
     """
     Check equipment availability for given time range
@@ -352,8 +353,8 @@ def check_availability(
 @router.post("/themes", response_model=ThemeResponse)
 def create_theme(
     theme: ThemeCreate,
-    db: Annotated[Session, Depends(get_db)],
-    _user: User = Depends(require_role("admin")),
+    db: Annotated[AsyncSession, Depends(get_async_session)],
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Create new equipment theme (Admin-only)
