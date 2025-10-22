@@ -1,7 +1,21 @@
 
 > rentguy-pwa-scanner@0.0.1 build
-> vite build
+> node scripts/build.mjs
 
 
 npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
-sh: 1: vite: not found
+
+  dist/assets/main.js                           457.4kb
+  dist/assets/Planner-V5KIWBJO.js               155.6kb
+  dist/assets/chunk-7CRLOZZG.js                 102.8kb
+  dist/assets/SecretsDashboard-M2UR3E2J.js       75.0kb
+  dist/assets/chunk-O5J354VJ.js                   7.6kb
+  dist/assets/chunk-2P7ICI3B.js                   6.1kb
+  dist/assets/main.js.map                       646.6kb
+  dist/assets/Planner-V5KIWBJO.js.map           272.9kb
+  dist/assets/chunk-7CRLOZZG.js.map             186.6kb
+  dist/assets/SecretsDashboard-M2UR3E2J.js.map  105.0kb
+  dist/assets/chunk-2P7ICI3B.js.map              13.3kb
+  dist/assets/chunk-O5J354VJ.js.map              10.3kb
+
+⚡ Done in 318ms
