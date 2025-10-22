@@ -42,7 +42,15 @@ jobs:
       - name: Run lint
         if: steps.check-lint.outputs.lint_exists == 'true'
         run: npm run lint
-      
+
+      - name: Install scanner dependencies
+        working-directory: apps/pwa-scanner
+        run: npm ci
+
+      - name: Run scanner lint
+        working-directory: apps/pwa-scanner
+        run: npm run lint
+
       - name: Run typecheck
         run: npm run typecheck
 

@@ -42,7 +42,7 @@ The report’s “Next Steps” section highlights work that still needs executi
 | P3 | Extend analytics for BI dashboards | Complete | KPI and tooling roadmap documented in `docs/analytics_extension_plan.md`.【F:docs/production_readiness_round_2025-10-18.md†L67-L70】【F:docs/analytics_extension_plan.md†L1-L53】 |
 | P3 | Plan third-party accounting/CRM integrations | Complete | Prioritised vendor rollout recorded in `docs/integration_strategy.md`.【F:docs/production_readiness_round_2025-10-18.md†L72-L75】【F:docs/integration_strategy.md†L1-L49】 |
 | P3 | Prepare internationalisation roadmap | Complete | Localisation roadmap established in `docs/internationalization_roadmap.md`.【F:docs/production_readiness_round_2025-10-18.md†L77-L80】【F:docs/internationalization_roadmap.md†L1-L45】 |
-| P2 | Run scanner lint inside CI | Not Started | The GitHub Actions workflow only executes the root lint script; the scanner app's ESLint command still runs manually until a new job or workspace script is wired.【F:.github/workflows/main-workflow.yml†L33-L101】【F:apps/pwa-scanner/package.json†L1-L19】 |
+| P2 | Run scanner lint inside CI | Complete | `.github/workflows/main-workflow.yml` now installs the scanner workspace dependencies and runs its dedicated ESLint script alongside the root lint stage.【F:.github/workflows/main-workflow.yml†L33-L110】【F:apps/pwa-scanner/package.json†L1-L19】 |
 
 ### Multi-Agent Execution Log
 
