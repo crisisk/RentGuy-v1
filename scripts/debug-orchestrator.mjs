@@ -105,7 +105,12 @@ function handleScan() {
     { phase: 'typecheck', command: 'npm', args: ['run', 'typecheck'] },
     { phase: 'build', command: 'npm', args: ['run', 'build'] },
     { phase: 'db:migrate', command: 'npm', args: ['run', 'db:migrate'] },
-    { phase: 'start:dev', command: 'npm', args: ['run', 'start:dev'] },
+    {
+      phase: 'start:dev',
+      command: 'npm',
+      args: ['run', 'start:dev'],
+      options: { timeout: Number(process.env.DEBUG_START_DEV_TIMEOUT_MS ?? 15000), killSignal: 'SIGTERM' }
+    },
     { phase: 'smoke', command: 'npm', args: ['run', 'smoke'] },
     { phase: 'test', command: 'npm', args: ['run', 'test'] },
     { phase: 'e2e', command: 'npm', args: ['run', 'e2e'] }
@@ -115,7 +120,7 @@ function handleScan() {
 
   for (const entry of commands) {
     console.log(`Running ${entry.phase}...`);
-    const result = runCommand(entry.phase, entry.command, entry.args);
+    const result = runCommand(entry.phase, entry.command, entry.args, entry.options);
     if (result.status !== 'passed') {
       findings.push({
         phase: entry.phase,

@@ -1,7 +1,12 @@
 
 > rentguy-pwa-scanner@0.0.1 start:dev
-> vite
+> node scripts/dev-server.mjs
 
+RentGuy dev server running at http://localhost:5175
 
 npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
-sh: 1: vite: not found
+
+ > Local:   http://127.0.0.1:5175/
+ > Network: http://172.30.3.2:5175/
+
+[watch] build finished, watching for changes...

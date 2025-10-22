@@ -1,6 +1,6 @@
 {
   "status": "failed",
-  "lastUpdated": "2025-10-15T18:02:32.910Z",
+  "lastUpdated": "2025-10-22T18:45:29.203Z",
   "phases": {
     "prepare": {
       "status": "ok",
@@ -8,7 +8,7 @@
     },
     "scan": {
       "status": "failed",
-      "notes": "Baseline scan recorded 7 failure(s). See artifacts/debug/baseline-findings.json."
+      "notes": "Baseline scan recorded 6 failure(s). See artifacts/debug/baseline-findings.json."
     },
     "run": {
       "status": "blocked",

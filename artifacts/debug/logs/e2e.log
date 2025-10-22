@@ -4,9 +4,84 @@
 
 
 > rentguy-pwa-scanner@0.0.1 test:e2e
-> playwright test -c tests/e2e/playwright.config.ts
+> start-server-and-test start:dev http-get://127.0.0.1:5175 "cypress run --config-file tests/e2e/cypress.config.ts"
 
+1: starting server using command "npm run start:dev"
+and when url "[ 'http-get://127.0.0.1:5175' ]" is responding with HTTP status code 200
+running tests using command "cypress run --config-file tests/e2e/cypress.config.ts"
+
+
+> rentguy-pwa-scanner@0.0.1 start:dev
+> node scripts/dev-server.mjs
+
+It looks like this is your first time using Cypress: 13.15.2
+
+[STARTED] Task without title.
+Your system is missing the dependency: Xvfb
+
+Install Xvfb and run Cypress again.
+
+Read our documentation on dependencies for more information:
+
+https://on.cypress.io/required-dependencies
+
+If you are using Docker, we provide containers with all required dependencies installed.
+
+----------
+
+Error: spawn Xvfb ENOENT
+
+----------
+
+Platform: linux-x64 (Ubuntu - 24.04)
+Cypress Version: 13.15.2
 
 npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
-sh: 1: playwright: not found
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+Dev server failed to start: Error: listen tcp4 0.0.0.0:5175: bind: address already in use
+    at /workspace/RentGuy-v1/node_modules/esbuild/lib/main.js:1041:39
+    at responseCallbacks.<computed> (/workspace/RentGuy-v1/node_modules/esbuild/lib/main.js:622:9)
+    at handleIncomingPacket (/workspace/RentGuy-v1/node_modules/esbuild/lib/main.js:676:31)
+    at Socket.readFromStdout (/workspace/RentGuy-v1/node_modules/esbuild/lib/main.js:600:7)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+[watch] build finished, watching for changes...
+[FAILED] Your system is missing the dependency: Xvfb
+[FAILED] 
+[FAILED] Install Xvfb and run Cypress again.
+[FAILED] 
+[FAILED] Read our documentation on dependencies for more information:
+[FAILED] 
+[FAILED] https://on.cypress.io/required-dependencies
+[FAILED] 
+[FAILED] If you are using Docker, we provide containers with all required dependencies installed.
+[FAILED] 
+[FAILED] ----------
+[FAILED] 
+[FAILED] Error: spawn Xvfb ENOENT
+[FAILED] 
+[FAILED] ----------
+[FAILED] 
+[FAILED] Platform: linux-x64 (Ubuntu - 24.04)
+[FAILED] Cypress Version: 13.15.2
+Error: Command failed with exit code 1: cypress run --config-file tests/e2e/cypress.config.ts
+    at makeError (/workspace/RentGuy-v1/node_modules/start-server-and-test/node_modules/execa/lib/error.js:60:11)
+    at handlePromise (/workspace/RentGuy-v1/node_modules/start-server-and-test/node_modules/execa/index.js:118:26)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  shortMessage: 'Command failed with exit code 1: cypress run --config-file tests/e2e/cypress.config.ts',
+  command: 'cypress run --config-file tests/e2e/cypress.config.ts',
+  escapedCommand: '"cypress run --config-file tests/e2e/cypress.config.ts"',
+  exitCode: 1,
+  signal: undefined,
+  signalDescription: undefined,
+  stdout: undefined,
+  stderr: undefined,
+  failed: true,
+  timedOut: false,
+  isCanceled: false,
+  killed: false
+}

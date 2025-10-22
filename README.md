@@ -49,6 +49,7 @@ The report’s “Next Steps” section highlights work that still needs executi
 - **Round 1 — 18 Oct 2025:** Coordinated blockers and documentation updates recorded in `docs/production_readiness_round_2025-10-18.md` after attempting every open task across priorities.【F:docs/production_readiness_round_2025-10-18.md†L1-L82】
 - **Round 2 — 19 Oct 2025:** Provisioned local PostgreSQL with PostGIS, ran Alembic migrations plus seed scripts, and wired the legacy Cypress specs into a start-server-and-test workflow while documenting the remaining UI instrumentation gap.【54a533†L1-L28】【75a1ee†L1-L2】【F:package.json†L18-L36】
 - **Round 3 — 20 Oct 2025:** Hardened the CI pipeline so every Node.js job installs dependencies with `npm ci` and captured the follow-up task to cover the scanner lint command inside Actions.【F:.github/workflows/main-workflow.yml†L22-L101】
+- **Round 4 — 22 Oct 2025:** Refreshed the debug baseline via `npm run debug:scan`; lint, typecheck, smoke, unit tests, and E2E checks continue to fail while the dev server is auto-terminated after 15 seconds to avoid blocking the pipeline.【F:artifacts/debug/baseline-findings.json†L1-L107】【F:artifacts/debug/logs/smoke-results.json†L1-L23】【F:artifacts/debug/logs/start:dev.log†L1-L12】【F:DEBUG_SUMMARY.json†L1-L14】
 
 ## Nieuw plan van aanpak (Q4 2025)
 
