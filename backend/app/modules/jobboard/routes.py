@@ -153,11 +153,19 @@ def list_applications(
 ) -> list[JobApplicationResponse]:
     filters = []
 
-    if applicant_id is not None and applicant_id != current_user.id and current_user.role != "admin":
+    employer_roles = {"admin", "planner"}
+
+    if (
+        applicant_id is not None
+        and applicant_id != current_user.id
+        and current_user.role not in employer_roles
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorised to inspect other applicants.",
         )
+
+    requires_job_join = False
 
     if job_id is not None:
         job_posting = db.get(JobPosting, job_id)
@@ -175,7 +183,15 @@ def list_applications(
     if status_filter is not None:
         filters.append(JobApplication.status == status_filter.value)
 
+    if current_user.role == "planner":
+        requires_job_join = True
+        filters.append(JobPosting.employer_id == current_user.id)
+    elif current_user.role not in employer_roles:
+        filters.append(JobApplication.applicant_id == current_user.id)
+
     stmt = select(JobApplication).order_by(JobApplication.updated_at.desc())
+    if requires_job_join:
+        stmt = stmt.join(JobApplication.job_posting)
     if filters:
         stmt = stmt.where(and_(*filters))
 
