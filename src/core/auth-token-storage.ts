@@ -17,7 +17,7 @@ type TokenRecord = {
 }
 
 let inMemoryRecord: TokenRecord | null = null
-let expiryTimer: ReturnType<typeof setTimeout> | null = null
+let expiryTimer: number | null = null
 const listeners = new Set<(token: string) => void>()
 let lastBroadcastToken = ''
 
@@ -62,8 +62,8 @@ function isExpired(record: TokenRecord): boolean {
 }
 
 function cancelExpiryTimer(): void {
-  if (expiryTimer) {
-    clearTimeout(expiryTimer)
+  if (expiryTimer !== null) {
+    window.clearTimeout(expiryTimer)
     expiryTimer = null
   }
 }
@@ -73,7 +73,7 @@ function notifyListeners(token: string): void {
     return
   }
   lastBroadcastToken = token
-  listeners.forEach(listener => {
+  listeners.forEach((listener) => {
     try {
       listener(token)
     } catch (error) {
@@ -112,13 +112,10 @@ function scheduleExpiry(record: TokenRecord): void {
 
 function persistRecord(record: TokenRecord): void {
   inMemoryRecord = record
-  safeSessionCall(
-    () => {
-      window.sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(record))
-      return undefined
-    },
-    undefined,
-  )
+  safeSessionCall(() => {
+    window.sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(record))
+    return undefined
+  }, undefined)
   scheduleExpiry(record)
   persistLegacyToken(record.value)
 }
@@ -131,13 +128,10 @@ function readPersistedRecord(): TokenRecord | null {
   const parsed = parseRecord(raw)
   if (!parsed) {
     if (raw) {
-      safeSessionCall(
-        () => {
-          window.sessionStorage.removeItem(TOKEN_STORAGE_KEY)
-          return undefined
-        },
-        undefined,
-      )
+      safeSessionCall(() => {
+        window.sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+        return undefined
+      }, undefined)
     }
     return null
   }
@@ -186,13 +180,10 @@ export function clearStoredToken(): void {
   cancelExpiryTimer()
   const hadValue = inMemoryRecord?.value ?? ''
   inMemoryRecord = null
-  safeSessionCall(
-    () => {
-      window.sessionStorage.removeItem(TOKEN_STORAGE_KEY)
-      return undefined
-    },
-    undefined,
-  )
+  safeSessionCall(() => {
+    window.sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+    return undefined
+  }, undefined)
   clearLegacyToken()
   if (hadValue || lastBroadcastToken) {
     notifyListeners('')
@@ -208,7 +199,7 @@ export function subscribeToTokenChanges(listener: (token: string) => void): () =
 }
 
 if (hasWindow) {
-  window.addEventListener('storage', event => {
+  window.addEventListener('storage', (event) => {
     if (event.key !== TOKEN_STORAGE_KEY) {
       return
     }

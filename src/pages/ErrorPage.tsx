@@ -16,16 +16,25 @@ function normaliseError(error: unknown): ErrorDetails {
     const message =
       (typeof error.data === 'object' && error.data && 'message' in error.data
         ? String((error.data as Record<string, unknown>).message ?? '')
-        : '') || statusText || 'Er trad een onverwachte fout op'
+        : '') ||
+      statusText ||
+      'Er trad een onverwachte fout op'
 
-    return { status, statusText, message }
+    const details: ErrorDetails = { status, message }
+    if (statusText) {
+      details.statusText = statusText
+    }
+    return details
   }
 
   if (error instanceof Error) {
-    return {
+    const details: ErrorDetails = {
       message: error.message || 'Er ging iets mis',
-      stack: error.stack,
     }
+    if (typeof error.stack === 'string' && error.stack.trim()) {
+      details.stack = error.stack
+    }
+    return details
   }
 
   if (typeof error === 'string') {
@@ -113,9 +122,13 @@ export default function ErrorPage(): JSX.Element {
             {heading}
           </h1>
           {details.statusText && (
-            <p style={{ margin: 0, color: withOpacity(brand.colors.secondary, 0.75) }}>{details.statusText}</p>
+            <p style={{ margin: 0, color: withOpacity(brand.colors.secondary, 0.75) }}>
+              {details.statusText}
+            </p>
           )}
-          <p style={{ margin: 0, color: withOpacity(brand.colors.secondary, 0.85) }}>{details.message}</p>
+          <p style={{ margin: 0, color: withOpacity(brand.colors.secondary, 0.85) }}>
+            {details.message}
+          </p>
         </div>
 
         {showStack && (

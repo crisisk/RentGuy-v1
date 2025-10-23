@@ -14,6 +14,8 @@ export interface NavigateOptions {
   readonly replace?: boolean
 }
 
+type To = string | number
+
 export interface Location {
   readonly pathname: string
 }
@@ -31,7 +33,7 @@ export interface Router {
 
 interface RouterContextValue {
   readonly location: Location
-  readonly navigate: (to: string, options?: NavigateOptions) => void
+  readonly navigate: (to: To, options?: NavigateOptions) => void
   readonly routes: RouteObject[]
   readonly basename: string
 }
@@ -41,9 +43,11 @@ interface RouterProviderProps {
 }
 
 interface NavigateProps {
-  readonly to: string
+  readonly to: To
   readonly replace?: boolean
 }
+
+const RouteErrorContext = createContext<unknown>(null)
 
 const RouterContext = createContext<RouterContextValue | null>(null)
 
@@ -137,6 +141,7 @@ export function createBrowserRouter(
 export function RouterProvider({ router }: RouterProviderProps): JSX.Element {
   const { routes, basename } = router
   const [pathname, setPathname] = useState<string>(() => resolveInitialPath(basename))
+  const [routeError] = useState<unknown>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -153,6 +158,13 @@ export function RouterProvider({ router }: RouterProviderProps): JSX.Element {
 
   const navigate = useCallback<RouterContextValue['navigate']>(
     (to, options = {}) => {
+      if (typeof to === 'number') {
+        if (typeof window !== 'undefined') {
+          window.history.go(to)
+        }
+        return
+      }
+
       const target = normalisePath(to)
       const fullPath = joinBasename(target, basename)
       if (typeof window === 'undefined') {
@@ -178,7 +190,11 @@ export function RouterProvider({ router }: RouterProviderProps): JSX.Element {
 
   const element = useMemo(() => renderRoute(routes, pathname), [routes, pathname])
 
-  return <RouterContext.Provider value={contextValue}>{element}</RouterContext.Provider>
+  return (
+    <RouterContext.Provider value={contextValue}>
+      <RouteErrorContext.Provider value={routeError}>{element}</RouteErrorContext.Provider>
+    </RouterContext.Provider>
+  )
 }
 
 export function useNavigate(): RouterContextValue['navigate'] {
@@ -206,7 +222,10 @@ export function useParams<T extends Record<string, string> = Record<string, stri
   const params: Record<string, string> = {}
 
   if (segments.length > 1) {
-    params.id = segments[segments.length - 1]
+    const lastSegment = segments[segments.length - 1]
+    if (typeof lastSegment === 'string') {
+      params.id = lastSegment
+    }
   }
 
   return params as T
@@ -247,4 +266,21 @@ export function Link({ to, children, replace = false, className, style }: LinkPr
       {children}
     </a>
   )
+}
+
+export interface RouteErrorResponse {
+  readonly status: number
+  readonly statusText?: string
+  readonly data?: unknown
+}
+
+export function isRouteErrorResponse(error: unknown): error is RouteErrorResponse {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+  return typeof (error as { status?: unknown }).status === 'number'
+}
+
+export function useRouteError(): unknown {
+  return useContext(RouteErrorContext)
 }
