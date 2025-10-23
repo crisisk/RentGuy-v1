@@ -232,7 +232,7 @@ export const withPerformanceTracking = (WrappedComponent, componentName) => {
     useEffect(() => {
       const renderTime = performance.now() - renderStart
       console.log(`${componentName} render time: ${renderTime}ms`)
-    })
+    }, [])
 
     return <WrappedComponent {...props} />
   })
