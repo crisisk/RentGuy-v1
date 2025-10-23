@@ -1,7 +1,7 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 
-export type SetState<State> = (
-  update: Partial<State> | State | ((draft: State) => void),
+export type SetState<State extends object> = (
+  update: Partial<State> | State | ((draft: State) => void | Partial<State> | State),
 ) => void
 
 export type GetState<State> = () => State
@@ -25,7 +25,7 @@ function cloneState<State extends object>(state: State): State {
   return { ...(state as Record<string, unknown>) } as State
 }
 
-const identitySelector = <State,>(value: State): State => value
+const identitySelector = <State>(value: State): State => value
 
 function ensureSelector<State extends object, Selected>(
   selector?: (state: State) => Selected,
@@ -36,9 +36,11 @@ function ensureSelector<State extends object, Selected>(
   return identitySelector as unknown as (state: State) => Selected
 }
 
-export function create<State extends object>(
+type BoundStore<State extends object> = Store<State>
+
+function initialiseStore<State extends object>(
   initializer: StateCreator<State>,
-): Store<State> {
+): BoundStore<State> {
   let state = {} as State
   const listeners = new Set<() => void>()
 
@@ -57,8 +59,15 @@ export function create<State extends object>(
 
     if (typeof update === 'function') {
       const draft = cloneState(currentState)
-      ;(update as (draft: State) => void)(draft)
-      nextState = draft
+      const result = (update as (draft: State) => void | Partial<State> | State)(draft)
+      if (result && typeof result === 'object') {
+        nextState = {
+          ...(currentState as Record<string, unknown>),
+          ...(result as Record<string, unknown>),
+        } as State
+      } else {
+        nextState = draft
+      }
     } else {
       nextState = {
         ...(currentState as Record<string, unknown>),
@@ -83,9 +92,7 @@ export function create<State extends object>(
 
   state = initializer(setState, getState)
 
-  function useBoundStore<Selected>(
-    selector?: (state: State) => Selected,
-  ): Selected {
+  function useBoundStore<Selected>(selector?: (state: State) => Selected): Selected {
     const selectorRef = useRef(ensureSelector(selector))
     selectorRef.current = ensureSelector(selector)
 
@@ -101,6 +108,20 @@ export function create<State extends object>(
   ;(useBoundStore as Store<State>).subscribe = subscribe
 
   return useBoundStore as Store<State>
+}
+
+export function create<State extends object>(): (
+  initializer: StateCreator<State>,
+) => BoundStore<State>
+export function create<State extends object>(initializer: StateCreator<State>): BoundStore<State>
+export function create<State extends object>(
+  initializer?: StateCreator<State>,
+): BoundStore<State> | ((initializer: StateCreator<State>) => BoundStore<State>) {
+  if (!initializer) {
+    return (initialiserArgument: StateCreator<State>) => initialiseStore(initialiserArgument)
+  }
+
+  return initialiseStore(initializer)
 }
 
 // Default export for backward compatibility
