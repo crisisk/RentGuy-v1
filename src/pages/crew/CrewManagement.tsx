@@ -161,7 +161,7 @@ const CrewManagement: React.FC = () => {
       return
     }
 
-    if (!email.includes('@')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setAddFeedback({ type: 'error', message: 'Ongeldig e-mailadres' })
       return
     }
