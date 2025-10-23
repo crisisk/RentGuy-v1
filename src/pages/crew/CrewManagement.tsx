@@ -178,7 +178,7 @@ const CrewManagement: React.FC = () => {
       email,
       role: newMember.role,
       phone,
-      skills: Array.from(new Set([newMember.role, ...newMember.role.split('/')])).filter(Boolean),
+      skills: [newMember.role],
     }
 
     setCrewMembers((previous) => [...previous, createdMember])
