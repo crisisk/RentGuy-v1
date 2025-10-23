@@ -1,30 +1,6 @@
-import React, { useMemo, useState, type FormEvent } from 'react'
+import React, { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-
-interface CrewMember {
-  id: string
-  name: string
-  email: string
-  role: string
-  phone: string
-  skills: string[]
-}
-
-interface CrewShift {
-  id: string
-  memberId: string
-  date: string
-  start: string
-  end: string
-}
-
-interface TimeOffEntry {
-  id: string
-  memberId: string
-  start: string
-  end: string
-  reason: string
-}
+import crewStore from '../../stores/crewStore'
 
 type FeedbackState = {
   type: 'success' | 'error'
@@ -33,29 +9,6 @@ type FeedbackState = {
 
 const ROLE_OPTIONS = ['Technicus', 'Planner', 'Chauffeur', 'Producer', 'Stagehand']
 const TIME_OFF_REASONS = ['Vakantie', 'Ziekte', 'Training', 'Persoonlijk', 'Overig']
-
-const INITIAL_CREW: CrewMember[] = [
-  {
-    id: 'crew-jan',
-    name: 'Jan Jansen',
-    email: 'jan@rentguy.nl',
-    role: 'Technicus',
-    phone: '0612345678',
-    skills: ['Technicus', 'Audio'],
-  },
-  {
-    id: 'crew-elisabeth',
-    name: 'Elisabeth de Vries',
-    email: 'elisabeth@rentguy.nl',
-    role: 'Planner',
-    phone: '0623456789',
-    skills: ['Planner', 'Coördinatie'],
-  },
-]
-
-function generateId(): string {
-  return `crew-${Math.random().toString(36).slice(2, 10)}`
-}
 
 function normalise(value: string): string {
   return value.trim().toLowerCase()
@@ -78,7 +31,18 @@ function dateRangesOverlap(startA: string, endA: string, startB: string, endB: s
 }
 
 const CrewManagement: React.FC = () => {
-  const [crewMembers, setCrewMembers] = useState<CrewMember[]>(INITIAL_CREW)
+  const crewMembers = crewStore((state) => state.crew)
+  const shifts = crewStore((state) => state.shifts)
+  const timeOff = crewStore((state) => state.timeOff)
+  const loading = crewStore((state) => state.loading)
+  const error = crewStore((state) => state.error)
+  const fetchCrew = crewStore((state) => state.fetchCrew)
+  const fetchShifts = crewStore((state) => state.fetchShifts)
+  const fetchTimeOff = crewStore((state) => state.fetchTimeOff)
+  const createCrewMember = crewStore((state) => state.createCrewMember)
+  const assignShift = crewStore((state) => state.assignShift)
+  const requestTimeOff = crewStore((state) => state.requestTimeOff)
+  const resetError = crewStore((state) => state.resetError)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSkill, setSelectedSkill] = useState('')
 
@@ -94,8 +58,6 @@ const CrewManagement: React.FC = () => {
   const [activeShiftMemberId, setActiveShiftMemberId] = useState<string | null>(null)
   const [shiftForm, setShiftForm] = useState({ date: '', start: '', end: '' })
   const [shiftFeedback, setShiftFeedback] = useState<FeedbackState>(null)
-  const [scheduledShifts, setScheduledShifts] = useState<CrewShift[]>([])
-
   const [timeOffMemberId, setTimeOffMemberId] = useState<string | null>(null)
   const [timeOffForm, setTimeOffForm] = useState({
     start: '',
@@ -103,11 +65,24 @@ const CrewManagement: React.FC = () => {
     reason: TIME_OFF_REASONS[0],
   })
   const [timeOffFeedback, setTimeOffFeedback] = useState<FeedbackState>(null)
-  const [timeOffEntries, setTimeOffEntries] = useState<TimeOffEntry[]>([])
 
   const [availabilityOverrides, setAvailabilityOverrides] = useState<
     Record<string, 'Beschikbaar' | 'Niet beschikbaar'>
   >({})
+
+  useEffect(() => {
+    void fetchCrew()
+    void fetchShifts()
+    void fetchTimeOff()
+  }, [fetchCrew, fetchShifts, fetchTimeOff])
+
+  useEffect(() => {
+    if (!error) return
+    const timeout = setTimeout(() => {
+      resetError()
+    }, 5000)
+    return () => clearTimeout(timeout)
+  }, [error, resetError])
 
   const skillOptions = useMemo(() => {
     const skills = new Set<string>()
@@ -132,23 +107,23 @@ const CrewManagement: React.FC = () => {
 
   const resolvedAvailability = useMemo(() => {
     const overrides = new Map(Object.entries(availabilityOverrides))
-    timeOffEntries.forEach((entry) => {
+    timeOff.forEach((entry) => {
       overrides.set(entry.memberId, 'Niet beschikbaar')
     })
     return overrides
-  }, [availabilityOverrides, timeOffEntries])
+  }, [availabilityOverrides, timeOff])
 
   const crewSchedule = useMemo(() => {
-    return scheduledShifts.map((shift) => {
+    return shifts.map((shift) => {
       const member = crewMembers.find((crew) => crew.id === shift.memberId)
       return {
         ...shift,
         memberName: member?.name ?? 'Onbekend crewlid',
       }
     })
-  }, [crewMembers, scheduledShifts])
+  }, [crewMembers, shifts])
 
-  const handleAddCrewMember = (event: FormEvent<HTMLFormElement>) => {
+  const handleAddCrewMember = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setAddFeedback(null)
 
@@ -172,23 +147,25 @@ const CrewManagement: React.FC = () => {
       return
     }
 
-    const createdMember: CrewMember = {
-      id: generateId(),
-      name,
-      email,
-      role: newMember.role,
-      phone,
-      skills: [newMember.role],
+    try {
+      const createdMember = await createCrewMember({
+        name,
+        email,
+        role: newMember.role,
+        phone,
+        skills: [newMember.role],
+      })
+      setAvailabilityOverrides((previous) => ({ ...previous, [createdMember.id]: 'Beschikbaar' }))
+      setAddFeedback({ type: 'success', message: 'Crewlid succesvol toegevoegd' })
+      setShowAddForm(false)
+      setNewMember({ name: '', email: '', role: ROLE_OPTIONS[0], phone: '' })
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Toevoegen van crewlid mislukt'
+      setAddFeedback({ type: 'error', message })
     }
-
-    setCrewMembers((previous) => [...previous, createdMember])
-    setAvailabilityOverrides((previous) => ({ ...previous, [createdMember.id]: 'Beschikbaar' }))
-    setAddFeedback({ type: 'success', message: 'Crewlid succesvol toegevoegd' })
-    setShowAddForm(false)
-    setNewMember({ name: '', email: '', role: ROLE_OPTIONS[0], phone: '' })
   }
 
-  const handleScheduleShift = (event: FormEvent<HTMLFormElement>) => {
+  const handleScheduleShift = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!activeShiftMemberId) return
 
@@ -204,7 +181,7 @@ const CrewManagement: React.FC = () => {
       return
     }
 
-    const hasConflict = scheduledShifts.some(
+    const hasConflict = shifts.some(
       (shift) =>
         shift.memberId === activeShiftMemberId &&
         shift.date === shiftForm.date &&
@@ -216,21 +193,23 @@ const CrewManagement: React.FC = () => {
       return
     }
 
-    const newShift: CrewShift = {
-      id: generateId(),
-      memberId: activeShiftMemberId,
-      date: shiftForm.date,
-      start: shiftForm.start,
-      end: shiftForm.end,
+    try {
+      await assignShift({
+        memberId: activeShiftMemberId,
+        date: shiftForm.date,
+        start: shiftForm.start,
+        end: shiftForm.end,
+      })
+      setShiftFeedback({ type: 'success', message: 'Shift succesvol ingepland' })
+      setActiveShiftMemberId(null)
+      setShiftForm({ date: '', start: '', end: '' })
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Shift plannen mislukt'
+      setShiftFeedback({ type: 'error', message })
     }
-
-    setScheduledShifts((previous) => [...previous, newShift])
-    setShiftFeedback({ type: 'success', message: 'Shift succesvol ingepland' })
-    setActiveShiftMemberId(null)
-    setShiftForm({ date: '', start: '', end: '' })
   }
 
-  const handleRequestTimeOff = (event: FormEvent<HTMLFormElement>) => {
+  const handleRequestTimeOff = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!timeOffMemberId) return
 
@@ -246,7 +225,7 @@ const CrewManagement: React.FC = () => {
       return
     }
 
-    const overlap = timeOffEntries.some(
+    const overlap = timeOff.some(
       (entry) =>
         entry.memberId === timeOffMemberId &&
         dateRangesOverlap(entry.start, entry.end, timeOffForm.start, timeOffForm.end),
@@ -257,19 +236,24 @@ const CrewManagement: React.FC = () => {
       return
     }
 
-    const request: TimeOffEntry = {
-      id: generateId(),
-      memberId: timeOffMemberId,
-      start: timeOffForm.start,
-      end: timeOffForm.end,
-      reason: timeOffForm.reason,
+    try {
+      const created = await requestTimeOff({
+        memberId: timeOffMemberId,
+        start: timeOffForm.start,
+        end: timeOffForm.end,
+        reason: timeOffForm.reason,
+      })
+      setAvailabilityOverrides((previous) => ({
+        ...previous,
+        [created.memberId]: 'Niet beschikbaar',
+      }))
+      setTimeOffFeedback({ type: 'success', message: 'Beschikbaarheid geregistreerd' })
+      setTimeOffMemberId(null)
+      setTimeOffForm({ start: '', end: '', reason: TIME_OFF_REASONS[0] })
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Beschikbaarheid registreren mislukt'
+      setTimeOffFeedback({ type: 'error', message })
     }
-
-    setTimeOffEntries((previous) => [...previous, request])
-    setAvailabilityOverrides((previous) => ({ ...previous, [timeOffMemberId]: 'Niet beschikbaar' }))
-    setTimeOffFeedback({ type: 'success', message: 'Beschikbaarheid geregistreerd' })
-    setTimeOffMemberId(null)
-    setTimeOffForm({ start: '', end: '', reason: TIME_OFF_REASONS[0] })
   }
 
   const activeShiftMember = crewMembers.find((member) => member.id === activeShiftMemberId)
@@ -296,6 +280,18 @@ const CrewManagement: React.FC = () => {
           Nieuw crewlid
         </button>
       </header>
+
+      {loading && crewMembers.length === 0 && (
+        <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm">
+          Gegevens worden geladen…
+        </p>
+      )}
+
+      {error && (
+        <p className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+          {error}
+        </p>
+      )}
 
       <section className="grid gap-4 rounded-md border border-slate-200 p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <label className="flex flex-col text-sm font-medium text-slate-700">
