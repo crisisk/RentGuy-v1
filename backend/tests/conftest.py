@@ -120,10 +120,12 @@ def _install_geoalchemy_stubs() -> None:
         def get_col_spec(self, **kwargs):  # pragma: no cover - trivial stub
             return "GEOMETRY"
 
-    class _WKBElement:
-        def __init__(self, data=None, srid: int | None = None) -> None:  # pragma: no cover - trivial stub
-            self.data = data
-            self.srid = srid
+    class _WKBElement(str):
+        def __new__(cls, data=None, srid: int | None = None):  # pragma: no cover - trivial stub
+            text = data if data is not None else ""
+            obj = str.__new__(cls, text)
+            obj.srid = srid
+            return obj
 
     geoalchemy_module.Geometry = _Geometry
     geoalchemy_module.WKBElement = _WKBElement
@@ -137,10 +139,27 @@ def _install_geoalchemy_stubs() -> None:
 
     shape_module = types.ModuleType('geoalchemy2.shape')
 
-    def _from_shape(shape, srid=None):  # pragma: no cover - trivial stub
-        return shape
+    try:  # pragma: no cover - optional dependency
+        from shapely.geometry import shape as shapely_shape  # type: ignore
+        from shapely import wkt as shapely_wkt  # type: ignore
+    except Exception:  # pragma: no cover - best effort fallback
+        shapely_shape = None  # type: ignore
+        shapely_wkt = None  # type: ignore
+
+    def _from_shape(value, srid=None):  # pragma: no cover - trivial stub
+        if hasattr(value, 'wkt'):
+            return value.wkt
+        if shapely_shape is not None:
+            return shapely_shape(value).wkt
+        return value
+
+    def _to_shape(value):  # pragma: no cover - trivial stub
+        if shapely_wkt is not None and isinstance(value, str):
+            return shapely_wkt.loads(value)
+        return value
 
     shape_module.from_shape = _from_shape
+    shape_module.to_shape = _to_shape
 
     sys.modules['geoalchemy2'] = geoalchemy_module
     sys.modules['geoalchemy2.elements'] = elements_module
@@ -200,6 +219,7 @@ os.environ.setdefault('MRDJ_LEAD_CAPTURE_CAPTCHA_SECRET', 'dummy-secret')
 # Ensure models are imported so metadata is populated before accessing the FastAPI app
 import app.modules.auth.models  # noqa: F401
 import app.modules.chat.models  # noqa: F401
+import app.modules.booking.models  # noqa: F401
 import app.modules.crew.models  # noqa: F401
 import app.modules.customer_portal.models  # noqa: F401
 import app.modules.inventory.models  # noqa: F401
@@ -238,12 +258,14 @@ def db_session() -> Generator[Session, None, None]:
 class DummyUser:
     role: str
     email: str = 'test@rentguy.local'
+    id: int = 1
 
 
 @pytest.fixture()
 def client(db_session: Session) -> Generator[TestClient, None, None]:
     from app.main import app
     from app.modules.auth import deps as auth_deps
+    from app.modules.auth.models import User
 
     def override_get_db() -> Generator[Session, None, None]:
         try:
@@ -254,7 +276,20 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     app.dependency_overrides[auth_deps.get_db] = override_get_db
     app.dependency_overrides[auth_deps.get_current_user] = lambda: DummyUser(role='admin')
 
+    if not db_session.query(User).filter_by(id=1).first():
+        db_session.add(
+            User(id=1, email='test@rentguy.local', password_hash='secret', role='admin')
+        )
+        db_session.commit()
+
     with TestClient(app) as test_client:
         yield test_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def anyio_backend():
+    """Force AnyIO-based tests to run on asyncio only during unit tests."""
+
+    return "asyncio"

@@ -4,6 +4,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from uuid import uuid4, UUID
 
+from app.modules.crm.schemas import DashboardSummary
+
+from .crm_dashboard import build_dashboard_summary
+
 class CustomerModel(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
@@ -78,5 +82,10 @@ async def create_activity(activity: ActivityCreate):
     new_activity = ActivityModel(**activity.dict())
     activities.append(new_activity)
     return new_activity
+
+
+@crm_router.get("/analytics/dashboard", response_model=DashboardSummary)
+async def dashboard_summary() -> DashboardSummary:
+    return build_dashboard_summary()
 
 

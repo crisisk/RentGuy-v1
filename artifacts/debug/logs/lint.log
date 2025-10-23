@@ -1,20 +1,90 @@
 
 > rentguy-pwa-scanner@0.0.1 lint
-> eslint . --ext .ts,.tsx,.js,.jsx
+> eslint src --ext .ts,.tsx
+
+
+/workspace/RentGuy-v1/src/pages/admin/AdminPanel.tsx
+   2:10  error  'Link' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  58:16  error  'err' is defined but never used                                         @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/admin/UserManagement.tsx
+   5:11  error  'User' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  14:9   error  'navigate' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/crew/CrewManagement.tsx
+   2:10  error  'useNavigate' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  26:16  error  'err' is defined but never used                                                @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/crew/ShiftSchedule.tsx
+  17:9   error  'navigate' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  39:16  error  'err' is defined but never used                                                      @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/crew/TimeApproval.tsx
+  21:9   error  'navigate' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  28:16  error  'error' is defined but never used                                                    @typescript-eslint/no-unused-vars
+  43:14  error  'error' is defined but never used                                                    @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/crm/ActivityLog.tsx
+   2:10  error  'Link' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  37:16  error  'err' is defined but never used                                         @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/crm/CRMDashboard.tsx
+   2:10  error  'Link' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  45:16  error  'err' is defined but never used                                         @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/crm/CustomerDetails.tsx
+  46:16  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/crm/CustomerForm.tsx
+  65:14  error  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/crm/CustomerList.tsx
+  2:10  error  'useNavigate' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/dashboard/Dashboard.tsx
+   2:10  error  'useNavigate' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   2:23  error  'useParams' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+   2:34  error  'Link' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  26:16  error  'err' is defined but never used                                                @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/project/ProjectDetails.tsx
+  51:16  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/project/ProjectForm.tsx
+  47:18  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  80:14  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/project/ProjectOverview.tsx
+  26:16  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/pages/project/ProjectTimeline.tsx
+  24:16  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/stores/projectStore.ts
+  277:3  error  Async method 'getStats' has no 'await' expression             @typescript-eslint/require-await
+  284:3  error  Async method 'getRecentActivities' has no 'await' expression  @typescript-eslint/require-await
+  293:3  error  Async method 'getProjectById' has no 'await' expression       @typescript-eslint/require-await
+
+/workspace/RentGuy-v1/src/ui/Login.tsx
+    27:8   error  'useAuthStore' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+   325:9   error  'goToLogin' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+   330:9   error  'goToRegister' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   335:9   error  'goToForgotPassword' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+   460:9   error  'validateEmail' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   471:9   error  'validatePassword' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+   481:9   error  'showLoginView' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   495:9   error  'showRegisterView' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+   504:9   error  'showResetRequestView' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1220:10  error  'resolveViewFromPath' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/ui/Planner.tsx
+  307:7  error  'emptyMessageStyles' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/workspace/RentGuy-v1/src/ui/SecretsDashboard.tsx
+  100:14  error  'error' is defined but never used                                                            @typescript-eslint/no-unused-vars
+  423:9   error  'emailStatusLabel' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 43 problems (43 errors, 0 warnings)
 
 
 npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
-
-Oops! Something went wrong! :(
-
-ESLint: 9.34.0
-
-Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'typescript-eslint' imported from /workspace/RentGuy-v1/eslint.config.mjs
-    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:266:9)
-    at packageResolve (node:internal/modules/esm/resolve:767:81)
-    at moduleResolve (node:internal/modules/esm/resolve:853:18)
-    at defaultResolve (node:internal/modules/esm/resolve:983:11)
-    at #cachedDefaultResolve (node:internal/modules/esm/loader:717:20)
-    at ModuleLoader.resolve (node:internal/modules/esm/loader:694:38)
-    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:308:38)
-    at ModuleJob._link (node:internal/modules/esm/module_job:183:49)

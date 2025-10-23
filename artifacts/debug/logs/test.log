@@ -1,7 +1,35 @@
 
 > rentguy-pwa-scanner@0.0.1 test
-> vitest run --coverage --passWithNoTests
+> node scripts/test-runner.mjs
 
+Running 5 test files...
+
+src/application/auth/api.test.ts
+  ✗ Failed to execute src/application/auth/api.test.ts
+    vi.mock is not a function
+
+src/hooks/__tests__/useOnboardingPreferences.test.ts
+  ✓ parseSnoozeTimestamp › returns null for empty values
+  ✓ parseSnoozeTimestamp › returns a number for valid timestamps
+  ✓ parseSnoozeTimestamp › ignores non-numeric values
+  ✓ computeOnboardingShouldShow › hides onboarding when already seen
+  ✓ computeOnboardingShouldShow › hides onboarding when snoozed in the future
+  ✓ computeOnboardingShouldShow › shows onboarding when snooze expired
+  ✓ computeOnboardingShouldShow › shows onboarding when no snooze present
+
+src/stores/__tests__/authStore.test.ts
+  ✗ Failed to execute src/stores/__tests__/authStore.test.ts
+    initializer is not a function
+
+src/stores/__tests__/storeFactory.test.ts
+  ✓ createStore › updates state with partial objects and recipes
+  ✓ createStore › notifies subscribers on change
+
+src/ui/__tests__/normalizeSteps.test.ts
+  ✓ normalizeSteps › generates slugged codes from titles when missing
+  ✓ normalizeSteps › falls back to deterministic codes when no title is provided
+  ✓ normalizeSteps › ensures generated codes remain unique
+
+2 of 12 tests failed.
 
 npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
-sh: 1: vitest: not found

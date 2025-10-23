@@ -154,6 +154,12 @@ export interface SourcePerformanceKPI {
   gtm_revenue: number;
 }
 
+export interface DashboardProvenance {
+  source: string;
+  upstream_systems: string[];
+  last_refreshed_at: string | null;
+}
+
 export interface DashboardSummary {
   generated_at: string;
   headline: HeadlineKPIs;
@@ -163,4 +169,5 @@ export interface DashboardSummary {
   sales: SalesKPIs;
   acquisition: AcquisitionKPIs;
   source_performance: SourcePerformanceKPI[];
+  provenance: DashboardProvenance;
 }

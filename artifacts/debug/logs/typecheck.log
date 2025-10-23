@@ -2,6 +2,482 @@
 > rentguy-pwa-scanner@0.0.1 typecheck
 > tsc -p tsconfig.json --noEmit
 
-src/ui/OnboardingOverlay.tsx(984,3): error TS1109: Expression expected.
+node_modules/vite-node/dist/server.d.ts(1,10): error TS2305: Module '"vite"' has no exported member 'TransformResult'.
+node_modules/vite-node/dist/server.d.ts(1,27): error TS2305: Module '"vite"' has no exported member 'ViteDevServer'.
+node_modules/vite/dist/node/index.d.ts(5,41): error TS2307: Cannot find module 'rollup/parseAst' or its corresponding type declarations.
+  There are types at '/workspace/RentGuy-v1/node_modules/rollup/dist/parseAst.d.ts', but this result could not be resolved under your current 'moduleResolution' setting. Consider updating to 'node16', 'nodenext', or 'bundler'.
+node_modules/vite/dist/node/types.d-aGj9QkWt.d.ts(161,11): error TS2430: Interface 'ViteRuntimeImportMeta' incorrectly extends interface 'ImportMeta'.
+  Types of property 'env' are incompatible.
+    Type 'ImportMetaEnv' has no properties in common with type 'ImportMetaEnv'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(6,10): error TS2305: Module '"vite"' has no exported member 'ViteDevServer'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(6,25): error TS2305: Module '"vite"' has no exported member 'TransformResult'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(6,63): error TS2305: Module '"vite"' has no exported member 'ServerOptions'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(6,78): error TS2305: Module '"vite"' has no exported member 'DepOptimizationConfig'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(6,101): error TS2305: Module '"vite"' has no exported member 'AliasOptions'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(568,50): error TS2694: Namespace '"vite"' has no exported member 'ModuleNode'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(569,37): error TS2694: Namespace '"vite"' has no exported member 'ModuleNode'.
+src/application/auth/api.test.ts(6,4): error TS2339: Property 'mock' does not exist on type '{ fn<T extends (...args: any[]) => any>(implementation?: T | undefined): T & { mock: { calls: Parameters<T>[]; }; }; }'.
+src/application/auth/api.test.ts(12,26): error TS2693: 'AxiosError' only refers to a type, but is being used as a value here.
+src/application/auth/api.test.ts(16,8): error TS2339: Property 'mocked' does not exist on type '{ fn<T extends (...args: any[]) => any>(implementation?: T | undefined): T & { mock: { calls: Parameters<T>[]; }; }; }'.
+src/application/auth/api.test.ts(20,8): error TS2339: Property 'mocked' does not exist on type '{ fn<T extends (...args: any[]) => any>(implementation?: T | undefined): T & { mock: { calls: Parameters<T>[]; }; }; }'.
+src/application/auth/api.test.ts(25,19): error TS2339: Property 'value' does not exist on type 'LoginResult'.
+  Property 'value' does not exist on type 'ErrorResult<APIError>'.
+src/application/auth/api.test.ts(26,19): error TS2339: Property 'value' does not exist on type 'LoginResult'.
+  Property 'value' does not exist on type 'ErrorResult<APIError>'.
+src/application/auth/api.test.ts(27,38): error TS2339: Property 'value' does not exist on type 'LoginResult'.
+  Property 'value' does not exist on type 'ErrorResult<APIError>'.
+src/application/auth/api.test.ts(31,8): error TS2339: Property 'mocked' does not exist on type '{ fn<T extends (...args: any[]) => any>(implementation?: T | undefined): T & { mock: { calls: Parameters<T>[]; }; }; }'.
+src/application/auth/api.test.ts(36,19): error TS2339: Property 'error' does not exist on type 'LoginResult'.
+  Property 'error' does not exist on type 'SuccessResult<{ token: string; user: AuthUser; }>'.
+src/application/auth/api.ts(261,10): error TS2678: Type '"conflict"' is not comparable to type 'AppErrorCode'.
+src/core/auth-token-storage.ts(108,3): error TS2322: Type 'number' is not assignable to type 'Timeout'.
+src/pages/ErrorPage.tsx(2,10): error TS2305: Module '"react-router-dom"' has no exported member 'isRouteErrorResponse'.
+src/pages/ErrorPage.tsx(2,51): error TS2305: Module '"react-router-dom"' has no exported member 'useRouteError'.
+src/pages/ErrorPage.tsx(14,20): error TS18046: 'error' is of type 'unknown'.
+src/pages/ErrorPage.tsx(15,24): error TS18046: 'error' is of type 'unknown'.
+src/pages/ErrorPage.tsx(17,15): error TS18046: 'error' is of type 'unknown'.
+src/pages/ErrorPage.tsx(17,42): error TS18046: 'error' is of type 'unknown'.
+src/pages/ErrorPage.tsx(17,69): error TS18046: 'error' is of type 'unknown'.
+src/pages/ErrorPage.tsx(18,19): error TS18046: 'error' is of type 'unknown'.
+src/pages/ErrorPage.tsx(25,5): error TS2375: Type '{ message: string; stack: string | undefined; }' is not assignable to type 'ErrorDetails' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'stack' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/pages/ErrorPage.tsx(46,21): error TS2339: Property 'fontStack' does not exist on type 'BrandTheme'.
+src/pages/ErrorPage.tsx(88,62): error TS2339: Property 'DEV' does not exist on type 'ImportMetaEnv'.
+src/pages/ErrorPage.tsx(141,37): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/pages/NotFoundPage.tsx(18,21): error TS2339: Property 'fontStack' does not exist on type 'BrandTheme'.
+src/pages/NotFoundPage.tsx(109,37): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/pages/admin/AdminPanel.tsx(46,46): error TS2339: Property 'getSystemStats' does not exist on type 'Store<AdminState>'.
+src/pages/admin/AdminPanel.tsx(47,45): error TS2339: Property 'getUserActivities' does not exist on type 'Store<AdminState>'.
+src/pages/admin/UserManagement.tsx(19,16): error TS2339: Property 'loadUsers' does not exist on type 'Store<AdminState>'.
+src/pages/admin/UserManagement.tsx(24,24): error TS2339: Property 'deleteUser' does not exist on type 'Store<AdminState>'.
+src/pages/admin/UserManagement.tsx(26,18): error TS2339: Property 'loadUsers' does not exist on type 'Store<AdminState>'.
+src/pages/admin/UserManagement.tsx(30,18): error TS2339: Property 'loading' does not exist on type 'Store<AdminState>'.
+src/pages/admin/UserManagement.tsx(38,18): error TS2339: Property 'error' does not exist on type 'Store<AdminState>'.
+src/pages/admin/UserManagement.tsx(41,21): error TS2339: Property 'error' does not exist on type 'Store<AdminState>'.
+src/pages/admin/UserManagement.tsx(60,25): error TS2339: Property 'users' does not exist on type 'Store<AdminState>'.
+src/pages/admin/UserManagement.tsx(60,36): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/pages/crew/CrewManagement.tsx(23,25): error TS2339: Property 'fetchCrew' does not exist on type 'Store<CrewState & CrewActions>'.
+src/pages/crew/CrewManagement.tsx(24,35): error TS2339: Property 'getCrew' does not exist on type 'Store<CrewState & CrewActions>'.
+src/pages/crew/CrewManagement.tsx(60,22): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/crew/CrewManagement.tsx(65,22): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/crew/ShiftSchedule.tsx(25,5): error TS2322: Type '(string | undefined)[]' is not assignable to type 'string[]'.
+  Type 'string | undefined' is not assignable to type 'string'.
+    Type 'undefined' is not assignable to type 'string'.
+src/pages/crew/ShiftSchedule.tsx(36,47): error TS2339: Property 'getWeeklyShifts' does not exist on type 'Store<CrewState & CrewActions>'.
+src/pages/crew/ShiftSchedule.tsx(96,36): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/crew/TimeApproval.tsx(26,41): error TS2339: Property 'getTimeEntries' does not exist on type 'Store<CrewState & CrewActions>'.
+src/pages/crew/TimeApproval.tsx(42,23): error TS2339: Property 'updateTimeEntry' does not exist on type 'Store<CrewState & CrewActions>'.
+src/pages/crm/ActivityLog.tsx(34,50): error TS2339: Property 'getActivityLog' does not exist on type 'Store<CRMState>'.
+src/pages/crm/CRMDashboard.tsx(39,38): error TS2339: Property 'getCustomerStats' does not exist on type 'Store<CRMState>'.
+src/pages/crm/CRMDashboard.tsx(40,43): error TS2339: Property 'getRecentActivities' does not exist on type 'Store<CRMState>'.
+src/pages/crm/CustomerDetails.tsx(40,45): error TS2339: Property 'getCustomerById' does not exist on type 'Store<CRMState>'.
+src/pages/crm/CustomerDetails.tsx(41,51): error TS2339: Property 'getCustomerActivities' does not exist on type 'Store<CRMState>'.
+src/pages/crm/CustomerForm.tsx(33,16): error TS2339: Property 'getCustomer' does not exist on type 'Store<CRMState>'.
+src/pages/crm/CustomerForm.tsx(34,15): error TS7006: Parameter 'customer' implicitly has an 'any' type.
+src/pages/crm/CustomerForm.tsx(63,22): error TS2339: Property 'saveCustomer' does not exist on type 'Store<CRMState>'.
+src/pages/crm/CustomerList.tsx(24,37): error TS2339: Property 'loadCustomers' does not exist on type 'Store<CRMState>'.
+src/pages/crm/CustomerList.tsx(68,22): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/dashboard/Dashboard.tsx(88,35): error TS2532: Object is possibly 'undefined'.
+src/pages/finance/FinanceDashboard.tsx(56,20): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/FinanceDashboard.tsx(56,36): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/FinanceDashboard.tsx(57,17): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/FinanceDashboard.tsx(57,33): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/FinanceDashboard.tsx(58,19): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/FinanceDashboard.tsx(58,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/FinanceDashboard.tsx(59,17): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/FinanceDashboard.tsx(59,33): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/FinanceDashboard.tsx(60,28): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/FinanceDashboard.tsx(60,44): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/FinanceDashboard.tsx(61,22): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/FinanceDashboard.tsx(61,38): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/FinanceDashboard.tsx(91,16): error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/pages/finance/FinanceDashboard.tsx(91,38): error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/pages/finance/FinanceDashboard.tsx(104,29): error TS2339: Property 'fontStack' does not exist on type 'BrandTheme'.
+src/pages/finance/FinanceDashboard.tsx(139,29): error TS2339: Property 'fontStack' does not exist on type 'BrandTheme'.
+src/pages/finance/FinanceDashboard.tsx(153,27): error TS2339: Property 'fontStack' does not exist on type 'BrandTheme'.
+src/pages/finance/FinanceDashboard.tsx(298,39): error TS18048: 'palette' is possibly 'undefined'.
+src/pages/finance/FinanceDashboard.tsx(299,34): error TS18048: 'palette' is possibly 'undefined'.
+src/pages/finance/InvoiceForm.tsx(32,25): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceForm.tsx(32,41): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(33,25): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceForm.tsx(33,41): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(34,26): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceForm.tsx(34,42): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(35,19): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceForm.tsx(35,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(36,22): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceForm.tsx(36,38): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(65,60): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(125,13): error TS2375: Type '{ clientName: string; invoiceDate: string; dueDate: string | undefined; lineItems: InvoiceLineItem[]; total: number; }' is not assignable to type 'InvoiceInput' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'dueDate' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string | Date'.
+      Type 'undefined' is not assignable to type 'string | Date'.
+src/pages/finance/InvoiceForm.tsx(158,29): error TS2339: Property 'fontStack' does not exist on type 'BrandTheme'.
+src/pages/finance/InvoiceForm.tsx(172,27): error TS2339: Property 'fontStack' does not exist on type 'BrandTheme'.
+src/pages/finance/InvoiceForm.tsx(230,25): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(245,25): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(260,25): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(307,31): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(323,31): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/InvoiceForm.tsx(339,31): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(52,20): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceOverview.tsx(52,36): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(53,19): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceOverview.tsx(53,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(54,17): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceOverview.tsx(54,33): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(55,25): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceOverview.tsx(55,41): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(56,22): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/InvoiceOverview.tsx(56,38): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(83,28): error TS7006: Parameter 'invoice' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(134,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(139,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/InvoiceOverview.tsx(164,37): error TS7006: Parameter 'invoice' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(48,18): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/QuoteManagement.tsx(48,34): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(49,19): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/QuoteManagement.tsx(49,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(50,17): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/QuoteManagement.tsx(50,33): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(51,23): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/QuoteManagement.tsx(51,39): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(52,33): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/QuoteManagement.tsx(52,49): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(53,22): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/pages/finance/QuoteManagement.tsx(53,38): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(93,26): error TS7006: Parameter 'quote' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(138,23): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(143,23): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/pages/finance/QuoteManagement.tsx(166,32): error TS7006: Parameter 'quote' implicitly has an 'any' type.
+src/pages/project/ProjectForm.tsx(23,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/pages/project/ProjectForm.tsx(43,15): error TS2322: Type '"in-progress" | "completed" | "planned"' is not assignable to type '"PLANNING" | "IN_PROGRESS" | "COMPLETED" | "ON_HOLD"'.
+  Type '"in-progress"' is not assignable to type '"PLANNING" | "IN_PROGRESS" | "COMPLETED" | "ON_HOLD"'. Did you mean '"IN_PROGRESS"'?
+src/pages/project/ProjectForm.tsx(75,28): error TS2339: Property 'updateProject' does not exist on type '{ getProjects: () => Promise<Project[]>; getStats: () => Promise<{ totalTasks: number; completedTasks: number; }>; getRecentActivities: () => Promise<{ id: string; title: string; date: string; status: string; }[]>; getProjectById: (id: string) => Promise<...>; getState: GetState<...>; setState: SetState<...>; subscr...'.
+src/pages/project/ProjectForm.tsx(77,28): error TS2339: Property 'createProject' does not exist on type '{ getProjects: () => Promise<Project[]>; getStats: () => Promise<{ totalTasks: number; completedTasks: number; }>; getRecentActivities: () => Promise<{ id: string; title: string; date: string; status: string; }[]>; getProjectById: (id: string) => Promise<...>; getState: GetState<...>; setState: SetState<...>; subscr...'.
+src/pages/project/ProjectOverview.tsx(24,21): error TS2345: Argument of type 'Project[]' is not assignable to parameter of type 'SetStateAction<Project[]>'.
+  Type 'import("/workspace/RentGuy-v1/src/stores/projectStore").Project[]' is not assignable to type 'Project[]'.
+    Type 'Project' is missing the following properties from type 'Project': createdAt, teamSize
+src/pages/project/ProjectOverview.tsx(77,22): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/project/ProjectOverview.tsx(82,22): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/project/ProjectTimeline.tsx(21,44): error TS2551: Property 'getProject' does not exist on type '{ getProjects: () => Promise<Project[]>; getStats: () => Promise<{ totalTasks: number; completedTasks: number; }>; getRecentActivities: () => Promise<{ id: string; title: string; date: string; status: string; }[]>; getProjectById: (id: string) => Promise<...>; getState: GetState<...>; setState: SetState<...>; subscr...'. Did you mean 'getProjects'?
+src/pages/settings/SystemSettings.tsx(25,50): error TS2339: Property 'getSystemSettings' does not exist on type 'Store<AdminState>'.
+src/pages/settings/SystemSettings.tsx(40,24): error TS2339: Property 'updateSystemSettings' does not exist on type 'Store<AdminState>'.
+src/pages/settings/SystemSettings.tsx(62,30): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/settings/SystemSettings.tsx(82,30): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/pages/settings/SystemSettings.tsx(101,30): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/router/guards.tsx(3,27): error TS2307: Cannot find module './authStore' or its corresponding type declarations.
+src/router/guards.tsx(67,34): error TS2322: Type '{ to: string; state: { from: Location; }; replace: true; }' is not assignable to type 'NavigateProps'.
+  Property 'state' does not exist on type 'NavigateProps'.
+src/router/index.tsx(1,10): error TS2305: Module '"react"' has no exported member 'Suspense'.
+src/router/index.tsx(124,47): error TS2339: Property 'search' does not exist on type 'Location'.
+src/router/index.tsx(149,47): error TS2379: Argument of type '{ onLogout: () => void; secretsFocusPath: string | undefined; }' is not assignable to parameter of type 'CreateAppRoutesOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'secretsFocusPath' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/router/index.tsx(151,11): error TS2322: Type '{ path: string; match: ((pathname: string) => boolean) | undefined; element: any; }[]' is not assignable to type 'RouteObject[]'.
+  Type '{ path: string; match: ((pathname: string) => boolean) | undefined; element: any; }' is not assignable to type 'RouteObject' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'match' are incompatible.
+      Type '((pathname: string) => boolean) | undefined' is not assignable to type '(pathname: string) => boolean'.
+        Type 'undefined' is not assignable to type '(pathname: string) => boolean'.
+src/router/index.tsx(259,65): error TS2379: Argument of type '{ basename: string | undefined; }' is not assignable to parameter of type '{ basename?: string; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'basename' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/router/routes.tsx(1,25): error TS2305: Module '"react"' has no exported member 'lazy'.
+src/router/routes.tsx(1,36): error TS2305: Module '"react"' has no exported member 'LazyExoticComponent'.
+src/router/routes.tsx(1,62): error TS2305: Module '"react"' has no exported member 'ComponentType'.
+src/stores/__tests__/authStore.test.ts(18,32): error TS2339: Property 'getState' does not exist on type 'AuthStoreState'.
+src/stores/__tests__/authStore.test.ts(21,31): error TS2339: Property 'getState' does not exist on type 'AuthStoreState'.
+src/stores/__tests__/authStore.test.ts(32,32): error TS2339: Property 'getState' does not exist on type 'AuthStoreState'.
+src/stores/__tests__/authStore.test.ts(35,31): error TS2339: Property 'getState' does not exist on type 'AuthStoreState'.
+src/stores/__tests__/authStore.test.ts(41,32): error TS2339: Property 'getState' does not exist on type 'AuthStoreState'.
+src/stores/__tests__/authStore.test.ts(45,31): error TS2339: Property 'getState' does not exist on type 'AuthStoreState'.
+src/stores/adminStore.ts(98,40): error TS2339: Property 'patch' does not exist on type 'AxiosInstance'.
+src/stores/authStore.ts(108,29): error TS2554: Expected 1 arguments, but got 0.
+src/stores/authStore.ts(109,3): error TS2345: Argument of type 'StateCreator<AuthStoreState, [], [["zustand/persist", unknown]]>' is not assignable to parameter of type '((state: AuthStoreState) => AuthStoreState) | undefined'.
+  Type 'StateCreator<AuthStoreState, [], [["zustand/persist", unknown]]>' is not assignable to type '(state: AuthStoreState) => AuthStoreState'.
+    Target signature provides too few arguments. Expected 3 or more, but got 1.
+src/stores/authStore.ts(115,17): error TS2540: Cannot assign to 'token' because it is a read-only property.
+src/stores/authStore.ts(116,17): error TS2540: Cannot assign to 'user' because it is a read-only property.
+src/stores/authStore.ts(117,17): error TS2540: Cannot assign to 'status' because it is a read-only property.
+src/stores/authStore.ts(118,17): error TS2540: Cannot assign to 'error' because it is a read-only property.
+src/stores/authStore.ts(134,17): error TS2540: Cannot assign to 'status' because it is a read-only property.
+src/stores/authStore.ts(135,17): error TS2540: Cannot assign to 'error' because it is a read-only property.
+src/stores/authStore.ts(140,17): error TS2540: Cannot assign to 'status' because it is a read-only property.
+src/stores/authStore.ts(141,17): error TS2540: Cannot assign to 'error' because it is a read-only property.
+src/stores/authStore.ts(146,17): error TS2540: Cannot assign to 'status' because it is a read-only property.
+src/stores/authStore.ts(147,17): error TS2540: Cannot assign to 'error' because it is a read-only property.
+src/stores/authStore.ts(155,19): error TS2540: Cannot assign to 'token' because it is a read-only property.
+src/stores/authStore.ts(156,19): error TS2540: Cannot assign to 'user' because it is a read-only property.
+src/stores/authStore.ts(157,19): error TS2540: Cannot assign to 'status' because it is a read-only property.
+src/stores/authStore.ts(161,21): error TS2540: Cannot assign to 'error' because it is a read-only property.
+src/stores/authStore.ts(163,21): error TS2540: Cannot assign to 'error' because it is a read-only property.
+src/stores/authStore.ts(165,21): error TS2540: Cannot assign to 'error' because it is a read-only property.
+src/stores/authStore.ts(169,17): error TS2540: Cannot assign to 'token' because it is a read-only property.
+src/stores/authStore.ts(170,17): error TS2540: Cannot assign to 'status' because it is a read-only property.
+src/stores/authStore.ts(172,19): error TS2540: Cannot assign to 'error' because it is a read-only property.
+src/stores/authStore.ts(190,16): error TS2339: Property 'setState' does not exist on type 'AuthStoreState'.
+src/stores/crewStore.ts(139,17): error TS2339: Property 'patch' does not exist on type 'AxiosInstance'.
+src/stores/crmStore.ts(79,49): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/stores/crmStore.ts(95,50): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/stores/equipmentStore.ts(140,34): error TS2554: Expected 1 arguments, but got 0.
+src/stores/equipmentStore.ts(141,3): error TS2345: Argument of type 'StateCreator<object>' is not assignable to parameter of type '(state: InventoryState) => object'.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/stores/equipmentStore.ts(152,15): error TS2339: Property 'error' does not exist on type 'object'.
+src/stores/equipmentStore.ts(158,15): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/equipmentStore.ts(159,15): error TS2339: Property 'error' does not exist on type 'object'.
+src/stores/equipmentStore.ts(180,17): error TS2339: Property 'categories' does not exist on type 'object'.
+src/stores/equipmentStore.ts(181,17): error TS2339: Property 'items' does not exist on type 'object'.
+src/stores/equipmentStore.ts(182,17): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/equipmentStore.ts(183,17): error TS2339: Property 'lastFetchedAt' does not exist on type 'object'.
+src/stores/equipmentStore.ts(190,17): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/equipmentStore.ts(191,17): error TS2339: Property 'error' does not exist on type 'object'.
+src/stores/equipmentStore.ts(197,32): error TS7006: Parameter 'requests' implicitly has an 'any' type.
+src/stores/equipmentStore.ts(203,15): error TS2339: Property 'availabilityLoading' does not exist on type 'object'.
+src/stores/equipmentStore.ts(204,15): error TS2339: Property 'error' does not exist on type 'object'.
+src/stores/equipmentStore.ts(208,38): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/stores/equipmentStore.ts(219,17): error TS2339: Property 'availabilityLoading' does not exist on type 'object'.
+src/stores/equipmentStore.ts(221,19): error TS2339: Property 'availability' does not exist on type 'object'.
+src/stores/equipmentStore.ts(232,17): error TS2339: Property 'availabilityLoading' does not exist on type 'object'.
+src/stores/equipmentStore.ts(233,17): error TS2339: Property 'error' does not exist on type 'object'.
+src/stores/equipmentStore.ts(239,26): error TS7006: Parameter 'itemId' implicitly has an 'any' type.
+src/stores/equipmentStore.ts(239,34): error TS7006: Parameter 'status' implicitly has an 'any' type.
+src/stores/equipmentStore.ts(241,15): error TS2339: Property 'error' does not exist on type 'object'.
+src/stores/equipmentStore.ts(245,36): error TS2339: Property 'patch' does not exist on type 'AxiosInstance'.
+src/stores/equipmentStore.ts(246,77): error TS2339: Property 'categories' does not exist on type 'object'.
+src/stores/equipmentStore.ts(246,92): error TS7006: Parameter 'category' implicitly has an 'any' type.
+src/stores/equipmentStore.ts(249,31): error TS2339: Property 'items' does not exist on type 'object'.
+src/stores/equipmentStore.ts(249,47): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/stores/equipmentStore.ts(251,19): error TS2339: Property 'items' does not exist on type 'object'.
+src/stores/equipmentStore.ts(251,45): error TS2339: Property 'items' does not exist on type 'object'.
+src/stores/equipmentStore.ts(253,19): error TS2339: Property 'items' does not exist on type 'object'.
+src/stores/equipmentStore.ts(261,17): error TS2339: Property 'error' does not exist on type 'object'.
+src/stores/financeStore.ts(98,56): error TS2375: Type '{ id: string; clientName: any; amount: number; date: string; dueDate: string | undefined; status: InvoiceStatus; description: any; lineItems: InvoiceLineItem[]; }' is not assignable to type 'Invoice' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'dueDate' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/stores/financeStore.ts(133,56): error TS2375: Type '{ id: string; amount: number; invoiceId: string; method: any; processedAt: string | undefined; }' is not assignable to type 'Payment' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'processedAt' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/stores/financeStore.ts(183,32): error TS2554: Expected 1 arguments, but got 0.
+src/stores/financeStore.ts(184,3): error TS2345: Argument of type 'StateCreator<object>' is not assignable to parameter of type '(state: FinanceState) => object'.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/stores/financeStore.ts(211,30): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(211,45): error TS7006: Parameter 'invoice' implicitly has an 'any' type.
+src/stores/financeStore.ts(221,17): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(222,17): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/financeStore.ts(228,42): error TS2339: Property 'fetchInvoices' does not exist on type 'object'.
+src/stores/financeStore.ts(229,35): error TS7006: Parameter 'invoice' implicitly has an 'any' type.
+src/stores/financeStore.ts(232,21): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/financeStore.ts(243,27): error TS7006: Parameter 'invoice' implicitly has an 'any' type.
+src/stores/financeStore.ts(251,17): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(252,17): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/financeStore.ts(262,27): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/stores/financeStore.ts(262,31): error TS7006: Parameter 'invoice' implicitly has an 'any' type.
+src/stores/financeStore.ts(270,31): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(270,51): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/stores/financeStore.ts(272,19): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(274,19): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(276,17): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/financeStore.ts(286,27): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/stores/financeStore.ts(291,17): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(291,34): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(291,51): error TS7006: Parameter 'invoice' implicitly has an 'any' type.
+src/stores/financeStore.ts(292,17): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/financeStore.ts(316,34): error TS2339: Property 'fetchQuotes' does not exist on type 'object'.
+src/stores/financeStore.ts(320,35): error TS7006: Parameter 'quoteId' implicitly has an 'any' type.
+src/stores/financeStore.ts(326,17): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(327,17): error TS2339: Property 'quotes' does not exist on type 'object'.
+src/stores/financeStore.ts(327,32): error TS2339: Property 'quotes' does not exist on type 'object'.
+src/stores/financeStore.ts(327,44): error TS7006: Parameter 'quote' implicitly has an 'any' type.
+src/stores/financeStore.ts(332,17): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/financeStore.ts(356,27): error TS7006: Parameter 'payment' implicitly has an 'any' type.
+src/stores/financeStore.ts(366,17): error TS2339: Property 'payments' does not exist on type 'object'.
+src/stores/financeStore.ts(367,17): error TS2339: Property 'loading' does not exist on type 'object'.
+src/stores/financeStore.ts(381,32): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(394,32): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/stores/financeStore.ts(404,38): error TS2339: Property 'fetchInvoices' does not exist on type 'object'.
+src/stores/financeStore.ts(405,35): error TS2339: Property 'getFinanceStats' does not exist on type 'object'.
+src/stores/financeStore.ts(409,32): error TS2339: Property 'invoices' does not exist on type 'object'.
+src/ui/App.tsx(144,17): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/App.tsx(144,30): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/App.tsx(145,16): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/App.tsx(145,29): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/App.tsx(146,30): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/App.tsx(146,43): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/App.tsx(147,21): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/App.tsx(147,34): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/App.tsx(148,28): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/App.tsx(148,41): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/App.tsx(149,25): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/App.tsx(149,38): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/App.tsx(150,27): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/App.tsx(150,40): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/App.tsx(151,25): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/App.tsx(151,38): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/App.tsx(335,8): error TS2375: Type '{ isAuthenticated: boolean; onLogin: (nextToken: string, authenticatedUser: AuthUser) => void; onLogout: () => void; basename: string; postLoginPath: string; defaultAuthenticatedPath: string; defaultUnauthenticatedPath: string; secretsFocusPath: string | undefined; }' is not assignable to type 'AppRouterProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'secretsFocusPath' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/ui/App.tsx(382,57): error TS2379: Argument of type '{ modeOverride: "marketing" | undefined; }' is not assignable to parameter of type 'ResolveExperienceOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'modeOverride' are incompatible.
+    Type '"marketing" | undefined' is not assignable to type 'ExperienceModeOverride'.
+      Type 'undefined' is not assignable to type 'ExperienceModeOverride'.
+src/ui/InventorySnapshot.tsx(52,27): error TS2503: Cannot find namespace 'React'.
+src/ui/InventorySnapshot.tsx(61,19): error TS2503: Cannot find namespace 'React'.
+src/ui/InventorySnapshot.tsx(88,17): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(88,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(89,22): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(89,40): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(90,24): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(90,42): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(91,19): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(91,37): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(92,31): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(92,49): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(93,17): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(93,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(94,25): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(94,43): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(95,26): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(95,44): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(96,31): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(96,49): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(97,24): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(97,42): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(98,22): error TS2349: This expression is not callable.
+  Type '{}' has no call signatures.
+src/ui/InventorySnapshot.tsx(98,40): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(123,12): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(124,15): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(125,14): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(125,17): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(133,15): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(134,12): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(167,25): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(355,23): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(361,23): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(374,23): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(381,29): error TS7006: Parameter 'category' implicitly has an 'any' type.
+src/ui/InventorySnapshot.tsx(422,37): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<EquipmentStatus, { background: string; color: string; }>'.
+src/ui/InventorySnapshot.tsx(442,26): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<EquipmentStatus, string>'.
+src/ui/Login.tsx(239,5): error TS2304: Cannot find name 'setView'.
+src/ui/Login.tsx(239,13): error TS2304: Cannot find name 'initialMode'.
+src/ui/Login.tsx(240,7): error TS2304: Cannot find name 'initialMode'.
+src/ui/Login.tsx(243,19): error TS2304: Cannot find name 'initialResetToken'.
+src/ui/Login.tsx(244,7): error TS2304: Cannot find name 'initialResetToken'.
+src/ui/Login.tsx(317,7): error TS2304: Cannot find name 'view'.
+src/ui/Login.tsx(326,5): error TS2304: Cannot find name 'setGlobalNotice'.
+src/ui/Login.tsx(327,5): error TS2552: Cannot find name 'navigate'. Did you mean 'navigator'?
+src/ui/Login.tsx(328,7): error TS2552: Cannot find name 'navigate'. Did you mean 'navigator'?
+src/ui/Login.tsx(331,5): error TS2304: Cannot find name 'setGlobalNotice'.
+src/ui/Login.tsx(332,5): error TS2552: Cannot find name 'navigate'. Did you mean 'navigator'?
+src/ui/Login.tsx(333,7): error TS2552: Cannot find name 'navigate'. Did you mean 'navigator'?
+src/ui/Login.tsx(336,5): error TS2304: Cannot find name 'setGlobalNotice'.
+src/ui/Login.tsx(337,5): error TS2304: Cannot find name 'navigate'.
+src/ui/Login.tsx(338,7): error TS2304: Cannot find name 'navigate'.
+src/ui/Login.tsx(482,5): error TS2304: Cannot find name 'setView'.
+src/ui/Login.tsx(484,5): error TS2304: Cannot find name 'setRegisterSuccess'.
+src/ui/Login.tsx(486,7): error TS2304: Cannot find name 'setResetStatus'.
+src/ui/Login.tsx(489,5): error TS2304: Cannot find name 'setConfirmError'.
+src/ui/Login.tsx(496,5): error TS2304: Cannot find name 'setView'.
+src/ui/Login.tsx(498,5): error TS2304: Cannot find name 'setRegisterSuccess'.
+src/ui/Login.tsx(505,5): error TS2304: Cannot find name 'setView'.
+src/ui/Login.tsx(506,5): error TS2304: Cannot find name 'setResetStatus'.
+src/ui/Login.tsx(1128,8): error TS2304: Cannot find name 'activeView'.
+src/ui/Login.tsx(1171,8): error TS2304: Cannot find name 'activeView'.
+src/ui/Login.tsx(1231,5): error TS2322: Type '"forgot"' is not assignable to type 'AuthView'.
+src/ui/Login.tsx(1234,5): error TS2322: Type '"verify"' is not assignable to type 'AuthView'.
+src/ui/MarketingDemoPage.tsx(303,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingDemoPage.tsx(318,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingDemoPage.tsx(511,34): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(391,22): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(407,22): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(455,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(470,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(577,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(820,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(888,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(966,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/MarketingLandingPage.tsx(1034,24): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/ui/Planner.tsx(29,3): error TS2305: Module '"@rg-types/projectTypes"' has no exported member 'PersonaKpiConfig'.
+src/ui/Planner.tsx(512,20): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/Planner.tsx(512,33): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/Planner.tsx(513,21): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/Planner.tsx(513,34): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/ui/Planner.tsx(1002,18): error TS2345: Argument of type '"operations"' is not assignable to parameter of type 'PersonaKey'.
+src/ui/Planner.tsx(1008,18): error TS2345: Argument of type '"support"' is not assignable to parameter of type 'PersonaKey'.
+src/ui/Planner.tsx(1014,18): error TS2345: Argument of type '"cfo"' is not assignable to parameter of type 'PersonaKey'.
+src/ui/Planner.tsx(1020,18): error TS2345: Argument of type '"compliance"' is not assignable to parameter of type 'PersonaKey'.
+src/ui/Planner.tsx(1026,18): error TS2345: Argument of type '"sales"' is not assignable to parameter of type 'PersonaKey'.
+src/ui/Planner.tsx(1135,33): error TS2339: Property 'kpis' does not exist on type 'PersonaPreset'.
+src/ui/Planner.tsx(1138,34): error TS2339: Property 'kpis' does not exist on type 'PersonaPreset'.
+src/ui/Planner.tsx(1138,43): error TS7006: Parameter 'kpi' implicitly has an 'any' type.
+src/ui/Planner.tsx(1139,26): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ totalProjects: number; activeProjects: number; criticalProjects: number; warningProjects: number; upcoming7Days: number; upcoming14Days: number; completed30Days: number; eventsWithAlerts: number; atRiskProjects: number; }'.
+src/ui/Planner.tsx(1828,36): error TS7006: Parameter 'card' implicitly has an 'any' type.
+src/ui/SecretsDashboard.tsx(191,16): error TS2349: This expression is not callable.
+  Type 'AuthStoreState' has no call signatures.
+src/ui/SecretsDashboard.tsx(191,29): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/utils/errorTracking.ts(1,30): error TS7016: Could not find a declaration file for module 'uuid'. '/workspace/RentGuy-v1/node_modules/uuid/dist/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/uuid` if it exists or add a new declaration (.d.ts) file containing `declare module 'uuid';`
+src/utils/healthcheck.ts(69,38): error TS2345: Argument of type '(this: undefined, result: PromiseSettledResult<AxiosResponse<any>>, index: number) => { endpoint: string | undefined; details: { type: string; status: number; data: any; }; }[] | { ...; }[]' is not assignable to parameter of type '(this: undefined, value: PromiseSettledResult<AxiosResponse<any>>, index: number, array: PromiseSettledResult<AxiosResponse<any>>[]) => { ...; } | readonly { ...; }[]'.
+  Type '{ endpoint: string | undefined; details: { type: string; status: number; data: any; }; }[] | { endpoint: string | undefined; details: { type: string; reason: any; }; }[]' is not assignable to type '{ endpoint: string | undefined; details: { type: string; status: number; data: any; }; } | readonly { endpoint: string | undefined; details: { type: string; status: number; data: any; }; }[]'.
+    Type '{ endpoint: string | undefined; details: { type: string; reason: any; }; }[]' is not assignable to type '{ endpoint: string | undefined; details: { type: string; status: number; data: any; }; } | readonly { endpoint: string | undefined; details: { type: string; status: number; data: any; }; }[]'.
+      Type '{ endpoint: string | undefined; details: { type: string; reason: any; }; }[]' is not assignable to type 'readonly { endpoint: string | undefined; details: { type: string; status: number; data: any; }; }[]'.
+        Type '{ endpoint: string | undefined; details: { type: string; reason: any; }; }' is not assignable to type '{ endpoint: string | undefined; details: { type: string; status: number; data: any; }; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'details' are incompatible.
+            Type '{ type: string; reason: any; }' is missing the following properties from type '{ type: string; status: number; data: any; }': status, data
+src/utils/healthcheck.ts(112,34): error TS2339: Property 'endpoint' does not exist on type '{}'.
+src/utils/healthcheck.ts(113,27): error TS2339: Property 'details' does not exist on type '{}'.
+src/vendor/react-router-dom.tsx(209,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
 
 npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.

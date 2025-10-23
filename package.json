@@ -11,6 +11,7 @@
     "preview": "node scripts/dev-server.mjs",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "lint-staged": "lint-staged",
     "format": "prettier -w .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "ci:type-sanity": "ts-prune --ignore @core,@domain,@infra,@ui",

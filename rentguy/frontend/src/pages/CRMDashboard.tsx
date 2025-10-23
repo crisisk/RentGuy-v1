@@ -254,9 +254,13 @@ export const CRMDashboard: React.FC = () => {
           <div>
             <h1 className="heading-rentguy text-3xl">CRM KPI Dashboard</h1>
             {summary && (
-              <p className="text-sm text-foreground/70">
-                Laatste update: {formatDateTime(summary.generated_at)}
-              </p>
+              <div className="text-sm text-foreground/70 space-y-1">
+                <p>Laatste update: {formatDateTime(summary.generated_at)}</p>
+                <p className="text-xs text-foreground/60">
+                  Bron: {summary.provenance.source} · Upstream:{' '}
+                  {summary.provenance.upstream_systems.join(', ') || 'onbekend'}
+                </p>
+              </div>
             )}
           </div>
           <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">

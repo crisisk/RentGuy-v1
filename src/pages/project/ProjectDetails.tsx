@@ -1,74 +1,74 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import projectStore from '../../stores/projectStore';
+import React, { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import projectStore from '../../stores/projectStore'
 
 interface CrewMember {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
+  id: string
+  name: string
+  role: string
+  email: string
 }
 
 interface Equipment {
-  id: string;
-  name: string;
-  type: string;
-  quantity: number;
+  id: string
+  name: string
+  type: string
+  quantity: number
 }
 
 interface Project {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  crewMembers: CrewMember[];
-  equipment: Equipment[];
+  id: string
+  name: string
+  description: string
+  startDate: string
+  endDate: string
+  crewMembers: CrewMember[]
+  equipment: Equipment[]
 }
 
 const ProjectDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [project, setProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const [project, setProject] = useState<Project | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    });
-  };
+    })
+  }
 
   useEffect(() => {
     const loadProject = async () => {
       try {
-        if (!id) return;
-        const data = await projectStore.getProjectById(id);
-        setProject(data);
-      } catch (err) {
-        setError('Failed to load project');
-        navigate('/projects');
+        if (!id) return
+        const data = await projectStore.getProjectById(id)
+        setProject(data)
+      } catch {
+        setError('Failed to load project')
+        navigate('/projects')
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    loadProject();
-  }, [id, navigate]);
+    loadProject()
+  }, [id, navigate])
 
   if (isLoading) {
-    return <div className="p-4 text-center">Loading project details...</div>;
+    return <div className="p-4 text-center">Loading project details...</div>
   }
 
   if (error) {
-    return <div className="p-4 text-center text-red-500">{error}</div>;
+    return <div className="p-4 text-center text-red-500">{error}</div>
   }
 
   if (!project) {
-    return <div className="p-4 text-center">Project not found</div>;
+    return <div className="p-4 text-center">Project not found</div>
   }
 
   return (
@@ -140,7 +140,7 @@ const ProjectDetails: React.FC = () => {
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ProjectDetails;
+export default ProjectDetails

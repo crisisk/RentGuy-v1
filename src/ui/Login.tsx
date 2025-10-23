@@ -24,7 +24,6 @@ import FlowExperienceShell from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { createFlowNavigation } from '@ui/flowNavigation'
-import useAuthStore from '@stores/authStore'
 import { setLocalStorageItem } from '@core/storage'
 
 type AuthView = 'login' | 'register' | 'reset-request' | 'reset-confirm'
@@ -125,7 +124,8 @@ const loginJourney: FlowJourneyStep[] = [
   {
     id: 'planner',
     title: '3. Planner cockpit',
-    description: 'Stuur projecten, crew en materiaal. Alle persona-flows zijn vanuit hier bereikbaar.',
+    description:
+      'Stuur projecten, crew en materiaal. Alle persona-flows zijn vanuit hier bereikbaar.',
     status: 'upcoming',
     href: '/planner',
   },
@@ -206,7 +206,7 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)
 }
 
-export function Login({ onLogin }: LoginProps) {
+export function Login({ onLogin, initialMode = 'login', initialResetToken = '' }: LoginProps) {
   const support = useMemo(() => resolveSupportConfig(), [])
   const helpCenterUrl = support.helpCenterBaseUrl
   const statusPageUrl = support.statusPageUrl
@@ -236,7 +236,9 @@ export function Login({ onLogin }: LoginProps) {
   const [isConfirmingReset, setIsConfirmingReset] = useState(false)
 
   useEffect(() => {
-    setView(initialMode)
+    if (initialMode) {
+      setMode(initialMode)
+    }
   }, [initialMode])
 
   useEffect(() => {
@@ -314,7 +316,7 @@ export function Login({ onLogin }: LoginProps) {
     return () => {
       window.removeEventListener('popstate', handlePopState)
     }
-  }, [view])
+  }, [])
 
   useEffect(() => {
     if (mode === 'resetConfirm' && typeof window !== 'undefined') {
@@ -322,26 +324,13 @@ export function Login({ onLogin }: LoginProps) {
     }
   }, [mode])
 
-  const goToLogin = useCallback(() => {
-    setGlobalNotice(null)
-    navigate('/login')
-  }, [navigate])
-
-  const goToRegister = useCallback(() => {
-    setGlobalNotice(null)
-    navigate('/register')
-  }, [navigate])
-
-  const goToForgotPassword = useCallback(() => {
-    setGlobalNotice(null)
-    navigate('/password-reset')
-  }, [navigate])
-
   const stage = useMemo(
     () => ({
       label: 'Authenticatie & toegang',
       status: 'in-progress' as const,
-      detail: authError ? 'Controleer je gegevens en probeer opnieuw.' : 'Gebruik SSO of een demo-account om verder te gaan.',
+      detail: authError
+        ? 'Controleer je gegevens en probeer opnieuw.'
+        : 'Gebruik SSO of een demo-account om verder te gaan.',
     }),
     [authError],
   )
@@ -372,7 +361,8 @@ export function Login({ onLogin }: LoginProps) {
     return {
       tone: 'info' as const,
       title: 'Welkom bij de pilotomgeving',
-      description: 'Toegang tot de pilot activeert automatisch explainers, auditlogs en monitoring voor alle persona\'s.',
+      description:
+        "Toegang tot de pilot activeert automatisch explainers, auditlogs en monitoring voor alle persona's.",
     }
   }, [authError, authNotice])
 
@@ -401,7 +391,8 @@ export function Login({ onLogin }: LoginProps) {
       <div style={{ display: 'grid', gap: 8 }}>
         <strong style={{ fontSize: '0.95rem' }}>Support & documentatie</strong>
         <p style={{ margin: 0, fontSize: '0.85rem', color: withOpacity('#FFFFFF', 0.82) }}>
-          Bekijk de release notes en FAQ voor de laatste pilotwijzigingen of open een supportticket voor directe hulp.
+          Bekijk de release notes en FAQ voor de laatste pilotwijzigingen of open een supportticket
+          voor directe hulp.
         </p>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           <a href={helpCenterUrl} target="_blank" rel="noreferrer" style={footerLinkStyle}>
@@ -432,7 +423,8 @@ export function Login({ onLogin }: LoginProps) {
   const navigationRail = useMemo(
     () => ({
       title: 'Pilot gebruikersflows',
-      caption: 'Doorloop de flows in volgorde om explainers, dashboards en go-live checks automatisch te activeren.',
+      caption:
+        'Doorloop de flows in volgorde om explainers, dashboards en go-live checks automatisch te activeren.',
       items: createFlowNavigation(
         'login',
         { secrets: 'blocked' },
@@ -449,66 +441,13 @@ export function Login({ onLogin }: LoginProps) {
       ),
       footer: (
         <span>
-          Tip: Gebruik dezelfde volgorde tijdens demo- en training-sessies zodat auditlogs en monitoring de juiste context
-          bevatten.
+          Tip: Gebruik dezelfde volgorde tijdens demo- en training-sessies zodat auditlogs en
+          monitoring de juiste context bevatten.
         </span>
       ),
     }),
     [activeEmail],
   )
-
-  const validateEmail = useCallback((value: string) => {
-    if (!value || value.trim().length === 0) {
-      return 'E-mail is verplicht'
-    }
-    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!pattern.test(value.trim())) {
-      return 'Ongeldig e-mailadres'
-    }
-    return ''
-  }, [])
-
-  const validatePassword = useCallback((value: string, { allowEmpty = false }: { allowEmpty?: boolean } = {}) => {
-    if (!value || value.trim().length === 0) {
-      return allowEmpty ? '' : 'Wachtwoord is verplicht'
-    }
-    if (value.trim().length < 8) {
-      return 'Wachtwoord moet minimaal 8 tekens bevatten'
-    }
-    return ''
-  }, [])
-
-  const showLoginView = useCallback((options: { preserveResetStatus?: boolean } = {}) => {
-    setView('login')
-    setRegisterErrors([])
-    setRegisterSuccess('')
-    if (!options.preserveResetStatus) {
-      setResetStatus('')
-    }
-    setResetError('')
-    setConfirmError('')
-    if (typeof window !== 'undefined') {
-      window.history.replaceState({}, '', '/login')
-    }
-  }, [])
-
-  const showRegisterView = useCallback(() => {
-    setView('register')
-    setRegisterErrors([])
-    setRegisterSuccess('')
-    if (typeof window !== 'undefined') {
-      window.history.replaceState({}, '', '/register')
-    }
-  }, [])
-
-  const showResetRequestView = useCallback(() => {
-    setView('reset-request')
-    setResetStatus('')
-    setResetError('')
-    if (typeof window !== 'undefined') {
-      window.history.replaceState({}, '', '/password-reset')
-    }
-  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -584,7 +523,8 @@ export function Login({ onLogin }: LoginProps) {
         setRegisterErrors([])
         setAuthNotice({
           type: 'success',
-          message: 'Account succesvol aangemaakt. Controleer je e-mail om je account te bevestigen.',
+          message:
+            'Account succesvol aangemaakt. Controleer je e-mail om je account te bevestigen.',
         })
         setMode('login')
         if (typeof window !== 'undefined') {
@@ -695,7 +635,8 @@ export function Login({ onLogin }: LoginProps) {
       <div style={{ display: 'grid', gap: 12 }}>
         <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Demo login</h2>
         <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
-          Gebruik de demo-accounts om flows te testen. Tokens, onboardingprogressie en audit logs worden automatisch gevuld.
+          Gebruik de demo-accounts om flows te testen. Tokens, onboardingprogressie en audit logs
+          worden automatisch gevuld.
         </p>
       </div>
       <label htmlFor="login-email" style={{ display: 'grid', gap: 6 }}>
@@ -780,7 +721,15 @@ export function Login({ onLogin }: LoginProps) {
           Account aanmaken
         </button>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
         <button
           type="button"
           data-testid="forgot-password-link"
@@ -847,7 +796,8 @@ export function Login({ onLogin }: LoginProps) {
       <div style={{ display: 'grid', gap: 12 }}>
         <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Nieuw account aanmaken</h2>
         <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
-          Maak een proefaccount aan om de pilotflows te volgen. We sturen een bevestiging naar je e-mailadres.
+          Maak een proefaccount aan om de pilotflows te volgen. We sturen een bevestiging naar je
+          e-mailadres.
         </p>
       </div>
       <label htmlFor="register-email" style={{ display: 'grid', gap: 6 }}>
@@ -907,8 +857,17 @@ export function Login({ onLogin }: LoginProps) {
         </span>
       </label>
       {registerErrors.length > 0 && (
-        <ul style={{ margin: 0, paddingLeft: 20, color: brand.colors.warning, fontSize: '0.85rem', display: 'grid', gap: 4 }}>
-          {registerErrors.map(error => (
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: 20,
+            color: brand.colors.warning,
+            fontSize: '0.85rem',
+            display: 'grid',
+            gap: 4,
+          }}
+        >
+          {registerErrors.map((error) => (
             <li key={error}>{error}</li>
           ))}
         </ul>
@@ -952,7 +911,11 @@ export function Login({ onLogin }: LoginProps) {
   )
 
   const resetRequestForm = (
-    <form id="reset-request-form" style={{ display: 'grid', gap: 16 }} onSubmit={handleResetRequest}>
+    <form
+      id="reset-request-form"
+      style={{ display: 'grid', gap: 16 }}
+      onSubmit={handleResetRequest}
+    >
       <div style={{ display: 'grid', gap: 12 }}>
         <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Wachtwoord vergeten</h2>
         <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
@@ -1031,7 +994,11 @@ export function Login({ onLogin }: LoginProps) {
   )
 
   const resetConfirmForm = (
-    <form id="reset-confirm-form" style={{ display: 'grid', gap: 16 }} onSubmit={handleResetConfirm}>
+    <form
+      id="reset-confirm-form"
+      style={{ display: 'grid', gap: 16 }}
+      onSubmit={handleResetConfirm}
+    >
       <div style={{ display: 'grid', gap: 12 }}>
         <h2 style={{ margin: 0, fontFamily: headingFontStack }}>Nieuw wachtwoord instellen</h2>
         <p style={{ margin: 0, fontSize: '0.95rem', color: withOpacity('#ffffff', 0.8) }}>
@@ -1081,7 +1048,10 @@ export function Login({ onLogin }: LoginProps) {
         />
       </label>
       {resetError && (
-        <p role="alert" style={{ margin: 0, color: brand.colors.warning, fontSize: '0.9rem', fontWeight: 600 }}>
+        <p
+          role="alert"
+          style={{ margin: 0, color: brand.colors.warning, fontSize: '0.9rem', fontWeight: 600 }}
+        >
           {resetError}
         </p>
       )}
@@ -1155,9 +1125,14 @@ export function Login({ onLogin }: LoginProps) {
             ★
           </span>
           <div style={{ display: 'grid', gap: 4 }}>
-            <strong style={{ letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.82rem' }}>Demo accounts</strong>
+            <strong
+              style={{ letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.82rem' }}
+            >
+              Demo accounts
+            </strong>
             <span style={{ color: withOpacity('#ffffff', 0.78), fontSize: '0.88rem' }}>
-              Start als Bart (operations) of RentGuy (finance) om meteen de persona explainers te ontgrendelen.
+              Start als Bart (operations) of RentGuy (finance) om meteen de persona explainers te
+              ontgrendelen.
             </span>
           </div>
         </div>
@@ -1170,7 +1145,15 @@ export function Login({ onLogin }: LoginProps) {
 
       {activeView === 'login' && credentialList}
 
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.85rem', color: withOpacity('#ffffff', 0.7) }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 16,
+          flexWrap: 'wrap',
+          fontSize: '0.85rem',
+          color: withOpacity('#ffffff', 0.7),
+        }}
+      >
         <a href={brand.provider.url} target="_blank" rel="noreferrer" style={linkStyle}>
           Over Sevensa
         </a>
@@ -1191,10 +1174,13 @@ export function Login({ onLogin }: LoginProps) {
       description={
         <>
           <span>
-            Dit is de co-branded omgeving voor onze eerste klant. We combineren Sevensa governance met de {brand.tenant.tagline.toLowerCase()} zodat Bart en team de planning, crew en facturatie end-to-end kunnen testen.
+            Dit is de co-branded omgeving voor onze eerste klant. We combineren Sevensa governance
+            met de {brand.tenant.tagline.toLowerCase()} zodat Bart en team de planning, crew en
+            facturatie end-to-end kunnen testen.
           </span>
           <span>
-            Elk persona dashboard bevat explainers en best practices zodat UAT-sessies en go-live readiness objectief aantoonbaar zijn.
+            Elk persona dashboard bevat explainers en best practices zodat UAT-sessies en go-live
+            readiness objectief aantoonbaar zijn.
           </span>
         </>
       }
@@ -1215,25 +1201,6 @@ export function Login({ onLogin }: LoginProps) {
       navigationRail={navigationRail}
     />
   )
-}
-
-function resolveViewFromPath(pathname: string): AuthView {
-  if (!pathname) {
-    return 'login'
-  }
-  if (pathname.includes('/register')) {
-    return 'register'
-  }
-  if (pathname.includes('/password-reset/confirm')) {
-    return 'reset-confirm'
-  }
-  if (pathname.includes('/password-reset')) {
-    return 'forgot'
-  }
-  if (pathname.includes('/verify-email')) {
-    return 'verify'
-  }
-  return 'login'
 }
 
 async function notifyTestHarness(url: string, payload: Record<string, unknown>): Promise<boolean> {

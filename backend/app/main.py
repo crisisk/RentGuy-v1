@@ -120,12 +120,14 @@ def metrics() -> PlainTextResponse:
 ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
     ("app.modules.auth.routes", "router", "/api/v1/auth", ["auth"]),
     ("app.modules.inventory.routes", "router", "/api/v1/inventory", ["inventory"]),
+    ("app.modules.booking.routes", "router", "/api/v1", ["booking"]),
     ("app.modules.projects.routes", "router", "/api/v1", ["projects"]),
     ("app.modules.calendar_sync.routes", "router", "/api/v1", ["calendar"]),
     ("app.modules.crew.routes", "router", "/api/v1", ["crew"]),
     ("app.modules.transport.routes", "router", "/api/v1", ["transport"]),
     ("app.modules.billing.routes", "router", "/api/v1", ["billing"]),
     ("app.modules.warehouse.routes", "router", "/api/v1", ["warehouse"]),
+    ("app.modules.scanning.routes", "router", "/api/v1", ["scanning"]),
     ("app.modules.reporting.routes", "router", "/api/v1", ["reporting"]),
     ("app.modules.customer_portal.routes", "router", "/api/v1", ["customer-portal"]),
     (
@@ -134,6 +136,8 @@ ROUTERS: Sequence[tuple[str, str, str, list[str]]] = (
         "/api/v1",
         ["recurring-invoices"],
     ),
+    ("app.modules.jobboard.routes", "router", "/api/v1", ["jobboard"]),
+    ("app.modules.subrenting.routes", "router", "/api/v1", ["subrenting"]),
     ("app.modules.onboarding.routes", "router", "/api/v1", ["onboarding"]),
     ("app.modules.jobboard.routes", "router", "/api/v1", ["jobboard"]),
     ("app.modules.crm.routes", "router", "/api/v1", ["crm"]),

@@ -1,35 +1,35 @@
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import MainNavigation from './components/MainNavigation';
-import './App.css';
+import React, { Suspense, lazy } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import MainNavigation from './components/MainNavigation'
+import './App.css'
 
 // Lazy load the onboarding wizard
-const ImprovedOnboardingWizard = lazy(() => import('./components/ImprovedOnboardingWizard'));
+const ImprovedOnboardingWizard = lazy(() => import('./components/ImprovedOnboardingWizard'))
 
 // Lazy load all page components
-const ExecutiveDashboard = lazy(() => import('./pages/ExecutiveDashboard'));
-const ProjectOverview = lazy(() => import('./pages/ProjectOverview'));
-const CrewManagement = lazy(() => import('./pages/CrewManagement'));
-const EquipmentInventory = lazy(() => import('./pages/EquipmentInventory'));
-const FinanceDashboard = lazy(() => import('./pages/FinanceDashboard'));
-const InvoiceOverview = lazy(() => import('./pages/InvoiceOverview'));
-const TimeApproval = lazy(() => import('./pages/TimeApproval'));
-const QuoteManagement = lazy(() => import('./pages/QuoteManagement'));
-const VisualPlanner = lazy(() => import('./pages/VisualPlanner'));
-const CRMDashboard = lazy(() => import('./pages/CRMDashboard'));
-const CustomerDetails = lazy(() => import('./pages/CustomerDetails'));
-const ReportsAnalytics = lazy(() => import('./pages/ReportsAnalytics'));
-const SystemSettings = lazy(() => import('./pages/SystemSettings'));
-const UserManagement = lazy(() => import('./pages/UserManagement'));
-const MollieOverview = lazy(() => import('./pages/MollieOverview'));
-const MolliePaymentFlow = lazy(() => import('./pages/MolliePaymentFlow'));
-const MollieAdminDashboard = lazy(() => import('./pages/MollieAdminDashboard'));
-const CrewMobileHome = lazy(() => import('./pages/CrewMobileHome'));
-const CrewMobileShiftDetails = lazy(() => import('./pages/CrewMobileShiftDetails'));
-const TimeRegistrationInterface = lazy(() => import('./pages/TimeRegistrationInterface'));
-const TimeRegistrationApproval = lazy(() => import('./pages/TimeRegistrationApproval'));
-const AvailabilityCalendar = lazy(() => import('./pages/AvailabilityCalendar'));
-const DocumentManagementInterface = lazy(() => import('./pages/DocumentManagementInterface'));
+const ExecutiveDashboard = lazy(() => import('./pages/ExecutiveDashboard'))
+const ProjectOverview = lazy(() => import('./pages/ProjectOverview'))
+const CrewManagement = lazy(() => import('./pages/CrewManagement'))
+const EquipmentInventory = lazy(() => import('./pages/EquipmentInventory'))
+const FinanceDashboard = lazy(() => import('./pages/FinanceDashboard'))
+const InvoiceOverview = lazy(() => import('./pages/InvoiceOverview'))
+const TimeApproval = lazy(() => import('./pages/TimeApproval'))
+const QuoteManagement = lazy(() => import('./pages/QuoteManagement'))
+const VisualPlanner = lazy(() => import('./pages/VisualPlanner'))
+const CRMDashboard = lazy(() => import('./pages/CRMDashboard'))
+const CustomerDetails = lazy(() => import('./pages/CustomerDetails'))
+const ReportsAnalytics = lazy(() => import('./pages/ReportsAnalytics'))
+const SystemSettings = lazy(() => import('./pages/SystemSettings'))
+const UserManagement = lazy(() => import('./pages/UserManagement'))
+const MollieOverview = lazy(() => import('./pages/MollieOverview'))
+const MolliePaymentFlow = lazy(() => import('./pages/MolliePaymentFlow'))
+const MollieAdminDashboard = lazy(() => import('./pages/MollieAdminDashboard'))
+const CrewMobileHome = lazy(() => import('./pages/CrewMobileHome'))
+const CrewMobileShiftDetails = lazy(() => import('./pages/CrewMobileShiftDetails'))
+const TimeRegistrationInterface = lazy(() => import('./pages/TimeRegistrationInterface'))
+const TimeRegistrationApproval = lazy(() => import('./pages/TimeRegistrationApproval'))
+const AvailabilityCalendar = lazy(() => import('./pages/AvailabilityCalendar'))
+const DocumentManagementInterface = lazy(() => import('./pages/DocumentManagementInterface'))
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-screen bg-background">
@@ -38,30 +38,30 @@ const LoadingSpinner = () => (
       <p className="text-lg text-foreground font-semibold">Loading RentGuy...</p>
     </div>
   </div>
-);
+)
 
 function App() {
   return (
     <Router>
-      <div className="App min-h-screen bg-background">
+      <div className="App min-h-screen bg-background" data-testid="rentguy-app-shell">
         <Routes>
           {/* Onboarding route (no navigation) */}
-          <Route 
-            path="/onboarding" 
+          <Route
+            path="/onboarding"
             element={
               <Suspense fallback={<LoadingSpinner />}>
                 <ImprovedOnboardingWizard />
               </Suspense>
-            } 
+            }
           />
 
           {/* Main application routes (with navigation) */}
           <Route
             path="/*"
             element={
-              <div className="flex">
+              <div className="flex" data-testid="rentguy-app-layout">
                 <MainNavigation />
-                <div className="flex-1 ml-64">
+                <div className="flex-1 ml-64" data-testid="rentguy-app-content">
                   <Suspense fallback={<LoadingSpinner />}>
                     <Routes>
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -85,7 +85,10 @@ function App() {
                       <Route path="/crew/mobile" element={<CrewMobileHome />} />
                       <Route path="/crew/shift/:id" element={<CrewMobileShiftDetails />} />
                       <Route path="/time-registration" element={<TimeRegistrationInterface />} />
-                      <Route path="/time-registration/approval" element={<TimeRegistrationApproval />} />
+                      <Route
+                        path="/time-registration/approval"
+                        element={<TimeRegistrationApproval />}
+                      />
                       <Route path="/availability" element={<AvailabilityCalendar />} />
                       <Route path="/documents" element={<DocumentManagementInterface />} />
                     </Routes>
@@ -97,8 +100,7 @@ function App() {
         </Routes>
       </div>
     </Router>
-  );
+  )
 }
 
-export default App;
-
+export default App

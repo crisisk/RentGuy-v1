@@ -142,6 +142,7 @@ def update_application_status(
     return JobApplicationResponse.model_validate(application)
 
 
+
 @router.get("/applications", response_model=list[JobApplicationResponse])
 def list_applications(
     job_id: Optional[int] = None,
