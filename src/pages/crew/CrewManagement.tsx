@@ -241,7 +241,7 @@ const CrewManagement: React.FC = () => {
       return
     }
 
-    if (timeOffForm.end < timeOffForm.start) {
+    if (new Date(timeOffForm.end) < new Date(timeOffForm.start)) {
       setTimeOffFeedback({ type: 'error', message: 'Eindtijd moet na startdatum liggen' })
       return
     }
