@@ -1,5 +1,5 @@
 // Authentication slice for Zustand store
-export const authSlice = (set, get, api) => ({
+export const authSlice = (set, get) => ({
   auth: {
     user: null,
     token: null,

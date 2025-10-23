@@ -7,13 +7,15 @@
  * @date October 2025
  */
 
+const env = import.meta.env ?? {};
+
 // Database connection configuration
 const DB_CONFIG = {
-  host: process.env.REACT_APP_DB_HOST || 'localhost',
-  port: process.env.REACT_APP_DB_PORT || 5432,
-  database: process.env.REACT_APP_DB_NAME || 'rentguy_enterprise',
-  user: process.env.REACT_APP_DB_USER || 'rentguy_user',
-  password: process.env.REACT_APP_DB_PASSWORD || '',
+  host: env.VITE_DB_HOST || 'localhost',
+  port: env.VITE_DB_PORT || 5432,
+  database: env.VITE_DB_NAME || 'rentguy_enterprise',
+  user: env.VITE_DB_USER || 'rentguy_user',
+  password: env.VITE_DB_PASSWORD || '',
   
   // Connection pool settings
   pool: {
@@ -382,7 +384,7 @@ class DatabaseService {
   /**
    * Simulated query execution (replace with actual database calls)
    */
-  async executeQuery(sql, params) {
+  async executeQuery(sql) {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 50));
     
