@@ -1,75 +1,81 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import crmStore from '../../stores/crmStore';
+import React, { useState, useEffect } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import crmStore from '../../stores/crmStore'
 
 interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
+  id: string
+  name: string
+  email: string
+  phone: string
+  company: string
 }
 
 interface Activity {
-  id: string;
-  type: string;
-  date: string;
-  description: string;
+  id: string
+  type: string
+  date: string
+  description: string
 }
 
 const CustomerDetails: React.FC = () => {
-  const { customerId } = useParams<{ customerId: string }>();
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { customerId } = useParams<{ customerId: string }>()
+  const [customer, setCustomer] = useState<Customer | null>(null)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
-    });
-  };
+      day: 'numeric',
+    })
+  }
 
   useEffect(() => {
     const fetchCustomerDetails = async () => {
       try {
-        setLoading(true);
-        const customerData = await crmStore.getCustomerById(customerId);
-        const customerActivities = await crmStore.getCustomerActivities(customerId);
-        
-        setCustomer(customerData);
-        setActivities(customerActivities);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load customer details');
-        setLoading(false);
-      }
-    };
+        setLoading(true)
+        if (!customerId) {
+          throw new Error('Customer id missing')
+        }
+        const customerData = await crmStore.getCustomerById(customerId)
+        const customerActivities = await crmStore.getCustomerActivities(customerId)
 
-    fetchCustomerDetails();
-  }, [customerId]);
+        setCustomer(customerData)
+        setActivities(customerActivities)
+      } catch {
+        setError('Failed to load customer details')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCustomerDetails()
+  }, [customerId])
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+      <div
+        className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+        role="alert"
+      >
         {error}
       </div>
-    );
+    )
   }
 
   if (!customer) {
-    return <div>No customer found</div>;
+    return <div>No customer found</div>
   }
 
   return (
@@ -118,17 +124,17 @@ const CustomerDetails: React.FC = () => {
           )}
         </div>
       </div>
-      
+
       <div className="mt-8 text-center">
-        <Link 
-          to="/customers" 
+        <Link
+          to="/customers"
           className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
         >
           Back to Customers
         </Link>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default CustomerDetails;
+export default CustomerDetails

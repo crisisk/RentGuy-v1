@@ -43,139 +43,178 @@ function resolveErrorMessage(error: unknown): string {
   return mapUnknownToApiError(error).message
 }
 
-export const projectStore = create<ProjectState>(set => ({
+export const projectStore = create<ProjectState>((set) => ({
   projects: [],
   currentProject: null,
   timeline: [],
   loading: false,
   error: null,
   fetchProjects: async () => {
-    set(produce((state: ProjectState) => {
-      state.loading = true;
-      state.error = null;
-    }));
+    set(
+      produce((state: ProjectState) => {
+        state.loading = true
+        state.error = null
+      }),
+    )
 
     try {
-      const response = await api.get<Project[]>(PROJECTS_BASE_PATH);
-      set(produce((state: ProjectState) => {
-        state.projects = Array.isArray(response.data) ? response.data : [];
-        state.loading = false;
-      }));
+      const response = await api.get<Project[]>(PROJECTS_BASE_PATH)
+      set(
+        produce((state: ProjectState) => {
+          state.projects = Array.isArray(response.data) ? response.data : []
+          state.loading = false
+        }),
+      )
     } catch (error) {
-      set(produce((state: ProjectState) => {
-        state.loading = false;
-        state.error = resolveErrorMessage(error);
-      }));
+      set(
+        produce((state: ProjectState) => {
+          state.loading = false
+          state.error = resolveErrorMessage(error)
+        }),
+      )
     }
   },
   createProject: async (data) => {
-    set(produce((state: ProjectState) => {
-      state.loading = true;
-      state.error = null;
-    }));
+    set(
+      produce((state: ProjectState) => {
+        state.loading = true
+        state.error = null
+      }),
+    )
 
     try {
-      const response = await api.post<Project>(PROJECTS_BASE_PATH, data);
-      set(produce((state: ProjectState) => {
-        if (response.data) {
-          state.projects.push(response.data);
-        }
-        state.loading = false;
-      }));
+      const response = await api.post<Project>(PROJECTS_BASE_PATH, data)
+      set(
+        produce((state: ProjectState) => {
+          if (response.data) {
+            state.projects.push(response.data)
+          }
+          state.loading = false
+        }),
+      )
     } catch (error) {
-      set(produce((state: ProjectState) => {
-        state.loading = false;
-        state.error = resolveErrorMessage(error);
-      }));
+      set(
+        produce((state: ProjectState) => {
+          state.loading = false
+          state.error = resolveErrorMessage(error)
+        }),
+      )
     }
   },
   updateProject: async (id, data) => {
-    set(produce((state: ProjectState) => {
-      state.loading = true;
-      state.error = null;
-    }));
+    set(
+      produce((state: ProjectState) => {
+        state.loading = true
+        state.error = null
+      }),
+    )
 
     try {
-      const response = await api.put<Project>(`${PROJECTS_BASE_PATH}/${id}`, data);
-      set(produce((state: ProjectState) => {
-        const index = state.projects.findIndex(p => p.id === id);
-        if (response.data) {
-          if (index !== -1) state.projects[index] = response.data;
-          if (state.currentProject?.id === id) state.currentProject = response.data;
-        }
-        state.loading = false;
-      }));
+      const response = await api.put<Project>(`${PROJECTS_BASE_PATH}/${id}`, data)
+      set(
+        produce((state: ProjectState) => {
+          const index = state.projects.findIndex((p) => p.id === id)
+          if (response.data) {
+            if (index !== -1) state.projects[index] = response.data
+            if (state.currentProject?.id === id) state.currentProject = response.data
+          }
+          state.loading = false
+        }),
+      )
     } catch (error) {
-      set(produce((state: ProjectState) => {
-        state.loading = false;
-        state.error = resolveErrorMessage(error);
-      }));
+      set(
+        produce((state: ProjectState) => {
+          state.loading = false
+          state.error = resolveErrorMessage(error)
+        }),
+      )
     }
   },
   deleteProject: async (id) => {
-    set(produce((state: ProjectState) => {
-      state.loading = true;
-      state.error = null;
-    }));
+    set(
+      produce((state: ProjectState) => {
+        state.loading = true
+        state.error = null
+      }),
+    )
 
     try {
-      await api.delete(`${PROJECTS_BASE_PATH}/${id}`);
-      set(produce((state: ProjectState) => {
-        state.projects = state.projects.filter(p => p.id !== id);
-        if (state.currentProject?.id === id) state.currentProject = null;
-        state.loading = false;
-      }));
+      await api.delete(`${PROJECTS_BASE_PATH}/${id}`)
+      set(
+        produce((state: ProjectState) => {
+          state.projects = state.projects.filter((p) => p.id !== id)
+          if (state.currentProject?.id === id) state.currentProject = null
+          state.loading = false
+        }),
+      )
     } catch (error) {
-      set(produce((state: ProjectState) => {
-        state.loading = false;
-        state.error = resolveErrorMessage(error);
-      }));
+      set(
+        produce((state: ProjectState) => {
+          state.loading = false
+          state.error = resolveErrorMessage(error)
+        }),
+      )
     }
   },
   fetchTimeline: async (projectId) => {
-    set(produce((state: ProjectState) => {
-      state.loading = true;
-      state.error = null;
-    }));
+    set(
+      produce((state: ProjectState) => {
+        state.loading = true
+        state.error = null
+      }),
+    )
 
     try {
-      const response = await api.get<TimelineEvent[]>(`${PROJECTS_BASE_PATH}/${projectId}/timeline`);
-      set(produce((state: ProjectState) => {
-        state.timeline = Array.isArray(response.data) ? response.data : [];
-        state.loading = false;
-      }));
+      const response = await api.get<TimelineEvent[]>(`${PROJECTS_BASE_PATH}/${projectId}/timeline`)
+      set(
+        produce((state: ProjectState) => {
+          state.timeline = Array.isArray(response.data) ? response.data : []
+          state.loading = false
+        }),
+      )
     } catch (error) {
-      set(produce((state: ProjectState) => {
-        state.loading = false;
-        state.error = resolveErrorMessage(error);
-      }));
+      set(
+        produce((state: ProjectState) => {
+          state.loading = false
+          state.error = resolveErrorMessage(error)
+        }),
+      )
     }
   },
   addTimelineEvent: async (data) => {
-    set(produce((state: ProjectState) => {
-      state.loading = true;
-      state.error = null;
-    }));
+    set(
+      produce((state: ProjectState) => {
+        state.loading = true
+        state.error = null
+      }),
+    )
     try {
-      const response = await api.post<TimelineEvent>(`${PROJECTS_BASE_PATH}/${data.projectId}/timeline`, data);
-      set(produce((state: ProjectState) => {
-        if (response.data) {
-          state.timeline.push(response.data);
-        }
-        state.loading = false;
-      }));
+      const response = await api.post<TimelineEvent>(
+        `${PROJECTS_BASE_PATH}/${data.projectId}/timeline`,
+        data,
+      )
+      set(
+        produce((state: ProjectState) => {
+          if (response.data) {
+            state.timeline.push(response.data)
+          }
+          state.loading = false
+        }),
+      )
     } catch (error) {
-      set(produce((state: ProjectState) => {
-        state.loading = false;
-        state.error = resolveErrorMessage(error);
-      }));
+      set(
+        produce((state: ProjectState) => {
+          state.loading = false
+          state.error = resolveErrorMessage(error)
+        }),
+      )
     }
   },
-}));
+}))
 
 export const defaultProjectPresets: Record<PersonaKey, PersonaPreset> = {
   all: {
-    label: 'Alle persona\'s',
+    label: "Alle persona's",
     description: 'Volledige planning zonder filters voor gezamenlijke UAT-sessies.',
     statusFilter: 'all',
     riskFilter: 'all',
@@ -185,7 +224,7 @@ export const defaultProjectPresets: Record<PersonaKey, PersonaPreset> = {
   },
   bart: {
     label: 'Bart · Operations lead',
-    description: 'Actieve projecten en voorraadrisico\'s in één overzicht voor directe bijsturing.',
+    description: "Actieve projecten en voorraadrisico's in één overzicht voor directe bijsturing.",
     statusFilter: 'active',
     riskFilter: 'warning',
     sortKey: 'start_offset',
@@ -227,7 +266,7 @@ export const defaultProjectPresets: Record<PersonaKey, PersonaPreset> = {
   },
   sven: {
     label: 'Sven · System admin',
-    description: 'Escalaties en kritieke risico\'s prioriteren voor governance en alerts.',
+    description: "Escalaties en kritieke risico's prioriteren voor governance en alerts.",
     statusFilter: 'all',
     riskFilter: 'critical',
     sortKey: 'risk',
@@ -271,33 +310,37 @@ export const defaultProjectPresets: Record<PersonaKey, PersonaPreset> = {
 const store = {
   ...projectStore,
   getProjects: async () => {
-    await projectStore.getState().fetchProjects();
-    return projectStore.getState().projects;
+    await projectStore.getState().fetchProjects()
+    return projectStore.getState().projects
   },
-  getStats: async () => {
-    const projects = projectStore.getState().projects;
-    return {
+  getStats: () => {
+    const projects = projectStore.getState().projects
+    return Promise.resolve({
       totalTasks: projects.length * 10,
       completedTasks: projects.length * 7,
-    };
+    })
   },
-  getRecentActivities: async () => {
-    const projects = projectStore.getState().projects;
-    return projects.slice(0, 5).map(p => ({
-      id: p.id,
-      title: p.name,
-      date: p.startDate,
-      status: p.status === 'completed' ? 'completed' : 'in-progress',
-    }));
+  getRecentActivities: () => {
+    const projects = projectStore.getState().projects
+    return Promise.resolve(
+      projects.slice(0, 5).map((p) => ({
+        id: p.id,
+        title: p.name,
+        date: p.startDate,
+        status: p.status === 'completed' ? 'completed' : 'in-progress',
+      })),
+    )
   },
-  getProjectById: async (id: string) => {
-    const project = projectStore.getState().projects.find(p => p.id === id);
-    if (!project) throw new Error('Project not found');
-    return {
+  getProjectById: (id: string) => {
+    const project = projectStore.getState().projects.find((p) => p.id === id)
+    if (!project) {
+      return Promise.reject(new Error('Project not found'))
+    }
+    return Promise.resolve({
       ...project,
       crewMembers: [],
       equipment: [],
-    };
+    })
   },
-};
-export default store;
+}
+export default store
