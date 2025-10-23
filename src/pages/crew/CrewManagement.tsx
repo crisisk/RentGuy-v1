@@ -46,35 +46,47 @@ const CrewManagement: React.FC = () => {
 
   const skills = Array.from(new Set(crewMembers.flatMap((m) => m.skills)))
 
-  if (loading) return <div className="p-4 text-center">Loading...</div>
-  if (error) return <div className="p-4 text-red-500">{error}</div>
+  if (loading)
+    return (
+      <div className="p-4 text-center" data-testid="crew-management-loading">
+        Loading...
+      </div>
+    )
+  if (error)
+    return (
+      <div className="p-4 text-red-500" data-testid="crew-management-error">
+        {error}
+      </div>
+    )
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex flex-col sm:flex-row gap-2">
+    <div className="p-4" data-testid="crew-management-root">
+      <div className="mb-4 flex flex-col sm:flex-row gap-2" data-testid="crew-management-filters">
         <input
           type="text"
           placeholder="Search crew..."
           className="p-2 border rounded"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          data-testid="crew-management-search"
         />
         <select
           className="p-2 border rounded"
           value={selectedSkill}
           onChange={(e) => setSelectedSkill(e.target.value)}
+          data-testid="crew-management-skill-filter"
         >
           <option value="">All Skills</option>
           {skills.map((skill) => (
-            <option key={skill} value={skill}>
+            <option key={skill} value={skill} data-testid={`crew-management-skill-${skill}`}>
               {skill}
             </option>
           ))}
         </select>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full table-auto">
+      <div className="overflow-x-auto" data-testid="crew-management-table-wrapper">
+        <table className="min-w-full table-auto" data-testid="crew-management-table">
           <thead>
             <tr className="bg-gray-100">
               <th className="px-4 py-2 text-left">Name</th>
@@ -84,29 +96,49 @@ const CrewManagement: React.FC = () => {
               <th className="px-4 py-2 text-left">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody data-testid="crew-management-body">
             {crewMembers.filter(filterMembers).map((member) => (
-              <tr key={member.id} className="border-b">
-                <td className="px-4 py-2">{member.name}</td>
-                <td className="px-4 py-2">
+              <tr
+                key={member.id}
+                className="border-b"
+                data-testid={`crew-management-row-${member.id}`}
+              >
+                <td className="px-4 py-2" data-testid={`crew-management-name-${member.id}`}>
+                  {member.name}
+                </td>
+                <td className="px-4 py-2" data-testid={`crew-management-availability-${member.id}`}>
                   <span
                     className={`px-2 py-1 rounded ${checkAvailability(member.availability) === 'Available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                    data-testid={`crew-management-availability-badge-${member.id}`}
                   >
                     {checkAvailability(member.availability)}
                   </span>
                 </td>
-                <td className="px-4 py-2">
-                  <div className="flex flex-wrap gap-1">
+                <td className="px-4 py-2" data-testid={`crew-management-skills-${member.id}`}>
+                  <div
+                    className="flex flex-wrap gap-1"
+                    data-testid={`crew-management-skill-tags-${member.id}`}
+                  >
                     {member.skills.map((skill) => (
-                      <span key={skill} className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      <span
+                        key={skill}
+                        className="bg-blue-100 text-blue-800 px-2 py-1 rounded"
+                        data-testid={`crew-management-skill-tag-${member.id}-${skill}`}
+                      >
                         {skill}
                       </span>
                     ))}
                   </div>
                 </td>
-                <td className="px-4 py-2">${member.rate.toLocaleString()}</td>
-                <td className="px-4 py-2">
-                  <Link to={`/crew/${member.id}`} className="text-blue-500 hover:text-blue-700">
+                <td className="px-4 py-2" data-testid={`crew-management-rate-${member.id}`}>
+                  ${member.rate.toLocaleString()}
+                </td>
+                <td className="px-4 py-2" data-testid={`crew-management-actions-${member.id}`}>
+                  <Link
+                    to={`/crew/${member.id}`}
+                    className="text-blue-500 hover:text-blue-700"
+                    data-testid={`crew-management-details-${member.id}`}
+                  >
                     Details
                   </Link>
                 </td>
@@ -115,7 +147,9 @@ const CrewManagement: React.FC = () => {
           </tbody>
         </table>
         {crewMembers.filter(filterMembers).length === 0 && (
-          <div className="p-4 text-center text-gray-500">No crew members found</div>
+          <div className="p-4 text-center text-gray-500" data-testid="crew-management-empty">
+            No crew members found
+          </div>
         )}
       </div>
     </div>
