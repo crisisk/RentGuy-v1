@@ -138,7 +138,7 @@ const PerformanceMonitor = ({ children, componentName = 'Unknown' }) => {
   useEffect(() => {
     const renderTime = performance.now() - renderStartTime.current;
     performanceRef.current.trackComponentRender(componentName, renderTime);
-  }, [componentName]);
+  }, [componentName, renderStartTime.current]);
 
   // Performance warning system
   useEffect(() => {
