@@ -1,16 +1,20 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
-import { visualizer } from 'rollup-plugin-visualizer'
+import process from 'node:process';
+import { fileURLToPath, URL } from 'node:url';
+
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vite.dev/config/
+const isAnalyzeEnabled = Boolean(process.env?.ANALYZE);
+
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     // Bundle analyzer for production builds
-    process.env.ANALYZE && visualizer({
+    isAnalyzeEnabled && visualizer({
       filename: 'dist/stats.html',
       open: true,
       gzipSize: true,
@@ -19,7 +23,7 @@ export default defineConfig({
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   build: {

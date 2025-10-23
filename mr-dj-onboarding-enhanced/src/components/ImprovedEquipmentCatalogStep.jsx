@@ -46,9 +46,6 @@ const ImprovedEquipmentCatalogStep = ({ onNext, onBack, initialData = {} }) => {
     }
   ];
 
-  // Flatten all items for search
-  const allItems = equipmentCategories.flatMap(category => category.items);
-
   // Filter items based on search term
   const filteredCategories = equipmentCategories.map(category => ({
     ...category,
