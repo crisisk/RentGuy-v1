@@ -52,7 +52,10 @@ const CRMDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div
+        className="flex justify-center items-center h-screen"
+        data-testid="crm-dashboard-loading"
+      >
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
       </div>
     )
@@ -63,6 +66,7 @@ const CRMDashboard: React.FC = () => {
       <div
         className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
         role="alert"
+        data-testid="crm-dashboard-error"
       >
         {error}
       </div>
@@ -70,19 +74,27 @@ const CRMDashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <h1 className="text-2xl font-bold mb-6">CRM Dashboard</h1>
+    <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-page">
+      <h1 className="text-2xl font-bold mb-6" data-testid="crm-dashboard-heading">
+        CRM Dashboard
+      </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white shadow rounded-lg p-4">
+      <div
+        className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+        data-testid="crm-dashboard-stat-cards"
+      >
+        <div className="bg-white shadow rounded-lg p-4" data-testid="crm-dashboard-total-customers">
           <h2 className="text-lg font-semibold mb-2">Total Customers</h2>
           <p className="text-3xl font-bold text-blue-600">{customerStats?.total || 0}</p>
         </div>
-        <div className="bg-white shadow rounded-lg p-4">
+        <div className="bg-white shadow rounded-lg p-4" data-testid="crm-dashboard-new-customers">
           <h2 className="text-lg font-semibold mb-2">New This Month</h2>
           <p className="text-3xl font-bold text-green-600">{customerStats?.newThisMonth || 0}</p>
         </div>
-        <div className="bg-white shadow rounded-lg p-4">
+        <div
+          className="bg-white shadow rounded-lg p-4"
+          data-testid="crm-dashboard-active-customers"
+        >
           <h2 className="text-lg font-semibold mb-2">Active Customers</h2>
           <p className="text-3xl font-bold text-purple-600">
             {customerStats?.activeCustomers || 0}
@@ -90,9 +102,9 @@ const CRMDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-4">
+      <div className="bg-white shadow rounded-lg p-4" data-testid="crm-dashboard-activities">
         <h2 className="text-lg font-semibold mb-4">Recent Activities</h2>
-        <table className="w-full text-left">
+        <table className="w-full text-left" data-testid="crm-dashboard-activities-table">
           <thead className="bg-gray-100">
             <tr>
               <th className="p-2">Type</th>
@@ -102,7 +114,7 @@ const CRMDashboard: React.FC = () => {
           </thead>
           <tbody>
             {recentActivities.map((activity) => (
-              <tr key={activity.id} className="border-b">
+              <tr key={activity.id} className="border-b" data-testid="crm-dashboard-activity-row">
                 <td className="p-2 capitalize">{activity.type}</td>
                 <td className="p-2">{activity.customerName}</td>
                 <td className="p-2">{formatRelativeTime(activity.timestamp)}</td>

@@ -59,18 +59,32 @@ const CustomerList = () => {
     }
   }
 
-  if (loading) return <div className="p-4 text-gray-500">Loading customers...</div>
-  if (error) return <div className="p-4 text-red-500">Error: {error}</div>
+  if (loading) {
+    return (
+      <div className="p-4 text-gray-500" data-testid="customer-list-loading">
+        Loading customers...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500" data-testid="customer-list-error">
+        Error: {error}
+      </div>
+    )
+  }
 
   return (
-    <div className="p-4">
-      <div className="mb-4 space-y-4">
+    <div className="p-4" data-testid="customer-list-page">
+      <div className="mb-4 space-y-4" data-testid="customer-list-filters">
         <input
           type="text"
           placeholder="Search customers..."
           className="w-full p-2 border rounded-lg"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          data-testid="customer-list-search"
         />
 
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -83,6 +97,7 @@ const CustomerList = () => {
                   ? `${getStatusColor(status)} ring-1 ring-inset ring-black/10`
                   : 'bg-gray-100 text-gray-600'
               }`}
+              data-testid={`customer-status-filter-${status}`}
             >
               {status}
             </button>
@@ -91,10 +106,12 @@ const CustomerList = () => {
       </div>
 
       {filteredCustomers.length === 0 ? (
-        <div className="text-gray-500">No customers found</div>
+        <div className="text-gray-500" data-testid="customer-list-empty">
+          No customers found
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200" data-testid="customer-list-table">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -116,11 +133,12 @@ const CustomerList = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50">
+                <tr key={customer.id} className="hover:bg-gray-50" data-testid="customer-list-row">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Link
                       to={`/customers/${customer.id}`}
                       className="text-blue-600 hover:underline"
+                      data-testid="customer-list-row-link"
                     >
                       {customer.name}
                     </Link>
