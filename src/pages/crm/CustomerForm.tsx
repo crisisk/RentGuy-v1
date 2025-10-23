@@ -1,86 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import crmStore from '../../stores/crmStore';
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import crmStore from '../../stores/crmStore'
 
 interface Customer {
-  id?: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  status: 'active' | 'inactive';
+  id?: string
+  name: string
+  email: string
+  phone: string
+  address: string
+  status: 'active' | 'inactive'
 }
 
 const CustomerForm: React.FC = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(!!id);
-  const [formError, setFormError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(!!id)
+  const [formError, setFormError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [formData, setFormData] = useState<Customer>({
     name: '',
     email: '',
     phone: '',
     address: '',
-    status: 'active'
-  });
+    status: 'active',
+  })
 
-  const [errors, setErrors] = useState<Partial<Customer>>({});
+  const [errors, setErrors] = useState<Partial<Customer>>({})
 
   useEffect(() => {
     if (id) {
-      crmStore.getCustomer(id)
-        .then(customer => {
-          if (customer) setFormData(customer);
-          else setFormError('Customer not found');
-          setLoading(false);
+      crmStore
+        .getCustomer(id)
+        .then((customer) => {
+          if (customer) setFormData(customer)
+          else setFormError('Customer not found')
+          setLoading(false)
         })
         .catch(() => {
-          setFormError('Failed to load customer');
-          setLoading(false);
-        });
+          setFormError('Failed to load customer')
+          setLoading(false)
+        })
     }
-  }, [id]);
+  }, [id])
 
   const validate = (): boolean => {
-    const newErrors: Partial<Customer> = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email';
-    if (!formData.phone.match(/^\d{10,15}$/)) newErrors.phone = 'Invalid phone number';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    const newErrors: Partial<Customer> = {}
+    if (!formData.name.trim()) newErrors.name = 'Name is required'
+    if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email'
+    if (!formData.phone.match(/^\d{10,15}$/)) newErrors.phone = 'Invalid phone number'
+    if (!formData.address.trim()) newErrors.address = 'Address is required'
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-    if (!validate()) return;
+    e.preventDefault()
+    setFormError('')
+    if (!validate()) return
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await crmStore.saveCustomer(formData);
-      navigate('/customers');
-    } catch (error) {
-      setFormError('Failed to save customer');
+      await crmStore.saveCustomer(formData)
+      navigate('/customers')
+    } catch {
+      setFormError('Failed to save customer')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
-  const handleChange = (field: keyof Customer) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
-    setErrors(prev => ({ ...prev, [field]: '' }));
-  };
+  const handleChange =
+    (field: keyof Customer) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setFormData((prev) => ({ ...prev, [field]: e.target.value }))
+      setErrors((prev) => ({ ...prev, [field]: '' }))
+    }
 
-  if (loading) return <div className="p-4 text-center">Loading...</div>;
-  if (formError) return <div className="p-4 text-red-500">{formError}</div>;
+  if (loading) return <div className="p-4 text-center">Loading...</div>
+  if (formError) return <div className="p-4 text-red-500">{formError}</div>
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-6">{id ? 'Edit' : 'Create'} Customer</h1>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {formError && <div className="text-red-500 text-sm">{formError}</div>}
 
@@ -155,7 +157,7 @@ const CustomerForm: React.FC = () => {
         </div>
       </form>
     </div>
-  );
-};
+  )
+}
 
-export default CustomerForm;
+export default CustomerForm

@@ -17,7 +17,10 @@ import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import { buildHelpCenterUrl, resolveSupportConfig } from './experienceConfig'
 import TipBanner from '@ui/TipBanner'
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
-import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
+import FlowExperienceShell, {
+  type FlowExperienceAction,
+  type FlowExperiencePersona,
+} from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { createFlowNavigation, type FlowNavigationStatus } from '@ui/flowNavigation'
@@ -304,15 +307,6 @@ function ensureAlerts(value: unknown): string[] {
   return []
 }
 
-const emptyMessageStyles: React.CSSProperties = {
-  padding: '36px',
-  textAlign: 'center',
-  color: brand.colors.mutedText,
-  fontStyle: 'italic',
-  background: withOpacity('#ffffff', 0.8),
-  borderRadius: 18,
-}
-
 const filterControlStyle: React.CSSProperties = {
   padding: '10px 14px',
   borderRadius: 12,
@@ -399,7 +393,14 @@ function RiskBadge({ risk }: RiskBadgeProps) {
         letterSpacing: '0.02em',
       }}
     >
-      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: riskPalette[risk] ?? '#4b5563' }} />
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: riskPalette[risk] ?? '#4b5563',
+        }}
+      />
       {riskLabels[risk] ?? 'Onbekend'}
     </span>
   )
@@ -426,10 +427,10 @@ function SummaryMetric({ label, value, tone = 'neutral', helpText, testId }: Sum
     tone === 'success'
       ? brand.colors.success
       : tone === 'warning'
-      ? brand.colors.warning
-      : tone === 'danger'
-      ? brand.colors.danger
-      : brand.colors.primary
+        ? brand.colors.warning
+        : tone === 'danger'
+          ? brand.colors.danger
+          : brand.colors.primary
 
   return (
     <div
@@ -455,12 +456,23 @@ function SummaryMetric({ label, value, tone = 'neutral', helpText, testId }: Sum
             boxShadow: `0 0 0 4px ${withOpacity(accent, 0.18)}`,
           }}
         />
-        <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <div
+          style={{
+            fontSize: '0.85rem',
+            color: brand.colors.mutedText,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}
+        >
           {label}
         </div>
       </div>
-      <div style={{ fontSize: '1.6rem', fontWeight: 700, color: brand.colors.secondary }}>{value}</div>
-      {helpText && <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{helpText}</div>}
+      <div style={{ fontSize: '1.6rem', fontWeight: 700, color: brand.colors.secondary }}>
+        {value}
+      </div>
+      {helpText && (
+        <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{helpText}</div>
+      )}
     </div>
   )
 }
@@ -509,8 +521,8 @@ export default function Planner({ onLogout }: PlannerProps) {
   })
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [calendarSyncing, setCalendarSyncing] = useState(false)
-  const userRole = useAuthStore(state => state.user?.role ?? '')
-  const userEmail = useAuthStore(state => state.user?.email ?? '')
+  const userRole = useAuthStore((state) => state.user?.role ?? '')
+  const userEmail = useAuthStore((state) => state.user?.email ?? '')
   const showSecretsShortcut = userRole === 'admin'
   const support = useMemo(() => resolveSupportConfig(), [])
   const runbookUrl = useMemo(() => buildHelpCenterUrl(support, 'runbook'), [support])
@@ -519,7 +531,7 @@ export default function Planner({ onLogout }: PlannerProps) {
     setLoading(true)
     try {
       const { data } = await api.get<PlannerProjectDto[]>('/api/v1/projects')
-      const mapped: PlannerEvent[] = data.map(project => {
+      const mapped: PlannerEvent[] = data.map((project) => {
         const status = isProjectStatus(project.status) ? project.status : 'upcoming'
         const risk = isRiskLevel(project.inventory_risk) ? project.inventory_risk : 'ok'
         const start = project.start_date ?? ''
@@ -535,12 +547,13 @@ export default function Planner({ onLogout }: PlannerProps) {
           risk,
           alerts: ensureAlerts(project.inventory_alerts),
           durationDays: typeof project.duration_days === 'number' ? project.duration_days : null,
-          daysUntilStart: typeof project.days_until_start === 'number' ? project.days_until_start : null,
+          daysUntilStart:
+            typeof project.days_until_start === 'number' ? project.days_until_start : null,
           notes: project.notes ?? '',
         }
       })
       setEvents(mapped)
-      setFeedback(previous => (previous?.type === 'error' ? null : previous))
+      setFeedback((previous) => (previous?.type === 'error' ? null : previous))
     } catch (error) {
       console.error(error)
       setFeedback({ type: 'error', message: 'Projecten konden niet worden geladen.' })
@@ -660,10 +673,10 @@ export default function Planner({ onLogout }: PlannerProps) {
   const filteredEvents = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
     return events
-      .filter(eventItem => statusMatches(statusFilter, eventItem.status))
-      .filter(eventItem => (riskFilter === 'all' ? true : eventItem.risk === riskFilter))
-      .filter(eventItem => matchesTimeFilter(eventItem, timeFilter))
-      .filter(eventItem => {
+      .filter((eventItem) => statusMatches(statusFilter, eventItem.status))
+      .filter((eventItem) => (riskFilter === 'all' ? true : eventItem.risk === riskFilter))
+      .filter((eventItem) => matchesTimeFilter(eventItem, timeFilter))
+      .filter((eventItem) => {
         if (!term) return true
         return (
           eventItem.name.toLowerCase().includes(term) ||
@@ -705,7 +718,7 @@ export default function Planner({ onLogout }: PlannerProps) {
 
   const calendarEvents = useMemo<EventInput[]>(
     () =>
-      filteredEvents.map(eventItem => ({
+      filteredEvents.map((eventItem) => ({
         id: String(eventItem.id),
         title: `${eventItem.name} (${eventItem.client})`,
         start: eventItem.start,
@@ -716,7 +729,7 @@ export default function Planner({ onLogout }: PlannerProps) {
           risk: eventItem.risk,
         },
       })),
-    [filteredEvents]
+    [filteredEvents],
   )
 
   const handleCalendarEventDrop = useCallback(
@@ -755,7 +768,7 @@ export default function Planner({ onLogout }: PlannerProps) {
         setCalendarSyncing(false)
       }
     },
-    [loadProjects]
+    [loadProjects],
   )
 
   const summary = useMemo(
@@ -771,9 +784,9 @@ export default function Planner({ onLogout }: PlannerProps) {
           if (eventItem.risk === 'critical') acc.critical += 1
           return acc
         },
-        { total: 0, active: 0, upcoming: 0, completed: 0, atRisk: 0, warning: 0, critical: 0 }
+        { total: 0, active: 0, upcoming: 0, completed: 0, atRisk: 0, warning: 0, critical: 0 },
       ),
-    [events]
+    [events],
   )
 
   const plannerJourney: FlowJourneyStep[] = useMemo(() => {
@@ -793,7 +806,8 @@ export default function Planner({ onLogout }: PlannerProps) {
       {
         id: 'login',
         title: '1. Inloggen',
-        description: 'Je sessie is actief. Alle acties worden realtime gelogd voor audittrail en rollback.',
+        description:
+          'Je sessie is actief. Alle acties worden realtime gelogd voor audittrail en rollback.',
         status: 'complete',
         badge: 'Authenticatie',
         meta: userEmail ? `Ingelogd als ${userEmail}` : undefined,
@@ -811,7 +825,8 @@ export default function Planner({ onLogout }: PlannerProps) {
       {
         id: 'planner',
         title: '3. Planner cockpit',
-        description: 'Prioriteer projecten, bewaak voorraad en schakel tussen dashboard en kalender.',
+        description:
+          'Prioriteer projecten, bewaak voorraad en schakel tussen dashboard en kalender.',
         status: 'current',
         badge: 'Operations',
         meta: plannerMeta,
@@ -970,7 +985,11 @@ export default function Planner({ onLogout }: PlannerProps) {
 
   const openCrewHandoff = useCallback(() => {
     if (typeof window !== 'undefined') {
-      window.open('/dashboard?focus=integration&action=sync&handoff=crew', '_blank', 'noopener,noreferrer')
+      window.open(
+        '/dashboard?focus=integration&action=sync&handoff=crew',
+        '_blank',
+        'noopener,noreferrer',
+      )
     }
   }, [])
 
@@ -1039,8 +1058,8 @@ export default function Planner({ onLogout }: PlannerProps) {
           summary.critical > 0
             ? 'danger'
             : summary.warning > 0 || eventsWithAlerts > 0
-            ? 'warning'
-            : 'success',
+              ? 'warning'
+              : 'success',
         metricLabel: 'Voorraadbewaking',
         metricValue: `${summary.critical} kritisch • ${eventsWithAlerts} alerts`,
         description:
@@ -1048,7 +1067,11 @@ export default function Planner({ onLogout }: PlannerProps) {
         helperText:
           'De hand-off opent direct het secrets-dashboard met sync-acties. De risicolog blijft beschikbaar voor aanvullende context.',
         primaryAction: { label: 'Activeer operations flow', onClick: startOperationsFlow },
-        secondaryAction: { label: 'Bekijk risicolog', onClick: focusRiskView, variant: 'secondary' },
+        secondaryAction: {
+          label: 'Bekijk risicolog',
+          onClick: focusRiskView,
+          variant: 'secondary',
+        },
       },
       {
         id: 'planning',
@@ -1062,7 +1085,11 @@ export default function Planner({ onLogout }: PlannerProps) {
         helperText:
           'De hand-off opent een nieuwe tab voor crew sync met integratievariabelen. Kalenderfilter blijft actief voor snelle updates.',
         primaryAction: { label: 'Start support hand-off', onClick: startPlanningFlow },
-        secondaryAction: { label: 'Kalenderoverzicht', onClick: openCalendarView, variant: 'secondary' },
+        secondaryAction: {
+          label: 'Kalenderoverzicht',
+          onClick: openCalendarView,
+          variant: 'secondary',
+        },
       },
       {
         id: 'sales',
@@ -1076,7 +1103,11 @@ export default function Planner({ onLogout }: PlannerProps) {
         helperText:
           'De sales hand-off opent de pipeline view in het secrets-dashboard zodat accountteams direct kunnen schakelen.',
         primaryAction: { label: 'Activeer sales flow', onClick: startSalesFlow },
-        secondaryAction: { label: 'Bekijk pipeline', onClick: focusSalesView, variant: 'secondary' },
+        secondaryAction: {
+          label: 'Bekijk pipeline',
+          onClick: focusSalesView,
+          variant: 'secondary',
+        },
       },
       {
         id: 'finance',
@@ -1090,7 +1121,11 @@ export default function Planner({ onLogout }: PlannerProps) {
         helperText:
           'De billing hand-off opent het secrets-dashboard met SLA matrix zodat facturatie kan escaleren binnen contractuele kaders.',
         primaryAction: { label: 'Start finance hand-off', onClick: startFinanceFlow },
-        secondaryAction: { label: 'Toon facturatiequeue', onClick: focusCompletedView, variant: 'secondary' },
+        secondaryAction: {
+          label: 'Toon facturatiequeue',
+          onClick: focusCompletedView,
+          variant: 'secondary',
+        },
       },
       {
         id: 'admin',
@@ -1104,7 +1139,11 @@ export default function Planner({ onLogout }: PlannerProps) {
         helperText:
           'Bij de governance hand-off opent de changelog-teaser en supportmatrix zodat escalaties traceerbaar blijven.',
         primaryAction: { label: 'Activeer governance flow', onClick: startAdminFlow },
-        secondaryAction: { label: 'Critical alerts', onClick: focusEscalationView, variant: 'secondary' },
+        secondaryAction: {
+          label: 'Critical alerts',
+          onClick: focusEscalationView,
+          variant: 'secondary',
+        },
       },
     ]
   }, [
@@ -1130,19 +1169,16 @@ export default function Planner({ onLogout }: PlannerProps) {
 
   const personaPresetConfig = useMemo(() => personaPresets[personaPreset], [personaPreset])
 
-  const personaKpiCards = useMemo(
-    () => {
-      if (!personaPresetConfig?.kpis?.length) {
-        return [] as Array<PersonaKpiConfig & { value: string }>
-      }
-      return personaPresetConfig.kpis.map(kpi => {
-        const rawValue = personaMetricValues[kpi.metric] ?? 0
-        const formatted = `${kpi.prefix ?? ''}${rawValue}${kpi.suffix ?? ''}`
-        return { ...kpi, value: formatted }
-      })
-    },
-    [personaPresetConfig, personaMetricValues],
-  )
+  const personaKpiCards = useMemo(() => {
+    if (!personaPresetConfig?.kpis?.length) {
+      return [] as Array<PersonaKpiConfig & { value: string }>
+    }
+    return personaPresetConfig.kpis.map((kpi) => {
+      const rawValue = personaMetricValues[kpi.metric] ?? 0
+      const formatted = `${kpi.prefix ?? ''}${rawValue}${kpi.suffix ?? ''}`
+      return { ...kpi, value: formatted }
+    })
+  }, [personaPresetConfig, personaMetricValues])
 
   const personaHint = personaPresetConfig?.description
 
@@ -1202,7 +1238,7 @@ export default function Planner({ onLogout }: PlannerProps) {
   ])
 
   function shiftRange(delta: number) {
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
       start: shiftDate(prev.start, delta),
       end: shiftDate(prev.end, delta),
@@ -1224,7 +1260,8 @@ export default function Planner({ onLogout }: PlannerProps) {
         justifyContent: 'space-between',
         gap: 16,
         alignItems: 'center',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
+        background:
+          'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
         borderRadius: 24,
         padding: '20px 24px',
         border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
@@ -1232,12 +1269,22 @@ export default function Planner({ onLogout }: PlannerProps) {
       }}
     >
       <div style={{ maxWidth: 520, display: 'grid', gap: 6 }}>
-        <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.2em', color: brand.colors.mutedText }}>
+        <span
+          style={{
+            fontSize: '0.8rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.2em',
+            color: brand.colors.mutedText,
+          }}
+        >
           Systeembeheer
         </span>
-        <strong style={{ fontFamily: headingFontStack, fontSize: '1.2rem' }}>Nieuwe secrets-console beschikbaar</strong>
+        <strong style={{ fontFamily: headingFontStack, fontSize: '1.2rem' }}>
+          Nieuwe secrets-console beschikbaar
+        </strong>
         <span style={{ color: brand.colors.mutedText }}>
-          Vul alle .env-variabelen centraal en push ze naar FastAPI- en Express-services. Houd e-mail, betalingen en observability gekoppeld.
+          Vul alle .env-variabelen centraal en push ze naar FastAPI- en Express-services. Houd
+          e-mail, betalingen en observability gekoppeld.
         </span>
       </div>
       <Link
@@ -1279,57 +1326,51 @@ export default function Planner({ onLogout }: PlannerProps) {
     return items
   }, [personaPreset, personaPresetConfig])
 
-  const personaSummary = useMemo<FlowExperiencePersona>(
-    () => {
-      const personaName = personaPresetConfig ? personaPresetConfig.label : 'Alle persona\'s'
-      const normalizedRole = userRole && userRole !== 'pending' ? userRole : 'planner'
-      const roleLabel = roleLabelMap[normalizedRole] ?? 'Pilot gebruiker'
-      const persona: FlowExperiencePersona = {
-        name: personaName,
-        role: roleLabel,
-      }
-      if (userEmail) {
-        persona.meta = userEmail
-      }
-      return persona
-    },
-    [personaPresetConfig, userEmail, userRole],
-  )
+  const personaSummary = useMemo<FlowExperiencePersona>(() => {
+    const personaName = personaPresetConfig ? personaPresetConfig.label : "Alle persona's"
+    const normalizedRole = userRole && userRole !== 'pending' ? userRole : 'planner'
+    const roleLabel = roleLabelMap[normalizedRole] ?? 'Pilot gebruiker'
+    const persona: FlowExperiencePersona = {
+      name: personaName,
+      role: roleLabel,
+    }
+    if (userEmail) {
+      persona.meta = userEmail
+    }
+    return persona
+  }, [personaPresetConfig, userEmail, userRole])
 
-  const stage = useMemo(
-    () => {
-      if (summary.total === 0) {
-        return {
-          label: 'Plan eerste projecten',
-          status: 'upcoming' as const,
-          detail: 'Voeg een project toe om dashboards en explainers te activeren.',
-        }
-      }
-      if (summary.critical > 0) {
-        return {
-          label: 'Los voorraadblokkades op',
-          status: 'in-progress' as const,
-          detail: `${summary.critical} kritieke voorraadissues vereisen actie`,
-        }
-      }
-      if (upcomingWithin7 > 0) {
-        return {
-          label: 'Bereid komende shows voor',
-          status: 'in-progress' as const,
-          detail: `${upcomingWithin7} projecten starten binnen 7 dagen`,
-        }
-      }
+  const stage = useMemo(() => {
+    if (summary.total === 0) {
       return {
-        label: 'Operaties op schema',
-        status: 'completed' as const,
-        detail:
-          summary.warning > 0
-            ? `${summary.warning} waarschuwingen gemonitord`
-            : 'Geen kritieke of waarschuwing alerts actief',
+        label: 'Plan eerste projecten',
+        status: 'upcoming' as const,
+        detail: 'Voeg een project toe om dashboards en explainers te activeren.',
       }
-    },
-    [summary.critical, summary.total, summary.warning, upcomingWithin7],
-  )
+    }
+    if (summary.critical > 0) {
+      return {
+        label: 'Los voorraadblokkades op',
+        status: 'in-progress' as const,
+        detail: `${summary.critical} kritieke voorraadissues vereisen actie`,
+      }
+    }
+    if (upcomingWithin7 > 0) {
+      return {
+        label: 'Bereid komende shows voor',
+        status: 'in-progress' as const,
+        detail: `${upcomingWithin7} projecten starten binnen 7 dagen`,
+      }
+    }
+    return {
+      label: 'Operaties op schema',
+      status: 'completed' as const,
+      detail:
+        summary.warning > 0
+          ? `${summary.warning} waarschuwingen gemonitord`
+          : 'Geen kritieke of waarschuwing alerts actief',
+    }
+  }, [summary.critical, summary.total, summary.warning, upcomingWithin7])
 
   const statusMessage = useMemo(() => {
     if (feedback?.type === 'error') {
@@ -1410,7 +1451,9 @@ export default function Planner({ onLogout }: PlannerProps) {
             color: withOpacity('#FFFFFF', 0.86),
           }}
         >
-          <li>Gebruik de persona-presets om crew- en finance dashboards automatisch te synchroniseren.</li>
+          <li>
+            Gebruik de persona-presets om crew- en finance dashboards automatisch te synchroniseren.
+          </li>
           <li>Escalaties verlopen via het secrets-dashboard en NOC monitoring documentatie.</li>
           <li>Plan rollback scenario’s wekelijks; auditlogs staan gekoppeld aan elke wijziging.</li>
         </ul>
@@ -1428,12 +1471,14 @@ export default function Planner({ onLogout }: PlannerProps) {
   )
 
   const navigationRail = useMemo(() => {
-    const roleStatus: FlowNavigationStatus = userRole && userRole !== 'pending' ? 'complete' : 'blocked'
+    const roleStatus: FlowNavigationStatus =
+      userRole && userRole !== 'pending' ? 'complete' : 'blocked'
     const secretsStatus: FlowNavigationStatus = showSecretsShortcut ? 'upcoming' : 'blocked'
 
     return {
       title: 'Pilot gebruikersflows',
-      caption: 'Volg de navigator om alle persona\'s soepel door planning, crew en go-live stappen te leiden.',
+      caption:
+        "Volg de navigator om alle persona's soepel door planning, crew en go-live stappen te leiden.",
       items: createFlowNavigation(
         'planner',
         {
@@ -1458,7 +1503,8 @@ export default function Planner({ onLogout }: PlannerProps) {
       ),
       footer: (
         <span>
-          Tip: Deel deze navigator tijdens go-live war rooms zodat alle stakeholders dezelfde context hebben.
+          Tip: Deel deze navigator tijdens go-live war rooms zodat alle stakeholders dezelfde
+          context hebben.
         </span>
       ),
     }
@@ -1472,9 +1518,12 @@ export default function Planner({ onLogout }: PlannerProps) {
       description={
         <>
           <span>
-            Persona-presets voor operations, sales, finance en compliance brengen KPI’s per stakeholder samen in één cockpit.
+            Persona-presets voor operations, sales, finance en compliance brengen KPI’s per
+            stakeholder samen in één cockpit.
           </span>
-          <span>Gebruik explainers per rol om crew, finance en escalaties vanuit één cockpit te sturen.</span>
+          <span>
+            Gebruik explainers per rol om crew, finance en escalaties vanuit één cockpit te sturen.
+          </span>
         </>
       }
       heroPrologue={<FlowExplainerList items={heroExplainers} minWidth={240} />}
@@ -1498,7 +1547,8 @@ export default function Planner({ onLogout }: PlannerProps) {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 12,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.82) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.82) 100%)',
             borderRadius: 20,
             padding: '16px 20px',
             border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
@@ -1513,7 +1563,7 @@ export default function Planner({ onLogout }: PlannerProps) {
                   { key: 'dashboard', label: 'Persona-dashboard' },
                   { key: 'calendar', label: 'Kalender' },
                 ] as const
-              ).map(option => {
+              ).map((option) => {
                 const active = viewMode === option.key
                 return (
                   <button
@@ -1543,7 +1593,12 @@ export default function Planner({ onLogout }: PlannerProps) {
               })}
             </div>
           </div>
-          <span style={{ fontSize: '0.85rem', color: calendarSyncing ? brand.colors.secondary : brand.colors.mutedText }}>
+          <span
+            style={{
+              fontSize: '0.85rem',
+              color: calendarSyncing ? brand.colors.secondary : brand.colors.mutedText,
+            }}
+          >
             {viewMode === 'calendar'
               ? calendarSyncing
                 ? 'Kalender synchroniseert…'
@@ -1568,7 +1623,11 @@ export default function Planner({ onLogout }: PlannerProps) {
             testId="planner-metric-active"
           />
           <SummaryMetric label="Komend" value={summary.upcoming} testId="planner-metric-upcoming" />
-          <SummaryMetric label="Afgerond" value={summary.completed} testId="planner-metric-completed" />
+          <SummaryMetric
+            label="Afgerond"
+            value={summary.completed}
+            testId="planner-metric-completed"
+          />
           <SummaryMetric
             label="Voorraadrisico"
             value={`${summary.critical} kritisch / ${summary.warning} waarschuwing`}
@@ -1577,9 +1636,7 @@ export default function Planner({ onLogout }: PlannerProps) {
           />
         </div>
 
-        {viewMode !== 'calendar' && (
-          <InventorySnapshot />
-        )}
+        {viewMode !== 'calendar' && <InventorySnapshot />}
 
         <FlowGuidancePanel
           eyebrow="User flows"
@@ -1594,16 +1651,30 @@ export default function Planner({ onLogout }: PlannerProps) {
             gap: 18,
             padding: '24px 28px',
             borderRadius: 26,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(227, 232, 255, 0.86) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(227, 232, 255, 0.86) 100%)',
             border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
             boxShadow: brand.colors.shadow,
           }}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 12,
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <div style={{ display: 'grid', gap: 6 }}>
-              <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>Operationale borging</h3>
+              <h3
+                style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}
+              >
+                Operationale borging
+              </h3>
               <p style={{ margin: 0, color: brand.colors.mutedText, maxWidth: 680 }}>
-                SLA-verwachtingen en release highlights worden hier samengebracht zodat planners hand-offs kunnen verantwoorden richting crew, finance en governance.
+                SLA-verwachtingen en release highlights worden hier samengebracht zodat planners
+                hand-offs kunnen verantwoorden richting crew, finance en governance.
               </p>
             </div>
             <button
@@ -1642,7 +1713,9 @@ export default function Planner({ onLogout }: PlannerProps) {
                 border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
               }}
             >
-              <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>SLA matrix</strong>
+              <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>
+                SLA matrix
+              </strong>
               <table
                 style={{
                   width: '100%',
@@ -1653,23 +1726,69 @@ export default function Planner({ onLogout }: PlannerProps) {
               >
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}` }}>Pakket</th>
-                    <th style={{ textAlign: 'left', padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}` }}>RTO</th>
-                    <th style={{ textAlign: 'left', padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}` }}>Coverage</th>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '8px 0',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                      }}
+                    >
+                      Pakket
+                    </th>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '8px 0',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                      }}
+                    >
+                      RTO
+                    </th>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '8px 0',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.16)}`,
+                      }}
+                    >
+                      Coverage
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {serviceLevelMatrix.map(row => (
+                  {serviceLevelMatrix.map((row) => (
                     <tr key={row.tier}>
-                      <td style={{ padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`, fontWeight: 600 }}>{row.tier}</td>
-                      <td style={{ padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}` }}>{row.rto}</td>
-                      <td style={{ padding: '8px 0', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}` }}>{row.coverage}</td>
+                      <td
+                        style={{
+                          padding: '8px 0',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {row.tier}
+                      </td>
+                      <td
+                        style={{
+                          padding: '8px 0',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+                        }}
+                      >
+                        {row.rto}
+                      </td>
+                      <td
+                        style={{
+                          padding: '8px 0',
+                          borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+                        }}
+                      >
+                        {row.coverage}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <span style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>
-                Escalaties: {serviceLevelMatrix.map(row => row.escalation).join(' • ')}
+                Escalaties: {serviceLevelMatrix.map((row) => row.escalation).join(' • ')}
               </span>
             </article>
 
@@ -1683,11 +1802,23 @@ export default function Planner({ onLogout }: PlannerProps) {
                 border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
               }}
             >
-              <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>Release highlights</strong>
-              <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6, color: brand.colors.mutedText, fontSize: '0.9rem' }}>
-                {releaseHighlights.map(item => (
+              <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>
+                Release highlights
+              </strong>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 18,
+                  display: 'grid',
+                  gap: 6,
+                  color: brand.colors.mutedText,
+                  fontSize: '0.9rem',
+                }}
+              >
+                {releaseHighlights.map((item) => (
                   <li key={item.version}>
-                    <strong style={{ color: brand.colors.secondary }}>{item.version}:</strong> {item.summary}
+                    <strong style={{ color: brand.colors.secondary }}>{item.version}:</strong>{' '}
+                    {item.summary}
                   </li>
                 ))}
               </ul>
@@ -1695,7 +1826,12 @@ export default function Planner({ onLogout }: PlannerProps) {
                 href="https://github.com/crisisk/RentGuy-v1/releases"
                 target="_blank"
                 rel="noreferrer"
-                style={{ color: brand.colors.primary, fontWeight: 600, textDecoration: 'none', fontSize: '0.85rem' }}
+                style={{
+                  color: brand.colors.primary,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  fontSize: '0.85rem',
+                }}
               >
                 Bekijk volledige changelog →
               </a>
@@ -1705,7 +1841,8 @@ export default function Planner({ onLogout }: PlannerProps) {
 
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(227, 232, 255, 0.82) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(227, 232, 255, 0.82) 100%)',
             borderRadius: 24,
             padding: '24px 28px',
             border: `1px solid ${withOpacity(brand.colors.primary, 0.24)}`,
@@ -1715,7 +1852,15 @@ export default function Planner({ onLogout }: PlannerProps) {
           }}
         >
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18 }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.85rem', color: brand.colors.mutedText }}>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                fontSize: '0.85rem',
+                color: brand.colors.mutedText,
+              }}
+            >
               Persona preset
               <select
                 value={personaPreset}
@@ -1736,7 +1881,15 @@ export default function Planner({ onLogout }: PlannerProps) {
               </select>
             </label>
 
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.85rem', color: brand.colors.mutedText }}>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                fontSize: '0.85rem',
+                color: brand.colors.mutedText,
+              }}
+            >
               Statusfilter
               <select
                 value={statusFilter}
@@ -1755,7 +1908,15 @@ export default function Planner({ onLogout }: PlannerProps) {
               </select>
             </label>
 
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.85rem', color: brand.colors.mutedText }}>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                fontSize: '0.85rem',
+                color: brand.colors.mutedText,
+              }}
+            >
               Voorraadrisico
               <select
                 value={riskFilter}
@@ -1788,7 +1949,9 @@ export default function Planner({ onLogout }: PlannerProps) {
                 type="search"
                 placeholder="Zoek op project, klant of notitie"
                 value={searchTerm}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value)}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setSearchTerm(event.target.value)
+                }
                 data-testid="planner-filter-search"
                 style={filterControlStyle}
               />
@@ -1814,7 +1977,9 @@ export default function Planner({ onLogout }: PlannerProps) {
               Reset filters
             </button>
           </div>
-          {personaHint && <div style={{ fontSize: '0.9rem', color: brand.colors.mutedText }}>{personaHint}</div>}
+          {personaHint && (
+            <div style={{ fontSize: '0.9rem', color: brand.colors.mutedText }}>{personaHint}</div>
+          )}
           {personaKpiCards.length > 0 && (
             <div
               role="list"
@@ -1825,13 +1990,26 @@ export default function Planner({ onLogout }: PlannerProps) {
                 gap: 16,
               }}
             >
-              {personaKpiCards.map(card => (
+              {personaKpiCards.map((card) => (
                 <article key={card.id} role="listitem" style={personaKpiCardStyle}>
-                  <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: brand.colors.mutedText }}>
+                  <span
+                    style={{
+                      fontSize: '0.8rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: brand.colors.mutedText,
+                    }}
+                  >
                     {card.label}
                   </span>
-                  <strong style={{ fontSize: '1.5rem', color: brand.colors.secondary }}>{card.value}</strong>
-                  {card.hint && <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{card.hint}</span>}
+                  <strong style={{ fontSize: '1.5rem', color: brand.colors.secondary }}>
+                    {card.value}
+                  </strong>
+                  {card.hint && (
+                    <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>
+                      {card.hint}
+                    </span>
+                  )}
                 </article>
               ))}
             </div>
@@ -1842,7 +2020,8 @@ export default function Planner({ onLogout }: PlannerProps) {
           <div
             data-testid="planner-calendar-wrapper"
             style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
+              background:
+                'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
               borderRadius: 28,
               padding: '12px 16px',
               border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
@@ -1909,18 +2088,35 @@ export default function Planner({ onLogout }: PlannerProps) {
             data-testid="planner-projects-table-container"
             style={{
               overflowX: 'auto',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.8) 100%)',
+              background:
+                'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.8) 100%)',
               borderRadius: 28,
               border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
               boxShadow: brand.colors.shadow,
               padding: '12px',
             }}
           >
-            <table data-testid="planner-projects-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+            <table
+              data-testid="planner-projects-table"
+              style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}
+            >
               <thead>
                 <tr>
-                  {['Project', 'Klant', 'Status', 'Planning', 'Voorraad', 'Start', 'Einde', 'Acties'].map(label => {
-                    const sortable = label === 'Status' || label === 'Voorraad' || label === 'Start' || label === 'Einde'
+                  {[
+                    'Project',
+                    'Klant',
+                    'Status',
+                    'Planning',
+                    'Voorraad',
+                    'Start',
+                    'Einde',
+                    'Acties',
+                  ].map((label) => {
+                    const sortable =
+                      label === 'Status' ||
+                      label === 'Voorraad' ||
+                      label === 'Start' ||
+                      label === 'Einde'
                     return (
                       <th
                         key={label}
@@ -1937,7 +2133,9 @@ export default function Planner({ onLogout }: PlannerProps) {
                           position: 'sticky',
                           top: 0,
                         }}
-                        onClick={() => sortable && toggleSort(sortKeyMap[label as keyof typeof sortKeyMap])}
+                        onClick={() =>
+                          sortable && toggleSort(sortKeyMap[label as keyof typeof sortKeyMap])
+                        }
                       >
                         {label}
                       </th>
@@ -1960,8 +2158,17 @@ export default function Planner({ onLogout }: PlannerProps) {
                         }}
                       >
                         <p style={{ margin: 0 }}>Geen projecten gevonden voor deze filters.</p>
-                        <p style={{ margin: 0 }}>Start een importwizard of reset de persona-instellingen.</p>
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <p style={{ margin: 0 }}>
+                          Start een importwizard of reset de persona-instellingen.
+                        </p>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 12,
+                            flexWrap: 'wrap',
+                            justifyContent: 'center',
+                          }}
+                        >
                           <button
                             type="button"
                             onClick={openImportWizard}
@@ -1985,13 +2192,15 @@ export default function Planner({ onLogout }: PlannerProps) {
                 </tbody>
               ) : (
                 <tbody>
-                  {filteredEvents.map(eventItem => {
+                  {filteredEvents.map((eventItem) => {
                     const isExpanded = expandedRow === eventItem.id
                     return (
                       <React.Fragment key={eventItem.id}>
                         <tr
                           style={{
-                            backgroundColor: isExpanded ? withOpacity(brand.colors.primary, 0.12) : 'transparent',
+                            backgroundColor: isExpanded
+                              ? withOpacity(brand.colors.primary, 0.12)
+                              : 'transparent',
                             transition: 'background-color 0.2s ease',
                           }}
                           onDoubleClick={() => openEditor(eventItem)}
@@ -2001,13 +2210,21 @@ export default function Planner({ onLogout }: PlannerProps) {
                           <td style={tableCellStyle}>
                             <StatusBadge status={eventItem.status} />
                           </td>
-                          <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>{timelineLabel(eventItem)}</td>
+                          <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>
+                            {timelineLabel(eventItem)}
+                          </td>
                           <td style={tableCellStyle}>
                             <RiskBadge risk={eventItem.risk} />
                           </td>
-                          <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>{formatDate(eventItem.start)}</td>
-                          <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>{formatDate(eventItem.end)}</td>
-                          <td style={{ ...tableCellStyle, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>
+                            {formatDate(eventItem.start)}
+                          </td>
+                          <td style={{ ...tableCellStyle, color: brand.colors.mutedText }}>
+                            {formatDate(eventItem.end)}
+                          </td>
+                          <td
+                            style={{ ...tableCellStyle, display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                          >
                             <button
                               type="button"
                               onClick={() => setExpandedRow(isExpanded ? null : eventItem.id)}
@@ -2022,40 +2239,78 @@ export default function Planner({ onLogout }: PlannerProps) {
                             >
                               Bekijk project
                             </Link>
-                            <button type="button" onClick={() => openEditor(eventItem)} style={primaryActionStyle}>
+                            <button
+                              type="button"
+                              onClick={() => openEditor(eventItem)}
+                              style={primaryActionStyle}
+                            >
                               Herplan
                             </button>
                           </td>
                         </tr>
                         {isExpanded && (
                           <tr>
-                            <td colSpan={8} style={{ padding: '18px 28px', backgroundColor: withOpacity('#ffffff', 0.85) }}>
+                            <td
+                              colSpan={8}
+                              style={{
+                                padding: '18px 28px',
+                                backgroundColor: withOpacity('#ffffff', 0.85),
+                              }}
+                            >
                               <div style={{ display: 'grid', gap: '12px' }}>
-                                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: brand.colors.mutedText }}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    gap: '16px',
+                                    flexWrap: 'wrap',
+                                    color: brand.colors.mutedText,
+                                  }}
+                                >
                                   <span>
-                                    <strong>Doorlooptijd:</strong> {eventItem.durationDays ? `${eventItem.durationDays} dagen` : 'Onbekend'}
+                                    <strong>Doorlooptijd:</strong>{' '}
+                                    {eventItem.durationDays
+                                      ? `${eventItem.durationDays} dagen`
+                                      : 'Onbekend'}
                                   </span>
                                   <span>
                                     <strong>Eindigt op:</strong> {formatDate(eventItem.end)}
                                   </span>
                                 </div>
-                                <div style={{ color: brand.colors.secondary, fontWeight: 600 }}>Projectnotities</div>
-                                <div style={{ color: brand.colors.mutedText, whiteSpace: 'pre-wrap' }}>
+                                <div style={{ color: brand.colors.secondary, fontWeight: 600 }}>
+                                  Projectnotities
+                                </div>
+                                <div
+                                  style={{ color: brand.colors.mutedText, whiteSpace: 'pre-wrap' }}
+                                >
                                   {eventItem.notes ? eventItem.notes : 'Geen notities toegevoegd.'}
                                 </div>
                                 {eventItem.alerts.length > 0 ? (
                                   <div>
-                                    <div style={{ color: brand.colors.secondary, fontWeight: 600, marginBottom: '6px' }}>
+                                    <div
+                                      style={{
+                                        color: brand.colors.secondary,
+                                        fontWeight: 600,
+                                        marginBottom: '6px',
+                                      }}
+                                    >
                                       Voorraaddetails
                                     </div>
-                                    <ul style={{ margin: 0, paddingLeft: '20px', color: brand.colors.danger }}>
+                                    <ul
+                                      style={{
+                                        margin: 0,
+                                        paddingLeft: '20px',
+                                        color: brand.colors.danger,
+                                      }}
+                                    >
                                       {eventItem.alerts.map((alert, index) => (
                                         <li key={index}>{alert}</li>
                                       ))}
                                     </ul>
                                   </div>
                                 ) : (
-                                  <div style={{ color: brand.colors.success }}>Geen voorraadissues voor dit project.</div>
+                                  <div style={{ color: brand.colors.success }}>
+                                    Geen voorraadissues voor dit project.
+                                  </div>
                                 )}
                               </div>
                             </td>
@@ -2082,27 +2337,48 @@ export default function Planner({ onLogout }: PlannerProps) {
               padding: '28px 32px',
               border: `1px solid ${withOpacity(brand.colors.primary, 0.24)}`,
               borderRadius: 24,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
+              background:
+                'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
               boxShadow: brand.colors.shadow,
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
               <h3 style={{ margin: 0, color: brand.colors.secondary }}>Project herplannen</h3>
-              <button type="button" onClick={closeEditor} data-testid="planner-editor-close" style={secondaryActionStyle}>
+              <button
+                type="button"
+                onClick={closeEditor}
+                data-testid="planner-editor-close"
+                style={secondaryActionStyle}
+              >
                 Sluiten
               </button>
             </div>
             <p style={{ margin: 0, color: brand.colors.mutedText }}>
-              Pas data en notities aan. Quick actions helpen om datumreeksen met één klik te verschuiven.
+              Pas data en notities aan. Quick actions helpen om datumreeksen met één klik te
+              verschuiven.
             </p>
 
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, color: brand.colors.mutedText }}>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                color: brand.colors.mutedText,
+              }}
+            >
               Projectnaam
               <input
                 type="text"
                 value={formState.name}
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setFormState(current => ({ ...current, name: event.target.value }))
+                  setFormState((current) => ({ ...current, name: event.target.value }))
                 }
                 required
                 data-testid="planner-editor-name"
@@ -2110,13 +2386,20 @@ export default function Planner({ onLogout }: PlannerProps) {
               />
             </label>
 
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, color: brand.colors.mutedText }}>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                color: brand.colors.mutedText,
+              }}
+            >
               Klant
               <input
                 type="text"
                 value={formState.client}
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setFormState(current => ({ ...current, client: event.target.value }))
+                  setFormState((current) => ({ ...current, client: event.target.value }))
                 }
                 required
                 data-testid="planner-editor-client"
@@ -2125,26 +2408,42 @@ export default function Planner({ onLogout }: PlannerProps) {
             </label>
 
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 200px', color: brand.colors.mutedText }}>
+              <label
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  flex: '1 1 200px',
+                  color: brand.colors.mutedText,
+                }}
+              >
                 Startdatum
                 <input
                   type="date"
                   value={formState.start}
                   onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setFormState(current => ({ ...current, start: event.target.value }))
+                    setFormState((current) => ({ ...current, start: event.target.value }))
                   }
                   required
                   data-testid="planner-editor-start"
                   style={{ ...filterControlStyle, width: '100%' }}
                 />
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 200px', color: brand.colors.mutedText }}>
+              <label
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  flex: '1 1 200px',
+                  color: brand.colors.mutedText,
+                }}
+              >
                 Einddatum
                 <input
                   type="date"
                   value={formState.end}
                   onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setFormState(current => ({ ...current, end: event.target.value }))
+                    setFormState((current) => ({ ...current, end: event.target.value }))
                   }
                   required
                   data-testid="planner-editor-end"
@@ -2154,10 +2453,20 @@ export default function Planner({ onLogout }: PlannerProps) {
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <button type="button" onClick={() => shiftRange(-1)} data-testid="planner-editor-shift-back" style={tertiaryActionStyle}>
+              <button
+                type="button"
+                onClick={() => shiftRange(-1)}
+                data-testid="planner-editor-shift-back"
+                style={tertiaryActionStyle}
+              >
                 Vervroeg beide data 1 dag
               </button>
-              <button type="button" onClick={() => shiftRange(1)} data-testid="planner-editor-shift-forward" style={tertiaryActionStyle}>
+              <button
+                type="button"
+                onClick={() => shiftRange(1)}
+                data-testid="planner-editor-shift-forward"
+                style={tertiaryActionStyle}
+              >
                 Verleng beide data 1 dag
               </button>
               <button
@@ -2178,12 +2487,19 @@ export default function Planner({ onLogout }: PlannerProps) {
               </button>
             </div>
 
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 8, color: brand.colors.mutedText }}>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                color: brand.colors.mutedText,
+              }}
+            >
               Notities voor crew & finance
               <textarea
                 value={formState.notes}
                 onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
-                  setFormState(current => ({ ...current, notes: event.target.value }))
+                  setFormState((current) => ({ ...current, notes: event.target.value }))
                 }
                 rows={3}
                 data-testid="planner-editor-notes"
@@ -2200,7 +2516,12 @@ export default function Planner({ onLogout }: PlannerProps) {
               <button type="submit" data-testid="planner-editor-save" style={primaryActionStyle}>
                 Opslaan
               </button>
-              <button type="button" onClick={closeEditor} data-testid="planner-editor-cancel" style={secondaryActionStyle}>
+              <button
+                type="button"
+                onClick={closeEditor}
+                data-testid="planner-editor-cancel"
+                style={secondaryActionStyle}
+              >
                 Annuleren
               </button>
             </div>
