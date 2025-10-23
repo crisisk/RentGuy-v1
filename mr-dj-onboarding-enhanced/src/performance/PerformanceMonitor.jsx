@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
 
+const isDevelopment = import.meta.env?.DEV ?? false;
+
 class PerformanceMetrics {
   constructor() {
     this.metrics = new Map();
@@ -115,35 +117,28 @@ const PerformanceMonitor = ({ children, componentName = 'Unknown' }) => {
 
   useEffect(() => {
     const perf = performanceRef.current;
-    
-    // Initialize Web Vitals tracking
+
     perf.initWebVitals();
-    
-    // Track navigation timing
     perf.trackNavigation();
-    
-    // Set up periodic memory tracking
-    const memoryInterval = setInterval(() => {
-      perf.trackMemoryUsage();
-    }, 5000);
-
-    // Track resource loading
+    perf.trackMemoryUsage();
     perf.trackResourceLoading();
+    setMetrics(perf.getAllMetrics());
 
-    // Cleanup
+    const refreshInterval = setInterval(() => {
+      perf.trackMemoryUsage();
+      perf.trackResourceLoading();
+      setMetrics(perf.getAllMetrics());
+    }, 15000);
+
     return () => {
-      clearInterval(memoryInterval);
+      clearInterval(refreshInterval);
     };
   }, []);
 
   useEffect(() => {
-    // Track component render time
     const renderTime = performance.now() - renderStartTime.current;
     performanceRef.current.trackComponentRender(componentName, renderTime);
-    
-    // Update metrics state
-    setMetrics(performanceRef.current.getAllMetrics());
-  });
+  }, [componentName, renderStartTime.current]);
 
   // Performance warning system
   useEffect(() => {
@@ -173,15 +168,15 @@ const PerformanceMonitor = ({ children, componentName = 'Unknown' }) => {
   return (
     <>
       {children}
-      {process.env.NODE_ENV === 'development' && (
-        <PerformanceDebugPanel metrics={metrics} />
+      {isDevelopment && (
+        <PerformanceDebugPanel metrics={metrics} metricsRef={performanceRef} />
       )}
     </>
   );
 };
 
 // Debug panel for development
-const PerformanceDebugPanel = ({ metrics }) => {
+const PerformanceDebugPanel = ({ metrics, metricsRef }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   if (!isVisible) {
@@ -220,7 +215,7 @@ const PerformanceDebugPanel = ({ metrics }) => {
       
       <button
         onClick={() => {
-          const report = performanceRef.current?.exportMetrics();
+          const report = metricsRef.current?.exportMetrics();
           console.log('Performance Report:', report);
           navigator.clipboard?.writeText(JSON.stringify(report, null, 2));
         }}
@@ -249,20 +244,25 @@ export const withPerformanceTracking = (WrappedComponent, componentName) => {
 // Hook for performance tracking
 export const usePerformanceTracking = (componentName) => {
   const renderStart = useRef(performance.now());
-  const [renderCount, setRenderCount] = useState(0);
+  const renderCountRef = useRef(0);
+  const componentNameRef = useRef(componentName);
 
   useEffect(() => {
-    setRenderCount(prev => prev + 1);
+    componentNameRef.current = componentName;
+  }, [componentName]);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
     const renderTime = performance.now() - renderStart.current;
-    
+
     if (renderTime > 16) {
-      console.warn(`Slow render detected in ${componentName}: ${renderTime}ms`);
+      console.warn(`Slow render detected in ${componentNameRef.current}: ${renderTime}ms`);
     }
-    
+
     renderStart.current = performance.now();
   });
 
-  return { renderCount };
+  return { renderCount: renderCountRef.current };
 };
 
 export default PerformanceMonitor;

@@ -1,7 +1,7 @@
 // Gecomprimeerde implementatie van alle Mr. DJ onboarding componenten
 // Deze file bevat alle benodigde componenten voor de onboarding flow
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -152,26 +152,30 @@ export const BusinessInfoStep = ({ onNext, onBack, initialData = {} }) => {
 
 // PackageConfigurationStep Component
 export const PackageConfigurationStep = ({ onNext, onBack, initialData = {} }) => {
-  const [packages, setPackages] = useState(initialData.packages || [
-    {
-      name: 'Silver Package',
-      price: 950,
-      description: 'Basis DJ setup voor kleinere evenementen',
-      included: ['DJ Mixer', 'Speakers (Paar)', 'Microfoon', 'Basis verlichting']
-    },
-    {
-      name: 'Gold Package', 
-      price: 1350,
-      description: 'Uitgebreide setup voor middelgrote evenementen',
-      included: ['DJ Mixer', 'Speakers + Subwoofer', 'Draadloze microfoons', 'LED verlichting', 'Rookmachine']
-    },
-    {
-      name: 'Platinum Package',
-      price: 1750,
-      description: 'Complete premium setup voor grote evenementen',
-      included: ['Premium DJ setup', 'Volledige PA systeem', 'Moving heads', 'Laser effecten', 'DJ Booth', 'Crew ondersteuning']
-    }
-  ]);
+  const packages = useMemo(() => (
+    initialData.packages && initialData.packages.length > 0
+      ? initialData.packages
+      : [
+          {
+            name: 'Silver Package',
+            price: 950,
+            description: 'Basis DJ setup voor kleinere evenementen',
+            included: ['DJ Mixer', 'Speakers (Paar)', 'Microfoon', 'Basis verlichting'],
+          },
+          {
+            name: 'Gold Package',
+            price: 1350,
+            description: 'Uitgebreide setup voor middelgrote evenementen',
+            included: ['DJ Mixer', 'Speakers + Subwoofer', 'Draadloze microfoons', 'LED verlichting', 'Rookmachine'],
+          },
+          {
+            name: 'Platinum Package',
+            price: 1750,
+            description: 'Complete premium setup voor grote evenementen',
+            included: ['Premium DJ setup', 'Volledige PA systeem', 'Moving heads', 'Laser effecten', 'DJ Booth', 'Crew ondersteuning'],
+          },
+        ]
+  ), [initialData.packages]);
 
   const handleSubmit = () => {
     onNext({ packages });
@@ -283,33 +287,66 @@ export const TestingValidationStep = ({ onNext, onBack }) => (
   </div>
 );
 
-export const CompletionStep = ({ onNext, allData }) => (
-  <div className="text-center space-y-6">
-    <div className="w-24 h-24 mx-auto bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
-      <CheckCircle className="w-12 h-12 text-white" />
-    </div>
-    <h2 className="text-3xl font-bold text-gray-900">Onboarding voltooid!</h2>
-    <p className="text-lg text-gray-600">
-      Gefeliciteerd Bart! Uw Mr. DJ account is succesvol geconfigureerd in RentGuy Enterprise.
-    </p>
-    <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-      <h3 className="font-semibold text-purple-900 mb-4">Wat is er geconfigureerd:</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-800">
-        <div>✅ Bedrijfsgegevens</div>
-        <div>✅ Apparatuur catalogus</div>
-        <div>✅ Service pakketten</div>
-        <div>✅ Prijsstelling</div>
-        <div>✅ Betalingsmethoden</div>
-        <div>✅ Crew beheer</div>
-        <div>✅ Levering configuratie</div>
-        <div>✅ Systeem validatie</div>
+export const CompletionStep = ({ allData = {} }) => {
+  const summaryDetails = useMemo(() => {
+    const getStepData = (step) => allData?.[step] || {};
+    const companyInfo = getStepData(2) || getStepData(1);
+    const equipmentSelection = getStepData(3)?.equipment || [];
+    const configuredPackages = getStepData(4)?.packages || [];
+    const paymentConfig = getStepData(6)?.paymentConfig || {};
+
+    const acceptedMethods = Array.isArray(paymentConfig.acceptedMethods)
+      ? paymentConfig.acceptedMethods.join(', ')
+      : 'Nog niet ingesteld';
+
+    return [
+      {
+        label: 'Bedrijfsnaam',
+        value: companyInfo?.businessName || companyInfo?.companyName || 'Mr. DJ',
+      },
+      {
+        label: 'Actieve pakketten',
+        value: configuredPackages.length
+          ? configuredPackages.map((pkg) => pkg.name || pkg).join(', ')
+          : 'Standaard pakketten Silver / Gold / Platinum',
+      },
+      {
+        label: 'Geselecteerde apparatuur',
+        value: equipmentSelection.length ? `${equipmentSelection.length} items` : 'Wordt aangevuld na catalogus sync',
+      },
+      {
+        label: 'Betaalmethoden',
+        value: acceptedMethods || 'Nog niet ingesteld',
+      },
+    ];
+  }, [allData]);
+
+  return (
+    <div className="text-center space-y-6">
+      <div className="w-24 h-24 mx-auto bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+        <CheckCircle className="w-12 h-12 text-white" />
       </div>
+      <h2 className="text-3xl font-bold text-gray-900">Onboarding voltooid!</h2>
+      <p className="text-lg text-gray-600">
+        Gefeliciteerd Bart! Uw Mr. DJ account is succesvol geconfigureerd in RentGuy Enterprise.
+      </p>
+      <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-left">
+        <h3 className="font-semibold text-purple-900 mb-4">Belangrijkste configuraties</h3>
+        <dl className="space-y-3 text-sm text-purple-800">
+          {summaryDetails.map(({ label, value }) => (
+            <div key={label} className="flex flex-col">
+              <dt className="font-semibold">{label}</dt>
+              <dd className="text-purple-700">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+      <Button
+        onClick={() => { window.location.href = '/dashboard'; }}
+        className="bg-gradient-to-r from-purple-600 to-blue-500 text-white px-8 py-3 text-lg"
+      >
+        Ga naar Dashboard
+      </Button>
     </div>
-    <Button 
-      onClick={() => window.location.href = '/dashboard'}
-      className="bg-gradient-to-r from-purple-600 to-blue-500 text-white px-8 py-3 text-lg"
-    >
-      Ga naar Dashboard
-    </Button>
-  </div>
-);
+  );
+};

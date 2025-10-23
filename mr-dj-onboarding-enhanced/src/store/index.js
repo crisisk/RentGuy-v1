@@ -6,8 +6,7 @@ import { onboardingSlice } from './slices/onboardingSlice';
 import { equipmentSlice } from './slices/equipmentSlice';
 import { settingsSlice } from './slices/settingsSlice';
 import { errorSlice } from './slices/errorSlice';
-import { persistenceMiddleware } from './middleware/persistence';
-import { loggingMiddleware } from './middleware/logging';
+const isDevelopment = import.meta.env?.DEV ?? false;
 
 // Main store configuration with multiple slices
 const useStore = create()(
@@ -16,10 +15,10 @@ const useStore = create()(
       subscribeWithSelector(
         immer((set, get, api) => ({
           // Authentication slice
-          ...authSlice(set, get, api),
+          ...authSlice(set, get),
           
           // Onboarding wizard slice
-          ...onboardingSlice(set, get, api),
+          ...onboardingSlice(set, get),
           
           // Equipment catalog slice
           ...equipmentSlice(set, get, api),
@@ -149,7 +148,7 @@ const useStore = create()(
     ),
     {
       name: 'RentGuy Store',
-      enabled: process.env.NODE_ENV === 'development',
+      enabled: isDevelopment,
     }
   )
 );
@@ -212,7 +211,7 @@ export const getStoreState = () => useStore.getState();
 export const subscribeToStore = (selector, callback) => useStore.subscribe(selector, callback);
 
 // Performance monitoring and analytics
-if (process.env.NODE_ENV === 'development') {
+if (isDevelopment) {
   // Subscribe to all state changes for debugging
   useStore.subscribe(
     (state) => state,

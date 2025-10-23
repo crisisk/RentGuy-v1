@@ -8,10 +8,10 @@ import { removeLocalStorageItem } from '@core/storage'
 export type AuthStatus = 'idle' | 'checking' | 'authenticated' | 'offline' | 'error'
 
 interface AuthStoreState {
-  readonly token: string | null
-  readonly user: AuthUser | null
-  readonly status: AuthStatus
-  readonly error: string | null
+  token: string | null
+  user: AuthUser | null
+  status: AuthStatus
+  error: string | null
   readonly setCredentials: (token: string, user: AuthUser) => void
   readonly clear: () => void
   readonly markChecking: () => void
@@ -111,7 +111,7 @@ export const useAuthStore = create<AuthStoreState>()(
       ...INITIAL_STATE,
       setCredentials: (token, user) => {
         const trimmed = token.trim()
-        set(state => {
+        set((state) => {
           state.token = trimmed || null
           state.user = trimmed ? { ...user } : null
           state.status = determineStatusFromToken(state.token, Boolean(state.user))
@@ -130,26 +130,26 @@ export const useAuthStore = create<AuthStoreState>()(
           }))
           return
         }
-        set(state => {
+        set((state) => {
           state.status = 'checking'
           state.error = null
         })
       },
       markError: (message: string) => {
-        set(state => {
+        set((state) => {
           state.status = 'error'
           state.error = message
         })
       },
       markOffline: (message?: string) => {
-        set(state => {
+        set((state) => {
           state.status = 'offline'
           state.error = message ?? null
         })
       },
       syncToken: (token: string) => {
         const trimmed = token.trim()
-        set(state => {
+        set((state) => {
           if (!trimmed) {
             const previousStatus = state.status
             state.token = null
@@ -159,7 +159,12 @@ export const useAuthStore = create<AuthStoreState>()(
             const manualLogout = consumeManualLogoutFlag()
             if (state.error && manualLogout) {
               state.error = null
-            } else if (!manualLogout && (previousStatus === 'authenticated' || previousStatus === 'offline' || previousStatus === 'checking')) {
+            } else if (
+              !manualLogout &&
+              (previousStatus === 'authenticated' ||
+                previousStatus === 'offline' ||
+                previousStatus === 'checking')
+            ) {
               state.error = 'Sessie verlopen. Log opnieuw in om verder te gaan.'
             } else if (manualLogout) {
               state.error = null
@@ -177,7 +182,7 @@ export const useAuthStore = create<AuthStoreState>()(
     {
       name: STORE_STORAGE_KEY,
       storage: createJSONStorage(resolveStorage),
-      partialize: state => ({
+      partialize: (state) => ({
         token: state.token,
         user: state.user,
         status: state.status === 'error' || state.status === 'checking' ? 'idle' : state.status,
@@ -190,9 +195,11 @@ export function resetAuthStore(): void {
   useAuthStore.setState({
     ...INITIAL_STATE,
   })
-  const persistApi = (useAuthStore as typeof useAuthStore & {
-    persist?: { clearStorage: () => Promise<void> }
-  }).persist
+  const persistApi = (
+    useAuthStore as typeof useAuthStore & {
+      persist?: { clearStorage: () => Promise<void> }
+    }
+  ).persist
   if (persistApi?.clearStorage) {
     void persistApi.clearStorage()
   }

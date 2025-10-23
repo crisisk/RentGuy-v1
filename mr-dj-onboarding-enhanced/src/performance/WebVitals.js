@@ -1,11 +1,13 @@
 // Web Vitals tracking and reporting
 import { getCLS, getFID, getFCP, getLCP, getTTFB, onINP } from 'web-vitals';
 
+const isDevelopment = import.meta.env?.DEV ?? false;
+
 class WebVitalsReporter {
   constructor(options = {}) {
     this.options = {
       reportAllChanges: false,
-      debug: process.env.NODE_ENV === 'development',
+      debug: isDevelopment,
       endpoint: '/api/analytics/web-vitals',
       ...options
     };
@@ -227,8 +229,8 @@ class WebVitalsReporter {
 
   sendToAnalytics(metric) {
     // Send to Google Analytics 4
-    if (typeof gtag !== 'undefined') {
-      gtag('event', metric.name, {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('event', metric.name, {
         event_category: 'Web Vitals',
         event_label: metric.id,
         value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),

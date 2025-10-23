@@ -1,5 +1,5 @@
 // Onboarding slice for Zustand store
-export const onboardingSlice = (set, get, api) => ({
+export const onboardingSlice = (set, get) => ({
   onboarding: {
     currentStep: 1,
     totalSteps: 6,
@@ -227,7 +227,7 @@ export const onboardingSlice = (set, get, api) => ({
     const errors = {};
     
     switch (stepNumber) {
-      case 1: // Company Information
+      case 1: { // Company Information
         const { companyInfo } = formData;
         if (!companyInfo.companyName?.trim()) errors.companyName = 'Company name is required';
         if (!companyInfo.contactPerson?.trim()) errors.contactPerson = 'Contact person is required';
@@ -235,35 +235,44 @@ export const onboardingSlice = (set, get, api) => ({
         if (!companyInfo.phone?.trim()) errors.phone = 'Phone number is required';
         if (!companyInfo.address?.trim()) errors.address = 'Address is required';
         break;
-        
-      case 2: // Service Configuration
+      }
+
+      case 2: { // Service Configuration
         const { serviceConfig } = formData;
         if (!serviceConfig.serviceTypes?.length) errors.serviceTypes = 'At least one service type is required';
         if (!serviceConfig.serviceAreas?.length) errors.serviceAreas = 'At least one service area is required';
         break;
-        
-      case 3: // Equipment Catalog
+      }
+
+      case 3: { // Equipment Catalog
         const { equipment } = formData;
         if (!equipment.categories?.length) errors.categories = 'At least one equipment category is required';
         if (!equipment.items?.length) errors.items = 'At least one equipment item is required';
         break;
-        
-      case 4: // Pricing Configuration
+      }
+
+      case 4: { // Pricing Configuration
         const { pricing } = formData;
         if (!pricing.hourlyRates?.weekday || pricing.hourlyRates.weekday <= 0) {
           errors.weekdayRate = 'Valid weekday rate is required';
         }
         break;
-        
-      case 5: // Payment & Billing
+      }
+
+      case 5: { // Payment & Billing
         const { paymentConfig } = formData;
         if (!paymentConfig.acceptedMethods?.length) {
           errors.paymentMethods = 'At least one payment method is required';
         }
         break;
-        
-      case 6: // Final Configuration
+      }
+
+      case 6: { // Final Configuration
         // Final step validation (optional configurations)
+        break;
+      }
+
+      default:
         break;
     }
     

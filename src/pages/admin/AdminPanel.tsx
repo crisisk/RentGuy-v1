@@ -65,7 +65,7 @@ const AdminPanel: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center h-screen" data-testid="admin-panel-loading">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
       </div>
     )
@@ -76,6 +76,7 @@ const AdminPanel: React.FC = () => {
       <div
         className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
         role="alert"
+        data-testid="admin-panel-error"
       >
         {error}
       </div>
@@ -83,31 +84,38 @@ const AdminPanel: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 md:px-8">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+    <div className="container mx-auto px-4 py-8 md:px-8" data-testid="admin-panel-root">
+      <h1 className="text-3xl font-bold mb-6" data-testid="admin-panel-title">
+        Admin Dashboard
+      </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white shadow rounded-lg p-4">
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        data-testid="admin-panel-stats-grid"
+      >
+        <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-card-total-users">
           <h2 className="text-gray-500 text-sm">Total Users</h2>
           <p className="text-2xl font-bold">{stats?.totalUsers}</p>
         </div>
-        <div className="bg-white shadow rounded-lg p-4">
+        <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-card-active-users">
           <h2 className="text-gray-500 text-sm">Active Users</h2>
           <p className="text-2xl font-bold">{stats?.activeUsers}</p>
         </div>
-        <div className="bg-white shadow rounded-lg p-4">
+        <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-card-uptime">
           <h2 className="text-gray-500 text-sm">Server Uptime</h2>
           <p className="text-2xl font-bold">{stats?.serverUptime}</p>
         </div>
-        <div className="bg-white shadow rounded-lg p-4">
+        <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-card-memory">
           <h2 className="text-gray-500 text-sm">Memory Usage</h2>
           <p className="text-2xl font-bold">{stats?.memoryUsage}%</p>
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-4">
-        <h2 className="text-xl font-semibold mb-4">Recent User Activity</h2>
-        <table className="w-full text-sm text-left">
+      <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-activity-card">
+        <h2 className="text-xl font-semibold mb-4" data-testid="admin-panel-activity-title">
+          Recent User Activity
+        </h2>
+        <table className="w-full text-sm text-left" data-testid="admin-panel-activity-table">
           <thead className="bg-gray-100">
             <tr>
               <th className="p-3">Username</th>
@@ -117,7 +125,11 @@ const AdminPanel: React.FC = () => {
           </thead>
           <tbody>
             {userActivities.map((activity) => (
-              <tr key={activity.id} className="border-b">
+              <tr
+                key={activity.id}
+                className="border-b"
+                data-testid={`admin-panel-activity-row-${activity.id}`}
+              >
                 <td className="p-3">{activity.username}</td>
                 <td className="p-3">{formatDate(activity.lastLogin)}</td>
                 <td className="p-3">{activity.loginCount}</td>

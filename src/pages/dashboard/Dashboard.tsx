@@ -46,26 +46,48 @@ const Dashboard = () => {
     return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`
   }
 
-  if (loading) return <div className="p-4 text-gray-500">Loading dashboard...</div>
-  if (error) return <div className="p-4 text-red-500">{error}</div>
+  if (loading)
+    return (
+      <div className="p-4 text-gray-500" data-testid="dashboard-loading">
+        Loading dashboard...
+      </div>
+    )
+  if (error)
+    return (
+      <div className="p-4 text-red-500" data-testid="dashboard-error">
+        {error}
+      </div>
+    )
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-6" data-testid="dashboard-root">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm">
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        data-testid="dashboard-stats-grid"
+      >
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm"
+          data-testid="dashboard-card-total-projects"
+        >
           <h3 className="text-gray-500 text-sm">Total Projects</h3>
           <p className="text-2xl font-semibold">{projects}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div className="bg-white p-4 rounded-lg shadow-sm" data-testid="dashboard-card-total-tasks">
           <h3 className="text-gray-500 text-sm">Total Tasks</h3>
           <p className="text-2xl font-semibold">{stats.totalTasks}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm"
+          data-testid="dashboard-card-completed-tasks"
+        >
           <h3 className="text-gray-500 text-sm">Completed Tasks</h3>
           <p className="text-2xl font-semibold">{stats.completedTasks}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm"
+          data-testid="dashboard-card-completion-rate"
+        >
           <h3 className="text-gray-500 text-sm">Completion Rate</h3>
           <p className="text-2xl font-semibold">
             {stats.totalTasks
@@ -76,10 +98,10 @@ const Dashboard = () => {
       </div>
 
       {/* Revenue Chart */}
-      <div className="bg-white p-4 rounded-lg shadow-sm">
+      <div className="bg-white p-4 rounded-lg shadow-sm" data-testid="dashboard-revenue-card">
         <h2 className="text-lg font-semibold mb-4">Revenue Overview</h2>
-        <div className="h-64">
-          <svg width="100%" height="100%">
+        <div className="h-64" data-testid="dashboard-revenue-chart">
+          <svg width="100%" height="100%" data-testid="dashboard-revenue-chart-svg">
             {revenueData.map((value, index) => (
               <React.Fragment key={index}>
                 <circle
@@ -104,13 +126,14 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Activities */}
-      <div className="bg-white p-4 rounded-lg shadow-sm">
+      <div className="bg-white p-4 rounded-lg shadow-sm" data-testid="dashboard-activities-card">
         <h2 className="text-lg font-semibold mb-4">Recent Activities</h2>
-        <div className="space-y-3">
+        <div className="space-y-3" data-testid="dashboard-activities-list">
           {activities.map((activity) => (
             <div
               key={activity.id}
               className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+              data-testid={`dashboard-activity-${activity.id}`}
             >
               <div className="flex items-center space-x-3">
                 <div
