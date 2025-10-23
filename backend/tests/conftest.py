@@ -221,11 +221,13 @@ import app.modules.auth.models  # noqa: F401
 import app.modules.chat.models  # noqa: F401
 import app.modules.booking.models  # noqa: F401
 import app.modules.crew.models  # noqa: F401
+import app.modules.customer_portal.models  # noqa: F401
 import app.modules.inventory.models  # noqa: F401
+import app.modules.jobboard.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
 import app.modules.platform.secrets.models  # noqa: F401
 import app.modules.crm.models  # noqa: F401
-import app.modules.scanning.models  # noqa: F401
+import app.modules.recurring_invoices.models  # noqa: F401
 
 from app.core.db import Base
 

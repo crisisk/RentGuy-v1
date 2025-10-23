@@ -1,96 +1,56 @@
-"""Notification service for job board events."""
+"""Notification helpers for the job board module."""
 
 from __future__ import annotations
 
-from typing import Optional
+import logging
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from .models import JobApplication
 
-from .models import JobApplication, JobPosting
+logger = logging.getLogger(__name__)
 
 
 class NotificationService:
-    """Handles outbound notifications for job application events."""
+    """Dispatch lightweight notifications for job board events."""
 
-    def __init__(self, db: AsyncSession):
-        self._db = db
+    def send_email(self, recipient: str, subject: str, body: str) -> None:
+        """Send an e-mail notification.
 
-    async def _load_application(self, application: JobApplication) -> JobApplication:
-        """Ensure relationships are loaded before accessing them."""
+        In production this would integrate with the configured mailer. During
+        development we log the payload so the behaviour remains observable.
+        """
 
-        if (
-            "job_posting" in application.__dict__
-            and application.__dict__["job_posting"] is not None
-            and "applicant" in application.__dict__
-            and application.__dict__["applicant"] is not None
-        ):
-            return application
+        logger.info("Email sent", extra={"to": recipient, "subject": subject, "body": body})
 
-        result = await self._db.execute(
-            select(JobApplication)
-            .options(
-                selectinload(JobApplication.job_posting).selectinload(JobPosting.employer),
-                selectinload(JobApplication.applicant),
-            )
-            .where(JobApplication.id == application.id)
+    def create_in_app_notification(self, user_id: int, message: str) -> None:
+        """Persist an in-app notification placeholder."""
+
+        logger.info("In-app notification", extra={"user_id": user_id, "message": message})
+
+    def send_application_submitted(self, application: JobApplication) -> None:
+        """Notify the employer about a newly submitted application."""
+
+        subject = "New job application received"
+        body = (
+            f"You have a new application for {application.job_posting.title} "
+            f"from {application.applicant.email}."
         )
-        return result.scalar_one()
+        self.send_email(application.job_posting.employer.email, subject, body)
 
-    async def send_email(self, recipient: str, subject: str, body: str) -> None:
-        """Send email notification (placeholder implementation)."""
-
-        # In production this would be replaced by the mailer integration. The
-        # print is kept to assist when running tests locally.
-        print(f"Email sent to {recipient}: {subject}")
-
-    async def create_in_app_notification(self, user_id: int, message: str) -> None:
-        """Create an in-app notification (placeholder implementation)."""
-
-        print(f"In-app notification for {user_id}: {message}")
-
-    async def send_application_submitted(self, application: JobApplication) -> None:
-        """Notify the employer about a new application."""
-
-        application = await self._load_application(application)
-        employer = getattr(application.job_posting, "employer", None)
-        if employer is None or not getattr(employer, "email", None):
-            return
-
-        subject = "New Job Application Received"
-        body = f"You have a new application for {application.job_posting.title}"
-
-        await self.send_email(employer.email, subject, body)
-
-    async def send_application_status_update(
-        self,
-        application: JobApplication,
-        previous_status: Optional[str] = None,
+    def send_application_status_update(
+        self, application: JobApplication, previous_status: str | None = None
     ) -> None:
         """Notify the applicant about a status change."""
 
-        if previous_status is not None and application.status == previous_status:
+        if previous_status == application.status:
             return
 
-        application = await self._load_application(application)
-        applicant = getattr(application, "applicant", None)
-        if applicant is None or not getattr(applicant, "email", None):
-            return
-
-        subject = "Application Status Updated"
+        subject = "Your job application status changed"
         body = (
-            f"Your application for {application.job_posting.title} "
-            f"has changed from {previous_status or 'submitted'} to {application.status}"
+            f"Your application for {application.job_posting.title} changed from "
+            f"{previous_status or 'submitted'} to {application.status}."
         )
-
-        await self.send_email(applicant.email, subject, body)
-
-        message = (
-            f"Your application status for {application.job_posting.title} "
-            f"updated to {application.status}"
-        )
-        await self.create_in_app_notification(applicant.id, message)
+        self.send_email(application.applicant.email, subject, body)
+        self.create_in_app_notification(application.applicant_id, body)
 
 
 __all__ = ["NotificationService"]

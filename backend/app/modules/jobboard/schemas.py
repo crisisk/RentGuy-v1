@@ -1,17 +1,16 @@
-"""Pydantic schemas for the job board module."""
+"""Pydantic schemas for the job board API."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ApplicationStatus(str, Enum):
-    """Valid statuses for job applications."""
+    """Valid workflow states for job applications."""
 
     SUBMITTED = "submitted"
     UNDER_REVIEW = "under_review"
@@ -20,66 +19,86 @@ class ApplicationStatus(str, Enum):
 
 
 class JobPostingCreate(BaseModel):
-    """Schema for creating a job posting."""
+    """Payload for creating job postings."""
 
     title: str = Field(..., max_length=100)
     description: str = Field(..., min_length=10)
-    location: str = Field(..., max_length=100)
+    location: str = Field(..., max_length=50)
 
 
 class JobPostingUpdate(BaseModel):
-    """Schema for updating an existing job posting."""
+    """Payload for updating job postings."""
 
     title: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = Field(None, min_length=10)
-    location: Optional[str] = Field(None, max_length=100)
+    location: Optional[str] = Field(None, max_length=50)
     status: Optional[str] = Field(None, pattern=r"^(open|closed)$")
 
 
-class JobPostingResponse(BaseModel):
-    """Response schema for job postings."""
+class UserSummary(BaseModel):
+    """Lightweight representation of an auth user."""
 
-    id: UUID
+    id: int
+    email: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class JobPostingResponse(BaseModel):
+    """API response model for job postings."""
+
+    id: int
     title: str
     description: str
     location: str
     status: str
     created_at: datetime
-    updated_at: datetime
-    employer_id: int
+    employer: UserSummary
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class JobApplicationCreate(BaseModel):
-    """Schema for submitting a job application."""
+    """Payload for submitting job applications."""
 
-    job_posting_id: UUID
-    resume_file_path: str = Field(..., max_length=255)
+    job_posting_id: int
+    resume_file_path: str = Field(..., max_length=200)
 
 
 class JobApplicationUpdate(BaseModel):
-    """Schema for updating an existing application."""
+    """Payload for updating the status of an application."""
 
     status: ApplicationStatus
 
     @field_validator("status")
     @classmethod
-    def validate_status(cls, value: ApplicationStatus) -> ApplicationStatus:
+    def validate_transition(cls, value: ApplicationStatus) -> ApplicationStatus:
         if value == ApplicationStatus.SUBMITTED:
-            raise ValueError("Cannot revert to submitted status")
+            raise ValueError("Status cannot be changed back to submitted")
         return value
 
 
 class JobApplicationResponse(BaseModel):
-    """Response schema for job applications."""
+    """Response payload for job applications."""
 
-    id: UUID
+    id: int
     status: ApplicationStatus
     created_at: datetime
     updated_at: datetime
-    applicant_id: int
-    job_posting_id: UUID
     resume_file_path: str
+    applicant: UserSummary
+    job_posting: JobPostingResponse
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
+
+
+__all__ = [
+    "ApplicationStatus",
+    "JobPostingCreate",
+    "JobPostingUpdate",
+    "JobPostingResponse",
+    "JobApplicationCreate",
+    "JobApplicationUpdate",
+    "JobApplicationResponse",
+    "UserSummary",
+]
