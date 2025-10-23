@@ -1,49 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import projectStore from '../../stores/projectStore';
+import React, { useState, useEffect } from 'react'
+import projectStore from '../../stores/projectStore'
 
 const Dashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [projects, setProjects] = useState<number>(0);
-  const [stats, setStats] = useState<{ totalTasks: number; completedTasks: number }>({ totalTasks: 0, completedTasks: 0 });
-  const [activities, setActivities] = useState<Array<{ id: string; title: string; date: string; status: string }>>([]);
-  const [revenueData, setRevenueData] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [projects, setProjects] = useState<number>(0)
+  const [stats, setStats] = useState<{ totalTasks: number; completedTasks: number }>({
+    totalTasks: 0,
+    completedTasks: 0,
+  })
+  const [activities, setActivities] = useState<
+    Array<{ id: string; title: string; date: string; status: string }>
+  >([])
+  const [revenueData, setRevenueData] = useState<number[]>([])
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(true);
-        const projectData = await projectStore.getProjects();
-        const statsData = await projectStore.getStats();
-        const activitiesData = await projectStore.getRecentActivities();
-        
-        setProjects(projectData.length);
-        setStats(statsData);
-        setActivities(activitiesData);
-        setRevenueData(generateRevenueData());
-        setError('');
-      } catch (err) {
-        setError('Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
+        setLoading(true)
+        const projectData = await projectStore.getProjects()
+        const statsData = await projectStore.getStats()
+        const activitiesData = await projectStore.getRecentActivities()
 
-    loadData();
-  }, []);
+        setProjects(projectData.length)
+        setStats(statsData)
+        setActivities(activitiesData)
+        setRevenueData(generateRevenueData())
+        setError('')
+      } catch (error) {
+        console.error('Failed to load dashboard data', error)
+        setError('Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
 
   const generateRevenueData = () => {
-    return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10000) + 5000);
-  };
+    return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10000) + 5000)
+  }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-  };
+    const date = new Date(dateString)
+    return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`
+  }
 
-  if (loading) return <div className="p-4 text-gray-500">Loading dashboard...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
+  if (loading) return <div className="p-4 text-gray-500">Loading dashboard...</div>
+  if (error) return <div className="p-4 text-red-500">{error}</div>
 
   return (
     <div className="p-4 space-y-6">
@@ -64,7 +69,9 @@ const Dashboard = () => {
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <h3 className="text-gray-500 text-sm">Completion Rate</h3>
           <p className="text-2xl font-semibold">
-            {stats.totalTasks ? `${Math.round((stats.completedTasks / stats.totalTasks) * 100)}%` : '0%'}
+            {stats.totalTasks
+              ? `${Math.round((stats.completedTasks / stats.totalTasks) * 100)}%`
+              : '0%'}
           </p>
         </div>
       </div>
@@ -101,10 +108,15 @@ const Dashboard = () => {
       <div className="bg-white p-4 rounded-lg shadow-sm">
         <h2 className="text-lg font-semibold mb-4">Recent Activities</h2>
         <div className="space-y-3">
-          {activities.map(activity => (
-            <div key={activity.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+          {activities.map((activity) => (
+            <div
+              key={activity.id}
+              className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+            >
               <div className="flex items-center space-x-3">
-                <div className={`w-2 h-2 rounded-full ${activity.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${activity.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`}
+                />
                 <span className="font-medium">{activity.title}</span>
               </div>
               <span className="text-sm text-gray-500">{formatDate(activity.date)}</span>
@@ -113,7 +125,7 @@ const Dashboard = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Dashboard;
+export default Dashboard

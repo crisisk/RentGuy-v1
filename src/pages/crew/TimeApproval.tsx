@@ -1,106 +1,118 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import crewStore from '../../stores/crewStore';
+import React, { useState, useEffect } from 'react'
+import crewStore from '../../stores/crewStore'
 
 interface TimeEntry {
-  id: string;
-  date: string;
-  hours: number;
-  description: string;
-  status: 'pending' | 'approved' | 'rejected';
+  id: string
+  date: string
+  hours: number
+  description: string
+  status: 'pending' | 'approved' | 'rejected'
   user: {
-    id: string;
-    name: string;
-  };
+    id: string
+    name: string
+  }
 }
 
 const TimeApproval: React.FC = () => {
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
-  const navigate = useNavigate();
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     const loadEntries = async () => {
       try {
-        const entries = await crewStore.getTimeEntries();
-        setTimeEntries(entries);
+        const entries = await crewStore.getTimeEntries()
+        setTimeEntries(entries)
       } catch (error) {
-        setErrorMessage('Failed to load time entries');
+        console.error('Failed to load time entries', error)
+        setErrorMessage('Failed to load time entries')
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
-    loadEntries();
-  }, []);
+    }
+    loadEntries()
+  }, [])
 
   const handleStatusUpdate = async (id: string, status: 'approved' | 'rejected') => {
     try {
-      setTimeEntries(prev => prev.map(entry => 
-        entry.id === id ? { ...entry, status } : entry
-      ));
-      await crewStore.updateTimeEntry(id, status);
+      setTimeEntries((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, status } : entry)),
+      )
+      await crewStore.updateTimeEntry(id, status)
     } catch (error) {
-      setErrorMessage('Failed to update entry');
-      setTimeEntries(prev => prev.map(entry => 
-        entry.id === id ? { ...entry, status: 'pending' } : entry
-      ));
+      console.error('Failed to update time entry', error)
+      setErrorMessage('Failed to update entry')
+      setTimeEntries((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, status: 'pending' } : entry)),
+      )
     }
-  };
+  }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
-    });
-  };
+      year: 'numeric',
+    })
+  }
 
   if (isLoading) {
-    return (
-      <div className="p-4 text-center text-gray-600">
-        Loading time entries...
-      </div>
-    );
+    return <div className="p-4 text-center text-gray-600">Loading time entries...</div>
   }
 
   if (errorMessage) {
-    return (
-      <div className="p-4 bg-red-100 text-red-700 rounded-md">
-        {errorMessage}
-      </div>
-    );
+    return <div className="p-4 bg-red-100 text-red-700 rounded-md">{errorMessage}</div>
   }
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Time Approval Requests</h1>
-      
+
       <div className="overflow-x-auto rounded-lg shadow">
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                User
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Hours
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Description
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {timeEntries.map(entry => (
+            {timeEntries.map((entry) => (
               <tr key={entry.id}>
                 <td className="px-6 py-4 whitespace-nowrap">{formatDate(entry.date)}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{entry.user.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{entry.hours}</td>
-                <td className="px-6 py-4 whitespace-nowrap max-w-xs truncate">{entry.description}</td>
+                <td className="px-6 py-4 whitespace-nowrap max-w-xs truncate">
+                  {entry.description}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 rounded-full text-xs 
-                    ${entry.status === 'approved' ? 'bg-green-100 text-green-800' :
-                     entry.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                     'bg-gray-100 text-gray-800'}`}>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs 
+                    ${
+                      entry.status === 'approved'
+                        ? 'bg-green-100 text-green-800'
+                        : entry.status === 'rejected'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {entry.status}
                   </span>
                 </td>
@@ -127,13 +139,11 @@ const TimeApproval: React.FC = () => {
           </tbody>
         </table>
         {timeEntries.length === 0 && (
-          <div className="p-4 text-center text-gray-500">
-            No time entries found
-          </div>
+          <div className="p-4 text-center text-gray-500">No time entries found</div>
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default TimeApproval;
+export default TimeApproval

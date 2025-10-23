@@ -1,46 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import adminStore from '../../stores/adminStore';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'editor' | 'user';
-  createdAt: string;
-}
+import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import adminStore from '../../stores/adminStore'
 
 const UserManagement: React.FC = () => {
-  const navigate = useNavigate();
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    adminStore.loadUsers();
-  }, []);
+    adminStore.loadUsers()
+  }, [])
 
   const handleDeleteConfirm = async () => {
     if (selectedUserId) {
-      await adminStore.deleteUser(selectedUserId);
-      setShowConfirmDelete(false);
-      adminStore.loadUsers();
+      await adminStore.deleteUser(selectedUserId)
+      setShowConfirmDelete(false)
+      adminStore.loadUsers()
     }
-  };
+  }
 
   if (adminStore.loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
-    );
+    )
   }
 
   if (adminStore.error) {
     return (
-      <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">
-        {adminStore.error}
-      </div>
-    );
+      <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">{adminStore.error}</div>
+    )
   }
 
   return (
@@ -49,11 +38,21 @@ const UserManagement: React.FC = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Role
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Created
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -62,11 +61,15 @@ const UserManagement: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap">{user.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                    user.role === 'editor' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      user.role === 'admin'
+                        ? 'bg-red-100 text-red-800'
+                        : user.role === 'editor'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {user.role}
                   </span>
                 </td>
@@ -74,7 +77,7 @@ const UserManagement: React.FC = () => {
                   {new Date(user.createdAt).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
-                    day: 'numeric'
+                    day: 'numeric',
                   })}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap space-x-2">
@@ -86,8 +89,8 @@ const UserManagement: React.FC = () => {
                   </Link>
                   <button
                     onClick={() => {
-                      setSelectedUserId(user.id);
-                      setShowConfirmDelete(true);
+                      setSelectedUserId(user.id)
+                      setShowConfirmDelete(true)
                     }}
                     className="text-red-600 hover:text-red-900"
                   >
@@ -122,7 +125,7 @@ const UserManagement: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default UserManagement;
+export default UserManagement

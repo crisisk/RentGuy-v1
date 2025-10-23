@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { fetchEmailDiagnostics, fetchManagedSecrets, syncManagedSecrets, updateManagedSecret } from '@application/platform/secrets/api'
+import {
+  fetchEmailDiagnostics,
+  fetchManagedSecrets,
+  syncManagedSecrets,
+  updateManagedSecret,
+} from '@application/platform/secrets/api'
 import type { EmailDiagnostics, ManagedSecret } from '@rg-types/platform'
 import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/branding'
 import { buildHelpCenterUrl, resolveSupportConfig } from './experienceConfig'
 import FlowGuidancePanel, { type FlowItem } from '@ui/FlowGuidancePanel'
-import FlowExperienceShell, { type FlowExperienceAction, type FlowExperiencePersona } from '@ui/FlowExperienceShell'
+import FlowExperienceShell, {
+  type FlowExperienceAction,
+  type FlowExperiencePersona,
+} from '@ui/FlowExperienceShell'
 import FlowExplainerList, { type FlowExplainerItem } from '@ui/FlowExplainerList'
 import FlowJourneyMap, { type FlowJourneyStep } from '@ui/FlowJourneyMap'
 import { createFlowNavigation, type FlowNavigationStatus } from '@ui/flowNavigation'
@@ -48,7 +56,15 @@ const categoryLabels: Record<string, string> = {
   custom: 'Aangepast',
 }
 
-const categoryOrder = ['core', 'email', 'payments', 'integrations', 'mr_dj', 'observability', 'custom']
+const categoryOrder = [
+  'core',
+  'email',
+  'payments',
+  'integrations',
+  'mr_dj',
+  'observability',
+  'custom',
+]
 
 function categoryWeight(category: string): number {
   const index = categoryOrder.indexOf(category)
@@ -69,7 +85,11 @@ const integrationKeys = [
 
 const requiredSecretKeys = new Set<string>(integrationKeys)
 
-function validateSecretInput(key: string, rawValue: string, secret?: ManagedSecret | null): ValidationResult {
+function validateSecretInput(
+  key: string,
+  rawValue: string,
+  secret?: ManagedSecret | null,
+): ValidationResult {
   const value = rawValue.trim()
   const normalizedKey = key.toUpperCase()
 
@@ -95,10 +115,14 @@ function validateSecretInput(key: string, rawValue: string, secret?: ManagedSecr
     try {
       const parsedUrl = new URL(value)
       if (!/^https?:$/.test(parsedUrl.protocol)) {
-        return { valid: false, message: 'Alleen http(s) URL\'s zijn toegestaan.' }
+        return { valid: false, message: "Alleen http(s) URL's zijn toegestaan." }
       }
     } catch (error) {
-      return { valid: false, message: 'Gebruik een volledige URL inclusief protocol (bijv. https://).' }
+      console.warn('Ongeldige URL voor secret', { key, value, error })
+      return {
+        valid: false,
+        message: 'Gebruik een volledige URL inclusief protocol (bijv. https://).',
+      }
     }
   }
 
@@ -109,7 +133,10 @@ function validateSecretInput(key: string, rawValue: string, secret?: ManagedSecr
     const hasNumber = /\d/.test(value)
     const hasLetter = /[a-zA-Z]/.test(value)
     if (!hasNumber || !hasLetter) {
-      return { valid: false, message: 'Gebruik een mix van letters en cijfers voor extra veiligheid.' }
+      return {
+        valid: false,
+        message: 'Gebruik een mix van letters en cijfers voor extra veiligheid.',
+      }
     }
   }
 
@@ -188,7 +215,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   const [activeTab, setActiveTab] = useState<'secrets' | 'integration'>('secrets')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [fieldSuccess, setFieldSuccess] = useState<Record<string, string>>({})
-  const user = useAuthStore(state => state.user)
+  const user = useAuthStore((state) => state.user)
   const userEmail = user?.email ?? ''
   const userRole = user?.role ?? ''
   const userFirstName = (user?.first_name ?? '').trim()
@@ -198,7 +225,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   const complianceUrl = useMemo(() => buildHelpCenterUrl(support, 'compliance'), [support])
 
   const markSaving = useCallback((key: string, saving: boolean) => {
-    setSavingKeys(prev => {
+    setSavingKeys((prev) => {
       const next = new Set(prev)
       if (saving) {
         next.add(key)
@@ -218,7 +245,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   }, [secrets])
 
   const setFieldError = useCallback((key: string, message?: string) => {
-    setFieldErrors(prev => {
+    setFieldErrors((prev) => {
       if (!message && !(key in prev)) {
         return prev
       }
@@ -233,7 +260,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   }, [])
 
   const setFieldSuccessMessage = useCallback((key: string, message?: string) => {
-    setFieldSuccess(prev => {
+    setFieldSuccess((prev) => {
       if (!message && !(key in prev)) {
         return prev
       }
@@ -296,22 +323,26 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
 
   const integrationSecrets = useMemo(
     () =>
-      integrationKeys.map(key => ({
+      integrationKeys.map((key) => ({
         key,
-        secret: secrets.find(item => item.key === key) ?? null,
+        secret: secrets.find((item) => item.key === key) ?? null,
       })),
     [secrets],
   )
 
   const missingIntegrationKeys = useMemo(
-    () => integrationSecrets.filter(entry => !entry.secret || !entry.secret.hasValue).map(entry => entry.key),
+    () =>
+      integrationSecrets
+        .filter((entry) => !entry.secret || !entry.secret.hasValue)
+        .map((entry) => entry.key),
     [integrationSecrets],
   )
 
   const integrationReady = missingIntegrationKeys.length === 0
 
   const configuredIntegrations = useMemo(
-    () => integrationSecrets.reduce((count, entry) => (entry.secret?.hasValue ? count + 1 : count), 0),
+    () =>
+      integrationSecrets.reduce((count, entry) => (entry.secret?.hasValue ? count + 1 : count), 0),
     [integrationSecrets],
   )
 
@@ -321,7 +352,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
 
   const handleInputChange = useCallback(
     (key: string, value: string, secretOverride?: ManagedSecret | null) => {
-      setFormValues(prev => ({
+      setFormValues((prev) => ({
         ...prev,
         [key]: value,
       }))
@@ -339,7 +370,7 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
 
   const handleResetField = useCallback(
     (key: string) => {
-      setFormValues(prev => ({
+      setFormValues((prev) => ({
         ...prev,
         [key]: '',
       }))
@@ -375,18 +406,24 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
 
       setFeedback(null)
       markSaving(secret.key, true)
-      const result = await updateManagedSecret(secret.key, { value: trimmed.length > 0 ? trimmed : '' })
+      const result = await updateManagedSecret(secret.key, {
+        value: trimmed.length > 0 ? trimmed : '',
+      })
       if (result.ok) {
-        setSecrets(prev => prev.map(item => (item.key === secret.key ? result.value : item)))
-        setFormValues(prev => ({ ...prev, [secret.key]: '' }))
+        setSecrets((prev) => prev.map((item) => (item.key === secret.key ? result.value : item)))
+        setFormValues((prev) => ({ ...prev, [secret.key]: '' }))
         const savedMessage = `${secret.label} ${trimmed.length > 0 ? 'opgeslagen' : 'leeg gemaakt'} (${timestampFormatter.format(new Date())}).`
         setFeedback({ tone: trimmed.length > 0 ? 'success' : 'info', message: savedMessage })
         setFieldError(secret.key)
         setFieldSuccessMessage(secret.key, savedMessage)
         await refreshEmailDiagnostics()
       } else {
-        setFeedback({ tone: 'error', message: result.error.message ?? 'Opslaan mislukt. Probeer het opnieuw.' })
-        const errorMessage = result.error.message ?? 'Opslaan mislukt. Controleer verbinding en toegangsrechten.'
+        setFeedback({
+          tone: 'error',
+          message: result.error.message ?? 'Opslaan mislukt. Probeer het opnieuw.',
+        })
+        const errorMessage =
+          result.error.message ?? 'Opslaan mislukt. Controleer verbinding en toegangsrechten.'
         setFieldError(secret.key, errorMessage)
         setFieldSuccessMessage(secret.key)
       }
@@ -400,7 +437,9 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     setSyncing(true)
     const result = await syncManagedSecrets()
     if (result.ok) {
-      const restartHint = result.value.triggeredRestart ? ' Herstart de backend-service om wijzigingen toe te passen.' : ''
+      const restartHint = result.value.triggeredRestart
+        ? ' Herstart de backend-service om wijzigingen toe te passen.'
+        : ''
       setFeedback({
         tone: 'success',
         message: `Secrets opgeslagen naar ${result.value.envPath}. ${restartHint}`.trim(),
@@ -408,7 +447,10 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       await fetchSecrets()
       await refreshEmailDiagnostics()
     } else {
-      setFeedback({ tone: 'error', message: result.error.message ?? 'Synchroniseren naar het systeem is mislukt.' })
+      setFeedback({
+        tone: 'error',
+        message: result.error.message ?? 'Synchroniseren naar het systeem is mislukt.',
+      })
     }
     setSyncing(false)
   }, [fetchSecrets, refreshEmailDiagnostics])
@@ -419,18 +461,6 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     () => secrets.reduce((count, secret) => (secret.hasValue ? count + 1 : count), 0),
     [secrets],
   )
-
-  const emailStatusLabel = useMemo(() => {
-    if (!emailDiagnostics) {
-      return 'E-mailstatus onbekend'
-    }
-    const labelMap: Record<EmailDiagnostics['status'], string> = {
-      ok: 'OK',
-      warning: 'Waarschuwing',
-      error: 'Storing',
-    }
-    return `E-mailstatus: ${labelMap[emailDiagnostics.status]}`
-  }, [emailDiagnostics])
 
   const openSecretsTab = useCallback(() => setActiveTab('secrets'), [])
 
@@ -495,8 +525,8 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     const integrationTone: FlowItem['status'] = integrationReady
       ? 'success'
       : missingIntegrationKeys.length > 2
-      ? 'danger'
-      : 'warning'
+        ? 'danger'
+        : 'warning'
     const integrationMetric = integrationReady
       ? 'Compleet'
       : `${missingIntegrationKeys.length} ontbreekt`
@@ -506,10 +536,10 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     const emailTone: FlowItem['status'] = !emailDiagnostics
       ? 'warning'
       : emailDiagnostics.status === 'ok'
-      ? 'success'
-      : emailDiagnostics.status === 'warning'
-      ? 'warning'
-      : 'danger'
+        ? 'success'
+        : emailDiagnostics.status === 'warning'
+          ? 'warning'
+          : 'danger'
     const emailMetric = emailDiagnostics ? emailDiagnostics.status.toUpperCase() : 'Geen data'
     const emailHelper = emailDiagnostics
       ? emailDiagnostics.missing.length > 0
@@ -560,7 +590,11 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
           'Monitor de Express-mail pipeline en valideer dat authenticatie en SPF/DMARC configuraties actief blijven.',
         helperText: emailHelper,
         primaryAction: { label: 'Ververs diagnose', onClick: triggerEmailRefresh },
-        secondaryAction: { label: 'Naar secrets-tab', onClick: openSecretsTab, variant: 'secondary' },
+        secondaryAction: {
+          label: 'Naar secrets-tab',
+          onClick: openSecretsTab,
+          variant: 'secondary',
+        },
       },
     ]
   }, [
@@ -611,7 +645,9 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
           ? 'Alle MR DJ integratievariabelen zijn ingevuld. Je kunt de release checklist afronden.'
           : 'Werk ontbrekende integratievariabelen bij en synchroniseer opnieuw voor een groene status.',
         meta: integrationReady ? 'Compleet' : `Ontbrekend: ${missingList}`,
-        ...(integrationReady ? {} : { action: { label: 'Bekijk integraties', onClick: openIntegrationTab } }),
+        ...(integrationReady
+          ? {}
+          : { action: { label: 'Bekijk integraties', onClick: openIntegrationTab } }),
       },
       {
         id: 'email-diagnostics',
@@ -635,11 +671,14 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
   ])
 
   const secretsJourney = useMemo<FlowJourneyStep[]>(() => {
-    const plannerMeta = totalSecrets > 0 ? `${totalSecrets} secrets geregistreerd` : 'Nog geen secrets geladen'
+    const plannerMeta =
+      totalSecrets > 0 ? `${totalSecrets} secrets geregistreerd` : 'Nog geen secrets geladen'
     const integrationMeta = `${integrationCoverage}% integraties compleet${
       missingIntegrationKeys.length ? ` · ${missingIntegrationKeys.length} ontbrekend` : ''
     }`
-    const emailMeta = emailDiagnostics ? emailDiagnostics.message : 'Voer een diagnose uit voor e-mail en notificaties'
+    const emailMeta = emailDiagnostics
+      ? emailDiagnostics.message
+      : 'Voer een diagnose uit voor e-mail en notificaties'
     const launchReady = integrationReady && emailDiagnostics?.status === 'ok'
 
     return [
@@ -654,7 +693,8 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       {
         id: 'role',
         title: '2. Administratorrechten',
-        description: 'Beheerderstoegang geeft je de mogelijkheid om secrets te synchroniseren en integraties te activeren.',
+        description:
+          'Beheerderstoegang geeft je de mogelijkheid om secrets te synchroniseren en integraties te activeren.',
         status: userRole === 'admin' ? 'complete' : 'blocked',
         badge: 'Rollen',
         meta: userRole ? `Rol: ${userRole}` : 'Rol onbekend',
@@ -671,7 +711,8 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       {
         id: 'secrets',
         title: '4. Secrets & integraties',
-        description: 'Vul ontbrekende waarden aan en synchroniseer naar de platformdiensten voor productiepariteit.',
+        description:
+          'Vul ontbrekende waarden aan en synchroniseer naar de platformdiensten voor productiepariteit.',
         status: 'current',
         badge: 'Configuratie',
         meta: integrationMeta,
@@ -733,15 +774,23 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
             border: `1px dashed ${withOpacity(brand.colors.primary, 0.4)}`,
           }}
         >
-          <strong style={{ fontFamily: headingFontStack, color: brand.colors.primary }}>E-maildiagnose niet beschikbaar</strong>
+          <strong style={{ fontFamily: headingFontStack, color: brand.colors.primary }}>
+            E-maildiagnose niet beschikbaar
+          </strong>
           <span style={{ color: brand.colors.mutedText }}>
-            De status kon niet worden opgehaald. Controleer de verbinding en probeer het later opnieuw.
+            De status kon niet worden opgehaald. Controleer de verbinding en probeer het later
+            opnieuw.
           </span>
         </div>
       )
     }
 
-    const statusColor = emailDiagnostics.status === 'ok' ? brand.colors.success : emailDiagnostics.status === 'warning' ? brand.colors.warning : brand.colors.danger
+    const statusColor =
+      emailDiagnostics.status === 'ok'
+        ? brand.colors.success
+        : emailDiagnostics.status === 'warning'
+          ? brand.colors.warning
+          : brand.colors.danger
     return (
       <div
         id="email-diagnostics-card"
@@ -750,17 +799,34 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
           gap: 12,
           padding: '24px 28px',
           borderRadius: 24,
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.82) 100%)',
+          background:
+            'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(227, 232, 255, 0.82) 100%)',
           border: `1px solid ${withOpacity(statusColor, 0.4)}`,
           boxShadow: brand.colors.shadow,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
           <div>
-            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.22em', color: brand.colors.mutedText }}>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.22em',
+                color: brand.colors.mutedText,
+              }}
+            >
               E-mailintegratie
             </span>
-            <h3 style={{ margin: 4, fontFamily: headingFontStack, color: statusColor }}>Status: {emailDiagnostics.status.toUpperCase()}</h3>
+            <h3 style={{ margin: 4, fontFamily: headingFontStack, color: statusColor }}>
+              Status: {emailDiagnostics.status.toUpperCase()}
+            </h3>
           </div>
           <div
             style={{
@@ -802,25 +868,49 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
             gap: 16,
             padding: '24px 28px',
             borderRadius: 28,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(231, 240, 255, 0.88) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(231, 240, 255, 0.88) 100%)',
             border: `1px solid ${withOpacity(brand.colors.secondary, 0.25)}`,
             boxShadow: brand.colors.shadow,
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
             <div style={{ display: 'grid', gap: 8 }}>
-              <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.22em', color: brand.colors.mutedText }}>
+              <span
+                style={{
+                  textTransform: 'uppercase',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.22em',
+                  color: brand.colors.mutedText,
+                }}
+              >
                 Mr. DJ Express/React koppeling
               </span>
-              <h2 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>
+              <h2
+                style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}
+              >
                 Productie-credentials overzicht
               </h2>
               <p style={{ margin: 0, maxWidth: 620, color: brand.colors.mutedText }}>
                 Synchroniseer deze waardes naar het mr-djv1 project ({' '}
-                <a href="https://github.com/crisisk/mr-djv1" target="_blank" rel="noreferrer" style={{ color: brand.colors.primary }}>
+                <a
+                  href="https://github.com/crisisk/mr-djv1"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: brand.colors.primary }}
+                >
                   GitHub
                 </a>
-                ) om de Express API en React frontend te laten authenticeren tegen RentGuy en SMTP e-mail af te handelen.
+                ) om de Express API en React frontend te laten authenticeren tegen RentGuy en SMTP
+                e-mail af te handelen.
               </p>
             </div>
             <div
@@ -846,24 +936,28 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
         </section>
 
         <section style={{ display: 'grid', gap: 16 }}>
-          <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>Benodigde variabelen</h3>
+          <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>
+            Benodigde variabelen
+          </h3>
           <div
             style={{
               display: 'grid',
               gap: 12,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(227, 233, 255, 0.85) 100%)',
+              background:
+                'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(227, 233, 255, 0.85) 100%)',
               borderRadius: 24,
               padding: '18px 22px',
               border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
               boxShadow: brand.colors.shadow,
             }}
           >
-            {integrationSecrets.map(entry => {
+            {integrationSecrets.map((entry) => {
               const secret = entry.secret
               const hasValue = secret?.hasValue ?? false
               const valueHint = secret?.valueHint ?? 'Nog niet ingesteld'
               const label = secret?.label ?? entry.key
-              const description = secret?.description ?? 'Configureer deze variabele in het secrets dashboard.'
+              const description =
+                secret?.description ?? 'Configureer deze variabele in het secrets dashboard.'
 
               return (
                 <div
@@ -877,16 +971,29 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                     border: `1px solid ${withOpacity(brand.colors.primary, 0.1)}`,
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     <div style={{ display: 'grid', gap: 4 }}>
                       <strong style={{ fontFamily: headingFontStack }}>{label}</strong>
-                      <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{entry.key}</span>
+                      <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>
+                        {entry.key}
+                      </span>
                     </div>
                     <span
                       style={{
                         padding: '4px 10px',
                         borderRadius: 999,
-                        background: withOpacity(hasValue ? brand.colors.success : brand.colors.warning, 0.18),
+                        background: withOpacity(
+                          hasValue ? brand.colors.success : brand.colors.warning,
+                          0.18,
+                        ),
                         color: hasValue ? brand.colors.success : brand.colors.warning,
                         fontSize: '0.75rem',
                         fontWeight: 600,
@@ -898,12 +1005,29 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                   </div>
                   <p style={{ margin: 0, color: brand.colors.mutedText }}>{description}</p>
                   {secret && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: brand.colors.mutedText, flexWrap: 'wrap', gap: 8 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '0.8rem',
+                        color: brand.colors.mutedText,
+                        flexWrap: 'wrap',
+                        gap: 8,
+                      }}
+                    >
                       <span>Laatst gewijzigd: {formatTimestamp(secret.updatedAt)}</span>
-                      <span>Waardevoorbeeld: {secret.isSensitive ? secret.valueHint ?? 'Verborgen' : valueHint}</span>
+                      <span>
+                        Waardevoorbeeld:{' '}
+                        {secret.isSensitive ? (secret.valueHint ?? 'Verborgen') : valueHint}
+                      </span>
                     </div>
                   )}
-                  {!secret && <span style={{ color: brand.colors.mutedText }}>Wordt toegevoegd bij de eerstvolgende synchronisatie.</span>}
+                  {!secret && (
+                    <span style={{ color: brand.colors.mutedText }}>
+                      Wordt toegevoegd bij de eerstvolgende synchronisatie.
+                    </span>
+                  )}
                 </div>
               )
             })}
@@ -911,7 +1035,9 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
         </section>
 
         <section style={{ display: 'grid', gap: 12 }}>
-          <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>SMTP status</h3>
+          <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>
+            SMTP status
+          </h3>
           {renderEmailDiagnostics()}
         </section>
 
@@ -921,37 +1047,53 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
             gap: 12,
             padding: '22px 26px',
             borderRadius: 24,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(232, 240, 255, 0.82) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(232, 240, 255, 0.82) 100%)',
             border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
             boxShadow: brand.colors.shadow,
           }}
         >
-          <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>Aanbevolen integratiestappen</h3>
-          <ol style={{ margin: 0, paddingLeft: 20, color: brand.colors.mutedText, display: 'grid', gap: 8 }}>
+          <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>
+            Aanbevolen integratiestappen
+          </h3>
+          <ol
+            style={{
+              margin: 0,
+              paddingLeft: 20,
+              color: brand.colors.mutedText,
+              display: 'grid',
+              gap: 8,
+            }}
+          >
             <li>
-              Vul alle SMTP- en Mr. DJ-variabelen in en klik op <strong>Secrets synchroniseren</strong> om <code>.env.secrets</code> te
-              genereren. Mount dit bestand als <code>.env.production</code> in de Express-host.
+              Vul alle SMTP- en Mr. DJ-variabelen in en klik op{' '}
+              <strong>Secrets synchroniseren</strong> om <code>.env.secrets</code> te genereren.
+              Mount dit bestand als <code>.env.production</code> in de Express-host.
             </li>
             <li>
-              Update het mr-djv1 project met deze waarden ({' '}
-              <code>MRDJ_SERVICE_ACCOUNT_EMAIL</code>, <code>MRDJ_SERVICE_ACCOUNT_PASSWORD</code> en <code>MRDJ_WEBHOOK_SECRET</code>) en gebruik
-              ze in de Express authenticatiemiddleware voor aanroepen naar RentGuy.
+              Update het mr-djv1 project met deze waarden ( <code>MRDJ_SERVICE_ACCOUNT_EMAIL</code>,{' '}
+              <code>MRDJ_SERVICE_ACCOUNT_PASSWORD</code> en <code>MRDJ_WEBHOOK_SECRET</code>) en
+              gebruik ze in de Express authenticatiemiddleware voor aanroepen naar RentGuy.
             </li>
             <li>
-              Configureer de React frontend (.env) met <code>VITE_API_URL</code> of een gelijkwaardige variabele die verwijst naar{' '}
-              <code>MRDJ_API_URL</code>. Zorg ervoor dat de mailer in mr-djv1 dezelfde SMTP-instellingen gebruikt als hierboven opgeslagen.
+              Configureer de React frontend (.env) met <code>VITE_API_URL</code> of een
+              gelijkwaardige variabele die verwijst naar <code>MRDJ_API_URL</code>. Zorg ervoor dat
+              de mailer in mr-djv1 dezelfde SMTP-instellingen gebruikt als hierboven opgeslagen.
             </li>
             <li>
-              Gebruik het webhook secret om inkomende events vanuit RentGuy te verifiëren en registreer het geheim ook in de mr-djv1
-              configuratie (bijvoorbeeld <code>RENTGUY_WEBHOOK_SECRET</code>).
+              Gebruik het webhook secret om inkomende events vanuit RentGuy te verifiëren en
+              registreer het geheim ook in de mr-djv1 configuratie (bijvoorbeeld{' '}
+              <code>RENTGUY_WEBHOOK_SECRET</code>).
             </li>
             <li>
-              Documenteer bij wijzigingen welke services opnieuw moeten starten. Secrets met het label <em>Herstart vereist</em> dienen na
-              synchronisatie zowel op FastAPI als Express opnieuw geladen te worden.
+              Documenteer bij wijzigingen welke services opnieuw moeten starten. Secrets met het
+              label <em>Herstart vereist</em> dienen na synchronisatie zowel op FastAPI als Express
+              opnieuw geladen te worden.
             </li>
           </ol>
           <p style={{ margin: 0, color: brand.colors.mutedText }}>
-            Zie de integratiehandleiding voor meer details over CI/CD en secret sync tussen RentGuy en mr-djv1.
+            Zie de integratiehandleiding voor meer details over CI/CD en secret sync tussen RentGuy
+            en mr-djv1.
           </p>
         </section>
       </div>
@@ -979,8 +1121,18 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       {renderFeedback()}
 
       <div style={{ display: 'grid', gap: 18 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 600, color: brand.colors.mutedText }}>Synchroniseer opgeslagen waarden naar het systeem.</span>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 12,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span style={{ fontWeight: 600, color: brand.colors.mutedText }}>
+            Synchroniseer opgeslagen waarden naar het systeem.
+          </span>
           <button
             type="button"
             onClick={handleSync}
@@ -1011,28 +1163,41 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
             const sortedItems = [...items].sort((a, b) => a.label.localeCompare(b.label))
             return (
               <section key={category} style={{ display: 'grid', gap: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h2 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>{label}</h2>
-                  <span style={{ color: brand.colors.mutedText }}>{sortedItems.length} variabelen</span>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontFamily: headingFontStack,
+                      color: brand.colors.secondary,
+                    }}
+                  >
+                    {label}
+                  </h2>
+                  <span style={{ color: brand.colors.mutedText }}>
+                    {sortedItems.length} variabelen
+                  </span>
                 </div>
                 <div
                   style={{
                     display: 'grid',
                     gap: 16,
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
+                    background:
+                      'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.86) 100%)',
                     borderRadius: 24,
                     padding: '18px 24px',
                     border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
                     boxShadow: brand.colors.shadow,
                   }}
                 >
-                  {sortedItems.map(item => {
+                  {sortedItems.map((item) => {
                     const inputValue = formValues[item.key] ?? ''
                     const saving = savingKeys.has(item.key)
                     const placeholder = item.hasValue
                       ? item.isSensitive
-                        ? item.valueHint ?? 'Waarde geconfigureerd'
-                        : item.valueHint ?? 'Waarde geconfigureerd'
+                        ? (item.valueHint ?? 'Waarde geconfigureerd')
+                        : (item.valueHint ?? 'Waarde geconfigureerd')
                       : 'Nog niet ingesteld'
 
                     return (
@@ -1047,17 +1212,36 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                           border: `1px solid ${withOpacity(brand.colors.primary, 0.12)}`,
                         }}
                       >
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 8,
+                            justifyContent: 'space-between',
+                          }}
+                        >
                           <div>
                             <strong style={{ fontFamily: headingFontStack }}>{item.label}</strong>
-                            <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{item.description ?? '—'}</div>
+                            <div style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>
+                              {item.description ?? '—'}
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: 8,
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                            }}
+                          >
                             <span
                               style={{
                                 padding: '4px 10px',
                                 borderRadius: 999,
-                                background: withOpacity(item.hasValue ? brand.colors.success : brand.colors.warning, 0.15),
+                                background: withOpacity(
+                                  item.hasValue ? brand.colors.success : brand.colors.warning,
+                                  0.15,
+                                ),
                                 color: item.hasValue ? brand.colors.success : brand.colors.warning,
                                 fontSize: '0.75rem',
                                 fontWeight: 600,
@@ -1087,12 +1271,13 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                           {(() => {
                             const errorMessage = fieldErrors[item.key]
                             const successMessage = fieldSuccess[item.key]
-                            const messageId = errorMessage || successMessage ? `${item.key}-message` : undefined
+                            const messageId =
+                              errorMessage || successMessage ? `${item.key}-message` : undefined
                             const borderColor = errorMessage
                               ? withOpacity(brand.colors.danger, 0.7)
                               : successMessage
-                              ? withOpacity(brand.colors.success, 0.6)
-                              : withOpacity(brand.colors.primary, 0.24)
+                                ? withOpacity(brand.colors.success, 0.6)
+                                : withOpacity(brand.colors.primary, 0.24)
                             return (
                               <>
                                 <input
@@ -1104,7 +1289,11 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                                   }
                                   onBlur={() => {
                                     const nextValue = formValues[item.key] ?? ''
-                                    const validation = validateSecretInput(item.key, nextValue, item)
+                                    const validation = validateSecretInput(
+                                      item.key,
+                                      nextValue,
+                                      item,
+                                    )
                                     if (!validation.valid) {
                                       setFieldError(item.key, validation.message)
                                     }
@@ -1120,8 +1309,8 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                                     boxShadow: successMessage
                                       ? `0 0 0 3px ${withOpacity(brand.colors.success, 0.18)}`
                                       : errorMessage
-                                      ? `0 0 0 3px ${withOpacity(brand.colors.danger, 0.12)}`
-                                      : 'none',
+                                        ? `0 0 0 3px ${withOpacity(brand.colors.danger, 0.12)}`
+                                        : 'none',
                                     transition: 'border 0.2s ease, box-shadow 0.2s ease',
                                   }}
                                 />
@@ -1130,7 +1319,9 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                                     id={messageId}
                                     style={{
                                       fontSize: '0.85rem',
-                                      color: errorMessage ? brand.colors.danger : brand.colors.success,
+                                      color: errorMessage
+                                        ? brand.colors.danger
+                                        : brand.colors.success,
                                       display: 'grid',
                                       gap: 8,
                                     }}
@@ -1177,7 +1368,15 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                               </>
                             )
                           })()}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: brand.colors.mutedText }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '0.8rem',
+                              color: brand.colors.mutedText,
+                            }}
+                          >
                             <span>Laatst gewijzigd: {formatTimestamp(item.updatedAt)}</span>
                             <span>Laatste sync: {formatTimestamp(item.lastSyncedAt)}</span>
                           </div>
@@ -1190,7 +1389,9 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                                 padding: '8px 18px',
                                 borderRadius: 999,
                                 border: 'none',
-                                background: saving ? withOpacity(brand.colors.primary, 0.4) : brand.colors.primary,
+                                background: saving
+                                  ? withOpacity(brand.colors.primary, 0.4)
+                                  : brand.colors.primary,
                                 color: '#fff',
                                 fontWeight: 600,
                                 cursor: saving ? 'not-allowed' : 'pointer',
@@ -1217,16 +1418,30 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
             gap: 16,
             padding: '22px 26px',
             borderRadius: 24,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(226, 232, 255, 0.84) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(226, 232, 255, 0.84) 100%)',
             border: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
             boxShadow: brand.colors.shadow,
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
             <div style={{ display: 'grid', gap: 6 }}>
-              <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>SLA matrix</h3>
+              <h3
+                style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}
+              >
+                SLA matrix
+              </h3>
               <p style={{ margin: 0, color: brand.colors.mutedText }}>
-                Gebruik deze matrix om escalaties te verbinden aan Sevensa support en klantverwachtingen te bevestigen per pakket.
+                Gebruik deze matrix om escalaties te verbinden aan Sevensa support en
+                klantverwachtingen te bevestigen per pakket.
               </p>
             </div>
             <button
@@ -1257,21 +1472,97 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
             >
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>Pakket</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>RTO</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>RPO</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>Coverage</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}` }}>Escalatiepad</th>
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                    }}
+                  >
+                    Pakket
+                  </th>
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                    }}
+                  >
+                    RTO
+                  </th>
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                    }}
+                  >
+                    RPO
+                  </th>
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                    }}
+                  >
+                    Coverage
+                  </th>
+                  <th
+                    style={{
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.2)}`,
+                    }}
+                  >
+                    Escalatiepad
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {slaMatrixRows.map(row => (
+                {slaMatrixRows.map((row) => (
                   <tr key={row.tier}>
-                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`, fontWeight: 600 }}>{row.tier}</td>
-                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}` }}>{row.rto}</td>
-                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}` }}>{row.rpo}</td>
-                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}` }}>{row.coverage}</td>
-                    <td style={{ padding: '12px 16px', borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}` }}>{row.escalation}</td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {row.tier}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`,
+                      }}
+                    >
+                      {row.rto}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`,
+                      }}
+                    >
+                      {row.rpo}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`,
+                      }}
+                    >
+                      {row.coverage}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.12)}`,
+                      }}
+                    >
+                      {row.escalation}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1286,19 +1577,23 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
             gap: 16,
             padding: '22px 26px',
             borderRadius: 24,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(226, 232, 255, 0.82) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(226, 232, 255, 0.82) 100%)',
             border: `1px solid ${withOpacity(brand.colors.primary, 0.22)}`,
             boxShadow: brand.colors.shadow,
           }}
         >
           <div style={{ display: 'grid', gap: 6 }}>
-            <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.primary }}>Release highlights</h3>
+            <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.primary }}>
+              Release highlights
+            </h3>
             <p style={{ margin: 0, color: brand.colors.mutedText }}>
-              Deze teaser laat de laatste wijzigingen zien. De volledige changelog staat in het helpcenter en wordt gekoppeld aan het monitoringrapport.
+              Deze teaser laat de laatste wijzigingen zien. De volledige changelog staat in het
+              helpcenter en wordt gekoppeld aan het monitoringrapport.
             </p>
           </div>
           <div style={{ display: 'grid', gap: 12 }}>
-            {changelogTeasers.map(item => (
+            {changelogTeasers.map((item) => (
               <article
                 key={item.version}
                 style={{
@@ -1310,13 +1605,22 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
                   gap: 4,
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>Versie {item.version}</strong>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <strong style={{ fontFamily: headingFontStack, color: brand.colors.secondary }}>
+                    Versie {item.version}
+                  </strong>
                   <a
                     href={`https://github.com/crisisk/RentGuy-v1/releases/tag/${item.version}`}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ color: brand.colors.primary, fontSize: '0.85rem', textDecoration: 'none', fontWeight: 600 }}
+                    style={{
+                      color: brand.colors.primary,
+                      fontSize: '0.85rem',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                    }}
                   >
                     Volledige release →
                   </a>
@@ -1384,19 +1688,16 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
     return base
   }, [activeTab])
 
-  const personaSummary = useMemo<FlowExperiencePersona>(
-    () => {
-      const persona: FlowExperiencePersona = {
-        name: userDisplayName || 'Sevensa beheer',
-        role: roleLabelMap[userRole ?? 'admin'] ?? 'Administrator',
-      }
-      if (userEmail) {
-        persona.meta = userEmail
-      }
-      return persona
-    },
-    [userDisplayName, userEmail, userRole],
-  )
+  const personaSummary = useMemo<FlowExperiencePersona>(() => {
+    const persona: FlowExperiencePersona = {
+      name: userDisplayName || 'Sevensa beheer',
+      role: roleLabelMap[userRole ?? 'admin'] ?? 'Administrator',
+    }
+    if (userEmail) {
+      persona.meta = userEmail
+    }
+    return persona
+  }, [userDisplayName, userEmail, userRole])
 
   const stage = useMemo(() => {
     if (!integrationReady) {
@@ -1526,12 +1827,25 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       <div style={{ display: 'grid', gap: 10 }}>
         <strong style={{ fontSize: '0.95rem' }}>Compliance & monitoring</strong>
         <p style={{ margin: 0, fontSize: '0.85rem', color: withOpacity('#FFFFFF', 0.82) }}>
-          Houd secrets, e-mail en webhooks aantoonbaar compliant door elke deploy een diagnose en synchronisatie te loggen.
+          Houd secrets, e-mail en webhooks aantoonbaar compliant door elke deploy een diagnose en
+          synchronisatie te loggen.
         </p>
-        <div style={{ display: 'grid', gap: 6, fontSize: '0.8rem', color: withOpacity('#FFFFFF', 0.8) }}>
-          <span>• Integratiecoverage: {integrationCoverage}% ({configuredIntegrations}/{integrationSecrets.length})</span>
+        <div
+          style={{
+            display: 'grid',
+            gap: 6,
+            fontSize: '0.8rem',
+            color: withOpacity('#FFFFFF', 0.8),
+          }}
+        >
+          <span>
+            • Integratiecoverage: {integrationCoverage}% ({configuredIntegrations}/
+            {integrationSecrets.length})
+          </span>
           <span>• Node readiness: {emailDiagnostics?.nodeReady ? 'gereed' : 'actie vereist'}</span>
-          <span>• Authenticatie: {emailDiagnostics?.authConfigured ? 'ingesteld' : 'niet ingesteld'}</span>
+          <span>
+            • Authenticatie: {emailDiagnostics?.authConfigured ? 'ingesteld' : 'niet ingesteld'}
+          </span>
         </div>
         <a
           href={complianceUrl}
@@ -1551,11 +1865,11 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       integrationCoverage,
       integrationSecrets.length,
     ],
-
-    )
+  )
 
   const navigationRail = useMemo(() => {
-    const roleStatus: FlowNavigationStatus = userRole && userRole !== 'pending' ? 'complete' : 'blocked'
+    const roleStatus: FlowNavigationStatus =
+      userRole && userRole !== 'pending' ? 'complete' : 'blocked'
     const plannerStatus: FlowNavigationStatus = integrationReady ? 'complete' : 'blocked'
     const emailSummary = emailDiagnostics
       ? `E-mailstatus: ${emailDiagnostics.status.toUpperCase()}`
@@ -1563,7 +1877,8 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
 
     return {
       title: 'Pilot gebruikersflows',
-      caption: 'Monitor de eindstappen voor go-live. Gebruik dit overzicht als navigatie tijdens release reviews.',
+      caption:
+        'Monitor de eindstappen voor go-live. Gebruik dit overzicht als navigatie tijdens release reviews.',
       items: createFlowNavigation(
         'secrets',
         {
@@ -1585,22 +1900,27 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
       ),
       footer: (
         <span>
-          Combineer deze navigator met de releasechecklist zodat alle compliance-stappen aantoonbaar blijven tijdens go-live.
+          Combineer deze navigator met de releasechecklist zodat alle compliance-stappen aantoonbaar
+          blijven tijdens go-live.
         </span>
       ),
     }
   }, [emailDiagnostics, integrationReady, missingIntegrationKeys.length, userEmail, userRole])
 
   return (
-
     <FlowExperienceShell
       eyebrow="Configuration command center"
       heroBadge="Compliance & integraties"
       title="Secrets & configuratie-dashboard"
       description={
         <>
-          <span>Beheer alle .env-variabelen centraal en publiceer ze veilig naar de platformdiensten.</span>
-          <span>Gebruik de explainers om integraties, e-mail en synchronisaties aantoonbaar gereed te houden.</span>
+          <span>
+            Beheer alle .env-variabelen centraal en publiceer ze veilig naar de platformdiensten.
+          </span>
+          <span>
+            Gebruik de explainers om integraties, e-mail en synchronisaties aantoonbaar gereed te
+            houden.
+          </span>
         </>
       }
       heroPrologue={<FlowExplainerList items={heroExplainers} minWidth={240} />}
@@ -1665,7 +1985,8 @@ export default function SecretsDashboard({ onLogout }: SecretsDashboardProps): J
               color: activeTab === 'integration' ? '#fff' : brand.colors.secondary,
               fontWeight: 600,
               cursor: activeTab === 'integration' ? 'default' : 'pointer',
-              boxShadow: activeTab === 'integration' ? '0 10px 24px rgba(99, 102, 241, 0.22)' : 'none',
+              boxShadow:
+                activeTab === 'integration' ? '0 10px 24px rgba(99, 102, 241, 0.22)' : 'none',
               transition: 'background 0.2s ease',
             }}
           >

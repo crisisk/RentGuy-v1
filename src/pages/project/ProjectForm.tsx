@@ -1,38 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import projectStore from '../../stores/projectStore';
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import projectStore from '../../stores/projectStore'
 
 interface ProjectFormProps {}
 
 interface ProjectData {
-  id?: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  status: 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
+  id?: string
+  name: string
+  description: string
+  startDate: string
+  endDate: string
+  status: 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD'
 }
 
 const ProjectForm: React.FC<ProjectFormProps> = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>()
+  const navigate = useNavigate()
 
   const [formData, setFormData] = useState<ProjectData>({
     name: '',
     description: '',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
-    status: 'PLANNING'
-  });
+    status: 'PLANNING',
+  })
 
-  const [loading, setLoading] = useState<boolean>(!!id);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(!!id)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) {
       const fetchProject = async () => {
         try {
-          const project = await projectStore.getProjectById(id);
+          const project = await projectStore.getProjectById(id)
           if (project) {
             setFormData({
               id: project.id,
@@ -40,62 +40,62 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
               description: project.description,
               startDate: project.startDate,
               endDate: project.endDate || '',
-              status: project.status
-            });
+              status: project.status,
+            })
           }
-          setLoading(false);
-        } catch (err) {
-          setError('Failed to load project');
-          setLoading(false);
+          setLoading(false)
+        } catch (error) {
+          console.error('Failed to load project for editing', error)
+          setError('Failed to load project')
+          setLoading(false)
         }
-      };
-      fetchProject();
+      }
+      fetchProject()
     } else {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [id]);
+  }, [id])
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+    const { name, value } = e.target
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
-    }));
-  };
+      [name]: value,
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
 
     try {
       if (id) {
-        await projectStore.updateProject(formData);
+        await projectStore.updateProject(formData)
       } else {
-        await projectStore.createProject(formData);
+        await projectStore.createProject(formData)
       }
-      navigate('/projects');
-    } catch (err) {
-      setError('Failed to save project');
-      setLoading(false);
+      navigate('/projects')
+    } catch (error) {
+      console.error('Failed to save project', error)
+      setError('Failed to save project')
+      setLoading(false)
     }
-  };
+  }
 
   const validateForm = () => {
-    return formData.name.trim() && formData.description.trim();
-  };
+    return formData.name.trim() && formData.description.trim()
+  }
 
   if (loading) {
-    return <div className="p-4 text-center">Loading...</div>;
+    return <div className="p-4 text-center">Loading...</div>
   }
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6">
-        {id ? 'Edit Project' : 'Create New Project'}
-      </h2>
+      <h2 className="text-2xl font-bold mb-6">{id ? 'Edit Project' : 'Create New Project'}</h2>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -200,7 +200,7 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
         </div>
       </form>
     </div>
-  );
-};
+  )
+}
 
-export default ProjectForm;
+export default ProjectForm
