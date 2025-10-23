@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AxiosError } from 'axios'
 import { login, isOfflineDemoToken } from './api'
+import type { LoginResult } from './api'
 import { api } from '@infra/http/api'
 
 vi.mock('@infra/http/api', () => ({
@@ -10,6 +11,18 @@ vi.mock('@infra/http/api', () => ({
 }))
 
 const networkError = new AxiosError('Network Error', 'ERR_NETWORK')
+
+function assertSuccess(result: LoginResult): asserts result is LoginResult & { ok: true } {
+  if (!result.ok) {
+    throw new Error(`Expected success but received error: ${result.error.code}`)
+  }
+}
+
+function assertFailure(result: LoginResult): asserts result is LoginResult & { ok: false } {
+  if (result.ok) {
+    throw new Error('Expected error result but received success')
+  }
+}
 
 describe('auth api offline safeguards', () => {
   beforeEach(() => {
@@ -21,9 +34,10 @@ describe('auth api offline safeguards', () => {
 
     const result = await login({ email: 'bart@rentguy.demo', password: 'mr-dj' })
 
+    assertSuccess(result)
     expect(result.ok).toBe(true)
     expect(result.value.token).toBe('offline-demo-bart')
-    expect(result.value.user.role).toBe('planner')
+    expect(result.value.user?.role).toBe('planner')
     expect(isOfflineDemoToken(result.value.token)).toBe(true)
   })
 
@@ -32,6 +46,7 @@ describe('auth api offline safeguards', () => {
 
     const result = await login({ email: 'bart@rentguy.demo', password: 'verkeerd' })
 
+    assertFailure(result)
     expect(result.ok).toBe(false)
     expect(result.error.code).toBe('network')
   })

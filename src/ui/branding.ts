@@ -18,6 +18,8 @@ export interface BrandTheme extends BrandIdentity {
   provider: BrandIdentity
   tenant: BrandIdentity & { colors: BrandPalette }
   partnerTagline: string
+  fontStack: string
+  headingFont: string
   colors: {
     primary: HexColor
     primaryDark: HexColor
@@ -64,11 +66,17 @@ export const rentGuyBrand: BrandIdentity & { shortName: string } = {
   url: 'https://sevensa.ai/rentguy',
 }
 
+export const brandFontStack = `'Poppins', 'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
+
+export const headingFontStack = `'Montserrat', 'Poppins', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
+
 export const brand: BrandTheme = {
   ...rentGuyBrand,
   provider: sevensaBrand,
   tenant: mrDjBrand,
   partnerTagline: `${mrDjBrand.tagline} · Powered by Sevensa`,
+  fontStack: brandFontStack,
+  headingFont: headingFontStack,
   colors: {
     primary: mrDjBrand.colors.primary,
     primaryDark: '#4C1D95',
@@ -91,17 +99,12 @@ export const brand: BrandTheme = {
   },
 }
 
-export const brandFontStack = `'Poppins', 'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
-
-export const headingFontStack = `'Montserrat', 'Poppins', 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif`
-
 export function withOpacity(hex: string, alpha = 1) {
   if (!hex || hex[0] !== '#' || (hex.length !== 4 && hex.length !== 7)) {
     return hex
   }
-  const normalized = hex.length === 4
-    ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
-    : hex
+  const normalized =
+    hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex
   const value = Number.parseInt(normalized.slice(1), 16)
   const r = (value >> 16) & 255
   const g = (value >> 8) & 255

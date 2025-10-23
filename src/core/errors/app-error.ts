@@ -6,6 +6,7 @@ export type AppErrorCode =
   | 'not_found'
   | 'validation'
   | 'server'
+  | 'conflict'
   | 'cancelled'
   | 'unknown'
 
@@ -52,7 +53,10 @@ export class AppError extends Error {
   }
 
   public static isAppError(value: unknown): value is AppError {
-    return value instanceof AppError || Boolean((value as { name?: string } | null)?.name === AppError.nameSymbol)
+    return (
+      value instanceof AppError ||
+      Boolean((value as { name?: string } | null)?.name === AppError.nameSymbol)
+    )
   }
 
   public static fromAxiosError(error: AxiosError<unknown>): AppError {
@@ -90,6 +94,7 @@ function resolveCodeFromStatus(status?: number, axiosCode?: string | null): AppE
   if (status === 401) return 'unauthorized'
   if (status === 403) return 'forbidden'
   if (status === 404) return 'not_found'
+  if (status === 409) return 'conflict'
   if (status >= 500) return 'server'
   if (status >= 400) return 'validation'
   return 'unknown'
@@ -108,6 +113,8 @@ function resolveMessage(code: AppErrorCode, status?: number, fallback?: string |
       return 'De gevraagde resource kon niet worden gevonden.'
     case 'validation':
       return 'De server accepteerde de invoer niet. Controleer en probeer opnieuw.'
+    case 'conflict':
+      return 'De gevraagde bewerking kan niet worden voltooid omdat er al een conflicterende resource bestaat.'
     case 'server':
       return 'De server reageerde met een fout. Probeer het later opnieuw.'
     case 'timeout':
@@ -136,7 +143,9 @@ function buildMeta(error: AxiosError<unknown>): Record<string, unknown> | undefi
 }
 
 function isAxiosErrorLike(error: unknown): error is AxiosError<unknown> {
-  return Boolean(error && typeof error === 'object' && (error as { isAxiosError?: boolean }).isAxiosError)
+  return Boolean(
+    error && typeof error === 'object' && (error as { isAxiosError?: boolean }).isAxiosError,
+  )
 }
 
 export function mapUnknownToAppError(error: unknown): AppError {

@@ -31,7 +31,14 @@ declare module 'axios' {
     eject(id: number): void
   }
 
-  export interface AxiosError<T = any> extends Error {
+  export class AxiosError<T = any> extends Error {
+    constructor(
+      message?: string,
+      code?: string,
+      config?: AxiosRequestConfig<T>,
+      request?: unknown,
+      response?: AxiosResponse<T>,
+    )
     isAxiosError: true
     config: AxiosRequestConfig<T>
     code?: string
@@ -55,6 +62,7 @@ declare module 'axios' {
     get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>
     post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>
     put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>
+    patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>
     delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>
   }
 
