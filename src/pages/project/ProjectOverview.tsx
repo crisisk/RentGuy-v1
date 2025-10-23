@@ -51,7 +51,10 @@ const ProjectOverview: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div
+        className="flex justify-center items-center h-screen"
+        data-testid="project-overview-loading"
+      >
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div>
       </div>
     )
@@ -62,6 +65,7 @@ const ProjectOverview: React.FC = () => {
       <div
         className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
         role="alert"
+        data-testid="project-overview-error"
       >
         {error}
       </div>
@@ -71,19 +75,24 @@ const ProjectOverview: React.FC = () => {
   const filteredProjects = filterProjects(projects)
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between mb-6">
+    <div className="container mx-auto px-4 py-8" data-testid="project-overview-root">
+      <div
+        className="flex flex-col md:flex-row justify-between mb-6"
+        data-testid="project-overview-filters"
+      >
         <input
           type="text"
           placeholder="Search projects..."
           className="w-full md:w-1/3 px-3 py-2 border rounded-md mb-2 md:mb-0"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          data-testid="project-overview-search"
         />
         <select
           className="w-full md:w-1/4 px-3 py-2 border rounded-md"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
+          data-testid="project-overview-status-filter"
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
@@ -92,8 +101,11 @@ const ProjectOverview: React.FC = () => {
         </select>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="overflow-x-auto" data-testid="project-overview-table-wrapper">
+        <table
+          className="w-full bg-white shadow-md rounded-lg overflow-hidden"
+          data-testid="project-overview-table"
+        >
           <thead className="bg-gray-100">
             <tr>
               <th className="px-4 py-3 text-left">Project Name</th>
@@ -103,11 +115,20 @@ const ProjectOverview: React.FC = () => {
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody data-testid="project-overview-body">
             {filteredProjects.map((project) => (
-              <tr key={project.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3">{project.name}</td>
-                <td className="px-4 py-3 hidden md:table-cell">
+              <tr
+                key={project.id}
+                className="border-b hover:bg-gray-50"
+                data-testid={`project-overview-row-${project.id}`}
+              >
+                <td className="px-4 py-3" data-testid={`project-overview-name-${project.id}`}>
+                  {project.name}
+                </td>
+                <td
+                  className="px-4 py-3 hidden md:table-cell"
+                  data-testid={`project-overview-status-${project.id}`}
+                >
                   <span
                     className={`
                     px-2 py-1 rounded-full text-xs font-semibold
@@ -119,16 +140,28 @@ const ProjectOverview: React.FC = () => {
                           : 'bg-yellow-100 text-yellow-800'
                     }
                   `}
+                    data-testid={`project-overview-status-badge-${project.id}`}
                   >
                     {project.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 hidden md:table-cell">{formatDate(project.createdAt)}</td>
-                <td className="px-4 py-3">{project.teamSize}</td>
-                <td className="px-4 py-3 text-right">
+                <td
+                  className="px-4 py-3 hidden md:table-cell"
+                  data-testid={`project-overview-created-${project.id}`}
+                >
+                  {formatDate(project.createdAt)}
+                </td>
+                <td className="px-4 py-3" data-testid={`project-overview-team-${project.id}`}>
+                  {project.teamSize}
+                </td>
+                <td
+                  className="px-4 py-3 text-right"
+                  data-testid={`project-overview-actions-${project.id}`}
+                >
                   <Link
                     to={`/projects/${project.id}`}
                     className="text-blue-600 hover:text-blue-800"
+                    data-testid={`project-overview-view-${project.id}`}
                   >
                     View
                   </Link>
@@ -138,7 +171,9 @@ const ProjectOverview: React.FC = () => {
           </tbody>
         </table>
         {filteredProjects.length === 0 && (
-          <div className="text-center py-6 text-gray-500">No projects found</div>
+          <div className="text-center py-6 text-gray-500" data-testid="project-overview-empty">
+            No projects found
+          </div>
         )}
       </div>
     </div>

@@ -59,21 +59,32 @@ const CustomerList = () => {
     }
   }
 
-  if (loading) return <div className="p-4 text-gray-500">Loading customers...</div>
-  if (error) return <div className="p-4 text-red-500">Error: {error}</div>
+  if (loading)
+    return (
+      <div className="p-4 text-gray-500" data-testid="customer-list-loading">
+        Loading customers...
+      </div>
+    )
+  if (error)
+    return (
+      <div className="p-4 text-red-500" data-testid="customer-list-error">
+        Error: {error}
+      </div>
+    )
 
   return (
-    <div className="p-4">
-      <div className="mb-4 space-y-4">
+    <div className="p-4" data-testid="customer-list-root">
+      <div className="mb-4 space-y-4" data-testid="customer-list-filters">
         <input
           type="text"
           placeholder="Search customers..."
           className="w-full p-2 border rounded-lg"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          data-testid="customer-list-search"
         />
 
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-2 overflow-x-auto pb-2" data-testid="customer-list-status-filter">
           {statusOptions.map((status) => (
             <button
               key={status}
@@ -83,6 +94,7 @@ const CustomerList = () => {
                   ? `${getStatusColor(status)} ring-1 ring-inset ring-black/10`
                   : 'bg-gray-100 text-gray-600'
               }`}
+              data-testid={`customer-list-status-${status}`}
             >
               {status}
             </button>
@@ -91,10 +103,15 @@ const CustomerList = () => {
       </div>
 
       {filteredCustomers.length === 0 ? (
-        <div className="text-gray-500">No customers found</div>
+        <div className="text-gray-500" data-testid="customer-list-empty">
+          No customers found
+        </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div
+          className="overflow-x-auto rounded-lg border"
+          data-testid="customer-list-table-wrapper"
+        >
+          <table className="min-w-full divide-y divide-gray-200" data-testid="customer-list-table">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -114,27 +131,52 @@ const CustomerList = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200" data-testid="customer-list-body">
               {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                <tr
+                  key={customer.id}
+                  className="hover:bg-gray-50"
+                  data-testid={`customer-list-row-${customer.id}`}
+                >
+                  <td
+                    className="px-6 py-4 whitespace-nowrap"
+                    data-testid={`customer-list-name-${customer.id}`}
+                  >
                     <Link
                       to={`/customers/${customer.id}`}
                       className="text-blue-600 hover:underline"
+                      data-testid={`customer-list-link-${customer.id}`}
                     >
                       {customer.name}
                     </Link>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{customer.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{customer.phone}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td
+                    className="px-6 py-4 whitespace-nowrap"
+                    data-testid={`customer-list-email-${customer.id}`}
+                  >
+                    {customer.email}
+                  </td>
+                  <td
+                    className="px-6 py-4 whitespace-nowrap"
+                    data-testid={`customer-list-phone-${customer.id}`}
+                  >
+                    {customer.phone}
+                  </td>
+                  <td
+                    className="px-6 py-4 whitespace-nowrap"
+                    data-testid={`customer-list-status-cell-${customer.id}`}
+                  >
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(customer.status)}`}
+                      data-testid={`customer-list-status-badge-${customer.id}`}
                     >
                       {customer.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td
+                    className="px-6 py-4 whitespace-nowrap"
+                    data-testid={`customer-list-joined-${customer.id}`}
+                  >
                     {new Date(customer.createdAt).toLocaleDateString()}
                   </td>
                 </tr>

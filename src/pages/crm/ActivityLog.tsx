@@ -54,7 +54,7 @@ const ActivityLog: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64" data-testid="crm-activity-log-loading">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     )
@@ -62,33 +62,56 @@ const ActivityLog: React.FC = () => {
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+      <div
+        className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+        data-testid="crm-activity-log-error"
+      >
         {error}
       </div>
     )
   }
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-4 md:p-6">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">Activity Timeline</h2>
+    <div className="bg-white shadow-md rounded-lg p-4 md:p-6" data-testid="crm-activity-log-root">
+      <h2 className="text-xl font-semibold mb-4 text-gray-800" data-testid="crm-activity-log-title">
+        Activity Timeline
+      </h2>
       {activities.length === 0 ? (
-        <p className="text-gray-500 text-center">No activities found</p>
+        <p className="text-gray-500 text-center" data-testid="crm-activity-log-empty">
+          No activities found
+        </p>
       ) : (
-        <ul className="divide-y divide-gray-200">
+        <ul className="divide-y divide-gray-200" data-testid="crm-activity-log-list">
           {activities.map((activity) => (
             <li
               key={activity.id}
               className="py-4 hover:bg-gray-50 transition-colors flex items-start"
+              data-testid={`crm-activity-log-item-${activity.id}`}
             >
-              <div className="mr-4 text-2xl">{renderActivityIcon(activity.type)}</div>
+              <div className="mr-4 text-2xl" data-testid={`crm-activity-log-icon-${activity.id}`}>
+                {renderActivityIcon(activity.type)}
+              </div>
               <div className="flex-1">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-medium text-gray-900">{activity.user}</h3>
-                  <span className="text-xs text-gray-500">
+                  <h3
+                    className="text-sm font-medium text-gray-900"
+                    data-testid={`crm-activity-log-user-${activity.id}`}
+                  >
+                    {activity.user}
+                  </h3>
+                  <span
+                    className="text-xs text-gray-500"
+                    data-testid={`crm-activity-log-time-${activity.id}`}
+                  >
                     {formatRelativeTime(activity.timestamp)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+                <p
+                  className="text-sm text-gray-600 mt-1"
+                  data-testid={`crm-activity-log-description-${activity.id}`}
+                >
+                  {activity.description}
+                </p>
               </div>
             </li>
           ))}
