@@ -252,7 +252,7 @@ export const usePerformanceTracking = (componentName) => {
     }
 
     renderStart.current = performance.now()
-  })
+  }, [componentName])
 
   return { renderCount: renderCountRef.current }
 }
