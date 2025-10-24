@@ -85,7 +85,9 @@ const toStringSafe = (value: unknown, fallback = ''): string => {
 const toStringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
 
-const toIsoString = (value: unknown, fallback: Date = new Date()): string => {
+const DEFAULT_FALLBACK_DATE = new Date('1970-01-01T00:00:00.000Z')
+
+const toIsoString = (value: unknown, fallback: Date = DEFAULT_FALLBACK_DATE): string => {
   if (value) {
     const date = new Date(value as string | number | Date)
     if (!Number.isNaN(date.getTime())) {
