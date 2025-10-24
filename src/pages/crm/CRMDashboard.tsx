@@ -96,7 +96,7 @@ const CRMDashboard = () => {
     <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-root">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <h1 className="text-3xl font-bold" data-testid="crm-dashboard-title">
-          Sales &amp; CRM Dashboard
+          Sales & CRM Dashboard
         </h1>
         {lastRefreshLabel && (
           <span className="text-sm text-gray-500" data-testid="crm-dashboard-last-refresh">
