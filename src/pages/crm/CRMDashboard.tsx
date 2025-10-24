@@ -11,7 +11,7 @@ const currencyFormatter = new Intl.NumberFormat('nl-NL', {
 const numberFormatter = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 })
 
 const formatCurrency = (value?: number | null) =>
-  currencyFormatter.format(Math.max(0, Math.round(((value ?? 0) + Number.EPSILON) * 100) / 100))
+  currencyFormatter.format(Math.max(0, value ?? 0))
 
 const formatPercent = (value?: number | null) => `${(value ?? 0).toFixed(1)}%`
 
