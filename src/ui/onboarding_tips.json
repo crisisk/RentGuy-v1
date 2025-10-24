@@ -38,5 +38,10 @@
     "module": "automation",
     "message": "Gebruik automatiseringen om repetitieve taken te elimineren zodra onboarding mijlpalen zijn bereikt.",
     "cta": "Open automation studio"
+  },
+  {
+    "module": "sales",
+    "message": "Synchroniseer CRM leads en deals via de importwizard zodat sales direct pipeline KPI's kan volgen.",
+    "cta": "Open CRM pipeline"
   }
 ]
