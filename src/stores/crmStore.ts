@@ -216,7 +216,9 @@ const mapDashboardSummary = (payload: any): CRMDashboardSummary => ({
 
 export const crmStore = create<CRMState>((set) => ({
   customers: [],
-  activities: [],
+  customerActivities: {},
+  activityLog: [],
+  dashboardSummary: null,
   loading: false,
   error: null,
   dashboard: null,
