@@ -1,84 +1,59 @@
-import React, { useEffect, useState } from 'react'
-import crmStore, {
-  type CRMDashboardSummary,
-  type CRMCustomerStats,
-  type CRMRecentActivity,
-  type CRMPipelineStageKPI,
-  type CRMSalesKPIs,
-} from '../../stores/crmStore'
+import { useEffect, useMemo, useState } from 'react'
+import crmStore from '../../stores/crmStore'
+import type { CRMDashboardSummary, PipelineStageMetric } from '@rg-types/crmTypes'
 
-const numberFormatter = new Intl.NumberFormat('nl-NL')
 const currencyFormatter = new Intl.NumberFormat('nl-NL', {
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 0,
 })
 
-function formatRelativeTime(timestampMs: number): string {
-  const now = Date.now()
-  const diff = Math.max(0, now - timestampMs)
-  const minutes = Math.floor(diff / 60000)
-  if (minutes < 1) return 'zojuist'
-  if (minutes < 60) return `${minutes} min geleden`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} uur geleden`
-  const days = Math.floor(hours / 24)
-  return `${days} dag${days > 1 ? 'en' : ''} geleden`
+const numberFormatter = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 })
+
+const formatCurrency = (value?: number | null) =>
+  currencyFormatter.format(Math.max(0, value ?? 0))
+
+const formatPercent = (value?: number | null) => `${(value ?? 0).toFixed(1)}%`
+
+const formatCount = (value?: number | null) =>
+  numberFormatter.format(Math.max(0, Math.trunc(value ?? 0)))
+
+const formatDays = (value?: number | null) => {
+  if (value === null || value === undefined) return '—'
+  const rounded = Math.round((value + Number.EPSILON) * 10) / 10
+  return `${rounded.toFixed(1)} d`
 }
 
-function formatCurrency(value: number | null | undefined): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return '—'
-  }
-  return currencyFormatter.format(value)
+const resolveLastRefresh = (summary: CRMDashboardSummary | null) => {
+  if (!summary) return null
+  const source = summary.provenance.lastRefreshedAt ?? summary.generatedAt
+  if (!source) return null
+  const date = new Date(source)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleString('nl-NL', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
-function formatNumber(value: number | null | undefined): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return '0'
-  }
-  return numberFormatter.format(value)
-}
-
-function formatPercent(value: number | null | undefined, fractionDigits = 1): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return '—'
-  }
-  return `${(value * 100).toFixed(fractionDigits)}%`
-}
-
-function activityLabel(type: CRMRecentActivity['type']): string {
-  if (type === 'support') return 'Support'
-  if (type === 'signup') return 'Signup'
-  return 'Sales'
-}
-
-const CRMDashboard: React.FC = () => {
-  const [customerStats, setCustomerStats] = useState<CRMCustomerStats | null>(null)
-  const [recentActivities, setRecentActivities] = useState<CRMRecentActivity[]>([])
-  const [dashboardSummary, setDashboardSummary] = useState<CRMDashboardSummary | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+const CRMDashboard = () => {
+  const [summary, setSummary] = useState<CRMDashboardSummary | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-
-    const fetchDashboardData = async () => {
+    const fetchDashboard = async () => {
       try {
-        setIsLoading(true)
-        const [stats, activities, summary] = await Promise.all([
-          crmStore.getCustomerStats(),
-          crmStore.getRecentActivities(),
-          crmStore.getDashboardSummary(),
-        ])
-        if (cancelled) return
-        setCustomerStats(stats)
-        setRecentActivities(activities)
-        setDashboardSummary(summary)
-        setError(null)
+        const analytics = await crmStore.fetchDashboardSummary()
+        setSummary(analytics)
       } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to load CRM analytics data. Please retry later.',
+        )
       } finally {
         if (!cancelled) {
           setIsLoading(false)
@@ -86,12 +61,15 @@ const CRMDashboard: React.FC = () => {
       }
     }
 
-    fetchDashboardData()
-
-    return () => {
-      cancelled = true
-    }
+    fetchDashboard()
   }, [])
+
+  const totalPipelineDeals = useMemo(() => {
+    if (!summary) return 0
+    return summary.pipeline.reduce((total, stage) => total + (stage.dealCount ?? 0), 0)
+  }, [summary])
+
+  const lastRefreshLabel = useMemo(() => resolveLastRefresh(summary), [summary])
 
   if (isLoading) {
     return (
@@ -126,32 +104,82 @@ const CRMDashboard: React.FC = () => {
   const sales: CRMSalesKPIs | null = dashboardSummary?.sales ?? null
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8" data-testid="crm-dashboard-root">
-      <header>
-        <h1 className="text-3xl font-bold mb-2" data-testid="crm-dashboard-title">
-          CRM Dashboard
+    <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-root">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-3xl font-bold" data-testid="crm-dashboard-title">
+          Sales & CRM Dashboard
         </h1>
-        <p className="text-gray-600">
-          Overzicht van pipeline, salesprestaties en de laatste klantactiviteiten.
-        </p>
-      </header>
+        {lastRefreshLabel && (
+          <span className="text-sm text-gray-500" data-testid="crm-dashboard-last-refresh">
+            Laatste update: {lastRefreshLabel}
+          </span>
+        )}
+      </div>
 
-      <section
-        className="grid grid-cols-1 md:grid-cols-3 gap-4"
-        data-testid="crm-dashboard-stats-grid"
+      <div
+        className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4 md:p-6"
+        data-testid="crm-dashboard-crm-sync"
       >
-        <article className="bg-white shadow rounded-lg p-4" data-testid="crm-dashboard-card-total">
-          <h2 className="text-sm text-gray-500">Totaal klanten</h2>
-          <p className="text-3xl font-bold text-blue-600">{formatNumber(stats.total)}</p>
-        </article>
-        <article className="bg-white shadow rounded-lg p-4" data-testid="crm-dashboard-card-new">
-          <h2 className="text-sm text-gray-500">Nieuwe deze maand</h2>
-          <p className="text-3xl font-bold text-green-600">{formatNumber(stats.newThisMonth)}</p>
-        </article>
-        <article className="bg-white shadow rounded-lg p-4" data-testid="crm-dashboard-card-active">
-          <h2 className="text-sm text-gray-500">Actieve klanten</h2>
-          <p className="text-3xl font-bold text-purple-600">
-            {formatNumber(stats.activeCustomers)}
+        <h2 className="text-lg font-semibold text-indigo-900">CRM sync klaar voor gebruik</h2>
+        <p className="mt-2 text-sm text-indigo-800">
+          Importeer leads en deals vanuit je bronsysteem om de pipeline hieronder te vullen en het
+          sales-team 100% sales ready te maken. De import wizard synchroniseert velden als
+          dealwaarde, fase en verwachtte sluitingsdatum.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+          <a
+            href="/sales/crm-sync"
+            className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            data-testid="crm-dashboard-crm-sync-cta"
+          >
+            Open CRM import wizard
+          </a>
+          <span className="text-sm text-indigo-700" data-testid="crm-dashboard-crm-sync-hint">
+            Tip: importeer minimaal 3 pipeline fases zodat het sales-team direct opvolgacties ziet.
+          </span>
+        </div>
+      </div>
+
+      <div
+        className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+        data-testid="crm-dashboard-kpis"
+      >
+        <div className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-kpi-total-value">
+          <p className="text-sm font-medium text-gray-500">Totale pipelinewaarde</p>
+          <p className="mt-2 text-2xl font-bold text-gray-900">
+            {formatCurrency(summary?.headline.totalPipelineValue)}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            {formatCount(totalPipelineDeals)} deals in actieve pipeline
+          </p>
+        </div>
+        <div
+          className="rounded-lg bg-white p-4 shadow"
+          data-testid="crm-dashboard-kpi-weighted-value"
+        >
+          <p className="text-sm font-medium text-gray-500">Gewogen pipeline</p>
+          <p className="mt-2 text-2xl font-bold text-gray-900">
+            {formatCurrency(summary?.headline.weightedPipelineValue)}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">Kansgewogen forecast voor lopende deals</p>
+        </div>
+        <div className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-kpi-winrate">
+          <p className="text-sm font-medium text-gray-500">Winrate laatste 30 dagen</p>
+          <p className="mt-2 text-2xl font-bold text-gray-900">
+            {formatPercent(summary?.sales.winRate)}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            {formatCount(summary?.sales.wonDealsLast30Days)} deals gewonnen •{' '}
+            {formatCurrency(summary?.headline.wonValueLast30Days)} omzet
+          </p>
+        </div>
+        <div className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-kpi-forecast">
+          <p className="text-sm font-medium text-gray-500">Forecast komende 30 dagen</p>
+          <p className="mt-2 text-2xl font-bold text-gray-900">
+            {formatCurrency(summary?.sales.forecastNext30Days)}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            Pipeline velocity: {formatCurrency(summary?.sales.pipelineVelocityPerDay)} per dag
           </p>
         </article>
       </section>
@@ -221,109 +249,169 @@ const CRMDashboard: React.FC = () => {
         )}
       </section>
 
-      {sales && (
+      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section
-          className="bg-white shadow rounded-lg p-4 md:p-6"
-          data-testid="crm-dashboard-sales-section"
-          aria-labelledby="crm-dashboard-sales-title"
+          className="rounded-lg bg-white p-4 shadow"
+          data-testid="crm-dashboard-pipeline-card"
         >
-          <h2 id="crm-dashboard-sales-title" className="text-lg font-semibold mb-4">
-            Sales prestaties
+          <div className="flex flex-col gap-2 border-b pb-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold" data-testid="crm-dashboard-pipeline-title">
+                Pipeline per fase
+              </h2>
+              <p className="text-sm text-gray-500">
+                Toon deals per fase inclusief waarde en gemiddelde doorlooptijd
+              </p>
+            </div>
+            <div className="text-right text-sm text-gray-500">
+              {formatCount(summary?.sales.openDeals)} open deals
+            </div>
+          </div>
+
+          {summary && summary.pipeline.length > 0 ? (
+            <div
+              className="mt-4 overflow-x-auto"
+              data-testid="crm-dashboard-pipeline-table-wrapper"
+            >
+              <table
+                className="min-w-full divide-y divide-gray-200"
+                data-testid="crm-dashboard-pipeline-table"
+              >
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Fase
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Deals
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Waarde
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Gewogen
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Gem. leeftijd
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {summary.pipeline.map((stage: PipelineStageMetric) => (
+                    <tr
+                      key={stage.stageId}
+                      data-testid={`crm-dashboard-pipeline-stage-${stage.stageId}`}
+                    >
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {stage.stageName}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {formatCount(stage.dealCount)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {formatCurrency(stage.totalValue)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {formatCurrency(stage.weightedValue)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {formatDays(stage.avgAgeDays)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div
+              className="mt-6 rounded-lg border border-dashed border-indigo-200 bg-indigo-50 p-6 text-center text-indigo-800"
+              data-testid="crm-dashboard-pipeline-empty"
+            >
+              <h3 className="text-lg font-semibold">Nog geen pipeline data</h3>
+              <p className="mt-2 text-sm">
+                Start de CRM import om deals in te lezen of maak handmatig een eerste opportunity
+                aan.
+              </p>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-sales-card">
+          <h2 className="text-xl font-semibold" data-testid="crm-dashboard-sales-title">
+            Sales momentum
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <article
-              className="border border-gray-200 rounded-lg p-4"
+          <p className="text-sm text-gray-500">
+            Inzicht in dealflow en doorlooptijden voor het salesteam
+          </p>
+
+          <dl
+            className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+            data-testid="crm-dashboard-sales-metrics"
+          >
+            <div
+              className="rounded-md border border-gray-100 p-4"
               data-testid="crm-dashboard-sales-open-deals"
             >
-              <h3 className="text-sm text-gray-500">Open deals</h3>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatNumber(sales.openDeals)}
+              <dt className="text-sm font-medium text-gray-500">Openstaande deals</dt>
+              <dd className="mt-2 text-2xl font-bold text-gray-900">
+                {formatCount(summary?.sales.openDeals)}
+              </dd>
+              <p className="mt-1 text-xs text-gray-500">
+                {formatCount(summary?.sales.totalDeals)} totaal geregistreerde deals
               </p>
-            </article>
-            <article
-              className="border border-gray-200 rounded-lg p-4"
-              data-testid="crm-dashboard-sales-win-rate"
+            </div>
+            <div
+              className="rounded-md border border-gray-100 p-4"
+              data-testid="crm-dashboard-sales-bookings"
             >
-              <h3 className="text-sm text-gray-500">Win-rate</h3>
-              <p className="text-2xl font-semibold text-gray-900">{formatPercent(sales.winRate)}</p>
-            </article>
-            <article
-              className="border border-gray-200 rounded-lg p-4"
-              data-testid="crm-dashboard-sales-avg-value"
-            >
-              <h3 className="text-sm text-gray-500">Gem. dealwaarde</h3>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatCurrency(sales.avgDealValue)}
+              <dt className="text-sm font-medium text-gray-500">Boekingen laatste 30 dagen</dt>
+              <dd className="mt-2 text-2xl font-bold text-gray-900">
+                {formatCount(summary?.sales.bookingsLast30Days)}
+              </dd>
+              <p className="mt-1 text-xs text-gray-500">
+                Gemiddelde dealwaarde {formatCurrency(summary?.sales.avgDealValue)}
               </p>
-            </article>
-            <article
-              className="border border-gray-200 rounded-lg p-4"
-              data-testid="crm-dashboard-sales-forecast"
+            </div>
+            <div
+              className="rounded-md border border-gray-100 p-4"
+              data-testid="crm-dashboard-sales-cycle"
             >
-              <h3 className="text-sm text-gray-500">Forecast 30 dagen</h3>
-              <p className="text-2xl font-semibold text-gray-900">
-                {formatCurrency(sales.forecastNext30Days)}
+              <dt className="text-sm font-medium text-gray-500">Gemiddelde doorlooptijd</dt>
+              <dd className="mt-2 text-2xl font-bold text-gray-900">
+                {formatDays(summary?.headline.avgDealCycleDays)}
+              </dd>
+              <p className="mt-1 text-xs text-gray-500">Inclusief gewonnen én verloren deals</p>
+            </div>
+            <div
+              className="rounded-md border border-gray-100 p-4"
+              data-testid="crm-dashboard-sales-automation"
+            >
+              <dt className="text-sm font-medium text-gray-500">Actieve workflows</dt>
+              <dd className="mt-2 text-2xl font-bold text-gray-900">
+                {formatCount(summary?.headline.activeWorkflows)}
+              </dd>
+              <p className="mt-1 text-xs text-gray-500">
+                Automatiseringsfoutpercentage{' '}
+                {formatPercent(summary?.headline.automationFailureRate)}
               </p>
-            </article>
-          </div>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-600">
-            <p data-testid="crm-dashboard-sales-bookings">
-              <span className="font-medium text-gray-900">
-                {formatNumber(sales.bookingsLast30Days)}
-              </span>{' '}
-              boekingen afgelopen 30 dagen
-            </p>
-            <p data-testid="crm-dashboard-sales-total">
-              <span className="font-medium text-gray-900">{formatNumber(sales.totalDeals)}</span>{' '}
-              deals in totaal
-            </p>
-            <p data-testid="crm-dashboard-sales-velocity">
-              Pipeline snelheid:{' '}
-              <span className="font-medium text-gray-900">
-                {formatCurrency(sales.pipelineVelocityPerDay)} / dag
-              </span>
+            </div>
+          </dl>
+
+          <div
+            className="mt-6 rounded-md border border-dashed border-gray-200 p-4"
+            data-testid="crm-dashboard-sales-guidance"
+          >
+            <h3 className="text-sm font-semibold text-gray-700">
+              Volgende stap voor sales enablement
+            </h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Publiceer de pipeline widget in het demo-dashboard en stuur het team een update zodra
+              de CRM sync is afgerond. Zo weten accountmanagers precies welke deals opvolging nodig
+              hebben en ben je 100% sales ready.
             </p>
           </div>
         </section>
-      )}
-
-      <section
-        className="bg-white shadow rounded-lg p-4"
-        data-testid="crm-dashboard-activities-card"
-      >
-        <h2 className="text-lg font-semibold mb-4" data-testid="crm-dashboard-activities-title">
-          Recente activiteiten
-        </h2>
-        {recentActivities.length === 0 ? (
-          <p className="text-gray-500" data-testid="crm-dashboard-activities-empty">
-            Nog geen activiteiten geregistreerd. Log een call, meeting of follow-up om deze tijdlijn
-            te vullen.
-          </p>
-        ) : (
-          <table className="w-full text-left" data-testid="crm-dashboard-activities-table">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-2">Type</th>
-                <th className="p-2">Klant</th>
-                <th className="p-2">Wanneer</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentActivities.map((activity) => (
-                <tr
-                  key={activity.id}
-                  className="border-b"
-                  data-testid={`crm-dashboard-activity-${activity.id}`}
-                >
-                  <td className="p-2 capitalize">{activityLabel(activity.type)}</td>
-                  <td className="p-2">{activity.customerName}</td>
-                  <td className="p-2">{formatRelativeTime(activity.timestamp)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      </div>
     </div>
   )
 }

@@ -69,3 +69,96 @@ export interface CustomerSegment {
 }
 
 export type CustomerWithContacts = Customer & { contacts: Contact[] }
+
+export interface DashboardHeadlineKPIs {
+  totalPipelineValue: number
+  weightedPipelineValue: number
+  wonValueLast30Days: number
+  avgDealCycleDays?: number | null
+  automationFailureRate: number
+  activeWorkflows: number
+}
+
+export interface DashboardLeadFunnelKPIs {
+  totalLeads: number
+  leadsLast30Days: number
+  leadsWithDeals: number
+  conversionRate: number
+}
+
+export interface PipelineStageMetric {
+  stageId: number
+  stageName: string
+  dealCount: number
+  totalValue: number
+  weightedValue: number
+  avgAgeDays?: number | null
+}
+
+export interface AutomationWorkflowMetric {
+  workflowId: string
+  runCount: number
+  failedRuns: number
+  avgCompletionMinutes?: number | null
+  slaBreaches: number
+  failureRate: number
+}
+
+export interface SalesPerformanceKPIs {
+  openDeals: number
+  wonDealsLast30Days: number
+  lostDealsLast30Days: number
+  totalDeals: number
+  bookingsLast30Days: number
+  winRate: number
+  avgDealValue?: number | null
+  forecastNext30Days: number
+  pipelineVelocityPerDay: number
+}
+
+export interface AcquisitionPerformanceKPIs {
+  lookbackDays: number
+  gaSessions: number
+  gaNewUsers: number
+  gaEngagedSessions: number
+  gaConversions: number
+  gaConversionValue: number
+  gtmConversions: number
+  gtmConversionValue: number
+  blendedConversionRate: number
+  activeConnectors: string[]
+}
+
+export interface SourcePerformanceMetric {
+  key: string
+  label: string
+  dimensionType: string
+  leadCount: number
+  dealCount: number
+  wonDealCount: number
+  pipelineValue: number
+  wonValue: number
+  gaSessions: number
+  gaConversions: number
+  gtmConversions: number
+  gaRevenue: number
+  gtmRevenue: number
+}
+
+export interface DashboardProvenance {
+  source: string
+  upstreamSystems: string[]
+  lastRefreshedAt?: string | null
+}
+
+export interface CRMDashboardSummary {
+  generatedAt: string
+  headline: DashboardHeadlineKPIs
+  leadFunnel: DashboardLeadFunnelKPIs
+  pipeline: PipelineStageMetric[]
+  automation: AutomationWorkflowMetric[]
+  sales: SalesPerformanceKPIs
+  acquisition: AcquisitionPerformanceKPIs
+  sourcePerformance: SourcePerformanceMetric[]
+  provenance: DashboardProvenance
+}

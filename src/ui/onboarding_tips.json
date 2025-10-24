@@ -41,7 +41,7 @@
   },
   {
     "module": "sales",
-    "message": "Importeer CRM-leads en koppel pipeline-stadia om je win-rate realtime te monitoren.",
-    "cta": "Open CRM-dashboard"
+    "message": "Synchroniseer CRM leads en deals via de importwizard zodat sales direct pipeline KPI's kan volgen.",
+    "cta": "Open CRM pipeline"
   }
 ]
