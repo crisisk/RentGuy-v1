@@ -38,5 +38,10 @@
     "module": "automation",
     "message": "Gebruik automatiseringen om repetitieve taken te elimineren zodra onboarding mijlpalen zijn bereikt.",
     "cta": "Open automation studio"
+  },
+  {
+    "module": "sales",
+    "message": "Importeer CRM-leads en koppel pipeline-stadia om je win-rate realtime te monitoren.",
+    "cta": "Open CRM-dashboard"
   }
 ]
