@@ -1,6 +1,7 @@
 # Mr. DJ CRM KPI Dashboard Plan
 
 ## 1. Module Scan
+
 - **Backend data sources**
   - `crm_leads`, `crm_deals`, `crm_pipeline_stages`, `crm_activities`, en `crm_automation_runs` worden ontsloten via de FastAPI CRM-module en bevatten tenant-id, waardes, probabiliteit en timestamps voor lifecycle-analyse.【F:backend/app/modules/crm/models.py†L1-L115】
   - Het nieuwe aggregatie-endpoint `GET /api/v1/crm/analytics/dashboard` levert geconsolideerde headline-, funnel-, pipeline- en automation-metrics voor de Mr. DJ tenant.【F:backend/app/modules/crm/routes.py†L73-L94】
@@ -8,9 +9,10 @@
 - **Automatisering**
   - Workflowruns worden gelogd met status, trigger en `completed_at`, waarmee SLA- en failure-rate berekeningen kunnen worden gemaakt.【F:backend/app/modules/crm/models.py†L117-L150】
 - **Frontend**
-  - De CRM-store gebruikt reeds caching voor leads/deals en kan het dashboard-endpoint consumeren voor widgets (geen extra auth vereist buiten `X-Tenant-ID`).【F:rentguy/frontend/src/stores/crmStore.ts†L1-L120】
+  - De CRM-store gebruikt reeds caching voor leads/deals en kan het dashboard-endpoint consumeren voor widgets (geen extra auth vereist buiten `X-Tenant-ID`).【F:src/stores/crmStore.ts†L1-L214】
 
 ## 2. KPI-selectie voor één dashboard
+
 1. **Lead funnel**
    - Totaal aantal leads, leads laatste 30 dagen, unieke leads met deals, conversieratio (leads → opportunity).
 2. **Pipeline performance**
@@ -25,6 +27,7 @@
    - Activiteiten per kanaal (WhatsApp, e-mail), open taken ouder dan SLA, escalaties uit automation context.
 
 ## 3. Dashboard lay-out
+
 1. **Hero tiles (bovenaan)**
    - Weighted pipeline value, won value 30d, conversion rate, automation failure rate.
 2. **Lead funnel visual (links)**
@@ -37,6 +40,7 @@
    - Top 10 deals zonder activiteit >7 dagen en automation runs met status `failed`.
 
 ## 4. Implementatiestappen
+
 1. **Backend**
    - [x] Dashboard endpoint implementeren met headline-, funnel-, pipeline-, sales- en acquisition-berekeningen.【F:backend/app/modules/crm/service.py†L214-L333】
    - [x] GA4/GTM ingestiescript `scripts/sync_crm_analytics.py` toevoegen zodat blended metrics periodiek geladen worden.【F:scripts/sync_crm_analytics.py†L1-L12】
@@ -52,8 +56,10 @@
      - Table card voor automation workflows (gesorteerd op failure rate >0).
    - [ ] Configureer refresh 5 minuten via Metabase pulse + Slack-alert bij failure-rate > 0.3.
 4. **Frontend**
-   - [x] Voeg dashboard-widget toe in CRM-overzichtspagina die data haalt via nieuwe endpoint en hero tiles + charts rendert.【F:rentguy/frontend/src/pages/CRMDashboard.tsx†L1-L301】
-   - [x] Hergebruik bestaande Zustand store (`crmStore.ts`) om dashboard-data te cachen met TTL 60s.【F:rentguy/frontend/src/stores/crmStore.ts†L1-L214】
+
+- [x] Voeg dashboard-widget toe in CRM-overzichtspagina die data haalt via nieuwe endpoint en hero tiles + charts rendert.【F:src/pages/crm/CRMDashboard.tsx†L1-L360】
+- [x] Hergebruik bestaande Zustand store (`crmStore.ts`) om dashboard-data te cachen met TTL 60s.【F:src/stores/crmStore.ts†L1-L214】
+
 5. **Operations & Governance**
    - [ ] Werk `docs/operations/crm_support_playbook.md` bij met procedure voor escalaties wanneer automation failure rate >30% of SLA-breach trend stijgt.
    - [x] Voeg KPI-paragraaf toe aan `docs/UAT/crm_mrdj_uat.md` zodat UAT-sessie dashboards controleert.【F:docs/UAT/crm_mrdj_uat.md†L41-L80】
@@ -61,10 +67,11 @@
 
 ## 6. Design review & UAT-resultaat
 
-- De front-end dashboards zijn herschreven met toegankelijke hero-kaarten, lead-funnel progressiebalken, sales velocity kaarten en marketing-sourcen tabellen die de volledige backend KPI-set weerspiegelen. Kleuren en contrast sluiten aan bij de RentGuy design tokens en voldoen aan WCAG AA voor de belangrijkste teksten.【F:rentguy/frontend/src/pages/CRMDashboard.tsx†L65-L297】
+- De front-end dashboards zijn herschreven met toegankelijke hero-kaarten, lead-funnel progressiebalken, sales velocity kaarten en marketing-sourcen tabellen die de volledige backend KPI-set weerspiegelen. Kleuren en contrast sluiten aan bij de RentGuy design tokens en voldoen aan WCAG AA voor de belangrijkste teksten.【F:src/pages/crm/CRMDashboard.tsx†L120-L360】
 - Tijdens de UAT dry-run (11 maart) door Bart en Chantal scoorden de nieuwe widgets 32 van de 32 controlepunten (100%) op de dashboard-sectie; de volledige Mr. DJ UAT-checklist haalde 99,1% doordat één minor verbeterpunt (tooltips voor automation failure rate) gepland staat voor de volgende sprint.【F:docs/UAT/crm_mrdj_uat.md†L81-L118】
 
 ## 5. Volgende acties
+
 - Plan Metabase implementatie met data-team (Bart/BI) en koppel dashboard aan service account.
 - Automatiseer wekelijkse export van dashboard-snapshots naar Confluence voor managementrapportage.
 - Evalueer binnen 2 weken of extra KPI's (churn, NPS) nodig zijn voor multi-tenant rollout en breid endpoint uit.
