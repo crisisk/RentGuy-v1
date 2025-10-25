@@ -81,14 +81,27 @@ const CRMDashboard = () => {
   useEffect(() => {
     let cancelled = false
 
-    const load = async () => {
+    const fetchDashboard = async () => {
+      setIsLoading(true)
+      setError(null)
+      if (!cancelled) {
+        setSummary(null)
+      }
+
       try {
-        await fetchDashboardSummary({ lookbackDays: selectedLookback })
+        const analytics = await crmStore.fetchDashboardSummary()
         if (!cancelled) {
-          setTransientError(null)
-          setHasRequested(true)
+          setSummary(analytics)
         }
-      } catch (error) {
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Failed to load CRM analytics data. Please retry later.',
+          )
+        }
+      } finally {
         if (!cancelled) {
           console.error('Kon CRM-dashboardgegevens niet laden', error)
           setTransientError(
@@ -101,18 +114,11 @@ const CRMDashboard = () => {
       }
     }
 
-    load().catch((error) => {
-      console.error('Onverwachte fout tijdens CRM-dashboardload', error)
-    })
+    fetchDashboard()
 
     return () => {
       cancelled = true
     }
-  }, [fetchDashboardSummary, selectedLookback])
-
-  const handleLookbackChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    const next = Number(event.target.value)
-    setSelectedLookback(Number.isNaN(next) ? 30 : next)
   }, [])
 
   const handleRefresh = useCallback(() => {
@@ -195,7 +201,8 @@ const CRMDashboard = () => {
     )
   }
 
-  const pipeline: CRMPipelineStageKPI[] = dashboardSummary?.pipeline ?? []
+  const pipeline = summary?.pipeline ?? []
+  const headline = summary?.headline
 
   return (
     <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-root">
@@ -331,14 +338,61 @@ const CRMDashboard = () => {
           <h2 id="crm-dashboard-pipeline-title" className="text-lg font-semibold">
             Pipeline per fase
           </h2>
-          {dashboardSummary?.headline && (
+          {headline && (
             <span className="text-sm text-gray-500">
-              Totaal pipeline: {formatCurrency(dashboardSummary.headline.totalPipelineValue)} ·
-              Gewogen: {formatCurrency(dashboardSummary.headline.weightedPipelineValue)}
+              Totaal pipeline: {formatCurrency(headline.totalPipelineValue)} · Gewogen:{' '}
+              {formatCurrency(headline.weightedPipelineValue)}
             </span>
           )}
         </div>
-      </div>
+        {pipeline.length === 0 ? (
+          <p className="text-gray-500" data-testid="crm-dashboard-pipeline-empty">
+            Nog geen pipeline data beschikbaar. Synchroniseer je CRM of voeg deals toe om de fasen
+            te vullen.
+          </p>
+        ) : (
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            data-testid="crm-dashboard-pipeline-grid"
+          >
+            {pipeline.map((stage: PipelineStageMetric) => (
+              <article
+                key={stage.stageId}
+                className="border border-gray-200 rounded-lg p-4"
+                data-testid={`crm-dashboard-pipeline-stage-${stage.stageId}`}
+              >
+                <h3 className="text-base font-semibold text-gray-800">{stage.stageName}</h3>
+                <dl className="mt-3 space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center justify-between">
+                    <dt>Deals</dt>
+                    <dd className="font-medium text-gray-900">{formatCount(stage.dealCount)}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt>Totale waarde</dt>
+                    <dd className="font-medium text-gray-900">
+                      {formatCurrency(stage.totalValue)}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt>Gewogen</dt>
+                    <dd className="font-medium text-gray-900">
+                      {formatCurrency(stage.weightedValue)}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt>Gem. leeftijd</dt>
+                    <dd className="font-medium text-gray-900">
+                      {typeof stage.avgAgeDays === 'number'
+                        ? `${stage.avgAgeDays.toFixed(1)} dagen`
+                        : '—'}
+                    </dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section
