@@ -9,7 +9,7 @@
 - **Automatisering**
   - Workflowruns worden gelogd met status, trigger en `completed_at`, waarmee SLA- en failure-rate berekeningen kunnen worden gemaakt.【F:backend/app/modules/crm/models.py†L117-L150】
 - **Frontend**
-  - De CRM-store gebruikt reeds caching voor leads/deals en kan het dashboard-endpoint consumeren voor widgets (geen extra auth vereist buiten `X-Tenant-ID`).【F:rentguy/frontend/src/stores/crmStore.ts†L1-L120】
+  - De CRM-store gebruikt reeds caching voor leads/deals en kan het dashboard-endpoint consumeren voor widgets (geen extra auth vereist buiten `X-Tenant-ID`).【F:src/stores/crmStore.ts†L1-L214】
 
 ## 2. KPI-selectie voor één dashboard
 
@@ -56,8 +56,10 @@
      - Table card voor automation workflows (gesorteerd op failure rate >0).
    - [ ] Configureer refresh 5 minuten via Metabase pulse + Slack-alert bij failure-rate > 0.3.
 4. **Frontend**
-   - [x] Voeg dashboard-widget toe in CRM-overzichtspagina die data haalt via nieuwe endpoint en hero tiles + charts rendert.【F:rentguy/frontend/src/pages/CRMDashboard.tsx†L1-L301】
-   - [x] Hergebruik bestaande Zustand store (`crmStore.ts`) om dashboard-data te cachen met TTL 60s.【F:rentguy/frontend/src/stores/crmStore.ts†L1-L214】
+
+- [x] Voeg dashboard-widget toe in CRM-overzichtspagina die data haalt via nieuwe endpoint en hero tiles + charts rendert.【F:src/pages/crm/CRMDashboard.tsx†L1-L360】
+- [x] Hergebruik bestaande Zustand store (`crmStore.ts`) om dashboard-data te cachen met TTL 60s.【F:src/stores/crmStore.ts†L1-L214】
+
 5. **Operations & Governance**
    - [ ] Werk `docs/operations/crm_support_playbook.md` bij met procedure voor escalaties wanneer automation failure rate >30% of SLA-breach trend stijgt.
    - [x] Voeg KPI-paragraaf toe aan `docs/UAT/crm_mrdj_uat.md` zodat UAT-sessie dashboards controleert.【F:docs/UAT/crm_mrdj_uat.md†L41-L80】
@@ -65,7 +67,7 @@
 
 ## 6. Design review & UAT-resultaat
 
-- De front-end dashboards zijn herschreven met toegankelijke hero-kaarten, lead-funnel progressiebalken, sales velocity kaarten en marketing-sourcen tabellen die de volledige backend KPI-set weerspiegelen. Kleuren en contrast sluiten aan bij de RentGuy design tokens en voldoen aan WCAG AA voor de belangrijkste teksten.【F:rentguy/frontend/src/pages/CRMDashboard.tsx†L65-L297】
+- De front-end dashboards zijn herschreven met toegankelijke hero-kaarten, lead-funnel progressiebalken, sales velocity kaarten en marketing-sourcen tabellen die de volledige backend KPI-set weerspiegelen. Kleuren en contrast sluiten aan bij de RentGuy design tokens en voldoen aan WCAG AA voor de belangrijkste teksten.【F:src/pages/crm/CRMDashboard.tsx†L120-L360】
 - Tijdens de UAT dry-run (11 maart) door Bart en Chantal scoorden de nieuwe widgets 32 van de 32 controlepunten (100%) op de dashboard-sectie; de volledige Mr. DJ UAT-checklist haalde 99,1% doordat één minor verbeterpunt (tooltips voor automation failure rate) gepland staat voor de volgende sprint.【F:docs/UAT/crm_mrdj_uat.md†L81-L118】
 
 ## 5. Volgende acties
