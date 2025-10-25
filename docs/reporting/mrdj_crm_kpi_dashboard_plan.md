@@ -1,6 +1,7 @@
 # Mr. DJ CRM KPI Dashboard Plan
 
 ## 1. Module Scan
+
 - **Backend data sources**
   - `crm_leads`, `crm_deals`, `crm_pipeline_stages`, `crm_activities`, en `crm_automation_runs` worden ontsloten via de FastAPI CRM-module en bevatten tenant-id, waardes, probabiliteit en timestamps voor lifecycle-analyse.【F:backend/app/modules/crm/models.py†L1-L115】
   - Het nieuwe aggregatie-endpoint `GET /api/v1/crm/analytics/dashboard` levert geconsolideerde headline-, funnel-, pipeline- en automation-metrics voor de Mr. DJ tenant.【F:backend/app/modules/crm/routes.py†L73-L94】
@@ -11,6 +12,7 @@
   - De CRM-store gebruikt reeds caching voor leads/deals en kan het dashboard-endpoint consumeren voor widgets (geen extra auth vereist buiten `X-Tenant-ID`).【F:rentguy/frontend/src/stores/crmStore.ts†L1-L120】
 
 ## 2. KPI-selectie voor één dashboard
+
 1. **Lead funnel**
    - Totaal aantal leads, leads laatste 30 dagen, unieke leads met deals, conversieratio (leads → opportunity).
 2. **Pipeline performance**
@@ -25,6 +27,7 @@
    - Activiteiten per kanaal (WhatsApp, e-mail), open taken ouder dan SLA, escalaties uit automation context.
 
 ## 3. Dashboard lay-out
+
 1. **Hero tiles (bovenaan)**
    - Weighted pipeline value, won value 30d, conversion rate, automation failure rate.
 2. **Lead funnel visual (links)**
@@ -37,6 +40,7 @@
    - Top 10 deals zonder activiteit >7 dagen en automation runs met status `failed`.
 
 ## 4. Implementatiestappen
+
 1. **Backend**
    - [x] Dashboard endpoint implementeren met headline-, funnel-, pipeline-, sales- en acquisition-berekeningen.【F:backend/app/modules/crm/service.py†L214-L333】
    - [x] GA4/GTM ingestiescript `scripts/sync_crm_analytics.py` toevoegen zodat blended metrics periodiek geladen worden.【F:scripts/sync_crm_analytics.py†L1-L12】
@@ -65,7 +69,13 @@
 - Tijdens de UAT dry-run (11 maart) door Bart en Chantal scoorden de nieuwe widgets 32 van de 32 controlepunten (100%) op de dashboard-sectie; de volledige Mr. DJ UAT-checklist haalde 99,1% doordat één minor verbeterpunt (tooltips voor automation failure rate) gepland staat voor de volgende sprint.【F:docs/UAT/crm_mrdj_uat.md†L81-L118】
 
 ## 5. Volgende acties
+
 - Plan Metabase implementatie met data-team (Bart/BI) en koppel dashboard aan service account.
 - Automatiseer wekelijkse export van dashboard-snapshots naar Confluence voor managementrapportage.
 - Evalueer binnen 2 weken of extra KPI's (churn, NPS) nodig zijn voor multi-tenant rollout en breid endpoint uit.
 - Vul `CRM_ANALYTICS_SOURCES` aan voor komende tenants (wedding, corporate) en koppel hun GA4/GTM credentials aan de pipeline.
+
+## 7. Sales readiness uitvoering
+
+- Het CRM-dashboard bevat nu een "Plan & uitvoering"-paneel dat de vijf sales enablement-stappen toont met actuele statusbadges, voortgangspercentage en concreet bewijs per stap zodat het team weet wat nog gepland, bezig of afgerond is.【F:src/pages/crm/CRMDashboard.tsx†L288-L327】
+- De guidance-card onder "Sales momentum" is herzien zodat accountmanagers direct een follow-upactie krijgen na het voltooien van de CRM-sync, passend bij de 100% sales ready-doelstelling.【F:src/pages/crm/CRMDashboard.tsx†L399-L452】
