@@ -234,8 +234,20 @@ const salesFallbackSteps: OnboardingStep[] = [
   {
     code: 'sales-offers',
     title: 'Personaliseer offertes',
-    description: 'Gebruik AI-templates en prijslijsten per segment.',
+    description: 'Gebruik AI-templates, voorgestelde kits en prijslijsten per segment.',
     module: 'templates',
+  },
+  {
+    code: 'sales-pricing',
+    title: 'Activeer pricing playbook',
+    description: 'Stel kortingen en marge-guardrails in zodat sales consistent kan offreren.',
+    module: 'sales',
+  },
+  {
+    code: 'sales-deposit',
+    title: 'Automatiseer aanbetalingen',
+    description: 'Start Mollie en Invoice Ninja triggers na offerte-acceptatie.',
+    module: 'billing',
   },
   {
     code: 'sales-handoff',
@@ -314,8 +326,10 @@ const personaNarratives: Record<PersonaKey, { pending: string; complete: string 
     complete: 'Supportprocessen staan klaar. Gebruik de tips hieronder om SLA-monitoring te verfijnen.',
   },
   sales: {
-    pending: 'Volg de stappen om CRM-sync, offertes en overdracht richting operations te activeren.',
-    complete: 'Saleshand-off loopt. Gebruik de tips hieronder om pipeline-automatisering te finetunen.',
+    pending:
+      'Volg de stappen om CRM-sync, offertes, pricing guardrails en aanbetalingen richting operations te activeren.',
+    complete:
+      'Saleshand-off loopt en aanbetalingen zijn geautomatiseerd. Gebruik de tips hieronder om pipeline-automatisering te finetunen.',
   },
   compliance: {
     pending: 'Volg de stappen om veiligheidsdossiers, toegangsrechten en audit exports klaar te zetten.',
@@ -392,6 +406,8 @@ const stepMeta: Record<string, StepMetaEntry> = {
   'support-feedback': { module: 'support', icon: '💬' },
   'sales-crm': { module: 'sales', icon: '🔗' },
   'sales-offers': { module: 'templates', icon: '🧾' },
+  'sales-pricing': { module: 'sales', icon: '💹' },
+  'sales-deposit': { module: 'billing', icon: '💰' },
   'sales-handoff': { module: 'automation', icon: '🔁' },
   'compliance-psra': { module: 'compliance', icon: '📂' },
   'compliance-access': { module: 'compliance', icon: '🔐' },
@@ -536,6 +552,16 @@ const stepActions: Partial<Record<string, StepAction>> = {
     href: '/sales/offers',
     label: 'Offerte templates',
     description: 'Personaliseer aanbod en AI-teksten.',
+  },
+  'sales-pricing': {
+    href: '/sales/pricing-playbook',
+    label: 'Open pricing playbook',
+    description: 'Gebruik marge- en discount-guardrails per segment.',
+  },
+  'sales-deposit': {
+    href: '/billing/deposits',
+    label: 'Automatiseer aanbetaling',
+    description: 'Activeer Mollie/Invoice Ninja triggers bij offerte-acceptatie.',
   },
   'sales-handoff': {
     href: '/sales/handoff',

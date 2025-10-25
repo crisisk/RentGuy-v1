@@ -70,6 +70,34 @@ export function createAppRoutes({
     },
   ]
 
+  routes.push(
+    {
+      path: '/crm',
+      requiresAuth: true,
+      element: createElement(CRMDashboardPage, {}),
+    },
+    {
+      path: '/sales/crm-sync',
+      requiresAuth: true,
+      element: createElement(SalesCRMImportPage, {}),
+    },
+    {
+      path: '/sales/offers',
+      requiresAuth: true,
+      element: createElement(SalesOfferPlaybookPage, {}),
+    },
+    {
+      path: '/sales/handoff',
+      requiresAuth: true,
+      element: createElement(SalesHandoffPlaybookPage, {}),
+    },
+    {
+      path: '/finance/quotes',
+      requiresAuth: true,
+      element: createElement(QuoteManagementPage, {}),
+    },
+  )
+
   const resolvedSecretsPath = normaliseRoutePath(secretsFocusPath)
   if (resolvedSecretsPath && resolvedSecretsPath !== '/dashboard') {
     const exists = routes.some((route) => route.path === resolvedSecretsPath)
