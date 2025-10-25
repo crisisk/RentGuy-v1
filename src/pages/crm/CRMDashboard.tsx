@@ -10,8 +10,7 @@ const currencyFormatter = new Intl.NumberFormat('nl-NL', {
 
 const numberFormatter = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 })
 
-const formatCurrency = (value?: number | null) =>
-  currencyFormatter.format(Math.max(0, value ?? 0))
+const formatCurrency = (value?: number | null) => currencyFormatter.format(Math.max(0, value ?? 0))
 
 const formatPercent = (value?: number | null) => `${(value ?? 0).toFixed(1)}%`
 
@@ -94,14 +93,7 @@ const CRMDashboard = () => {
     )
   }
 
-  const stats: CRMCustomerStats = customerStats ?? {
-    total: 0,
-    newThisMonth: 0,
-    activeCustomers: 0,
-  }
-
   const pipeline: CRMPipelineStageKPI[] = dashboardSummary?.pipeline ?? []
-  const sales: CRMSalesKPIs | null = dashboardSummary?.sales ?? null
 
   return (
     <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-root">
@@ -181,8 +173,8 @@ const CRMDashboard = () => {
           <p className="mt-1 text-xs text-gray-500">
             Pipeline velocity: {formatCurrency(summary?.sales.pipelineVelocityPerDay)} per dag
           </p>
-        </article>
-      </section>
+        </div>
+      </div>
 
       <section
         className="bg-white shadow rounded-lg p-4 md:p-6"
