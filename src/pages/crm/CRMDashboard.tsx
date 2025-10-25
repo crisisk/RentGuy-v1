@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import crmStore from '../../stores/crmStore'
 import type {
   AutomationWorkflowMetric,
@@ -7,13 +7,12 @@ import type {
   SourcePerformanceMetric,
 } from '@rg-types/crmTypes'
 
-const currencyFormatter = new Intl.NumberFormat('nl-NL', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 0,
-})
+const integerFormatter = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 })
 
-const numberFormatter = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 })
+const formatCurrency = (value?: number | null, fractionDigits = 0) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—'
+  }
 
 const formatCurrency = (value?: number | null) => currencyFormatter.format(Math.max(0, value ?? 0))
 
@@ -26,13 +25,29 @@ const formatPercent = (value?: number | null, fractionDigits = 1) => {
   return `${normalised.toFixed(fractionDigits)}%`
 }
 
-const formatCount = (value?: number | null) =>
-  numberFormatter.format(Math.max(0, Math.trunc(value ?? 0)))
+const formatPercent = (value?: number | null, fractionDigits = 1) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—'
+  }
+
+  const normalized = Math.abs(value) <= 1 ? value * 100 : value
+  return `${normalized.toFixed(fractionDigits)}%`
+}
 
 const formatDays = (value?: number | null) => {
-  if (value === null || value === undefined) return '—'
-  const rounded = Math.round((value + Number.EPSILON) * 10) / 10
-  return `${rounded.toFixed(1)} d`
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—'
+  }
+
+  return `${value.toFixed(1)} d`
+}
+
+const formatMinutes = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—'
+  }
+
+  return `${value.toFixed(1)} min`
 }
 
 const formatMinutes = (value?: number | null) => {
@@ -43,10 +58,13 @@ const formatMinutes = (value?: number | null) => {
 
 const resolveLastRefresh = (summary: CRMDashboardSummary | null) => {
   if (!summary) return null
+
   const source = summary.provenance.lastRefreshedAt ?? summary.generatedAt
   if (!source) return null
+
   const date = new Date(source)
   if (Number.isNaN(date.getTime())) return null
+
   return date.toLocaleString('nl-NL', {
     day: 'numeric',
     month: 'short',
@@ -66,14 +84,26 @@ const READINESS_AUTOMATION_THRESHOLD = 0.02
 const READINESS_WINRATE_TARGET = 0.3
 
 const CRMDashboard = () => {
-  const [summary, setSummary] = useState<CRMDashboardSummary | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [selectedLookback, setSelectedLookback] = useState<number>(30)
+  const dashboard = crmStore((state) => state.dashboard)
+  const isLoading = crmStore((state) => state.loading)
+  const storeError = crmStore((state) => state.error)
+  const fetchDashboardSummary = crmStore((state) => state.fetchDashboardSummary)
+  const [hasRequested, setHasRequested] = useState(false)
+  const [transientError, setTransientError] = useState<string | null>(null)
+
+  const summary = dashboard
 
   useEffect(() => {
     let cancelled = false
 
     const fetchDashboard = async () => {
+      setIsLoading(true)
+      setError(null)
+      if (!cancelled) {
+        setSummary(null)
+      }
+
       try {
         const analytics = await crmStore.fetchDashboardSummary()
         if (!cancelled) {
@@ -89,7 +119,13 @@ const CRMDashboard = () => {
         }
       } finally {
         if (!cancelled) {
-          setIsLoading(false)
+          console.error('Kon CRM-dashboardgegevens niet laden', error)
+          setTransientError(
+            error instanceof Error
+              ? error.message
+              : 'Kon CRM-dashboardgegevens niet laden. Probeer het opnieuw.',
+          )
+          setHasRequested(true)
         }
       }
     }
@@ -101,12 +137,62 @@ const CRMDashboard = () => {
     }
   }, [])
 
+  const handleRefresh = useCallback(() => {
+    fetchDashboardSummary({ lookbackDays: selectedLookback }).catch((error) => {
+      console.error('Fout tijdens handmatige refresh van CRM-dashboard', error)
+      setTransientError(
+        error instanceof Error
+          ? error.message
+          : 'Kon CRM-dashboardgegevens niet verversen. Probeer het opnieuw.',
+      )
+    })
+  }, [fetchDashboardSummary, selectedLookback])
+
   const totalPipelineDeals = useMemo(() => {
-    if (!summary) return 0
+    if (!summary) {
+      return 0
+    }
+
     return summary.pipeline.reduce((total, stage) => total + (stage.dealCount ?? 0), 0)
   }, [summary])
 
-  const lastRefreshLabel = useMemo(() => resolveLastRefresh(summary), [summary])
+  const funnelSteps = useMemo(() => {
+    if (!summary) {
+      return []
+    }
+
+    const { leadFunnel } = summary
+    const { totalLeads } = leadFunnel
+
+    const percentage = (value: number) =>
+      totalLeads > 0 ? Math.round((value / totalLeads) * 100) : 0
+
+    return [
+      {
+        id: 'total-leads',
+        label: 'Leads totaal',
+        value: leadFunnel.totalLeads,
+        percentage: 100,
+      },
+      {
+        id: 'recent-leads',
+        label: 'Leads laatste 30 dagen',
+        value: leadFunnel.leadsLast30Days,
+        percentage: percentage(leadFunnel.leadsLast30Days),
+      },
+      {
+        id: 'leads-with-deals',
+        label: 'Leads met deal',
+        value: leadFunnel.leadsWithDeals,
+        percentage: percentage(leadFunnel.leadsWithDeals),
+      },
+    ]
+  }, [summary])
+
+  const automationRows = useMemo(() => summary?.automation ?? [], [summary])
+  const sourceRows = useMemo(() => summary?.sourcePerformance ?? [], [summary])
+  const lastRefreshLabel = useMemo(() => resolveLastRefresh(summary ?? null), [summary])
+  const errorMessage = transientError ?? storeError
 
   const readinessInsights = useMemo<ReadinessInsight[]>(() => {
     if (!summary) return []
@@ -188,14 +274,14 @@ const CRMDashboard = () => {
     )
   }
 
-  if (error) {
+  if (errorMessage && !summary) {
     return (
       <div
         className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
         role="alert"
         data-testid="crm-dashboard-error"
       >
-        {error}
+        {errorMessage}
       </div>
     )
   }
@@ -226,6 +312,16 @@ const CRMDashboard = () => {
           </span>
         )}
       </div>
+
+      {errorMessage && summary && (
+        <div
+          className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+          data-testid="crm-dashboard-error"
+        >
+          {errorMessage}
+        </div>
+      )}
 
       <div
         className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4 md:p-6"
@@ -298,15 +394,14 @@ const CRMDashboard = () => {
       <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section
           className="rounded-lg bg-white p-4 shadow"
-          data-testid="crm-dashboard-pipeline-card"
+          data-testid="crm-dashboard-funnel"
+          aria-label="Lead funnel"
         >
-          <div className="flex flex-col gap-2 border-b pb-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-xl font-semibold" data-testid="crm-dashboard-pipeline-title">
-                Pipeline per fase
-              </h2>
+              <h2 className="text-xl font-semibold">Lead funnel</h2>
               <p className="text-sm text-gray-500">
-                Toon deals per fase inclusief waarde en gemiddelde doorlooptijd
+                Conversieratio: {formatPercent(summary?.leadFunnel.conversionRate)}
               </p>
             </div>
             <div className="text-right text-sm text-gray-500">
