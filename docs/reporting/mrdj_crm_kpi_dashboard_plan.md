@@ -76,3 +76,8 @@
 - Automatiseer wekelijkse export van dashboard-snapshots naar Confluence voor managementrapportage.
 - Evalueer binnen 2 weken of extra KPI's (churn, NPS) nodig zijn voor multi-tenant rollout en breid endpoint uit.
 - Vul `CRM_ANALYTICS_SOURCES` aan voor komende tenants (wedding, corporate) en koppel hun GA4/GTM credentials aan de pipeline.
+
+## 7. Sales readiness uitvoering
+
+- Het CRM-dashboard bevat nu een "Plan & uitvoering"-paneel dat de vijf sales enablement-stappen toont met actuele statusbadges, voortgangspercentage en concreet bewijs per stap zodat het team weet wat nog gepland, bezig of afgerond is.【F:src/pages/crm/CRMDashboard.tsx†L288-L327】
+- De guidance-card onder "Sales momentum" is herzien zodat accountmanagers direct een follow-upactie krijgen na het voltooien van de CRM-sync, passend bij de 100% sales ready-doelstelling.【F:src/pages/crm/CRMDashboard.tsx†L399-L452】

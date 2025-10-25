@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import crmStore from '../../stores/crmStore'
 import type {
   AutomationWorkflowMetric,
@@ -7,7 +7,21 @@ import type {
   SourcePerformanceMetric,
 } from '@rg-types/crmTypes'
 
-const integerFormatter = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 })
+type TaskStatus = 'planned' | 'in-progress' | 'complete'
+
+interface SalesReadinessTask {
+  id: string
+  title: string
+  description: string
+  status: TaskStatus
+  evidence: string
+}
+
+const currencyFormatter = new Intl.NumberFormat('nl-NL', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+})
 
 const formatCurrency = (value?: number | null, fractionDigits = 0) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -16,14 +30,7 @@ const formatCurrency = (value?: number | null, fractionDigits = 0) => {
 
 const formatCurrency = (value?: number | null) => currencyFormatter.format(Math.max(0, value ?? 0))
 
-const formatPercent = (value?: number | null, fractionDigits = 1) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return `${(0).toFixed(fractionDigits)}%`
-  }
-
-  const normalised = value > 1 ? value : value * 100
-  return `${normalised.toFixed(fractionDigits)}%`
-}
+const formatCurrency = (value?: number | null) => currencyFormatter.format(Math.max(0, value ?? 0))
 
 const formatPercent = (value?: number | null, fractionDigits = 1) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -73,81 +80,33 @@ const resolveLastRefresh = (summary: CRMDashboardSummary | null) => {
   })
 }
 
-type ReadinessInsight = {
-  id: string
-  title: string
-  detail: string
-  status: 'complete' | 'attention'
+const statusStyles: Record<TaskStatus, string> = {
+  complete: 'bg-emerald-50 border border-emerald-200 text-emerald-800',
+  'in-progress': 'bg-amber-50 border border-amber-200 text-amber-800',
+  planned: 'bg-slate-50 border border-slate-200 text-slate-700',
 }
 
-const READINESS_AUTOMATION_THRESHOLD = 0.02
-const READINESS_WINRATE_TARGET = 0.3
+const statusLabels: Record<TaskStatus, string> = {
+  complete: 'Afgerond',
+  'in-progress': 'Bezig',
+  planned: 'Gepland',
+}
 
 const CRMDashboard = () => {
-  const [selectedLookback, setSelectedLookback] = useState<number>(30)
-  const dashboard = crmStore((state) => state.dashboard)
-  const isLoading = crmStore((state) => state.loading)
-  const storeError = crmStore((state) => state.error)
-  const fetchDashboardSummary = crmStore((state) => state.fetchDashboardSummary)
-  const [hasRequested, setHasRequested] = useState(false)
-  const [transientError, setTransientError] = useState<string | null>(null)
-
-  const summary = dashboard
+  const { dashboard, loading, error, fetchDashboardSummary } = crmStore((state) => ({
+    dashboard: state.dashboard,
+    loading: state.loading,
+    error: state.error,
+    fetchDashboardSummary: state.fetchDashboardSummary,
+  }))
 
   useEffect(() => {
-    let cancelled = false
-
-    const fetchDashboard = async () => {
-      setIsLoading(true)
-      setError(null)
-      if (!cancelled) {
-        setSummary(null)
-      }
-
-      try {
-        const analytics = await crmStore.fetchDashboardSummary()
-        if (!cancelled) {
-          setSummary(analytics)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : 'Failed to load CRM analytics data. Please retry later.',
-          )
-        }
-      } finally {
-        if (!cancelled) {
-          console.error('Kon CRM-dashboardgegevens niet laden', error)
-          setTransientError(
-            error instanceof Error
-              ? error.message
-              : 'Kon CRM-dashboardgegevens niet laden. Probeer het opnieuw.',
-          )
-          setHasRequested(true)
-        }
-      }
-    }
-
-    fetchDashboard()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const handleRefresh = useCallback(() => {
-    fetchDashboardSummary({ lookbackDays: selectedLookback }).catch((error) => {
-      console.error('Fout tijdens handmatige refresh van CRM-dashboard', error)
-      setTransientError(
-        error instanceof Error
-          ? error.message
-          : 'Kon CRM-dashboardgegevens niet verversen. Probeer het opnieuw.',
-      )
+    fetchDashboardSummary().catch(() => {
+      /* error state is handled by store */
     })
-  }, [fetchDashboardSummary, selectedLookback])
+  }, [fetchDashboardSummary])
 
+  const summary = dashboard
   const totalPipelineDeals = useMemo(() => {
     if (!summary) {
       return 0
@@ -263,21 +222,129 @@ const CRMDashboard = () => {
       .slice(0, 3)
   }, [summary])
 
-  if (isLoading) {
+  const readinessTasks = useMemo<SalesReadinessTask[]>(() => {
+    const tasks: SalesReadinessTask[] = []
+
+    const pipelineReady = (summary?.pipeline.length ?? 0) > 0
+    const hasRecentSync = Boolean(summary?.provenance.lastRefreshedAt)
+    const openDeals = summary?.sales.openDeals ?? 0
+    const weightedPipeline = summary?.headline.weightedPipelineValue ?? 0
+    const automationActive = (summary?.headline.activeWorkflows ?? 0) > 0
+    const automationHealthy = (summary?.headline.automationFailureRate ?? 0) <= 0.3
+    const bookings = summary?.sales.bookingsLast30Days ?? 0
+    const blendedConversion = summary?.acquisition.blendedConversionRate ?? 0
+
+    tasks.push({
+      id: 'crm-sync',
+      title: 'CRM data synchroniseren',
+      description:
+        'Importeer leads en deals via de wizard zodat pipeline en forecast direct gevuld worden.',
+      status: pipelineReady ? 'complete' : hasRecentSync ? 'in-progress' : 'planned',
+      evidence: pipelineReady
+        ? `${formatCount(totalPipelineDeals)} deals in de pipeline`
+        : hasRecentSync
+          ? 'Laatste import verwerkt, wacht op eerste deals'
+          : 'Nog geen CRM-import uitgevoerd',
+    })
+
+    tasks.push({
+      id: 'pipeline-review',
+      title: 'Pipeline en forecast beoordelen',
+      description: 'Controleer pipelinewaarden, wegingen en stel opvolgacties vast per fase.',
+      status: weightedPipeline > 0 || openDeals > 0 ? 'in-progress' : 'planned',
+      evidence:
+        weightedPipeline > 0 || openDeals > 0
+          ? `Gewogen waarde ${formatCurrency(weightedPipeline)} · ${formatCount(openDeals)} open deals`
+          : 'Geen open deals of pipelinewaarde beschikbaar',
+    })
+
+    tasks.push({
+      id: 'automation',
+      title: 'Sales automation activeren',
+      description:
+        'Zorg dat opvolgworkflows draaien en monitor de failure-rate zodat afspraken niet blijven liggen.',
+      status:
+        automationActive && automationHealthy
+          ? 'complete'
+          : automationActive
+            ? 'in-progress'
+            : 'planned',
+      evidence: automationActive
+        ? `${formatCount(summary?.headline.activeWorkflows)} workflows actief · Failure-rate ${formatPercent(summary?.headline.automationFailureRate)}`
+        : 'Nog geen actieve workflows',
+    })
+
+    tasks.push({
+      id: 'acquisition',
+      title: 'Marketing & acquisitie koppelen',
+      description: 'Verbind GA4/GTM en beoordeel conversies zodat leads doorstromen naar sales.',
+      status: blendedConversion > 0 ? 'in-progress' : 'planned',
+      evidence:
+        blendedConversion > 0
+          ? `Blended conversion rate ${formatPercent(blendedConversion)} · ${formatCount(bookings)} boekingen 30d`
+          : 'Nog geen conversiedata ontvangen',
+    })
+
+    tasks.push({
+      id: 'handover',
+      title: 'Sales enablement update verzenden',
+      description:
+        'Publiceer een update naar het salesteam met de belangrijkste highlights en volgende acties.',
+      status:
+        pipelineReady && automationActive && blendedConversion > 0
+          ? 'complete'
+          : pipelineReady
+            ? 'in-progress'
+            : 'planned',
+      evidence:
+        pipelineReady && automationActive && blendedConversion > 0
+          ? 'Alle bouwstenen staan klaar — team kan live gaan'
+          : pipelineReady
+            ? 'Pipeline staat klaar, wacht op automation/marketing confirmatie'
+            : 'Wacht op eerste pipeline vulling',
+    })
+
+    return tasks
+  }, [summary, totalPipelineDeals])
+
+  const readinessStats = useMemo(() => {
+    const completed = readinessTasks.filter((task) => task.status === 'complete').length
+    const inProgress = readinessTasks.filter((task) => task.status === 'in-progress').length
+    const total = readinessTasks.length || 1
+    const progress = Math.round((completed / total) * 100)
+
+    let message = 'Plan staat klaar — start met de CRM-import om momentum te creëren.'
+    if (progress === 100) {
+      message = 'Alle stappen zijn afgerond. Het salesteam is 100% sales ready.'
+    } else if (completed > 0 || inProgress > 0) {
+      message =
+        'Goede voortgang! Rond de lopende stappen af en stuur het salesteam een enablement-update.'
+    }
+
+    return {
+      completed,
+      inProgress,
+      total,
+      progress,
+      message,
+    }
+  }, [readinessTasks])
+
+  if (loading && !summary) {
     return (
       <div
-        className="flex justify-center items-center h-screen"
+        className="flex h-screen items-center justify-center"
         data-testid="crm-dashboard-loading"
       >
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500" />
+        <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-blue-500" />
       </div>
     )
   }
 
-  if (errorMessage && !summary) {
+  if (error && !summary) {
     return (
       <div
-        className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+        className="rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700"
         role="alert"
         data-testid="crm-dashboard-error"
       >
@@ -285,20 +352,6 @@ const CRMDashboard = () => {
       </div>
     )
   }
-
-  if (!summary) {
-    return (
-      <div className="p-8 text-center text-gray-600" data-testid="crm-dashboard-empty">
-        Geen CRM analytics data beschikbaar. Probeer het later opnieuw.
-      </div>
-    )
-  }
-
-  const totalLeads = summary.leadFunnel.totalLeads ?? 0
-  const convertedLeads = summary.leadFunnel.leadsWithDeals ?? 0
-  const leadProgressPercent = totalLeads
-    ? Math.min(100, Math.round((convertedLeads / totalLeads) * 100))
-    : 0
 
   return (
     <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-root">
@@ -342,7 +395,7 @@ const CRMDashboard = () => {
             Open CRM import wizard
           </a>
           <span className="text-sm text-indigo-700" data-testid="crm-dashboard-crm-sync-hint">
-            Tip: importeer minimaal 3 pipeline fases zodat het salesteam direct opvolgacties ziet.
+            Tip: importeer minimaal 3 pipelinefases zodat het salesteam direct opvolgacties ziet.
           </span>
         </div>
       </div>
@@ -376,8 +429,8 @@ const CRMDashboard = () => {
             {formatPercent(summary.sales.winRate)}
           </p>
           <p className="mt-1 text-xs text-gray-500">
-            {formatCount(summary.sales.wonDealsLast30Days)} deals gewonnen •{' '}
-            {formatCurrency(summary.headline.wonValueLast30Days)} omzet
+            {formatCount(summary?.sales.wonDealsLast30Days)} deals gewonnen ·{' '}
+            {formatCurrency(summary?.headline.wonValueLast30Days)} omzet
           </p>
         </div>
         <div className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-kpi-forecast">
@@ -391,382 +444,215 @@ const CRMDashboard = () => {
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <section
-          className="rounded-lg bg-white p-4 shadow"
-          data-testid="crm-dashboard-funnel"
-          aria-label="Lead funnel"
-        >
-          <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Lead funnel</h2>
-              <p className="text-sm text-gray-500">
-                Conversieratio: {formatPercent(summary?.leadFunnel.conversionRate)}
-              </p>
-            </div>
-            <div className="text-right text-sm text-gray-500">
-              {formatCount(summary.sales.openDeals)} open deals
-            </div>
-          </div>
-
-          {summary.pipeline.length > 0 ? (
-            <div
-              className="mt-4 overflow-x-auto"
-              data-testid="crm-dashboard-pipeline-table-wrapper"
-            >
-              <table
-                className="min-w-full divide-y divide-gray-200"
-                data-testid="crm-dashboard-pipeline-table"
-              >
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Fase
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Deals
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Waarde
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Gewogen
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Gem. leeftijd
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {summary.pipeline.map((stage: PipelineStageMetric) => (
-                    <tr
-                      key={stage.stageId}
-                      data-testid={`crm-dashboard-pipeline-stage-${stage.stageId}`}
-                    >
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {stage.stageName}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatCount(stage.dealCount)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatCurrency(stage.totalValue)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatCurrency(stage.weightedValue)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatDays(stage.avgAgeDays)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div
-              className="mt-6 rounded-lg border border-dashed border-indigo-200 bg-indigo-50 p-6 text-center text-indigo-800"
-              data-testid="crm-dashboard-pipeline-empty"
-            >
-              <h3 className="text-lg font-semibold">Nog geen pipeline data</h3>
-              <p className="mt-2 text-sm">
-                Start de CRM import om deals in te lezen of maak handmatig een eerste opportunity
-                aan.
-              </p>
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-sales-card">
-          <h2 className="text-xl font-semibold" data-testid="crm-dashboard-sales-title">
-            Sales momentum
-          </h2>
-          <p className="text-sm text-gray-500">
-            Inzicht in dealflow en doorlooptijden voor het salesteam
-          </p>
-
-          <dl
-            className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
-            data-testid="crm-dashboard-sales-metrics"
-          >
-            <div
-              className="rounded-md border border-gray-100 p-4"
-              data-testid="crm-dashboard-sales-open-deals"
-            >
-              <dt className="text-sm font-medium text-gray-500">Openstaande deals</dt>
-              <dd className="mt-2 text-2xl font-bold text-gray-900">
-                {formatCount(summary.sales.openDeals)}
-              </dd>
-              <p className="mt-1 text-xs text-gray-500">
-                {formatCount(summary.sales.totalDeals)} totaal geregistreerde deals
-              </p>
-            </div>
-            <div
-              className="rounded-md border border-gray-100 p-4"
-              data-testid="crm-dashboard-sales-bookings"
-            >
-              <dt className="text-sm font-medium text-gray-500">Boekingen laatste 30 dagen</dt>
-              <dd className="mt-2 text-2xl font-bold text-gray-900">
-                {formatCount(summary.sales.bookingsLast30Days)}
-              </dd>
-              <p className="mt-1 text-xs text-gray-500">
-                Gemiddelde dealwaarde {formatCurrency(summary.sales.avgDealValue)}
-              </p>
-            </div>
-            <div
-              className="rounded-md border border-gray-100 p-4"
-              data-testid="crm-dashboard-sales-cycle"
-            >
-              <dt className="text-sm font-medium text-gray-500">Gemiddelde doorlooptijd</dt>
-              <dd className="mt-2 text-2xl font-bold text-gray-900">
-                {formatDays(summary.headline.avgDealCycleDays)}
-              </dd>
-              <p className="mt-1 text-xs text-gray-500">Inclusief gewonnen én verloren deals</p>
-            </div>
-            <div
-              className="rounded-md border border-gray-100 p-4"
-              data-testid="crm-dashboard-sales-automation"
-            >
-              <dt className="text-sm font-medium text-gray-500">Actieve workflows</dt>
-              <dd className="mt-2 text-2xl font-bold text-gray-900">
-                {formatCount(summary.headline.activeWorkflows)}
-              </dd>
-              <p className="mt-1 text-xs text-gray-500">
-                Automatiseringsfoutpercentage{' '}
-                {formatPercent(summary.headline.automationFailureRate)}
-              </p>
-            </div>
-          </dl>
-
-          <div
-            className="mt-6 rounded-md border border-dashed border-gray-200 p-4"
-            data-testid="crm-dashboard-sales-guidance"
-          >
-            <h3 className="text-sm font-semibold text-gray-700">
-              Volgende stap voor sales enablement
-            </h3>
-            <p className="mt-2 text-sm text-gray-600">
-              Publiceer de pipeline widget in het demo-dashboard en stuur het team een update zodra
-              de CRM sync is afgerond. Zo weten accountmanagers precies welke deals opvolging nodig
-              hebben en ben je 100% sales ready.
+      <section
+        className="mt-10 rounded-lg bg-white p-4 shadow md:p-6"
+        data-testid="crm-dashboard-sales-readiness"
+      >
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Plan &amp; uitvoering: 100% sales ready</h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Volg de stappen hieronder om het team verkoopklaar te maken en de voortgang met het
+              management te delen.
             </p>
           </div>
-        </section>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <section className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-lead-funnel">
-          <h2 className="text-xl font-semibold">Lead funnel</h2>
-          <p className="text-sm text-gray-500">Overzicht van leadgroei en conversie naar deals</p>
-          <dl className="mt-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Totaal aantal leads</dt>
-              <dd className="text-base font-semibold text-gray-900">{formatCount(totalLeads)}</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Leads laatste 30 dagen</dt>
-              <dd className="text-base font-semibold text-gray-900">
-                {formatCount(summary.leadFunnel.leadsLast30Days)}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Leads met deal</dt>
-              <dd className="text-base font-semibold text-gray-900">
-                {formatCount(convertedLeads)}
-              </dd>
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>Conversie lead → deal</span>
-                <span className="font-semibold text-gray-900">
-                  {formatPercent(summary.leadFunnel.conversionRate)}
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-gray-100" aria-hidden="true">
-                <div
-                  className="h-full rounded-full bg-indigo-500 transition-all"
-                  style={{ width: `${leadProgressPercent}%` }}
-                  aria-label={`Conversie ${leadProgressPercent}%`}
-                />
-              </div>
-            </div>
-          </dl>
-        </section>
-
-        <section className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-acquisition">
-          <h2 className="text-xl font-semibold">Marketing &amp; acquisitie</h2>
-          <p className="text-sm text-gray-500">
-            Blended GA4/GTM prestaties voor het huidige venster
-          </p>
-          <dl className="mt-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Sessies</dt>
-              <dd className="text-base font-semibold text-gray-900">
-                {formatCount(summary.acquisition.gaSessions)}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Nieuwe gebruikers</dt>
-              <dd className="text-base font-semibold text-gray-900">
-                {formatCount(summary.acquisition.gaNewUsers)}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Conversies (GA4 + GTM)</dt>
-              <dd className="text-base font-semibold text-gray-900">
-                {formatCount(
-                  summary.acquisition.gaConversions + summary.acquisition.gtmConversions,
-                )}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Totale omzetwaarde</dt>
-              <dd className="text-base font-semibold text-gray-900">
-                {formatCurrency(
-                  summary.acquisition.gaConversionValue + summary.acquisition.gtmConversionValue,
-                )}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-sm text-gray-500">Blended conversiepercentage</dt>
-              <dd className="text-base font-semibold text-gray-900">
-                {formatPercent(summary.acquisition.blendedConversionRate, 2)}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-4 text-xs text-gray-500">
-            Actieve connectoren:{' '}
-            {summary.acquisition.activeConnectors.join(', ') || 'geen gekoppelde kanalen'}
-          </p>
-        </section>
-
-        <section className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-automation">
-          <h2 className="text-xl font-semibold">Automation health</h2>
-          <p className="text-sm text-gray-500">
-            Belangrijkste workflows op basis van run-count en foutrate
-          </p>
-          {topAutomations.length === 0 ? (
-            <p className="mt-4 text-sm text-gray-500">Nog geen workflow runs geregistreerd.</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {topAutomations.map((workflow) => (
-                <li
-                  key={workflow.workflowId}
-                  className="rounded-md border border-gray-100 p-3"
-                  data-testid={`crm-dashboard-automation-${workflow.workflowId}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">{workflow.workflowId}</span>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        workflow.failureRate > READINESS_AUTOMATION_THRESHOLD
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}
-                    >
-                      {formatPercent(workflow.failureRate)}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500">
-                    {formatCount(workflow.runCount)} runs • {formatCount(workflow.failedRuns)}{' '}
-                    failures • {formatMinutes(workflow.avgCompletionMinutes)} doorlooptijd
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <section className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-sources">
-          <h2 className="text-xl font-semibold">Top bronnen</h2>
-          <p className="text-sm text-gray-500">
-            Belangrijkste leadbronnen op basis van pipelinewaarde
-          </p>
-          {topSources.length === 0 ? (
-            <p className="mt-4 text-sm text-gray-500">Nog geen brondata beschikbaar.</p>
-          ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table
-                className="min-w-full divide-y divide-gray-200"
-                data-testid="crm-dashboard-sources-table"
-              >
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Bron
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Leads
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Deals
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Gewonnen
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Pipelinewaarde
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {topSources.map((source) => (
-                    <tr key={source.key} data-testid={`crm-dashboard-source-${source.key}`}>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {source.label}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatCount(source.leadCount)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatCount(source.dealCount)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatCount(source.wonDealCount)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatCurrency(source.pipelineValue)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-lg bg-white p-4 shadow" data-testid="crm-dashboard-readiness">
-          <h2 className="text-xl font-semibold">Sales readiness checklist</h2>
-          <p className="text-sm text-gray-500">
-            Realtime status van de belangrijkste enablement-taken
-          </p>
-          <ul className="mt-4 space-y-3">
-            {readinessInsights.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-start gap-3 rounded-md border border-gray-100 p-3"
-                data-testid={`crm-dashboard-readiness-${item.id}`}
-              >
+          <div className="rounded-lg bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+            <p className="font-semibold">Voortgang {readinessStats.progress}%</p>
+            <p>
+              {readinessStats.completed} afgerond · {readinessStats.inProgress} bezig ·{' '}
+              {readinessStats.total - readinessStats.completed - readinessStats.inProgress} gepland
+            </p>
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-gray-700">{readinessStats.message}</p>
+        <div
+          className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2"
+          data-testid="crm-dashboard-sales-readiness-tasks"
+        >
+          {readinessTasks.map((task) => (
+            <article
+              key={task.id}
+              className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+              data-testid={`crm-dashboard-readiness-task-${task.id}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-lg font-semibold text-gray-900">{task.title}</h3>
                 <span
-                  className={`mt-0.5 inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    item.status === 'complete'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[task.status]}`}
                 >
-                  {item.status === 'complete' ? 'Klaar' : 'Actie'}
+                  {statusLabels[task.status]}
                 </span>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                  <p className="mt-1 text-xs text-gray-500">{item.detail}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+              </div>
+              <p className="mt-2 text-sm text-gray-600">{task.description}</p>
+              <p className="mt-3 text-sm font-medium text-gray-800">{task.evidence}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section
+        className="mt-10 rounded-lg bg-white p-4 shadow md:p-6"
+        data-testid="crm-dashboard-pipeline-section"
+        aria-labelledby="crm-dashboard-pipeline-title"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 id="crm-dashboard-pipeline-title" className="text-xl font-semibold">
+              Pipeline per fase
+            </h2>
+            <p className="text-sm text-gray-500">
+              Toon deals per fase inclusief waarde en gemiddelde doorlooptijd.
+            </p>
+          </div>
+          {summary?.headline && (
+            <span className="text-sm text-gray-500">
+              Totaal: {formatCurrency(summary.headline.totalPipelineValue)} · Gewogen:{' '}
+              {formatCurrency(summary.headline.weightedPipelineValue)}
+            </span>
+          )}
+        </div>
+
+        {(summary?.pipeline.length ?? 0) > 0 ? (
+          <div className="mt-6 overflow-x-auto" data-testid="crm-dashboard-pipeline-table-wrapper">
+            <table
+              className="min-w-full divide-y divide-gray-200"
+              data-testid="crm-dashboard-pipeline-table"
+            >
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Fase
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Deals
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Waarde
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Gewogen
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Gem. leeftijd
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {(summary?.pipeline ?? []).map((stage: PipelineStageMetric) => (
+                  <tr
+                    key={stage.stageId}
+                    data-testid={`crm-dashboard-pipeline-stage-${stage.stageId}`}
+                  >
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      {stage.stageName}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {formatCount(stage.dealCount)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {formatCurrency(stage.totalValue)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {formatCurrency(stage.weightedValue)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {formatDays(stage.avgAgeDays)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div
+            className="mt-6 rounded-lg border border-dashed border-indigo-200 bg-indigo-50 p-6 text-center text-indigo-800"
+            data-testid="crm-dashboard-pipeline-empty"
+          >
+            <h3 className="text-lg font-semibold">Nog geen pipeline data</h3>
+            <p className="mt-2 text-sm">
+              Start de CRM import om deals in te lezen of maak handmatig een eerste opportunity aan.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section
+        className="mt-10 rounded-lg bg-white p-4 shadow md:p-6"
+        data-testid="crm-dashboard-sales-card"
+      >
+        <h2 className="text-xl font-semibold" data-testid="crm-dashboard-sales-title">
+          Sales momentum
+        </h2>
+        <p className="text-sm text-gray-500">
+          Inzicht in dealflow en doorlooptijden voor het salesteam.
+        </p>
+
+        <dl
+          className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+          data-testid="crm-dashboard-sales-metrics"
+        >
+          <div
+            className="rounded-md border border-gray-100 p-4"
+            data-testid="crm-dashboard-sales-open-deals"
+          >
+            <dt className="text-sm font-medium text-gray-500">Openstaande deals</dt>
+            <dd className="mt-2 text-2xl font-bold text-gray-900">
+              {formatCount(summary?.sales.openDeals)}
+            </dd>
+            <p className="mt-1 text-xs text-gray-500">
+              {formatCount(summary?.sales.totalDeals)} totaal geregistreerde deals
+            </p>
+          </div>
+          <div
+            className="rounded-md border border-gray-100 p-4"
+            data-testid="crm-dashboard-sales-bookings"
+          >
+            <dt className="text-sm font-medium text-gray-500">Boekingen laatste 30 dagen</dt>
+            <dd className="mt-2 text-2xl font-bold text-gray-900">
+              {formatCount(summary?.sales.bookingsLast30Days)}
+            </dd>
+            <p className="mt-1 text-xs text-gray-500">
+              Gemiddelde dealwaarde {formatCurrency(summary?.sales.avgDealValue)}
+            </p>
+          </div>
+          <div
+            className="rounded-md border border-gray-100 p-4"
+            data-testid="crm-dashboard-sales-cycle"
+          >
+            <dt className="text-sm font-medium text-gray-500">Gemiddelde doorlooptijd</dt>
+            <dd className="mt-2 text-2xl font-bold text-gray-900">
+              {formatDays(summary?.headline.avgDealCycleDays)}
+            </dd>
+            <p className="mt-1 text-xs text-gray-500">Inclusief gewonnen én verloren deals</p>
+          </div>
+          <div
+            className="rounded-md border border-gray-100 p-4"
+            data-testid="crm-dashboard-sales-automation"
+          >
+            <dt className="text-sm font-medium text-gray-500">Actieve workflows</dt>
+            <dd className="mt-2 text-2xl font-bold text-gray-900">
+              {formatCount(summary?.headline.activeWorkflows)}
+            </dd>
+            <p className="mt-1 text-xs text-gray-500">
+              Automatiseringsfoutpercentage {formatPercent(summary?.headline.automationFailureRate)}
+            </p>
+          </div>
+        </dl>
+
+        <div
+          className="mt-6 rounded-md border border-dashed border-gray-200 p-4"
+          data-testid="crm-dashboard-sales-guidance"
+        >
+          <h3 className="text-sm font-semibold text-gray-700">
+            Volgende stap voor sales enablement
+          </h3>
+          <p className="mt-2 text-sm text-gray-600">
+            Publiceer de pipeline widget in het demo-dashboard en stuur het team een update zodra de
+            CRM sync is afgerond. Zo weten accountmanagers precies welke deals opvolging nodig
+            hebben en ben je 100% sales ready.
+          </p>
+        </div>
+      </section>
     </div>
   )
 }
