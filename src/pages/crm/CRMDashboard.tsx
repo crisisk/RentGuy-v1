@@ -1,11 +1,6 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import crmStore from '../../stores/crmStore'
-import type {
-  AutomationWorkflowMetric,
-  CRMDashboardSummary,
-  PipelineStageMetric,
-  SourcePerformanceMetric,
-} from '@rg-types/crmTypes'
+import type { CRMDashboardSummary, PipelineStageMetric } from '@rg-types/crmTypes'
 
 type TaskStatus = 'planned' | 'in-progress' | 'complete'
 
@@ -23,14 +18,31 @@ const currencyFormatter = new Intl.NumberFormat('nl-NL', {
   maximumFractionDigits: 0,
 })
 
-const formatCurrency = (value?: number | null, fractionDigits = 0) => {
+const currencyFormatterPrecise = new Intl.NumberFormat('nl-NL', {
+  style: 'currency',
+  currency: 'EUR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+const READINESS_AUTOMATION_THRESHOLD = 0.3
+
+const formatCurrency = (value?: number | null, withCents = false): string => {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '—'
   }
 
-const formatCurrency = (value?: number | null) => currencyFormatter.format(Math.max(0, value ?? 0))
+  const formatter = withCents ? currencyFormatterPrecise : currencyFormatter
+  return formatter.format(Math.max(0, value))
+}
 
-const formatCurrency = (value?: number | null) => currencyFormatter.format(Math.max(0, value ?? 0))
+const formatCount = (value?: number | null): string => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—'
+  }
+
+  return new Intl.NumberFormat('nl-NL').format(Math.max(0, value))
+}
 
 const formatPercent = (value?: number | null, fractionDigits = 1) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -47,20 +59,6 @@ const formatDays = (value?: number | null) => {
   }
 
   return `${value.toFixed(1)} d`
-}
-
-const formatMinutes = (value?: number | null) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—'
-  }
-
-  return `${value.toFixed(1)} min`
-}
-
-const formatMinutes = (value?: number | null) => {
-  if (value === null || value === undefined) return '—'
-  const rounded = Math.round((value + Number.EPSILON) * 10) / 10
-  return `${rounded.toFixed(1)} min`
 }
 
 const resolveLastRefresh = (summary: CRMDashboardSummary | null) => {
@@ -93,17 +91,41 @@ const statusLabels: Record<TaskStatus, string> = {
 }
 
 const CRMDashboard = () => {
-  const { dashboard, loading, error, fetchDashboardSummary } = crmStore((state) => ({
+  const {
+    dashboard,
+    loading,
+    error: storeError,
+    fetchDashboardSummary,
+  } = crmStore((state) => ({
     dashboard: state.dashboard,
     loading: state.loading,
     error: state.error,
     fetchDashboardSummary: state.fetchDashboardSummary,
   }))
 
+  const [transientError, setTransientError] = useState<string | null>(null)
+
   useEffect(() => {
-    fetchDashboardSummary().catch(() => {
-      /* error state is handled by store */
+    let mounted = true
+
+    setTransientError(null)
+
+    fetchDashboardSummary().catch((error: unknown) => {
+      if (!mounted) {
+        return
+      }
+
+      if (error instanceof Error && error.message) {
+        setTransientError(error.message)
+        return
+      }
+
+      setTransientError('Er is een fout opgetreden bij het ophalen van de CRM-dashboardgegevens.')
     })
+
+    return () => {
+      mounted = false
+    }
   }, [fetchDashboardSummary])
 
   const summary = dashboard
@@ -115,112 +137,8 @@ const CRMDashboard = () => {
     return summary.pipeline.reduce((total, stage) => total + (stage.dealCount ?? 0), 0)
   }, [summary])
 
-  const funnelSteps = useMemo(() => {
-    if (!summary) {
-      return []
-    }
-
-    const { leadFunnel } = summary
-    const { totalLeads } = leadFunnel
-
-    const percentage = (value: number) =>
-      totalLeads > 0 ? Math.round((value / totalLeads) * 100) : 0
-
-    return [
-      {
-        id: 'total-leads',
-        label: 'Leads totaal',
-        value: leadFunnel.totalLeads,
-        percentage: 100,
-      },
-      {
-        id: 'recent-leads',
-        label: 'Leads laatste 30 dagen',
-        value: leadFunnel.leadsLast30Days,
-        percentage: percentage(leadFunnel.leadsLast30Days),
-      },
-      {
-        id: 'leads-with-deals',
-        label: 'Leads met deal',
-        value: leadFunnel.leadsWithDeals,
-        percentage: percentage(leadFunnel.leadsWithDeals),
-      },
-    ]
-  }, [summary])
-
-  const automationRows = useMemo(() => summary?.automation ?? [], [summary])
-  const sourceRows = useMemo(() => summary?.sourcePerformance ?? [], [summary])
   const lastRefreshLabel = useMemo(() => resolveLastRefresh(summary ?? null), [summary])
   const errorMessage = transientError ?? storeError
-
-  const readinessInsights = useMemo<ReadinessInsight[]>(() => {
-    if (!summary) return []
-
-    const hasPipelineData = summary.pipeline.some((stage) => (stage.dealCount ?? 0) > 0)
-    const connectors = summary.acquisition.activeConnectors.length
-    const failureRate = summary.headline.automationFailureRate ?? 0
-    const winRate = summary.sales.winRate ?? 0
-
-    return [
-      {
-        id: 'pipeline-sync',
-        title: hasPipelineData ? 'Pipeline gevuld' : 'Vul pipeline met deals',
-        detail: hasPipelineData
-          ? `${formatCount(totalPipelineDeals)} deals verdeeld over ${summary.pipeline.length} fasen.`
-          : 'Importeer deals via de CRM wizard om alle pipelinefasen te activeren.',
-        status: hasPipelineData ? 'complete' : 'attention',
-      },
-      {
-        id: 'marketing-connectors',
-        title: connectors ? 'Marketingkanalen gekoppeld' : 'Activeer marketingconnectoren',
-        detail: connectors
-          ? `${connectors} actieve connector${connectors === 1 ? '' : 'en'} voor leadbrontracking.`
-          : 'Koppel GA4 of GTM zodat leadbronnen automatisch worden bijgewerkt.',
-        status: connectors ? 'complete' : 'attention',
-      },
-      {
-        id: 'automation-health',
-        title:
-          failureRate <= READINESS_AUTOMATION_THRESHOLD
-            ? 'Automation SLA op niveau'
-            : 'Analyseer automation SLA',
-        detail:
-          failureRate <= READINESS_AUTOMATION_THRESHOLD
-            ? `Foutrate ${formatPercent(failureRate)} — binnen norm (≤ ${formatPercent(
-                READINESS_AUTOMATION_THRESHOLD,
-              )}).`
-            : `Foutrate ${formatPercent(failureRate)} overschrijdt de norm (≤ ${formatPercent(
-                READINESS_AUTOMATION_THRESHOLD,
-              )}).`,
-        status: failureRate <= READINESS_AUTOMATION_THRESHOLD ? 'complete' : 'attention',
-      },
-      {
-        id: 'win-rate',
-        title: winRate >= READINESS_WINRATE_TARGET ? 'Winrate gezond' : 'Plan winrate review',
-        detail:
-          winRate >= READINESS_WINRATE_TARGET
-            ? `Huidige winrate ${formatPercent(winRate)} — boven target (${formatPercent(
-                READINESS_WINRATE_TARGET,
-              )}).`
-            : `Winrate is ${formatPercent(winRate)} — plan een dealreview met het salesteam.`,
-        status: winRate >= READINESS_WINRATE_TARGET ? 'complete' : 'attention',
-      },
-    ]
-  }, [summary, totalPipelineDeals])
-
-  const topSources = useMemo<SourcePerformanceMetric[]>(() => {
-    if (!summary) return []
-    return [...summary.sourcePerformance]
-      .sort((a, b) => (b.pipelineValue ?? 0) - (a.pipelineValue ?? 0))
-      .slice(0, 5)
-  }, [summary])
-
-  const topAutomations = useMemo<AutomationWorkflowMetric[]>(() => {
-    if (!summary) return []
-    return [...summary.automation]
-      .sort((a, b) => b.failureRate - a.failureRate || b.runCount - a.runCount)
-      .slice(0, 3)
-  }, [summary])
 
   const readinessTasks = useMemo<SalesReadinessTask[]>(() => {
     const tasks: SalesReadinessTask[] = []
@@ -230,7 +148,8 @@ const CRMDashboard = () => {
     const openDeals = summary?.sales.openDeals ?? 0
     const weightedPipeline = summary?.headline.weightedPipelineValue ?? 0
     const automationActive = (summary?.headline.activeWorkflows ?? 0) > 0
-    const automationHealthy = (summary?.headline.automationFailureRate ?? 0) <= 0.3
+    const automationHealthy =
+      (summary?.headline.automationFailureRate ?? 0) <= READINESS_AUTOMATION_THRESHOLD
     const bookings = summary?.sales.bookingsLast30Days ?? 0
     const blendedConversion = summary?.acquisition.blendedConversionRate ?? 0
 
@@ -270,7 +189,7 @@ const CRMDashboard = () => {
             ? 'in-progress'
             : 'planned',
       evidence: automationActive
-        ? `${formatCount(summary?.headline.activeWorkflows)} workflows actief · Failure-rate ${formatPercent(summary?.headline.automationFailureRate)}`
+        ? `${formatCount(summary?.headline.activeWorkflows)} workflows actief · Failure-rate ${formatPercent(summary?.headline.automationFailureRate)} (norm ≤ ${formatPercent(READINESS_AUTOMATION_THRESHOLD)})`
         : 'Nog geen actieve workflows',
     })
 
