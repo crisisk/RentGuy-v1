@@ -1,25 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import adminStore from '../../stores/adminStore'
-
-interface SystemStats {
-  totalUsers: number
-  activeUsers: number
-  serverUptime: string
-  memoryUsage: number
-}
-
-interface UserActivity {
-  id: number
-  username: string
-  lastLogin: string
-  loginCount: number
-}
+import React, { useEffect, useState } from 'react'
+import adminStore, { SystemStats, UserActivity } from '../../stores/adminStore'
 
 const AdminPanel: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null)
   const [userActivities, setUserActivities] = useState<UserActivity[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
+  const [localError, setLocalError] = useState<string | null>(null)
+  const loading = adminStore((state) => state.loading)
+  const storeError = adminStore((state) => state.error)
+  const getSystemStats = adminStore((state) => state.getSystemStats)
+  const getUserActivities = adminStore((state) => state.getUserActivities)
+  const error = localError ?? storeError
 
   const formatUptime = (seconds: number): string => {
     const days = Math.floor(seconds / (24 * 3600))
@@ -40,28 +30,20 @@ const AdminPanel: React.FC = () => {
 
   useEffect(() => {
     const fetchAdminData = async () => {
+      setLocalError(null)
       try {
-        setLoading(true)
-        const systemStats = await adminStore.getSystemStats()
-        const activities = await adminStore.getUserActivities()
+        const systemStats = await getSystemStats()
+        const activities = await getUserActivities()
 
-        setStats({
-          totalUsers: systemStats.totalUsers,
-          activeUsers: systemStats.activeUsers,
-          serverUptime: formatUptime(systemStats.uptimeSeconds),
-          memoryUsage: systemStats.memoryUsage,
-        })
-
+        setStats(systemStats)
         setUserActivities(activities)
       } catch {
-        setError('Failed to load admin data')
-      } finally {
-        setLoading(false)
+        setLocalError('Failed to load admin data')
       }
     }
 
-    fetchAdminData()
-  }, [])
+    void fetchAdminData()
+  }, [getSystemStats, getUserActivities])
 
   if (loading) {
     return (
@@ -95,19 +77,19 @@ const AdminPanel: React.FC = () => {
       >
         <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-card-total-users">
           <h2 className="text-gray-500 text-sm">Total Users</h2>
-          <p className="text-2xl font-bold">{stats?.totalUsers}</p>
+          <p className="text-2xl font-bold">{stats ? stats.totalUsers : '--'}</p>
         </div>
         <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-card-active-users">
           <h2 className="text-gray-500 text-sm">Active Users</h2>
-          <p className="text-2xl font-bold">{stats?.activeUsers}</p>
+          <p className="text-2xl font-bold">{stats ? stats.activeUsers : '--'}</p>
         </div>
         <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-card-uptime">
           <h2 className="text-gray-500 text-sm">Server Uptime</h2>
-          <p className="text-2xl font-bold">{stats?.serverUptime}</p>
+          <p className="text-2xl font-bold">{stats ? formatUptime(stats.uptimeSeconds) : '--'}</p>
         </div>
         <div className="bg-white shadow rounded-lg p-4" data-testid="admin-panel-card-memory">
           <h2 className="text-gray-500 text-sm">Memory Usage</h2>
-          <p className="text-2xl font-bold">{stats?.memoryUsage}%</p>
+          <p className="text-2xl font-bold">{stats ? `${stats.memoryUsage}%` : '--'}</p>
         </div>
       </div>
 
