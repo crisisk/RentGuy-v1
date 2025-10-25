@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, type FormEvent } from 'react'
+import React, { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import crewStore from '../../stores/crewStore'
 
@@ -7,16 +7,38 @@ type FeedbackState = {
   message: string
 } | null
 
-const ROLE_OPTIONS = ['Technicus', 'Planner', 'Chauffeur', 'Producer', 'Stagehand']
-const TIME_OFF_REASONS = ['Vakantie', 'Ziekte', 'Training', 'Persoonlijk', 'Overig']
+type NewMemberFormState = {
+  name: string
+  email: string
+  role: string
+  phone: string
+}
+
+type TimeOffFormState = {
+  start: string
+  end: string
+  reason: string
+}
+
+const ROLE_OPTIONS = ['Technicus', 'Planner', 'Chauffeur', 'Producer', 'Stagehand'] as const
+const DEFAULT_ROLE = ROLE_OPTIONS[0] ?? 'Technicus'
+const TIME_OFF_REASONS = ['Vakantie', 'Ziekte', 'Training', 'Persoonlijk', 'Overig'] as const
+const DEFAULT_TIME_OFF_REASON = TIME_OFF_REASONS[0] ?? 'Vakantie'
 
 function normalise(value: string): string {
   return value.trim().toLowerCase()
 }
 
 function timesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
-  const toMinutes = (time: string) => {
-    const [hours, minutes] = time.split(':').map((part) => Number.parseInt(part, 10))
+  const toMinutes = (time: string): number => {
+    const [hoursPart = '0', minutesPart = '0'] = time.split(':')
+    const hours = Number.parseInt(hoursPart, 10)
+    const minutes = Number.parseInt(minutesPart, 10)
+
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+      return 0
+    }
+
     return hours * 60 + minutes
   }
   const startMinutesA = toMinutes(startA)
@@ -47,10 +69,10 @@ const CrewManagement: React.FC = () => {
   const [selectedSkill, setSelectedSkill] = useState('')
 
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newMember, setNewMember] = useState({
+  const [newMember, setNewMember] = useState<NewMemberFormState>({
     name: '',
     email: '',
-    role: ROLE_OPTIONS[0],
+    role: DEFAULT_ROLE,
     phone: '',
   })
   const [addFeedback, setAddFeedback] = useState<FeedbackState>(null)
@@ -59,10 +81,10 @@ const CrewManagement: React.FC = () => {
   const [shiftForm, setShiftForm] = useState({ date: '', start: '', end: '' })
   const [shiftFeedback, setShiftFeedback] = useState<FeedbackState>(null)
   const [timeOffMemberId, setTimeOffMemberId] = useState<string | null>(null)
-  const [timeOffForm, setTimeOffForm] = useState({
+  const [timeOffForm, setTimeOffForm] = useState<TimeOffFormState>({
     start: '',
     end: '',
-    reason: TIME_OFF_REASONS[0],
+    reason: DEFAULT_TIME_OFF_REASON,
   })
   const [timeOffFeedback, setTimeOffFeedback] = useState<FeedbackState>(null)
 
@@ -158,7 +180,7 @@ const CrewManagement: React.FC = () => {
       setAvailabilityOverrides((previous) => ({ ...previous, [createdMember.id]: 'Beschikbaar' }))
       setAddFeedback({ type: 'success', message: 'Crewlid succesvol toegevoegd' })
       setShowAddForm(false)
-      setNewMember({ name: '', email: '', role: ROLE_OPTIONS[0], phone: '' })
+      setNewMember({ name: '', email: '', role: DEFAULT_ROLE, phone: '' })
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Toevoegen van crewlid mislukt'
       setAddFeedback({ type: 'error', message })
@@ -249,7 +271,7 @@ const CrewManagement: React.FC = () => {
       }))
       setTimeOffFeedback({ type: 'success', message: 'Beschikbaarheid geregistreerd' })
       setTimeOffMemberId(null)
-      setTimeOffForm({ start: '', end: '', reason: TIME_OFF_REASONS[0] })
+      setTimeOffForm({ start: '', end: '', reason: DEFAULT_TIME_OFF_REASON })
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Beschikbaarheid registreren mislukt'
       setTimeOffFeedback({ type: 'error', message })
@@ -299,7 +321,7 @@ const CrewManagement: React.FC = () => {
           <input
             type="search"
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value)}
             className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
             placeholder="Zoek op naam, e-mail of rol"
             data-testid="crew-search-input"
@@ -309,7 +331,9 @@ const CrewManagement: React.FC = () => {
           Filter op skill
           <select
             value={selectedSkill}
-            onChange={(event) => setSelectedSkill(event.target.value)}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              setSelectedSkill(event.target.value)
+            }
             className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
             data-testid="crew-skill-filter"
           >
@@ -335,7 +359,7 @@ const CrewManagement: React.FC = () => {
               <input
                 type="text"
                 value={newMember.name}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setNewMember((previous) => ({ ...previous, name: event.target.value }))
                 }
                 className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -348,7 +372,7 @@ const CrewManagement: React.FC = () => {
               <input
                 type="email"
                 value={newMember.email}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setNewMember((previous) => ({ ...previous, email: event.target.value }))
                 }
                 className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -360,7 +384,7 @@ const CrewManagement: React.FC = () => {
               Rol
               <select
                 value={newMember.role}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                   setNewMember((previous) => ({ ...previous, role: event.target.value }))
                 }
                 className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -378,7 +402,7 @@ const CrewManagement: React.FC = () => {
               <input
                 type="tel"
                 value={newMember.phone}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setNewMember((previous) => ({ ...previous, phone: event.target.value }))
                 }
                 className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -555,7 +579,7 @@ const CrewManagement: React.FC = () => {
             <input
               type="date"
               value={shiftForm.date}
-              onChange={(event) =>
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 setShiftForm((previous) => ({ ...previous, date: event.target.value }))
               }
               className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -568,7 +592,7 @@ const CrewManagement: React.FC = () => {
               <input
                 type="time"
                 value={shiftForm.start}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setShiftForm((previous) => ({ ...previous, start: event.target.value }))
                 }
                 className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -580,7 +604,7 @@ const CrewManagement: React.FC = () => {
               <input
                 type="time"
                 value={shiftForm.end}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setShiftForm((previous) => ({ ...previous, end: event.target.value }))
                 }
                 className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -632,7 +656,7 @@ const CrewManagement: React.FC = () => {
               <input
                 type="date"
                 value={timeOffForm.start}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setTimeOffForm((previous) => ({ ...previous, start: event.target.value }))
                 }
                 className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -644,7 +668,7 @@ const CrewManagement: React.FC = () => {
               <input
                 type="date"
                 value={timeOffForm.end}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setTimeOffForm((previous) => ({ ...previous, end: event.target.value }))
                 }
                 className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -656,7 +680,7 @@ const CrewManagement: React.FC = () => {
             Reden
             <select
               value={timeOffForm.reason}
-              onChange={(event) =>
+              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                 setTimeOffForm((previous) => ({ ...previous, reason: event.target.value }))
               }
               className="mt-2 rounded border border-slate-300 px-3 py-2 text-sm"
