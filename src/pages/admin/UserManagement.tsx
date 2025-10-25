@@ -1,24 +1,33 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import adminStore from '../../stores/adminStore'
+import adminStore, { AdminUser } from '../../stores/adminStore'
 
 const UserManagement: React.FC = () => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const users = adminStore((state) => state.users)
+  const loading = adminStore((state) => state.loading)
+  const error = adminStore((state) => state.error)
+  const loadUsers = adminStore((state) => state.loadUsers)
+  const deleteUser = adminStore((state) => state.deleteUser)
 
   useEffect(() => {
-    adminStore.loadUsers()
-  }, [])
+    void loadUsers()
+  }, [loadUsers])
 
   const handleDeleteConfirm = async () => {
     if (selectedUserId) {
-      await adminStore.deleteUser(selectedUserId)
-      setShowConfirmDelete(false)
-      adminStore.loadUsers()
+      try {
+        await deleteUser(selectedUserId)
+        setShowConfirmDelete(false)
+        await loadUsers()
+      } catch {
+        // Error is handled by the store state
+      }
     }
   }
 
-  if (adminStore.loading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64" data-testid="user-management-loading">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -26,13 +35,13 @@ const UserManagement: React.FC = () => {
     )
   }
 
-  if (adminStore.error) {
+  if (error) {
     return (
       <div
         className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg"
         data-testid="user-management-error"
       >
-        {adminStore.error}
+        {error}
       </div>
     )
   }
@@ -61,7 +70,7 @@ const UserManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {adminStore.users.map((user) => (
+            {users.map((user: AdminUser) => (
               <tr key={user.id} data-testid={`user-management-row-${user.id}`}>
                 <td
                   className="px-6 py-4 whitespace-nowrap"

@@ -1,50 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import adminStore from '../../stores/adminStore';
+import React, { ChangeEvent, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import adminStore, { AdminSettings } from '../../stores/adminStore'
 
-type SettingsTab = 'general' | 'email' | 'security';
+type SettingsTab = 'general' | 'email' | 'security'
 
 interface SystemSettingsProps {}
 
 const SystemSettings: React.FC<SystemSettingsProps> = () => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [settings, setSettings] = useState<any>({
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+  const [settings, setSettings] = useState<AdminSettings>(() => ({
     general: {},
     email: {},
-    security: {}
-  });
+    security: {},
+  }))
+  const [localError, setLocalError] = useState<string | null>(null)
+  const loading = adminStore((state) => state.loading)
+  const storeError = adminStore((state) => state.error)
+  const settingsFromStore = adminStore((state) => state.settings)
+  const getSystemSettings = adminStore((state) => state.getSystemSettings)
+  const updateSystemSettings = adminStore((state) => state.updateSystemSettings)
+  const error = localError ?? storeError
 
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchSettings = async () => {
+      setLocalError(null)
       try {
-        setLoading(true);
-        const fetchedSettings = await adminStore.getSystemSettings();
-        setSettings(fetchedSettings);
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load settings');
-        setLoading(false);
+        const fetchedSettings = await getSystemSettings()
+        setSettings({
+          general: { ...fetchedSettings.general },
+          email: { ...fetchedSettings.email },
+          security: { ...fetchedSettings.security },
+        })
+      } catch {
+        setLocalError('Failed to load settings')
       }
-    };
+    }
 
-    fetchSettings();
-  }, []);
+    void fetchSettings()
+  }, [getSystemSettings])
+
+  useEffect(() => {
+    setSettings({
+      general: { ...settingsFromStore.general },
+      email: { ...settingsFromStore.email },
+      security: { ...settingsFromStore.security },
+    })
+  }, [settingsFromStore])
 
   const handleUpdateSettings = async () => {
     try {
-      setLoading(true);
-      await adminStore.updateSystemSettings(settings);
-      alert('Settings updated successfully');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update settings');
-    } finally {
-      setLoading(false);
+      setLocalError(null)
+      const updatedSettings = await updateSystemSettings(settings)
+      setSettings({
+        general: { ...updatedSettings.general },
+        email: { ...updatedSettings.email },
+        security: { ...updatedSettings.security },
+      })
+      alert('Settings updated successfully')
+    } catch {
+      setLocalError('Failed to update settings')
     }
-  };
+  }
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -55,19 +73,21 @@ const SystemSettings: React.FC<SystemSettingsProps> = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 System Name
-                <input 
+                <input
                   type="text"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                   value={settings.general.systemName || ''}
-                  onChange={(e) => setSettings({
-                    ...settings, 
-                    general: { ...settings.general, systemName: e.target.value }
-                  })}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setSettings({
+                      ...settings,
+                      general: { ...settings.general, systemName: event.target.value },
+                    })
+                  }
                 />
               </label>
             </div>
           </div>
-        );
+        )
       case 'email':
         return (
           <div className="space-y-4">
@@ -75,19 +95,21 @@ const SystemSettings: React.FC<SystemSettingsProps> = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 SMTP Server
-                <input 
+                <input
                   type="text"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                   value={settings.email.smtpServer || ''}
-                  onChange={(e) => setSettings({
-                    ...settings, 
-                    email: { ...settings.email, smtpServer: e.target.value }
-                  })}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setSettings({
+                      ...settings,
+                      email: { ...settings.email, smtpServer: event.target.value },
+                    })
+                  }
                 />
               </label>
             </div>
           </div>
-        );
+        )
       case 'security':
         return (
           <div className="space-y-4">
@@ -95,13 +117,18 @@ const SystemSettings: React.FC<SystemSettingsProps> = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Two-Factor Authentication
-                <select 
+                <select
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                   value={settings.security.twoFactorEnabled || 'disabled'}
-                  onChange={(e) => setSettings({
-                    ...settings, 
-                    security: { ...settings.security, twoFactorEnabled: e.target.value }
-                  })}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                    setSettings({
+                      ...settings,
+                      security: {
+                        ...settings.security,
+                        twoFactorEnabled: event.target.value as 'enabled' | 'disabled',
+                      },
+                    })
+                  }
                 >
                   <option value="disabled">Disabled</option>
                   <option value="enabled">Enabled</option>
@@ -109,26 +136,26 @@ const SystemSettings: React.FC<SystemSettingsProps> = () => {
               </label>
             </div>
           </div>
-        );
+        )
     }
-  };
+  }
 
   if (loading) {
-    return <div className="p-4 text-center">Loading...</div>;
+    return <div className="p-4 text-center">Loading...</div>
   }
 
   if (error) {
     return (
       <div className="p-4 bg-red-100 text-red-800">
         {error}
-        <button 
-          onClick={() => navigate('/dashboard')} 
+        <button
+          onClick={() => navigate('/dashboard')}
           className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
         >
           Back to Dashboard
         </button>
       </div>
-    );
+    )
   }
 
   return (
@@ -142,9 +169,11 @@ const SystemSettings: React.FC<SystemSettingsProps> = () => {
                 onClick={() => setActiveTab(tab)}
                 className={`
                   px-4 py-2 border-b-2 font-medium text-sm
-                  ${activeTab === tab 
-                    ? 'border-blue-500 text-blue-600' 
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                  ${
+                    activeTab === tab
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
                 `}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)} Settings
@@ -152,9 +181,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = () => {
             ))}
           </nav>
         </div>
-        <div className="p-6">
-          {renderTabContent()}
-        </div>
+        <div className="p-6">{renderTabContent()}</div>
         <div className="bg-gray-50 px-4 py-3 sm:px-6 flex justify-end">
           <button
             onClick={handleUpdateSettings}
@@ -165,7 +192,7 @@ const SystemSettings: React.FC<SystemSettingsProps> = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default SystemSettings;
+export default SystemSettings
