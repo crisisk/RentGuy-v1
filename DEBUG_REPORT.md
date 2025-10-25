@@ -10,6 +10,7 @@
   warnings, enabling the lint, type-check, build, and test commands to execute locally.【F:artifacts/debug/logs/lint.log†L1-L40】【F:artifacts/debug/logs/typecheck.log†L1-L38】
 - **2025-10-22 18:46 UTC** – Reran `npm run debug:prepare`, `npm run debug:scan`, and
   `npm run debug:run` to refresh the debugging artefacts after the toolchain bootstrap.【F:DEBUG_SUMMARY.json†L1-L15】
+- **2025-10-26 09:20 UTC** – Landed TypeScript remediation (`c2af7ac`) that adds typed stores, router contracts, and shared type exports for planner and dashboard flows so subsequent compiler runs target the implemented data contracts.【F:src/stores/adminStore.ts†L1-L110】【F:src/router/routes.tsx†L1-L112】【F:src/types/index.ts†L1-L30】
 
 ## Key findings
 
@@ -23,7 +24,7 @@
    because supporting services are not running during the scan, leaving readiness validation
    blocked.【F:artifacts/debug/logs/smoke.log†L1-L8】【F:artifacts/debug/logs/smoke-results.json†L1-L22】
 4. **Automated tests require harness fixes** – Vitest fails in the auth store tests (`vi.mock is not
-   a function`), while Cypress cannot start due to the missing Xvfb dependency required for headed
+a function`), while Cypress cannot start due to the missing Xvfb dependency required for headed
    Electron runs in the sandbox.【F:artifacts/debug/logs/test.log†L1-L33】【F:artifacts/debug/logs/e2e.log†L1-L26】
 
 ## Next steps
