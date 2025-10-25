@@ -41,7 +41,12 @@
   },
   {
     "module": "sales",
-    "message": "Synchroniseer CRM leads en deals via de importwizard zodat sales direct pipeline KPI's kan volgen.",
-    "cta": "Open CRM pipeline"
+    "message": "Synchroniseer CRM leads en activeer het pricing playbook met gemiddelde korting per segment voor consistente marges.",
+    "cta": "Open CRM & pricing"
+  },
+  {
+    "module": "billing",
+    "message": "Automatiseer aanbetalingen zodra een offerte is geaccepteerd zodat Mollie en Invoice Ninja direct een betaalverzoek versturen.",
+    "cta": "Automatiseer aanbetaling"
   }
 ]
