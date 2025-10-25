@@ -18,21 +18,9 @@ const PlannerPage = lazy(() => import('@ui/Planner')) as ComponentWithProps<{
 const SecretsDashboardPage = lazy(() => import('@ui/SecretsDashboard')) as ComponentWithProps<{
   onLogout: () => void
 }>
-const CRMDashboardPage = lazy(() => import('../pages/crm/CRMDashboard')) as ComponentWithProps<
-  Record<string, never>
->
-const SalesCRMImportPage = lazy(
-  () => import('../pages/sales/SalesCRMImport'),
-) as ComponentWithProps<Record<string, never>>
-const SalesOfferPlaybookPage = lazy(
-  () => import('../pages/sales/SalesOfferPlaybook'),
-) as ComponentWithProps<Record<string, never>>
-const SalesHandoffPlaybookPage = lazy(
-  () => import('../pages/sales/SalesHandoffPlaybook'),
-) as ComponentWithProps<Record<string, never>>
-const QuoteManagementPage = lazy(
-  () => import('../pages/finance/QuoteManagement'),
-) as ComponentWithProps<Record<string, never>>
+const SalesCRMSyncPage = lazy(() => import('../pages/sales/CRMSync'))
+const SalesOffersPage = lazy(() => import('../pages/sales/SalesOffers'))
+const SalesHandoffPage = lazy(() => import('../pages/sales/SalesHandoff'))
 
 function normaliseRoutePath(path?: string | null): string | null {
   if (!path) {
@@ -65,6 +53,21 @@ export function createAppRoutes({
       element: createElement(PlannerPage, { onLogout }),
     },
     createSecretsRoute('/dashboard', onLogout),
+    {
+      path: '/sales/crm-sync',
+      requiresAuth: true,
+      element: createElement(SalesCRMSyncPage),
+    },
+    {
+      path: '/sales/offers',
+      requiresAuth: true,
+      element: createElement(SalesOffersPage),
+    },
+    {
+      path: '/sales/handoff',
+      requiresAuth: true,
+      element: createElement(SalesHandoffPage),
+    },
   ]
 
   routes.push(
