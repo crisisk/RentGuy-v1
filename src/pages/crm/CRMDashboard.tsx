@@ -10,8 +10,7 @@ const currencyFormatter = new Intl.NumberFormat('nl-NL', {
 
 const numberFormatter = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 })
 
-const formatCurrency = (value?: number | null) =>
-  currencyFormatter.format(Math.max(0, value ?? 0))
+const formatCurrency = (value?: number | null) => currencyFormatter.format(Math.max(0, value ?? 0))
 
 const formatPercent = (value?: number | null) => `${(value ?? 0).toFixed(1)}%`
 
@@ -44,16 +43,28 @@ const CRMDashboard = () => {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchDashboard = async () => {
+      setIsLoading(true)
+      setError(null)
+      if (!cancelled) {
+        setSummary(null)
+      }
+
       try {
         const analytics = await crmStore.fetchDashboardSummary()
-        setSummary(analytics)
+        if (!cancelled) {
+          setSummary(analytics)
+        }
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to load CRM analytics data. Please retry later.',
-        )
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Failed to load CRM analytics data. Please retry later.',
+          )
+        }
       } finally {
         if (!cancelled) {
           setIsLoading(false)
@@ -62,6 +73,10 @@ const CRMDashboard = () => {
     }
 
     fetchDashboard()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const totalPipelineDeals = useMemo(() => {
@@ -94,14 +109,8 @@ const CRMDashboard = () => {
     )
   }
 
-  const stats: CRMCustomerStats = customerStats ?? {
-    total: 0,
-    newThisMonth: 0,
-    activeCustomers: 0,
-  }
-
-  const pipeline: CRMPipelineStageKPI[] = dashboardSummary?.pipeline ?? []
-  const sales: CRMSalesKPIs | null = dashboardSummary?.sales ?? null
+  const pipeline = summary?.pipeline ?? []
+  const headline = summary?.headline
 
   return (
     <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-root">
@@ -181,8 +190,8 @@ const CRMDashboard = () => {
           <p className="mt-1 text-xs text-gray-500">
             Pipeline velocity: {formatCurrency(summary?.sales.pipelineVelocityPerDay)} per dag
           </p>
-        </article>
-      </section>
+        </div>
+      </div>
 
       <section
         className="bg-white shadow rounded-lg p-4 md:p-6"
@@ -193,10 +202,10 @@ const CRMDashboard = () => {
           <h2 id="crm-dashboard-pipeline-title" className="text-lg font-semibold">
             Pipeline per fase
           </h2>
-          {dashboardSummary?.headline && (
+          {headline && (
             <span className="text-sm text-gray-500">
-              Totaal pipeline: {formatCurrency(dashboardSummary.headline.totalPipelineValue)} ·
-              Gewogen: {formatCurrency(dashboardSummary.headline.weightedPipelineValue)}
+              Totaal pipeline: {formatCurrency(headline.totalPipelineValue)} · Gewogen:{' '}
+              {formatCurrency(headline.weightedPipelineValue)}
             </span>
           )}
         </div>
@@ -210,7 +219,7 @@ const CRMDashboard = () => {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             data-testid="crm-dashboard-pipeline-grid"
           >
-            {pipeline.map((stage) => (
+            {pipeline.map((stage: PipelineStageMetric) => (
               <article
                 key={stage.stageId}
                 className="border border-gray-200 rounded-lg p-4"
@@ -220,7 +229,7 @@ const CRMDashboard = () => {
                 <dl className="mt-3 space-y-2 text-sm text-gray-600">
                   <div className="flex items-center justify-between">
                     <dt>Deals</dt>
-                    <dd className="font-medium text-gray-900">{formatNumber(stage.dealCount)}</dd>
+                    <dd className="font-medium text-gray-900">{formatCount(stage.dealCount)}</dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt>Totale waarde</dt>
