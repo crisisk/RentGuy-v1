@@ -21,13 +21,7 @@ const formatCurrency = (value?: number | null, fractionDigits = 0) => {
   }).format(value)
 }
 
-const formatCount = (value?: number | null) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—'
-  }
-
-  return integerFormatter.format(Math.trunc(value))
-}
+const formatCurrency = (value?: number | null) => currencyFormatter.format(Math.max(0, value ?? 0))
 
 const formatPercent = (value?: number | null, fractionDigits = 1) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -201,6 +195,8 @@ const CRMDashboard = () => {
     )
   }
 
+  const pipeline: CRMPipelineStageKPI[] = dashboardSummary?.pipeline ?? []
+
   return (
     <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-root">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -323,6 +319,24 @@ const CRMDashboard = () => {
           <p className="mt-1 text-xs text-gray-500">
             Pipeline velocity: {formatCurrency(summary?.sales.pipelineVelocityPerDay)} per dag
           </p>
+        </div>
+      </div>
+
+      <section
+        className="bg-white shadow rounded-lg p-4 md:p-6"
+        data-testid="crm-dashboard-pipeline-section"
+        aria-labelledby="crm-dashboard-pipeline-title"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 id="crm-dashboard-pipeline-title" className="text-lg font-semibold">
+            Pipeline per fase
+          </h2>
+          {dashboardSummary?.headline && (
+            <span className="text-sm text-gray-500">
+              Totaal pipeline: {formatCurrency(dashboardSummary.headline.totalPipelineValue)} ·
+              Gewogen: {formatCurrency(dashboardSummary.headline.weightedPipelineValue)}
+            </span>
+          )}
         </div>
       </div>
 

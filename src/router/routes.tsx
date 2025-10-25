@@ -12,8 +12,27 @@ export interface CreateAppRoutesOptions {
   readonly secretsFocusPath?: string
 }
 
-const PlannerPage = lazy(() => import('@ui/Planner')) as ComponentWithProps<{ onLogout: () => void }>
-const SecretsDashboardPage = lazy(() => import('@ui/SecretsDashboard')) as ComponentWithProps<{ onLogout: () => void }>
+const PlannerPage = lazy(() => import('@ui/Planner')) as ComponentWithProps<{
+  onLogout: () => void
+}>
+const SecretsDashboardPage = lazy(() => import('@ui/SecretsDashboard')) as ComponentWithProps<{
+  onLogout: () => void
+}>
+const CRMDashboardPage = lazy(() => import('../pages/crm/CRMDashboard')) as ComponentWithProps<
+  Record<string, never>
+>
+const SalesCRMImportPage = lazy(
+  () => import('../pages/sales/SalesCRMImport'),
+) as ComponentWithProps<Record<string, never>>
+const SalesOfferPlaybookPage = lazy(
+  () => import('../pages/sales/SalesOfferPlaybook'),
+) as ComponentWithProps<Record<string, never>>
+const SalesHandoffPlaybookPage = lazy(
+  () => import('../pages/sales/SalesHandoffPlaybook'),
+) as ComponentWithProps<Record<string, never>>
+const QuoteManagementPage = lazy(
+  () => import('../pages/finance/QuoteManagement'),
+) as ComponentWithProps<Record<string, never>>
 
 function normaliseRoutePath(path?: string | null): string | null {
   if (!path) {
@@ -35,7 +54,10 @@ function createSecretsRoute(path: string, onLogout: () => void): AppRouteObject 
   }
 }
 
-export function createAppRoutes({ onLogout, secretsFocusPath }: CreateAppRoutesOptions): AppRouteObject[] {
+export function createAppRoutes({
+  onLogout,
+  secretsFocusPath,
+}: CreateAppRoutesOptions): AppRouteObject[] {
   const routes: AppRouteObject[] = [
     {
       path: '/planner',
@@ -45,9 +67,37 @@ export function createAppRoutes({ onLogout, secretsFocusPath }: CreateAppRoutesO
     createSecretsRoute('/dashboard', onLogout),
   ]
 
+  routes.push(
+    {
+      path: '/crm',
+      requiresAuth: true,
+      element: createElement(CRMDashboardPage, {}),
+    },
+    {
+      path: '/sales/crm-sync',
+      requiresAuth: true,
+      element: createElement(SalesCRMImportPage, {}),
+    },
+    {
+      path: '/sales/offers',
+      requiresAuth: true,
+      element: createElement(SalesOfferPlaybookPage, {}),
+    },
+    {
+      path: '/sales/handoff',
+      requiresAuth: true,
+      element: createElement(SalesHandoffPlaybookPage, {}),
+    },
+    {
+      path: '/finance/quotes',
+      requiresAuth: true,
+      element: createElement(QuoteManagementPage, {}),
+    },
+  )
+
   const resolvedSecretsPath = normaliseRoutePath(secretsFocusPath)
   if (resolvedSecretsPath && resolvedSecretsPath !== '/dashboard') {
-    const exists = routes.some(route => route.path === resolvedSecretsPath)
+    const exists = routes.some((route) => route.path === resolvedSecretsPath)
     if (!exists) {
       routes.push(createSecretsRoute(resolvedSecretsPath, onLogout))
     }
