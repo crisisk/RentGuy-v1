@@ -122,8 +122,13 @@ const mapInvoiceResponse = (payload: any): Invoice => {
 
 const mapQuoteResponse = (payload: any): Quote => {
   const id = String(payload.id ?? generateId())
-  const status: Quote['status'] =
-    payload.status ?? (payload.converted ? 'converted' : 'draft') ?? 'draft'
+  const status: Quote['status'] = (
+    typeof payload.status === 'string' && payload.status.length
+      ? payload.status
+      : payload.converted
+        ? 'converted'
+        : 'draft'
+  ) as Quote['status']
 
   return {
     id,
