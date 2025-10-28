@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useFinanceStore } from '@stores/financeStore'
 
@@ -49,11 +49,11 @@ export default function InvoiceOverview(): JSX.Element {
   const [clientFilter, setClientFilter] = useState('')
   const navigate = useNavigate()
 
-  const invoices = useFinanceStore(state => state.invoices)
-  const loading = useFinanceStore(state => state.loading)
-  const error = useFinanceStore(state => state.error)
-  const fetchInvoices = useFinanceStore(state => state.fetchInvoices)
-  const clearError = useFinanceStore(state => state.clearError)
+  const invoices = useFinanceStore((state) => state.invoices)
+  const loading = useFinanceStore((state) => state.loading)
+  const error = useFinanceStore((state) => state.error)
+  const fetchInvoices = useFinanceStore((state) => state.fetchInvoices)
+  const clearError = useFinanceStore((state) => state.clearError)
 
   useEffect(() => {
     let cancelled = false
@@ -80,10 +80,12 @@ export default function InvoiceOverview(): JSX.Element {
     const normalisedSearch = clientFilter.trim().toLowerCase()
     const selectedStatus = statusFilter.toLowerCase()
 
-    return invoices.filter(invoice => {
+    return invoices.filter((invoice) => {
       const invoiceStatus = (invoice.status ?? '').toLowerCase()
       const matchesStatus =
-        selectedStatus === 'all' || invoiceStatus === selectedStatus || (selectedStatus === 'paid' && invoiceStatus === 'completed')
+        selectedStatus === 'all' ||
+        invoiceStatus === selectedStatus ||
+        (selectedStatus === 'paid' && invoiceStatus === 'completed')
 
       const clientName = (invoice.clientName ?? '').toLowerCase()
       const matchesClient = !normalisedSearch || clientName.includes(normalisedSearch)
@@ -96,7 +98,11 @@ export default function InvoiceOverview(): JSX.Element {
 
   if (showLoadingState) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center" role="status" aria-live="polite">
+      <div
+        className="flex min-h-[60vh] items-center justify-center"
+        role="status"
+        aria-live="polite"
+      >
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
       </div>
     )
@@ -104,7 +110,10 @@ export default function InvoiceOverview(): JSX.Element {
 
   if (error) {
     return (
-      <div className="mx-auto mt-6 max-w-xl rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+      <div
+        className="mx-auto mt-6 max-w-xl rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        role="alert"
+      >
         {error}
       </div>
     )
@@ -115,7 +124,9 @@ export default function InvoiceOverview(): JSX.Element {
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Facturen</h1>
-          <p className="text-sm text-slate-500">Filter op klantnaam of status om snel de juiste factuur te vinden.</p>
+          <p className="text-sm text-slate-500">
+            Filter op klantnaam of status om snel de juiste factuur te vinden.
+          </p>
         </div>
         <Link
           to="/invoices/new"
@@ -131,12 +142,14 @@ export default function InvoiceOverview(): JSX.Element {
           placeholder="Zoek op klantnaam"
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={clientFilter}
-          onChange={event => setClientFilter(event.target.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setClientFilter(event.target.value)}
         />
         <select
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm md:w-56"
           value={statusFilter}
-          onChange={event => setStatusFilter(event.target.value as InvoiceStatusFilter)}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+            setStatusFilter(event.target.value as InvoiceStatusFilter)
+          }
         >
           <option value="all">Alle statussen</option>
           <option value="paid">Betaald</option>
@@ -153,24 +166,40 @@ export default function InvoiceOverview(): JSX.Element {
           <table className="w-full divide-y divide-slate-100">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Klant</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Bedrag</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Factuurdatum</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Acties</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Klant
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Bedrag
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Factuurdatum
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Acties
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {filteredInvoices.map(invoice => {
+              {filteredInvoices.map((invoice) => {
                 const invoiceStatus = (invoice.status ?? '').toLowerCase()
                 const badgeClass = statusVariants[invoiceStatus] ?? 'bg-slate-100 text-slate-700'
                 return (
                   <tr key={invoice.id}>
-                    <td className="px-4 py-3 text-sm font-semibold text-slate-900">{invoice.clientName}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{formatCurrency(invoice.amount)}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-slate-900">
+                      {invoice.clientName}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {formatCurrency(invoice.amount)}
+                    </td>
                     <td className="px-4 py-3 text-sm text-slate-600">{formatDate(invoice.date)}</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}
+                      >
                         {invoice.status ?? 'onbekend'}
                       </span>
                     </td>

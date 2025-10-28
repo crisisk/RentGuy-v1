@@ -1,12 +1,106 @@
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Any, Callable, Iterable, Sequence, cast
+
+from types import NoneType, UnionType
 
 import base64
 import hashlib
 import json
+from dataclasses import dataclass
+from typing import get_args, get_origin
+
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_core import PydanticUndefined
+
+
+@dataclass(frozen=True)
+class EnvironmentVariableDefinition:
+    """Metadata describing how a ``Settings`` field is sourced from the environment."""
+
+    name: str
+    type: str
+    required: bool
+    secret: bool
+    description: str | None
+    default: str | None
+    aliases: tuple[str, ...]
+    vault_path: str | None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a serialisable representation suitable for JSON exports."""
+
+        payload: dict[str, Any] = {
+            "name": self.name,
+            "type": self.type,
+            "required": self.required,
+            "secret": self.secret,
+        }
+        if self.description:
+            payload["description"] = self.description
+        if self.default is not None:
+            payload["default"] = self.default
+        if self.aliases:
+            payload["aliases"] = list(self.aliases)
+        if self.vault_path:
+            payload["vault_path"] = self.vault_path
+        return payload
+
+
+def _annotation_to_string(annotation: Any) -> str:
+    """Return a readable representation for a typing annotation."""
+
+    if annotation in {None, NoneType}:
+        return "None"
+
+    origin = get_origin(annotation)
+    if origin is None:
+        if getattr(annotation, "__name__", None):
+            return annotation.__name__
+        return str(annotation)
+
+    args = [_annotation_to_string(argument) for argument in get_args(annotation)]
+
+    if origin in {list, tuple, set, frozenset}:
+        inner = ", ".join(args) if args else "Any"
+        return f"{origin.__name__}[{inner}]"
+    if origin is dict:
+        key, value = (args + ["Any", "Any"])[:2]
+        return f"dict[{key}, {value}]"
+    if origin in {UnionType, getattr(__import__("typing"), "Union", UnionType)}:
+        return " | ".join(args) if args else "Any"
+    if origin is Sequence:
+        inner = ", ".join(args) if args else "Any"
+        return f"Sequence[{inner}]"
+
+    if getattr(origin, "__module__", "").startswith("typing"):
+        inner = ", ".join(args) if args else "Any"
+        name = getattr(origin, "_name", None) or origin.__qualname__
+        return f"{name}[{inner}]"
+
+    inner = ", ".join(args) if args else "Any"
+    return f"{origin.__name__}[{inner}]"
+
+
+def _is_secret_annotation(annotation: Any) -> bool:
+    if annotation is SecretStr:
+        return True
+    origin = get_origin(annotation)
+    if origin is None:
+        return False
+    return any(_is_secret_annotation(argument) for argument in get_args(annotation))
+
+
+def _serialise_default(value: Any, *, redact: bool) -> str | None:
+    if value is None or value is PydanticUndefined or redact:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return str(value)
+    try:
+        return json.dumps(value)
+    except TypeError:  # pragma: no cover - defensive fallback
+        return str(value)
 
 
 class Settings(BaseSettings):
@@ -46,18 +140,22 @@ class Settings(BaseSettings):
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
     SMTP_USER: str | None = None
-    SMTP_PASS: str | None = None
+    SMTP_PASS: str | None = Field(default=None, json_schema_extra={"secret": True})
     MAIL_FROM: str = "no-reply@rentguy.local"
-    STRIPE_API_KEY: str | None = None
-    STRIPE_WEBHOOK_SECRET: str | None = None
+    STRIPE_API_KEY: str | None = Field(default=None, json_schema_extra={"secret": True})
+    STRIPE_WEBHOOK_SECRET: str | None = Field(default=None, json_schema_extra={"secret": True})
     STRIPE_API_BASE: str = "https://api.stripe.com/v1"
-    MOLLIE_API_KEY: str | None = None
-    MOLLIE_WEBHOOK_SECRET: str | None = None
+    MOLLIE_API_KEY: str | None = Field(default=None, json_schema_extra={"secret": True})
+    MOLLIE_WEBHOOK_SECRET: str | None = Field(default=None, json_schema_extra={"secret": True})
     MOLLIE_API_BASE: str = "https://api.mollie.com/v2"
     RENTGUY_FINANCE_URL: str | None = None
-    RENTGUY_FINANCE_TOKEN: str | None = None
+    RENTGUY_FINANCE_TOKEN: str | None = Field(default=None, json_schema_extra={"secret": True})
     LEGACY_INVOICE_NINJA_URL: str | None = Field(default=None, alias="INVOICE_NINJA_URL")
-    LEGACY_INVOICE_NINJA_TOKEN: str | None = Field(default=None, alias="INVOICE_NINJA_TOKEN")
+    LEGACY_INVOICE_NINJA_TOKEN: str | None = Field(
+        default=None,
+        alias="INVOICE_NINJA_TOKEN",
+        json_schema_extra={"secret": True},
+    )
     PAYMENT_WEBHOOK_BASE_URL: str | None = None
     OTEL_EXPORTER_OTLP_ENDPOINT: str | None = None
     OTEL_EXPORTER_OTLP_HEADERS: str | None = None
@@ -193,5 +291,101 @@ class Settings(BaseSettings):
         digest = hashlib.sha256(base_secret.encode("utf-8")).digest()
         return base64.urlsafe_b64encode(digest)
 
+    @classmethod
+    def describe_environment(cls) -> list[EnvironmentVariableDefinition]:
+        """Return metadata describing the settings expected from the environment."""
 
-settings = Settings()
+        definitions: list[EnvironmentVariableDefinition] = []
+        for field_name, field in cls.model_fields.items():
+            primary_name = cast(str, field.alias or field_name)
+            aliases: list[str] = []
+            if primary_name != field_name:
+                aliases.append(field_name)
+
+            validation_alias = getattr(field, "validation_alias", None)
+            if validation_alias and validation_alias != primary_name:
+                aliases.append(str(validation_alias))
+
+            extra = field.json_schema_extra or {}
+            secret = bool(extra.get("secret")) or _is_secret_annotation(field.annotation)
+
+            if field.default_factory is not None:
+                default_value = field.default_factory()
+            else:
+                default_value = field.default
+
+            description = field.description or None
+            vault_path = None
+            if "vault_path" in extra:
+                vault_path = str(extra["vault_path"])
+            elif secret:
+                vault_path = f"secret/rentguy/{primary_name.lower()}"
+
+            definitions.append(
+                EnvironmentVariableDefinition(
+                    name=primary_name,
+                    type=_annotation_to_string(field.annotation),
+                    required=field.is_required(),
+                    secret=secret,
+                    description=description,
+                    default=_serialise_default(default_value, redact=secret),
+                    aliases=tuple(sorted(set(aliases))),
+                    vault_path=vault_path,
+                )
+            )
+
+        definitions.sort(key=lambda item: item.name)
+        return definitions
+
+
+class _SettingsProxy:
+    """Lazy proxy that defers ``Settings`` instantiation until first use."""
+
+    __slots__ = ("_factory", "_instance")
+
+    def __init__(self, factory: Callable[[], Settings]) -> None:
+        object.__setattr__(self, "_factory", factory)
+        object.__setattr__(self, "_instance", None)
+
+    def _get_instance(self) -> Settings:
+        instance = object.__getattribute__(self, "_instance")
+        if instance is None:
+            factory = object.__getattribute__(self, "_factory")
+            instance = factory()
+            object.__setattr__(self, "_instance", instance)
+        return instance
+
+    def __getattr__(self, item: str) -> Any:
+        return getattr(self._get_instance(), item)
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        if key in {"_factory", "_instance"}:
+            object.__setattr__(self, key, value)
+        else:
+            setattr(self._get_instance(), key, value)
+
+    def __repr__(self) -> str:  # pragma: no cover - representation helper
+        instance = object.__getattribute__(self, "_instance")
+        if instance is None:
+            return "<SettingsProxy (uninitialised)>"
+        return repr(instance)
+
+    def __call__(self) -> Settings:
+        return self._get_instance()
+
+    def reload(self) -> Settings:
+        factory = object.__getattribute__(self, "_factory")
+        instance = factory()
+        object.__setattr__(self, "_instance", instance)
+        return instance
+
+    @property
+    def loaded(self) -> bool:
+        return object.__getattribute__(self, "_instance") is not None
+
+
+def _settings_factory() -> Settings:
+    return Settings()
+
+
+settings = cast(Settings, _SettingsProxy(_settings_factory))

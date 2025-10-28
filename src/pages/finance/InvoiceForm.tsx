@@ -1,14 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
-import {
-  useFinanceStore,
-  type InvoiceInput,
-  type InvoiceLineItem,
-} from '@stores/financeStore'
+import { useFinanceStore, type InvoiceInput, type InvoiceLineItem } from '@stores/financeStore'
 
 const createLineItem = (): InvoiceLineItem => ({
-  id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `line-${Math.random().toString(36).slice(2, 9)}`,
+  id:
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `line-${Math.random().toString(36).slice(2, 9)}`,
   description: '',
   quantity: 1,
   unitPrice: 0,
@@ -29,11 +28,11 @@ export default function InvoiceForm(): JSX.Element {
   const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
 
-  const createInvoice = useFinanceStore(state => state.createInvoice)
-  const updateInvoice = useFinanceStore(state => state.updateInvoice)
-  const getInvoiceById = useFinanceStore(state => state.getInvoiceById)
-  const loading = useFinanceStore(state => state.loading)
-  const clearError = useFinanceStore(state => state.clearError)
+  const createInvoice = useFinanceStore((state) => state.createInvoice)
+  const updateInvoice = useFinanceStore((state) => state.updateInvoice)
+  const getInvoiceById = useFinanceStore((state) => state.getInvoiceById)
+  const loading = useFinanceStore((state) => state.loading)
+  const clearError = useFinanceStore((state) => state.clearError)
 
   const [clientName, setClientName] = useState('')
   const [invoiceDate, setInvoiceDate] = useState('')
@@ -62,7 +61,9 @@ export default function InvoiceForm(): JSX.Element {
         setInvoiceDate(toInputDate(invoice.date))
         setDueDate(toInputDate(invoice.dueDate))
         setLineItems(
-          invoice.lineItems.length ? invoice.lineItems.map(item => ({ ...item })) : [createLineItem()],
+          invoice.lineItems.length
+            ? invoice.lineItems.map((item) => ({ ...item }))
+            : [createLineItem()],
         )
         setError(null)
       } catch (err) {
@@ -85,28 +86,31 @@ export default function InvoiceForm(): JSX.Element {
     }
   }, [id, getInvoiceById, clearError])
 
-  const handleLineItemChange = useCallback((lineId: string, field: keyof InvoiceLineItem, value: string) => {
-    setLineItems(previous =>
-      previous.map(item =>
-        item.id === lineId
-          ? {
-              ...item,
-              [field]: field === 'description' ? value : Number(value) || 0,
-            }
-          : item,
-      ),
-    )
-  }, [])
+  const handleLineItemChange = useCallback(
+    (lineId: string, field: keyof InvoiceLineItem, value: string) => {
+      setLineItems((previous) =>
+        previous.map((item) =>
+          item.id === lineId
+            ? {
+                ...item,
+                [field]: field === 'description' ? value : Number(value) || 0,
+              }
+            : item,
+        ),
+      )
+    },
+    [],
+  )
 
   const handleRemoveLineItem = useCallback((lineId: string) => {
-    setLineItems(previous => {
-      const next = previous.filter(item => item.id !== lineId)
+    setLineItems((previous) => {
+      const next = previous.filter((item) => item.id !== lineId)
       return next.length ? next : [createLineItem()]
     })
   }, [])
 
   const handleAddLineItem = useCallback(() => {
-    setLineItems(previous => [...previous, createLineItem()])
+    setLineItems((previous) => [...previous, createLineItem()])
   }, [])
 
   const total = useMemo(
@@ -125,9 +129,9 @@ export default function InvoiceForm(): JSX.Element {
       const payload: InvoiceInput = {
         clientName,
         invoiceDate,
-        dueDate: dueDate || undefined,
         lineItems,
         total,
+        ...(dueDate ? { dueDate } : {}),
       }
 
       try {
@@ -144,7 +148,17 @@ export default function InvoiceForm(): JSX.Element {
         setError('Opslaan van de factuur is mislukt. Probeer het opnieuw.')
       }
     },
-    [clientName, invoiceDate, dueDate, lineItems, total, id, updateInvoice, createInvoice, navigate],
+    [
+      clientName,
+      invoiceDate,
+      dueDate,
+      lineItems,
+      total,
+      id,
+      updateInvoice,
+      createInvoice,
+      navigate,
+    ],
   )
 
   if (initialising) {
@@ -189,7 +203,8 @@ export default function InvoiceForm(): JSX.Element {
           {id ? 'Factuur bijwerken' : 'Nieuwe factuur'}
         </h1>
         <p style={{ margin: 0, color: withOpacity(brand.colors.secondary, 0.75) }}>
-          Vul klantgegevens in, voeg regels toe en valideer het totaalbedrag voordat je de factuur opslaat.
+          Vul klantgegevens in, voeg regels toe en valideer het totaalbedrag voordat je de factuur
+          opslaat.
         </p>
       </header>
 
@@ -221,13 +236,19 @@ export default function InvoiceForm(): JSX.Element {
           boxShadow: brand.colors.shadow,
         }}
       >
-        <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+        <div
+          style={{
+            display: 'grid',
+            gap: 18,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          }}
+        >
           <label style={{ display: 'grid', gap: 8, fontSize: '0.9rem', fontWeight: 600 }}>
             Klantnaam
             <input
               type="text"
               value={clientName}
-              onChange={event => setClientName(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setClientName(event.target.value)}
               required
               style={{
                 padding: '10px 14px',
@@ -242,7 +263,9 @@ export default function InvoiceForm(): JSX.Element {
             <input
               type="date"
               value={invoiceDate}
-              onChange={event => setInvoiceDate(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setInvoiceDate(event.target.value)
+              }
               required
               style={{
                 padding: '10px 14px',
@@ -257,7 +280,7 @@ export default function InvoiceForm(): JSX.Element {
             <input
               type="date"
               value={dueDate}
-              onChange={event => setDueDate(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setDueDate(event.target.value)}
               style={{
                 padding: '10px 14px',
                 borderRadius: 14,
@@ -269,7 +292,9 @@ export default function InvoiceForm(): JSX.Element {
         </div>
 
         <section style={{ display: 'grid', gap: 16 }}>
-          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <header
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          >
             <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Regels</h2>
             <button
               type="button"
@@ -289,7 +314,7 @@ export default function InvoiceForm(): JSX.Element {
           </header>
 
           <div style={{ display: 'grid', gap: 12 }}>
-            {lineItems.map(item => (
+            {lineItems.map((item) => (
               <div
                 key={item.id}
                 style={{
@@ -304,7 +329,9 @@ export default function InvoiceForm(): JSX.Element {
                   <input
                     type="text"
                     value={item.description}
-                    onChange={event => handleLineItemChange(item.id, 'description', event.target.value)}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      handleLineItemChange(item.id, 'description', event.target.value)
+                    }
                     required
                     style={{
                       padding: '10px 12px',
@@ -320,7 +347,9 @@ export default function InvoiceForm(): JSX.Element {
                     type="number"
                     min={0}
                     value={item.quantity}
-                    onChange={event => handleLineItemChange(item.id, 'quantity', event.target.value)}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      handleLineItemChange(item.id, 'quantity', event.target.value)
+                    }
                     style={{
                       padding: '10px 12px',
                       borderRadius: 12,
@@ -336,7 +365,9 @@ export default function InvoiceForm(): JSX.Element {
                     min={0}
                     step="0.01"
                     value={item.unitPrice}
-                    onChange={event => handleLineItemChange(item.id, 'unitPrice', event.target.value)}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      handleLineItemChange(item.id, 'unitPrice', event.target.value)
+                    }
                     style={{
                       padding: '10px 12px',
                       borderRadius: 12,
@@ -375,7 +406,8 @@ export default function InvoiceForm(): JSX.Element {
           }}
         >
           <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
-            Totaal: {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(total)}
+            Totaal:{' '}
+            {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(total)}
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <button

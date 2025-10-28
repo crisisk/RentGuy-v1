@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import crmStore from '../../stores/crmStore'
-
-interface Customer {
-  id?: string
-  name: string
-  email: string
-  phone: string
-  address: string
-  status: 'active' | 'inactive'
-}
+import crmStore, { type CustomerInput, type CustomerStatus } from '../../stores/crmStore'
 
 const CustomerForm: React.FC = () => {
   const { id } = useParams()
@@ -18,7 +9,7 @@ const CustomerForm: React.FC = () => {
   const [formError, setFormError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const [formData, setFormData] = useState<Customer>({
+  const [formData, setFormData] = useState<CustomerInput>({
     name: '',
     email: '',
     phone: '',
@@ -26,15 +17,29 @@ const CustomerForm: React.FC = () => {
     status: 'active',
   })
 
-  const [errors, setErrors] = useState<Partial<Customer>>({})
+  const [errors, setErrors] = useState<Partial<Record<keyof CustomerInput, string>>>({})
+
+  const statusOptions: CustomerStatus[] = ['active', 'pending', 'inactive', 'archived']
 
   useEffect(() => {
     if (id) {
       crmStore
         .getCustomer(id)
         .then((customer) => {
-          if (customer) setFormData(customer)
-          else setFormError('Customer not found')
+          if (customer) {
+            setFormData({
+              id: customer.id,
+              name: customer.name,
+              email: customer.email,
+              phone: customer.phone,
+              address: customer.address,
+              status: customer.status,
+              ...(customer.company ? { company: customer.company } : {}),
+              ...(customer.notes ? { notes: customer.notes } : {}),
+            })
+          } else {
+            setFormError('Customer not found')
+          }
           setLoading(false)
         })
         .catch(() => {
@@ -45,7 +50,7 @@ const CustomerForm: React.FC = () => {
   }, [id])
 
   const validate = (): boolean => {
-    const newErrors: Partial<Customer> = {}
+    const newErrors: Partial<Record<keyof CustomerInput, string>> = {}
     if (!formData.name.trim()) newErrors.name = 'Name is required'
     if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email'
     if (!formData.phone.match(/^\d{10,15}$/)) newErrors.phone = 'Invalid phone number'
@@ -71,8 +76,11 @@ const CustomerForm: React.FC = () => {
   }
 
   const handleChange =
-    (field: keyof Customer) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      setFormData((prev) => ({ ...prev, [field]: e.target.value }))
+    (field: keyof CustomerInput) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const value =
+        field === 'status' ? (e.target.value as CustomerStatus) : (e.target.value as string)
+      setFormData((prev) => ({ ...prev, [field]: value }))
       setErrors((prev) => ({ ...prev, [field]: '' }))
     }
 
@@ -189,8 +197,11 @@ const CustomerForm: React.FC = () => {
             className="w-full p-2 border border-gray-300 rounded"
             data-testid="customer-form-select-status"
           >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </option>
+            ))}
           </select>
         </div>
 

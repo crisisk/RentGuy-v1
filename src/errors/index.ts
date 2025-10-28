@@ -12,22 +12,14 @@ export type ApiErrorCode = AppErrorCode
 export type ApiErrorOptions = AppErrorOptions
 
 function extractOptionsFromAppError(appError: AppError): ApiErrorOptions {
-  const options: ApiErrorOptions = {}
-  if (appError.httpStatus !== undefined) {
-    options.httpStatus = appError.httpStatus
+  return {
+    ...(appError.httpStatus !== undefined ? { httpStatus: appError.httpStatus } : {}),
+    ...(appError.meta !== undefined ? { meta: appError.meta } : {}),
+    ...(appError.cause !== undefined ? { cause: appError.cause } : {}),
   }
-  if (appError.meta !== undefined) {
-    options.meta = appError.meta
-  }
-  if (appError.cause !== undefined) {
-    options.cause = appError.cause
-  }
-  return options
 }
 
 export class APIError extends AppError {
-  public static readonly nameSymbol = API_ERROR_NAME
-
   constructor(code: ApiErrorCode, message: string, options: ApiErrorOptions = {}) {
     super(code, message, options)
     this.name = API_ERROR_NAME
@@ -50,8 +42,9 @@ export class APIError extends AppError {
       return appError
     }
 
-    const options = extractOptionsFromAppError(appError)
-    return new APIError(appError.code, appError.message, options)
+    const baseError: AppError = appError
+    const options = extractOptionsFromAppError(baseError)
+    return new APIError(baseError.code, baseError.message, options)
   }
 
   public static from(error: unknown): APIError {

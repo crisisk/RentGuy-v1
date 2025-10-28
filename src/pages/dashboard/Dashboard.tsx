@@ -102,25 +102,35 @@ const Dashboard = () => {
         <h2 className="text-lg font-semibold mb-4">Revenue Overview</h2>
         <div className="h-64" data-testid="dashboard-revenue-chart">
           <svg width="100%" height="100%" data-testid="dashboard-revenue-chart-svg">
-            {revenueData.map((value, index) => (
-              <React.Fragment key={index}>
-                <circle
-                  cx={`${(index / (revenueData.length - 1)) * 100}%`}
-                  cy={`${100 - (value / 15000) * 100}%`}
-                  r="4"
-                  className="fill-blue-500"
-                />
-                {index > 0 && (
-                  <line
-                    x1={`${((index - 1) / (revenueData.length - 1)) * 100}%`}
-                    y1={`${100 - (revenueData[index - 1] / 15000) * 100}%`}
-                    x2={`${(index / (revenueData.length - 1)) * 100}%`}
-                    y2={`${100 - (value / 15000) * 100}%`}
-                    className="stroke-blue-500 stroke-2"
-                  />
-                )}
-              </React.Fragment>
-            ))}
+            {revenueData.map((value, index) => {
+              const currentX = `${(index / (revenueData.length - 1)) * 100}%`
+              const currentY = `${100 - (value / 15000) * 100}%`
+
+              return (
+                <React.Fragment key={index}>
+                  <circle cx={currentX} cy={currentY} r="4" className="fill-blue-500" />
+                  {index > 0 &&
+                    index - 1 < revenueData.length &&
+                    (() => {
+                      const previousValue = revenueData[index - 1]
+                      if (typeof previousValue !== 'number') {
+                        return null
+                      }
+                      const previousY = `${100 - (previousValue / 15000) * 100}%`
+                      const previousX = `${((index - 1) / (revenueData.length - 1)) * 100}%`
+                      return (
+                        <line
+                          x1={previousX}
+                          y1={previousY}
+                          x2={currentX}
+                          y2={currentY}
+                          className="stroke-blue-500 stroke-2"
+                        />
+                      )
+                    })()}
+                </React.Fragment>
+              )
+            })}
           </svg>
         </div>
       </div>

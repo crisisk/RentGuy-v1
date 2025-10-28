@@ -149,6 +149,17 @@ const loginPersona = {
   meta: 'Kies een persona na succesvolle login',
 }
 
+function mapAuthViewToMode(view: AuthView): AuthMode {
+  switch (view) {
+    case 'reset-request':
+      return 'forgot'
+    case 'reset-confirm':
+      return 'resetConfirm'
+    default:
+      return view
+  }
+}
+
 function resolveInitialAuthState(): InitialAuthState {
   if (typeof window === 'undefined') {
     return { mode: 'login', notice: null }
@@ -237,7 +248,7 @@ export function Login({ onLogin, initialMode = 'login', initialResetToken = '' }
 
   useEffect(() => {
     if (initialMode) {
-      setMode(initialMode)
+      setMode(mapAuthViewToMode(initialMode))
     }
   }, [initialMode])
 
@@ -1095,7 +1106,7 @@ export function Login({ onLogin, initialMode = 'login', initialResetToken = '' }
 
   const heroAside = (
     <div style={{ display: 'grid', gap: 20 }}>
-      {activeView === 'login' && (
+      {mode === 'login' && (
         <div
           style={{
             display: 'flex',
@@ -1143,7 +1154,7 @@ export function Login({ onLogin, initialMode = 'login', initialResetToken = '' }
       {mode === 'forgot' && resetRequestForm}
       {mode === 'resetConfirm' && resetConfirmForm}
 
-      {activeView === 'login' && credentialList}
+      {mode === 'login' && credentialList}
 
       <div
         style={{

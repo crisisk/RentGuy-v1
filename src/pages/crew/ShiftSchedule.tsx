@@ -14,16 +14,27 @@ const ShiftSchedule: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  const daysOfWeek = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ] as const
 
-  const getCurrentWeekDates = (): string[] => {
+  const getCurrentWeekDates = (): [string, string, string, string, string, string, string] => {
     const today = new Date()
     const currentDay = today.getDay()
     const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
-    return daysOfWeek.map((_, index) => {
-      const date = new Date(today.setDate(diff + index))
+    const baseDate = new Date(today)
+
+    return Array.from({ length: daysOfWeek.length }, (_, index) => {
+      const date = new Date(baseDate)
+      date.setDate(diff + index)
       return date.toISOString().split('T')[0]
-    })
+    }) as [string, string, string, string, string, string, string]
   }
 
   const weekDates = getCurrentWeekDates()
@@ -31,7 +42,7 @@ const ShiftSchedule: React.FC = () => {
   useEffect(() => {
     const fetchShifts = async () => {
       try {
-        const fetchedShifts = await crewStore.getWeeklyShifts(weekDates[0], weekDates[6])
+        const fetchedShifts = await crewStore.getWeeklyShifts(weekDates[0]!, weekDates[6]!)
         setShifts(fetchedShifts)
       } catch {
         setError('Failed to load shifts')
@@ -88,7 +99,7 @@ const ShiftSchedule: React.FC = () => {
             <tr>
               {daysOfWeek.map((_, index) => (
                 <td key={index} className="border border-gray-300 p-2 align-top">
-                  {getShiftsForDay(weekDates[index]).map((shift) => (
+                  {getShiftsForDay(weekDates[index]!).map((shift) => (
                     <div key={shift.id} className="bg-blue-100 rounded p-2 mb-2">
                       <div className="font-semibold">{shift.employeeName}</div>
                       <div className="text-sm text-gray-600">

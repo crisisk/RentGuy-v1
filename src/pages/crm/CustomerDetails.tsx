@@ -1,26 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import crmStore from '../../stores/crmStore'
-
-interface Customer {
-  id: string
-  name: string
-  email: string
-  phone: string
-  company: string
-}
-
-interface Activity {
-  id: string
-  type: string
-  date: string
-  description: string
-}
+import crmStore, {
+  type Customer as StoreCustomer,
+  type Activity as StoreActivity,
+} from '../../stores/crmStore'
 
 const CustomerDetails: React.FC = () => {
   const { customerId } = useParams<{ customerId: string }>()
-  const [customer, setCustomer] = useState<Customer | null>(null)
-  const [activities, setActivities] = useState<Activity[]>([])
+  const [customer, setCustomer] = useState<StoreCustomer | null>(null)
+  const [activities, setActivities] = useState<StoreActivity[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -43,7 +31,12 @@ const CustomerDetails: React.FC = () => {
         const customerData = await crmStore.getCustomerById(customerId)
         const customerActivities = await crmStore.getCustomerActivities(customerId)
 
-        setCustomer(customerData)
+        if (customerData) {
+          setCustomer(customerData)
+        } else {
+          setCustomer(null)
+          setError('Customer not found')
+        }
         setActivities(customerActivities)
       } catch {
         setError('Failed to load customer details')
@@ -98,7 +91,7 @@ const CustomerDetails: React.FC = () => {
               <strong>Phone:</strong> {customer.phone}
             </p>
             <p className="text-gray-600" data-testid="customer-details-company">
-              <strong>Company:</strong> {customer.company}
+              <strong>Company:</strong> {customer.company ?? '—'}
             </p>
           </div>
         </div>

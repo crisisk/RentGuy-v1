@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import type { CSSProperties } from 'react'
 import { useInventoryStore } from '@stores/equipmentStore'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import type { EquipmentItem, EquipmentStatus } from '@rg-types/equipmentTypes'
@@ -18,7 +19,10 @@ const statusStyles: Record<EquipmentStatus, { background: string; color: string 
   in_use: { background: withOpacity(brand.colors.accent, 0.18), color: brand.colors.accent },
   maintenance: { background: withOpacity(brand.colors.warning, 0.18), color: brand.colors.warning },
   damaged: { background: withOpacity(brand.colors.danger, 0.2), color: brand.colors.danger },
-  reserved: { background: withOpacity(brand.colors.secondary, 0.16), color: brand.colors.secondary },
+  reserved: {
+    background: withOpacity(brand.colors.secondary, 0.16),
+    color: brand.colors.secondary,
+  },
   inactive: { background: withOpacity('#94A3B8', 0.2), color: '#475569' },
   unknown: { background: withOpacity('#94A3B8', 0.2), color: '#475569' },
 }
@@ -49,7 +53,7 @@ function getAvailabilityWindow(days = 7) {
   return { start: toIsoDate(start), end: toIsoDate(end) }
 }
 
-const filterControlStyle: React.CSSProperties = {
+const filterControlStyle: CSSProperties = {
   padding: '10px 14px',
   borderRadius: 12,
   border: `1px solid ${withOpacity(brand.colors.primary, 0.18)}`,
@@ -58,7 +62,7 @@ const filterControlStyle: React.CSSProperties = {
   fontSize: '0.95rem',
 }
 
-const badgeStyle: React.CSSProperties = {
+const badgeStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: 6,
@@ -84,18 +88,20 @@ function matchesSearch(item: EquipmentItem, term: string): boolean {
   )
 }
 
-export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' }: InventorySnapshotProps) {
-  const items = useInventoryStore(state => state.items)
-  const categories = useInventoryStore(state => state.categories)
-  const availability = useInventoryStore(state => state.availability)
-  const loading = useInventoryStore(state => state.loading)
-  const availabilityLoading = useInventoryStore(state => state.availabilityLoading)
-  const error = useInventoryStore(state => state.error)
-  const lastFetchedAt = useInventoryStore(state => state.lastFetchedAt)
-  const fetchInventory = useInventoryStore(state => state.fetchInventory)
-  const refreshAvailability = useInventoryStore(state => state.refreshAvailability)
-  const updateStatus = useInventoryStore(state => state.updateStatus)
-  const clearError = useInventoryStore(state => state.clearError)
+export default function InventorySnapshot({
+  heading = 'Realtime voorraadstatus',
+}: InventorySnapshotProps) {
+  const items = useInventoryStore((state) => state.items)
+  const categories = useInventoryStore((state) => state.categories)
+  const availability = useInventoryStore((state) => state.availability)
+  const loading = useInventoryStore((state) => state.loading)
+  const availabilityLoading = useInventoryStore((state) => state.availabilityLoading)
+  const error = useInventoryStore((state) => state.error)
+  const lastFetchedAt = useInventoryStore((state) => state.lastFetchedAt)
+  const fetchInventory = useInventoryStore((state) => state.fetchInventory)
+  const refreshAvailability = useInventoryStore((state) => state.refreshAvailability)
+  const updateStatus = useInventoryStore((state) => state.updateStatus)
+  const clearError = useInventoryStore((state) => state.clearError)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<EquipmentStatus | 'all'>('all')
@@ -120,8 +126,8 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
       return
     }
     const key = items
-      .map(item => item.id)
-      .filter(id => id > 0)
+      .map((item) => item.id)
+      .filter((id) => id > 0)
       .sort((a, b) => a - b)
       .join(',')
     if (key && availabilityKeyRef.current === key) {
@@ -130,8 +136,8 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
     availabilityKeyRef.current = key
     const window = getAvailabilityWindow(7)
     const requests = items
-      .filter(item => item.id > 0)
-      .map(item => ({ itemId: item.id, quantity: 1, start: window.start, end: window.end }))
+      .filter((item) => item.id > 0)
+      .map((item) => ({ itemId: item.id, quantity: 1, start: window.start, end: window.end }))
     refreshAvailability(requests).catch(() => {
       availabilityKeyRef.current = ''
     })
@@ -164,7 +170,7 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
   }, [items])
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    return items.filter((item) => {
       if (!matchesSearch(item, searchTerm)) {
         return false
       }
@@ -216,16 +222,28 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
         gap: 18,
         padding: '24px 28px',
         borderRadius: 26,
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(227, 232, 255, 0.88) 100%)',
+        background:
+          'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(227, 232, 255, 0.88) 100%)',
         border: `1px solid ${withOpacity(brand.colors.primary, 0.16)}`,
         boxShadow: brand.colors.shadow,
       }}
     >
-      <header style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
+      <header
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 12,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <div style={{ display: 'grid', gap: 4 }}>
-          <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>{heading}</h3>
+          <h3 style={{ margin: 0, fontFamily: headingFontStack, color: brand.colors.secondary }}>
+            {heading}
+          </h3>
           <p style={{ margin: 0, color: brand.colors.mutedText, fontSize: '0.9rem' }}>
-            Monitor voorraadstatus, laag niveau waarschuwingen en beschikbaarheid zonder het planner dashboard te verlaten.
+            Monitor voorraadstatus, laag niveau waarschuwingen en beschikbaarheid zonder het planner
+            dashboard te verlaten.
           </p>
           {lastFetchedAt && (
             <span style={{ fontSize: '0.75rem', color: brand.colors.mutedText }}>
@@ -303,8 +321,12 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
           }}
         >
           <span style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>Actieve items</span>
-          <strong style={{ fontSize: '1.6rem', color: brand.colors.secondary }}>{statusSummary.totalActive}</strong>
-          <span style={{ fontSize: '0.75rem', color: brand.colors.mutedText }}>Op basis van actieve voorraadrecords</span>
+          <strong style={{ fontSize: '1.6rem', color: brand.colors.secondary }}>
+            {statusSummary.totalActive}
+          </strong>
+          <span style={{ fontSize: '0.75rem', color: brand.colors.mutedText }}>
+            Op basis van actieve voorraadrecords
+          </span>
         </article>
 
         <article
@@ -317,9 +339,15 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
             gap: 4,
           }}
         >
-          <span style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>Laag voorraadniveau</span>
-          <strong style={{ fontSize: '1.6rem', color: brand.colors.warning }}>{statusSummary.lowStock}</strong>
-          <span style={{ fontSize: '0.75rem', color: brand.colors.mutedText }}>Items ≤ minimum voorraadgrens</span>
+          <span style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>
+            Laag voorraadniveau
+          </span>
+          <strong style={{ fontSize: '1.6rem', color: brand.colors.warning }}>
+            {statusSummary.lowStock}
+          </strong>
+          <span style={{ fontSize: '0.75rem', color: brand.colors.mutedText }}>
+            Items ≤ minimum voorraadgrens
+          </span>
         </article>
 
         <article
@@ -333,8 +361,12 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
           }}
         >
           <span style={{ fontSize: '0.8rem', color: brand.colors.mutedText }}>Vraagt aandacht</span>
-          <strong style={{ fontSize: '1.6rem', color: brand.colors.danger }}>{statusSummary.attention}</strong>
-          <span style={{ fontSize: '0.75rem', color: brand.colors.mutedText }}>Beschadigd, onderhoud of onbekend</span>
+          <strong style={{ fontSize: '1.6rem', color: brand.colors.danger }}>
+            {statusSummary.attention}
+          </strong>
+          <span style={{ fontSize: '0.75rem', color: brand.colors.mutedText }}>
+            Beschadigd, onderhoud of onbekend
+          </span>
         </article>
       </div>
 
@@ -352,18 +384,20 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
             type="search"
             placeholder="Zoek op item of categorie"
             value={searchTerm}
-            onChange={event => setSearchTerm(event.target.value)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value)}
             data-testid="inventory-search"
             style={{ ...filterControlStyle, minWidth: 220 }}
           />
           <select
             value={statusFilter}
-            onChange={event => setStatusFilter(event.target.value as EquipmentStatus | 'all')}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              setStatusFilter(event.target.value as EquipmentStatus | 'all')
+            }
             data-testid="inventory-status-filter"
             style={{ ...filterControlStyle, minWidth: 180 }}
           >
             <option value="all">Alle statussen</option>
-            {statusOrder.map(status => (
+            {statusOrder.map((status) => (
               <option key={status} value={status}>
                 {statusLabels[status]}
               </option>
@@ -371,14 +405,14 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
           </select>
           <select
             value={categoryFilter}
-            onChange={event => {
+            onChange={(event: ChangeEvent<HTMLSelectElement>) => {
               setCategoryFilter(event.target.value === 'all' ? 'all' : Number(event.target.value))
             }}
             data-testid="inventory-category-filter"
             style={{ ...filterControlStyle, minWidth: 180 }}
           >
             <option value="all">Alle categorieën</option>
-            {categories.map(category => (
+            {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
@@ -402,43 +436,78 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
           }}
         >
           <thead>
-            <tr style={{ background: withOpacity(brand.colors.secondary, 0.08), textAlign: 'left' }}>
-              {['Item', 'Categorie', 'Status', 'Voorraad', 'Beschikbaar', 'Dagprijs', 'Acties'].map(column => (
-                <th key={column} style={{ padding: '14px 16px', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: brand.colors.mutedText }}>
-                  {column}
-                </th>
-              ))}
+            <tr
+              style={{ background: withOpacity(brand.colors.secondary, 0.08), textAlign: 'left' }}
+            >
+              {['Item', 'Categorie', 'Status', 'Voorraad', 'Beschikbaar', 'Dagprijs', 'Acties'].map(
+                (column) => (
+                  <th
+                    key={column}
+                    style={{
+                      padding: '14px 16px',
+                      fontSize: '0.75rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: brand.colors.mutedText,
+                    }}
+                  >
+                    {column}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
             {sortedItems.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: brand.colors.mutedText }}>
+                <td
+                  colSpan={7}
+                  style={{ padding: '24px', textAlign: 'center', color: brand.colors.mutedText }}
+                >
                   Geen items gevonden voor de huidige filters.
                 </td>
               </tr>
             ) : (
-              sortedItems.map(item => {
+              sortedItems.map((item) => {
                 const statusToken = statusStyles[item.status] ?? statusStyles.unknown
                 const availabilityEntry = availability[item.id]
                 const isUpdating = updatingItemId === item.id
                 const lowStock = item.quantityTotal <= item.minStock
 
                 return (
-                  <tr key={item.id} style={{ borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}` }}>
+                  <tr
+                    key={item.id}
+                    style={{
+                      borderBottom: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}`,
+                    }}
+                  >
                     <td style={{ padding: '16px', fontWeight: 600, color: brand.colors.secondary }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <span>{item.name}</span>
                         {lowStock && (
-                          <span style={{ ...badgeStyle, background: withOpacity(brand.colors.danger, 0.16), color: brand.colors.danger }}>
+                          <span
+                            style={{
+                              ...badgeStyle,
+                              background: withOpacity(brand.colors.danger, 0.16),
+                              color: brand.colors.danger,
+                            }}
+                          >
                             Lage voorraad
                           </span>
                         )}
                       </div>
                     </td>
-                    <td style={{ padding: '16px', color: brand.colors.mutedText }}>{item.categoryName ?? 'Onbekend'}</td>
+                    <td style={{ padding: '16px', color: brand.colors.mutedText }}>
+                      {item.categoryName ?? 'Onbekend'}
+                    </td>
                     <td style={{ padding: '16px' }}>
-                      <span style={{ ...badgeStyle, background: statusToken.background, color: statusToken.color }}>
+                      <span
+                        style={{
+                          ...badgeStyle,
+                          background: statusToken.background,
+                          color: statusToken.color,
+                        }}
+                      >
                         {statusLabels[item.status]}
                       </span>
                     </td>
@@ -476,7 +545,7 @@ export default function InventorySnapshot({ heading = 'Realtime voorraadstatus' 
                     </td>
                     <td style={{ padding: '16px' }}>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {statusOrder.map(targetStatus => {
+                        {statusOrder.map((targetStatus) => {
                           if (targetStatus === item.status || targetStatus === 'unknown') {
                             return null
                           }

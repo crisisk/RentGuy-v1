@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFinanceStore, type Quote } from '@stores/financeStore'
 
@@ -45,12 +45,12 @@ export default function QuoteManagement(): JSX.Element {
   const [convertingId, setConvertingId] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  const quotes = useFinanceStore(state => state.quotes)
-  const loading = useFinanceStore(state => state.loading)
-  const error = useFinanceStore(state => state.error)
-  const fetchQuotes = useFinanceStore(state => state.fetchQuotes)
-  const convertQuoteToInvoice = useFinanceStore(state => state.convertQuoteToInvoice)
-  const clearError = useFinanceStore(state => state.clearError)
+  const quotes = useFinanceStore((state) => state.quotes)
+  const loading = useFinanceStore((state) => state.loading)
+  const error = useFinanceStore((state) => state.error)
+  const fetchQuotes = useFinanceStore((state) => state.fetchQuotes)
+  const convertQuoteToInvoice = useFinanceStore((state) => state.convertQuoteToInvoice)
+  const clearError = useFinanceStore((state) => state.clearError)
 
   useEffect(() => {
     let cancelled = false
@@ -82,7 +82,7 @@ export default function QuoteManagement(): JSX.Element {
     } catch (err) {
       console.warn('Omzetten van offerte is mislukt', err)
     } finally {
-      setConvertingId(current => (current === quoteId ? null : current))
+      setConvertingId((current) => (current === quoteId ? null : current))
     }
   }
 
@@ -90,7 +90,7 @@ export default function QuoteManagement(): JSX.Element {
     const filter = statusFilter.toLowerCase()
     const term = searchTerm.trim().toLowerCase()
 
-    return quotes.filter(quote => {
+    return quotes.filter((quote) => {
       const quoteStatus = (quote.status ?? 'draft').toLowerCase()
       const matchesStatus = filter === 'all' || quoteStatus === filter
 
@@ -106,7 +106,11 @@ export default function QuoteManagement(): JSX.Element {
 
   if (showLoadingState) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center" role="status" aria-live="polite">
+      <div
+        className="flex min-h-[60vh] items-center justify-center"
+        role="status"
+        aria-live="polite"
+      >
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
       </div>
     )
@@ -114,7 +118,10 @@ export default function QuoteManagement(): JSX.Element {
 
   if (error) {
     return (
-      <div className="mx-auto mt-6 max-w-xl rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+      <div
+        className="mx-auto mt-6 max-w-xl rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        role="alert"
+      >
         {error}
       </div>
     )
@@ -135,12 +142,14 @@ export default function QuoteManagement(): JSX.Element {
             placeholder="Zoek op klant of nummer"
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:w-60"
             value={searchTerm}
-            onChange={event => setSearchTerm(event.target.value)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value)}
           />
           <select
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm md:w-48"
             value={statusFilter}
-            onChange={event => setStatusFilter(event.target.value as QuoteStatusFilter)}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              setStatusFilter(event.target.value as QuoteStatusFilter)
+            }
           >
             <option value="all">Alle statussen</option>
             <option value="draft">Concept</option>
@@ -154,16 +163,28 @@ export default function QuoteManagement(): JSX.Element {
         <table className="min-w-full divide-y divide-slate-100">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Offertenummer</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Klant</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Datum</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Bedrag</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Acties</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Offertenummer
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Klant
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Datum
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Bedrag
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Status
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Acties
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {visibleQuotes.map(quote => {
+            {visibleQuotes.map((quote) => {
               const status = (quote.status ?? 'draft').toLowerCase()
               const badgeClass = quoteBadgeVariants[status] ?? 'bg-slate-100 text-slate-700'
               const translatedStatus = quoteStatusLabels[status] ?? quote.status ?? 'Onbekend'
@@ -173,9 +194,13 @@ export default function QuoteManagement(): JSX.Element {
                   <td className="px-6 py-4 text-sm font-semibold text-slate-900">{quote.number}</td>
                   <td className="px-6 py-4 text-sm text-slate-700">{quote.client}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{formatDate(quote.date)}</td>
-                  <td className="px-6 py-4 text-sm font-semibold text-slate-900">{currencyFormatter.format(quote.amount)}</td>
+                  <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                    {currencyFormatter.format(quote.amount)}
+                  </td>
                   <td className="px-6 py-4 text-sm">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}
+                    >
                       {translatedStatus}
                     </span>
                   </td>
