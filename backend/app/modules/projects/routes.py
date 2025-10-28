@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.modules.auth.deps import get_db, require_role
 from app.modules.inventory.models import Item
+from app.modules.crew.models import Booking, CrewMember
+from app.modules.transport.models import Driver, Route, Vehicle
 from .models import Project
 from .repo import ProjectsRepo
 from .schemas import ProjectDetail, ProjectIn, ProjectItemOut, ProjectOut, ReserveRequest
@@ -122,6 +127,72 @@ class ProjectDatesIn(ProjectIn):
     start_date: date
     end_date: date
 
+
+def _collect_planner_conflicts(
+    db: Session, project_id: int, start: date, end: date
+) -> dict[str, list[dict[str, Any]]]:
+    """Return crew and transport assignments that would fall outside the new window."""
+
+    crew_conflicts: list[dict[str, Any]] = []
+    bookings = (
+        db.execute(
+            select(Booking).where(
+                Booking.project_id == project_id,
+                Booking.status != "declined",
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    for booking in bookings:
+        booking_start = booking.start.date()
+        booking_end = booking.end.date()
+        if booking_start < start or booking_end > end:
+            member = db.get(CrewMember, booking.crew_id)
+            crew_conflicts.append(
+                {
+                    "booking_id": booking.id,
+                    "crew_id": booking.crew_id,
+                    "crew_name": getattr(member, "name", None),
+                    "start": booking.start.isoformat(),
+                    "end": booking.end.isoformat(),
+                    "status": booking.status,
+                }
+            )
+
+    transport_conflicts: list[dict[str, Any]] = []
+    routes = (
+        db.execute(
+            select(Route).where(
+                Route.project_id == project_id,
+                Route.status != "cancelled",
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    for route in routes:
+        if route.date < start or route.date > end:
+            vehicle = db.get(Vehicle, route.vehicle_id)
+            driver = db.get(Driver, route.driver_id)
+            transport_conflicts.append(
+                {
+                    "route_id": route.id,
+                    "vehicle_id": route.vehicle_id,
+                    "vehicle_name": getattr(vehicle, "name", None),
+                    "driver_id": route.driver_id,
+                    "driver_name": getattr(driver, "name", None),
+                    "date": route.date.isoformat(),
+                    "start_time": route.start_time.isoformat(),
+                    "end_time": route.end_time.isoformat(),
+                    "status": route.status,
+                }
+            )
+
+    return {"crew_conflicts": crew_conflicts, "transport_conflicts": transport_conflicts}
+
 @router.put("/projects/{project_id}/dates", response_model=ProjectOut)
 def update_project_dates(
     project_id: int,
@@ -144,6 +215,18 @@ def update_project_dates(
     not_ok = [c for c in checks if not c["ok"]]
     if not_ok:
         raise HTTPException(409, {"error": "insufficient_stock_on_move", "details": not_ok})
+
+    conflicts = _collect_planner_conflicts(db, project_id, payload.start_date, payload.end_date)
+    if conflicts["crew_conflicts"] or conflicts["transport_conflicts"]:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {
+                "error": "planner_conflict",
+                "message": "Pas eerst gekoppelde crew- en transporttaken aan voordat je de planning wijzigt.",
+                **conflicts,
+            },
+        )
+
     # Safe to update
     prj.name = payload.name
     prj.client_name = payload.client_name
