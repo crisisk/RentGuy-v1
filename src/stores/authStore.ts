@@ -12,12 +12,12 @@ interface AuthStoreState {
   user: AuthUser | null
   status: AuthStatus
   error: string | null
-  readonly setCredentials: (token: string, user: AuthUser) => void
-  readonly clear: () => void
-  readonly markChecking: () => void
-  readonly markError: (message: string) => void
-  readonly markOffline: (message?: string) => void
-  readonly syncToken: (token: string) => void
+  setCredentials: (token: string, user: AuthUser) => void
+  clear: () => void
+  markChecking: () => void
+  markError: (message: string) => void
+  markOffline: (message?: string) => void
+  syncToken: (token: string) => void
 }
 
 const INITIAL_STATE: Pick<AuthStoreState, 'token' | 'user' | 'status' | 'error'> = {
@@ -27,8 +27,7 @@ const INITIAL_STATE: Pick<AuthStoreState, 'token' | 'user' | 'status' | 'error'>
   error: null,
 }
 
-const LEGACY_STORAGE_KEY = 'auth-storage'
-const STORE_STORAGE_KEY = 'rg__auth_store_v1'
+const STORAGE_KEY = 'rg__auth_store_v1'
 const MANUAL_LOGOUT_FLAG_KEY = 'rg__manual_logout_flag'
 
 function isSessionStorageAvailable(): boolean {
@@ -69,16 +68,16 @@ const noopStorage: Storage = {
   clear() {
     // noop
   },
-  getItem(_key: string) {
+  getItem() {
     return null
   },
-  key(_index: number) {
+  key() {
     return null
   },
-  removeItem(_key: string) {
+  removeItem() {
     // noop
   },
-  setItem(_key: string, _value: string) {
+  setItem() {
     // noop
   },
 }
@@ -88,48 +87,46 @@ function resolveStorage(): Storage {
     return noopStorage
   }
   try {
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY)
+    window.localStorage.removeItem('auth-storage')
   } catch (error) {
     console.warn('Kon legacy auth storage niet verwijderen', error)
   }
   return window.localStorage
 }
 
-function determineStatusFromToken(token: string | null, hasUser: boolean): AuthStatus {
+function determineStatus(token: string | null, user: AuthUser | null): AuthStatus {
   if (!token) {
     return 'idle'
   }
   if (isOfflineDemoToken(token)) {
     return 'offline'
   }
-  return hasUser ? 'authenticated' : 'checking'
+  return user ? 'authenticated' : 'checking'
 }
 
 export const useAuthStore = create<AuthStoreState>()(
   persist(
-    immer<AuthStoreState>((set, get) => ({
+    immer((set) => ({
       ...INITIAL_STATE,
       setCredentials: (token, user) => {
         const trimmed = token.trim()
         set((state) => {
           state.token = trimmed || null
           state.user = trimmed ? { ...user } : null
-          state.status = determineStatusFromToken(state.token, Boolean(state.user))
+          state.status = determineStatus(state.token, state.user)
           state.error = null
         })
       },
       clear: () => {
-        set(() => ({
-          ...INITIAL_STATE,
-        }))
+        set((state) => {
+          state.token = null
+          state.user = null
+          state.status = 'idle'
+          state.error = null
+        })
+        removeLocalStorageItem('sessionToken')
       },
       markChecking: () => {
-        if (get().token === null) {
-          set(() => ({
-            ...INITIAL_STATE,
-          }))
-          return
-        }
         set((state) => {
           state.status = 'checking'
           state.error = null
@@ -157,22 +154,19 @@ export const useAuthStore = create<AuthStoreState>()(
             state.status = 'idle'
             removeLocalStorageItem('sessionToken')
             const manualLogout = consumeManualLogoutFlag()
-            if (state.error && manualLogout) {
+            if (manualLogout) {
               state.error = null
             } else if (
-              !manualLogout &&
-              (previousStatus === 'authenticated' ||
-                previousStatus === 'offline' ||
-                previousStatus === 'checking')
+              previousStatus === 'authenticated' ||
+              previousStatus === 'offline' ||
+              previousStatus === 'checking'
             ) {
               state.error = 'Sessie verlopen. Log opnieuw in om verder te gaan.'
-            } else if (manualLogout) {
-              state.error = null
             }
             return
           }
           state.token = trimmed
-          state.status = determineStatusFromToken(trimmed, Boolean(state.user))
+          state.status = determineStatus(trimmed, state.user)
           if (state.status !== 'error') {
             state.error = null
           }
@@ -180,7 +174,7 @@ export const useAuthStore = create<AuthStoreState>()(
       },
     })),
     {
-      name: STORE_STORAGE_KEY,
+      name: STORAGE_KEY,
       storage: createJSONStorage(resolveStorage),
       partialize: (state) => ({
         token: state.token,
@@ -196,9 +190,7 @@ export function resetAuthStore(): void {
     ...INITIAL_STATE,
   })
   const persistApi = (
-    useAuthStore as typeof useAuthStore & {
-      persist?: { clearStorage: () => Promise<void> }
-    }
+    useAuthStore as typeof useAuthStore & { persist?: { clearStorage: () => Promise<void> } }
   ).persist
   if (persistApi?.clearStorage) {
     void persistApi.clearStorage()
