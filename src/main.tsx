@@ -4,7 +4,7 @@ import App from '@ui/App'
 import Scanner from '@ui/Scanner'
 import { env } from '@config/env'
 
-const container = document.getElementById('root')
+const container = document.querySelector<HTMLDivElement>('#root')
 
 if (!container) {
   throw new Error('Root element with id "root" not found')
@@ -15,5 +15,5 @@ const RootComponent = env.isScannerMode ? Scanner : App
 createRoot(container).render(
   <React.StrictMode>
     <RootComponent />
-  </React.StrictMode>
+  </React.StrictMode>,
 )
