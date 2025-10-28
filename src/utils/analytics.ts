@@ -26,7 +26,7 @@ const pushToDataLayer = (detail: Record<string, unknown>, legacyEvent?: string) 
     : typeof detail.event === 'string'
       ? detail.event
       : 'rentguy_event'
-  candidate.dataLayer.push({ event: eventName, ...detail })
+  candidate.dataLayer.push({ ...detail, event: eventName })
 }
 
 const dispatchBrowserEvents = (
