@@ -13,6 +13,8 @@ export interface Project {
   status: ProjectStatus
   startDate: string
   endDate?: string
+  createdAt: string
+  teamSize: number
   client?: string
 }
 
@@ -32,68 +34,192 @@ export interface TimelineEvent {
 
 interface ProjectState {
   projects: Project[]
-  currentProject: Project | null
+  currentProject: ProjectDetails | null
   timeline: TimelineEvent[]
   loading: boolean
   error: string | null
+  clearError: () => void
   fetchProjects: () => Promise<Project[]>
-  createProject: (data: Omit<Project, 'id'>) => Promise<Project>
+  createProject: (
+    data: Omit<Project, 'id' | 'createdAt' | 'teamSize'> & { teamSize?: number },
+  ) => Promise<Project>
   updateProject: (id: string, data: Partial<Project>) => Promise<Project>
   deleteProject: (id: string) => Promise<void>
   fetchTimeline: (projectId: string) => Promise<TimelineEvent[]>
   addTimelineEvent: (data: Omit<TimelineEvent, 'id'>) => Promise<TimelineEvent>
   getProjectById: (id: string) => Promise<ProjectDetails | null>
   getProject: (id: string) => Promise<Project | null>
-  clearError: () => void
 }
 
 const PROJECTS_BASE_PATH = '/api/v1/projects'
 
-function resolveErrorMessage(error: unknown): string {
-  return mapUnknownToApiError(error).message
+function resolveError(error: unknown, fallback: string): string {
+  const mapped = mapUnknownToApiError(error)
+  return mapped.message || fallback
 }
 
-function toProjectStatus(rawStatus: unknown): ProjectStatus {
-  const candidate = typeof rawStatus === 'string' ? rawStatus.toUpperCase() : ''
-  if (candidate === 'IN_PROGRESS' || candidate === 'COMPLETED' || candidate === 'ON_HOLD') {
-    return candidate
+function toStringSafe(value: unknown, fallback = ''): string {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value)
+  }
+  return fallback
+}
+
+function toDateString(value: unknown, fallback: Date = new Date()): string {
+  if (value instanceof Date) {
+    return value.toISOString()
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString()
+    }
+  }
+  return fallback.toISOString()
+}
+
+function toStatus(value: unknown): ProjectStatus {
+  if (value === 'IN_PROGRESS' || value === 'COMPLETED' || value === 'ON_HOLD') {
+    return value
   }
   return 'PLANNING'
 }
 
-function normaliseProject(raw: any): Project {
+function parseProject(payload: unknown): Project | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const record = payload as Record<string, unknown>
+  const id = record.id ?? record.projectId ?? crypto.randomUUID?.() ?? `${Date.now()}`
+  const name = record.name ?? record.title
+  const description = record.description ?? record.summary ?? ''
+  const startDate = record.startDate ?? record.start_date ?? Date.now()
+  const status = toStatus(record.status)
+  const teamSize = Number(record.teamSize ?? record.team_size ?? 0)
+
+  if (!name) {
+    return null
+  }
+
   const project: Project = {
-    id: String(raw.id ?? raw.projectId ?? ''),
-    name: String(raw.name ?? raw.title ?? 'Onbekend project'),
-    description: String(raw.description ?? ''),
-    status: toProjectStatus(raw.status),
-    startDate: new Date(raw.startDate ?? raw.start_date ?? Date.now()).toISOString(),
+    id: toStringSafe(id),
+    name: toStringSafe(name, 'Onbekend project'),
+    description: toStringSafe(description),
+    status,
+    startDate: toDateString(startDate),
+    createdAt:
+      record.createdAt || record.created_at
+        ? toDateString(record.createdAt ?? record.created_at)
+        : toDateString(Date.now()),
+    teamSize: Number.isFinite(teamSize) ? teamSize : 0,
   }
 
-  const endCandidate = raw.endDate ?? raw.end_date
-  if (endCandidate) {
-    project.endDate = new Date(endCandidate).toISOString()
+  if (record.endDate || record.end_date) {
+    project.endDate = toDateString(record.endDate ?? record.end_date)
   }
 
-  if (raw.client) {
-    project.client = String(raw.client)
+  const clientName = record.client ? toStringSafe(record.client) : ''
+  if (clientName) {
+    project.client = clientName
   }
 
   return project
 }
 
-function normaliseTimelineEvent(raw: any): TimelineEvent {
+function parseProjectDetails(payload: unknown): ProjectDetails | null {
+  const project = parseProject(payload)
+  if (!project) {
+    return null
+  }
+
+  const record = payload as Record<string, unknown>
+  const crew: Array<{ id: string; name: string; role: string; email: string }> = Array.isArray(
+    record.crewMembers,
+  )
+    ? record.crewMembers
+        .map((entry) => {
+          if (!entry || typeof entry !== 'object') {
+            return null
+          }
+          const crewRecord = entry as Record<string, unknown>
+          const id = crewRecord.id ?? crypto.randomUUID?.() ?? `${Date.now()}`
+          return {
+            id: toStringSafe(id),
+            name: toStringSafe(crewRecord.name ?? crewRecord.fullName ?? 'Onbekend lid'),
+            role: toStringSafe(crewRecord.role ?? crewRecord.position ?? 'crew'),
+            email: toStringSafe(crewRecord.email ?? ''),
+          }
+        })
+        .filter(
+          (value): value is { id: string; name: string; role: string; email: string } =>
+            value !== null,
+        )
+    : []
+
+  const equipment: Array<{ id: string; name: string; type: string; quantity: number }> =
+    Array.isArray(record.equipment)
+      ? record.equipment
+          .map((entry) => {
+            if (!entry || typeof entry !== 'object') {
+              return null
+            }
+            const equipmentRecord = entry as Record<string, unknown>
+            const id = equipmentRecord.id ?? crypto.randomUUID?.() ?? `${Date.now()}`
+            const quantity = Number(equipmentRecord.quantity ?? equipmentRecord.qty ?? 0)
+            return {
+              id: toStringSafe(id),
+              name: toStringSafe(equipmentRecord.name ?? 'Onbekend item'),
+              type: toStringSafe(equipmentRecord.type ?? equipmentRecord.category ?? 'overig'),
+              quantity: Number.isFinite(quantity) ? quantity : 0,
+            }
+          })
+          .filter(
+            (value): value is { id: string; name: string; type: string; quantity: number } =>
+              value !== null,
+          )
+      : []
+
   return {
-    id: String(raw.id ?? ''),
-    projectId: String(raw.projectId ?? raw.project_id ?? ''),
-    title: String(raw.title ?? 'Event'),
-    description: String(raw.description ?? ''),
-    date: new Date(raw.date ?? Date.now()).toISOString(),
-    type: (raw.type ?? 'event') as TimelineEvent['type'],
+    ...project,
+    crewMembers: crew,
+    equipment,
   }
 }
 
-const useProjectStoreBase = create<ProjectState>()(
+function parseTimelineEvent(payload: unknown): TimelineEvent | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  const record = payload as Record<string, unknown>
+  const id = record.id ?? crypto.randomUUID?.() ?? `${Date.now()}`
+  const projectId = record.projectId ?? record.project_id
+  const title = record.title ?? record.name
+  const description = record.description ?? record.summary ?? ''
+  const date = record.date ?? record.occurredAt ?? record.occurred_at ?? Date.now()
+  const type = record.type ?? 'event'
+
+  if (!projectId || !title) {
+    return null
+  }
+
+  const normalisedType: TimelineEvent['type'] =
+    type === 'milestone' || type === 'deadline' ? type : 'event'
+
+  return {
+    id: toStringSafe(id),
+    projectId: toStringSafe(projectId),
+    title: toStringSafe(title),
+    description: toStringSafe(description),
+    date: toDateString(date),
+    type: normalisedType,
+  }
+}
+
+export const useProjectStore = create<ProjectState>()(
   immer((set, get) => ({
     projects: [],
     currentProject: null,
@@ -114,8 +240,12 @@ const useProjectStoreBase = create<ProjectState>()(
       })
 
       try {
-        const response = await api.get<Project[]>(PROJECTS_BASE_PATH)
-        const projects = Array.isArray(response.data) ? response.data.map(normaliseProject) : []
+        const response = await api.get(PROJECTS_BASE_PATH)
+        const projects = Array.isArray(response.data)
+          ? response.data
+              .map(parseProject)
+              .filter((project): project is Project => project !== null)
+          : []
 
         set((state) => {
           state.projects = projects
@@ -124,7 +254,7 @@ const useProjectStoreBase = create<ProjectState>()(
 
         return projects
       } catch (error) {
-        const message = resolveErrorMessage(error)
+        const message = resolveError(error, 'Kon projecten niet laden')
         set((state) => {
           state.loading = false
           state.error = message
@@ -140,15 +270,20 @@ const useProjectStoreBase = create<ProjectState>()(
       })
 
       try {
-        const response = await api.post<Project>(PROJECTS_BASE_PATH, data)
-        const project = normaliseProject({ ...data, ...response.data })
+        const response = await api.post(PROJECTS_BASE_PATH, data)
+        const project = parseProject({ ...data, ...response.data })
+        if (!project) {
+          throw new Error('Onbekend antwoord bij het aanmaken van het project')
+        }
+
         set((state) => {
           state.projects.push(project)
           state.loading = false
         })
+
         return project
       } catch (error) {
-        const message = resolveErrorMessage(error)
+        const message = resolveError(error, 'Kon project niet aanmaken')
         set((state) => {
           state.loading = false
           state.error = message
@@ -164,22 +299,31 @@ const useProjectStoreBase = create<ProjectState>()(
       })
 
       try {
-        const response = await api.put<Project>(`${PROJECTS_BASE_PATH}/${id}`, data)
-        const merged = { ...data, ...response.data }
-        merged.id = id
-        const project = normaliseProject(merged)
+        const response = await api.put(`${PROJECTS_BASE_PATH}/${id}`, data)
+        const project = parseProject({ ...data, ...response.data, id })
+        if (!project) {
+          throw new Error('Onbekend antwoord bij het bijwerken van het project')
+        }
+
         set((state) => {
-          state.projects = state.projects.map((existing) =>
-            existing.id === project.id ? project : existing,
-          )
-          if (state.currentProject?.id === project.id) {
-            state.currentProject = project
+          const index = state.projects.findIndex((item) => item.id === id)
+          if (index >= 0) {
+            state.projects[index] = project
+          } else {
+            state.projects.push(project)
+          }
+          if (state.currentProject?.id === id) {
+            state.currentProject = {
+              ...state.currentProject,
+              ...project,
+            }
           }
           state.loading = false
         })
+
         return project
       } catch (error) {
-        const message = resolveErrorMessage(error)
+        const message = resolveError(error, 'Kon project niet bijwerken')
         set((state) => {
           state.loading = false
           state.error = message
@@ -204,7 +348,7 @@ const useProjectStoreBase = create<ProjectState>()(
           state.loading = false
         })
       } catch (error) {
-        const message = resolveErrorMessage(error)
+        const message = resolveError(error, 'Kon project niet verwijderen')
         set((state) => {
           state.loading = false
           state.error = message
@@ -220,10 +364,12 @@ const useProjectStoreBase = create<ProjectState>()(
       })
 
       try {
-        const response = await api.get<TimelineEvent[]>(
-          `${PROJECTS_BASE_PATH}/${projectId}/timeline`,
-        )
-        const events = Array.isArray(response.data) ? response.data.map(normaliseTimelineEvent) : []
+        const response = await api.get(`${PROJECTS_BASE_PATH}/${projectId}/timeline`)
+        const events = Array.isArray(response.data)
+          ? response.data
+              .map(parseTimelineEvent)
+              .filter((event): event is TimelineEvent => event !== null)
+          : []
 
         set((state) => {
           state.timeline = events
@@ -232,7 +378,7 @@ const useProjectStoreBase = create<ProjectState>()(
 
         return events
       } catch (error) {
-        const message = resolveErrorMessage(error)
+        const message = resolveError(error, 'Kon projecttijdlijn niet laden')
         set((state) => {
           state.loading = false
           state.error = message
@@ -246,19 +392,22 @@ const useProjectStoreBase = create<ProjectState>()(
         state.loading = true
         state.error = null
       })
+
       try {
-        const response = await api.post<TimelineEvent>(
-          `${PROJECTS_BASE_PATH}/${data.projectId}/timeline`,
-          data,
-        )
-        const event = normaliseTimelineEvent({ ...data, ...response.data })
+        const response = await api.post(`${PROJECTS_BASE_PATH}/${data.projectId}/timeline`, data)
+        const event = parseTimelineEvent({ ...data, ...response.data })
+        if (!event) {
+          throw new Error('Onbekend antwoord bij het aanmaken van het tijdlijnevent')
+        }
+
         set((state) => {
           state.timeline.push(event)
           state.loading = false
         })
+
         return event
       } catch (error) {
-        const message = resolveErrorMessage(error)
+        const message = resolveError(error, 'Kon tijdlijnevent niet aanmaken')
         set((state) => {
           state.loading = false
           state.error = message
@@ -267,7 +416,7 @@ const useProjectStoreBase = create<ProjectState>()(
       }
     },
 
-    getProjectById: async (id: string) => {
+    getProjectById: async (id) => {
       const cached = get().projects.find((project) => project.id === id)
       if (cached) {
         return {
@@ -283,21 +432,21 @@ const useProjectStoreBase = create<ProjectState>()(
       })
 
       try {
-        const response = await api.get<Project>(`${PROJECTS_BASE_PATH}/${id}`)
-        const merged = { ...response.data }
-        merged.id = id
-        const project = normaliseProject(merged)
+        const response = await api.get(`${PROJECTS_BASE_PATH}/${id}`)
+        const details = parseProjectDetails({ ...response.data, id })
+        if (!details) {
+          return null
+        }
+
         set((state) => {
-          state.projects.push(project)
+          state.projects.push(details)
+          state.currentProject = details
           state.loading = false
         })
-        return {
-          ...project,
-          crewMembers: [],
-          equipment: [],
-        }
+
+        return details
       } catch (error) {
-        const message = resolveErrorMessage(error)
+        const message = resolveError(error, 'Kon projectdetails niet laden')
         set((state) => {
           state.loading = false
           state.error = message
@@ -306,55 +455,57 @@ const useProjectStoreBase = create<ProjectState>()(
       }
     },
 
-    getProject: async (id: string) => {
+    getProject: async (id) => {
       const project = get().projects.find((existing) => existing.id === id)
       if (project) {
         return project
       }
-
       const details = await get().getProjectById(id)
-      return details ?? null
+      return details
     },
   })),
 )
 
-const projectStore = Object.assign(useProjectStoreBase, {
-  clearError: () => useProjectStoreBase.getState().clearError(),
-  fetchProjects: () => useProjectStoreBase.getState().fetchProjects(),
-  createProject: (data: Omit<Project, 'id'>) => useProjectStoreBase.getState().createProject(data),
+const projectStore = Object.assign(useProjectStore, {
+  clearError: () => useProjectStore.getState().clearError(),
+  fetchProjects: () => useProjectStore.getState().fetchProjects(),
+  createProject: (data: Omit<Project, 'id' | 'createdAt' | 'teamSize'> & { teamSize?: number }) =>
+    useProjectStore.getState().createProject(data),
   updateProject: (data: Partial<Project> & { id: string }) =>
-    useProjectStoreBase.getState().updateProject(data.id, data),
-  deleteProject: (id: string) => useProjectStoreBase.getState().deleteProject(id),
-  fetchTimeline: (projectId: string) => useProjectStoreBase.getState().fetchTimeline(projectId),
+    useProjectStore.getState().updateProject(data.id, data),
+  deleteProject: (id: string) => useProjectStore.getState().deleteProject(id),
+  fetchTimeline: (projectId: string) => useProjectStore.getState().fetchTimeline(projectId),
   addTimelineEvent: (data: Omit<TimelineEvent, 'id'>) =>
-    useProjectStoreBase.getState().addTimelineEvent(data),
+    useProjectStore.getState().addTimelineEvent(data),
+  getProjectById: (id: string) => useProjectStore.getState().getProjectById(id),
+  getProject: (id: string) => useProjectStore.getState().getProject(id),
   getProjects: async () => {
-    const store = useProjectStoreBase.getState()
+    const store = useProjectStore.getState()
     if (store.projects.length === 0) {
       await store.fetchProjects()
     }
-    return useProjectStoreBase.getState().projects
+    return useProjectStore.getState().projects
   },
-  getStats: () => {
-    const projects = useProjectStoreBase.getState().projects
-    return Promise.resolve({
-      totalTasks: projects.length * 10,
-      completedTasks: projects.filter((project) => project.status === 'COMPLETED').length * 10,
-    })
+  getStats: async () => {
+    const projects = await projectStore.getProjects()
+    const total = projects.length
+    const completed = projects.filter((project) => project.status === 'COMPLETED').length
+    return {
+      totalProjects: total,
+      completedProjects: completed,
+      activeProjects: projects.filter((project) => project.status === 'IN_PROGRESS').length,
+      upcomingProjects: projects.filter((project) => project.status === 'PLANNING').length,
+    }
   },
-  getRecentActivities: () => {
-    const projects = useProjectStoreBase.getState().projects
-    return Promise.resolve(
-      projects.slice(0, 5).map((project) => ({
-        id: project.id,
-        title: project.name,
-        date: project.startDate,
-        status: project.status === 'COMPLETED' ? 'completed' : 'in-progress',
-      })),
-    )
+  getRecentActivities: async () => {
+    const projects = await projectStore.getProjects()
+    return projects.slice(0, 5).map((project) => ({
+      id: project.id,
+      title: project.name,
+      date: project.startDate,
+      status: project.status === 'COMPLETED' ? 'completed' : 'in-progress',
+    }))
   },
-  getProjectById: (id: string) => useProjectStoreBase.getState().getProjectById(id),
-  getProject: (id: string) => useProjectStoreBase.getState().getProject(id),
 })
 
 export const defaultProjectPresets: Record<PersonaKey, PersonaPreset> = {
