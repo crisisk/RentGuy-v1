@@ -102,7 +102,88 @@ def _install_otel_stubs() -> None:
     sys.modules['opentelemetry.sdk.trace.export'] = sdk_trace_export_module
 
 
+def _install_aiosqlite_stub() -> None:
+    if 'aiosqlite' in sys.modules:
+        return
+
+    import sqlite3
+
+    module = types.ModuleType('aiosqlite')
+
+    class _Cursor:
+        def __init__(self, connection) -> None:
+            self._cursor = connection.cursor()
+
+        async def execute(self, *args, **kwargs):  # pragma: no cover - simple shim
+            self._cursor.execute(*args, **kwargs)
+            return self
+
+        async def fetchall(self):  # pragma: no cover - simple shim
+            return self._cursor.fetchall()
+
+        async def fetchone(self):  # pragma: no cover - simple shim
+            return self._cursor.fetchone()
+
+        async def close(self):  # pragma: no cover - simple shim
+            self._cursor.close()
+
+        def __getattr__(self, name):  # pragma: no cover - simple shim
+            return getattr(self._cursor, name)
+
+    class _Connection:
+        def __init__(self, *args, **kwargs) -> None:  # pragma: no cover - simple shim
+            self._conn = sqlite3.connect(*args, **kwargs)
+
+        async def cursor(self):  # pragma: no cover - simple shim
+            return _Cursor(self._conn)
+
+        async def execute(self, *args, **kwargs):  # pragma: no cover - simple shim
+            self._conn.execute(*args, **kwargs)
+
+        async def commit(self):  # pragma: no cover - simple shim
+            self._conn.commit()
+
+        async def rollback(self):  # pragma: no cover - simple shim
+            self._conn.rollback()
+
+        async def close(self):  # pragma: no cover - simple shim
+            self._conn.close()
+
+        async def __aenter__(self):  # pragma: no cover - simple shim
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):  # pragma: no cover - simple shim
+            await self.close()
+            return False
+
+        def __getattr__(self, name):  # pragma: no cover - simple shim
+            return getattr(self._conn, name)
+
+    async def _connect(*args, **kwargs):  # pragma: no cover - simple shim
+        return _Connection(*args, **kwargs)
+
+    module.connect = _connect
+    module.Connection = _Connection
+    module.Cursor = _Cursor
+    module.sqlite_version = sqlite3.sqlite_version
+    module.sqlite_version_info = sqlite3.sqlite_version_info
+    module.PARSE_DECLTYPES = sqlite3.PARSE_DECLTYPES
+    module.PARSE_COLNAMES = sqlite3.PARSE_COLNAMES
+    module.Error = sqlite3.Error
+    module.Warning = sqlite3.Warning
+    module.DatabaseError = sqlite3.DatabaseError
+    module.InterfaceError = sqlite3.InterfaceError
+    module.DataError = sqlite3.DataError
+    module.OperationalError = sqlite3.OperationalError
+    module.IntegrityError = sqlite3.IntegrityError
+    module.InternalError = sqlite3.InternalError
+    module.ProgrammingError = sqlite3.ProgrammingError
+    module.NotSupportedError = sqlite3.NotSupportedError
+    sys.modules['aiosqlite'] = module
+
+
 _install_otel_stubs()
+_install_aiosqlite_stub()
 
 # Provide light-weight stand-ins for optional geoalchemy2 dependency that is not
 # required for the current test-suite but imported by several modules.
@@ -219,6 +300,7 @@ os.environ.setdefault('MRDJ_LEAD_CAPTURE_CAPTCHA_SECRET', 'dummy-secret')
 # Ensure models are imported so metadata is populated before accessing the FastAPI app
 import app.modules.auth.models  # noqa: F401
 import app.modules.chat.models  # noqa: F401
+import app.modules.billing.models  # noqa: F401
 import app.modules.booking.models  # noqa: F401
 import app.modules.crew.models  # noqa: F401
 import app.modules.customer_portal.models  # noqa: F401
