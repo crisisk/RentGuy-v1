@@ -6,6 +6,10 @@
 > **Update (2025-10-26):** TypeScript compiler remediation merged via commit `c2af7ac`, adding typed Zustand stores, router contracts, and shared type exports for the planner and dashboard surfaces.【F:src/stores/adminStore.ts†L1-L110】【F:src/router/routes.tsx†L1-L112】【F:src/types/index.ts†L1-L30】
 > **Priority:** HIGH - Production Deployment Blocked
 
+## ✅ Daily Progress — 28 October 2025
+
+- **F1.6 – Run `npm install` to install all dependencies:** Completed successfully at 16:07 UTC with only minor warnings (peer dependency mismatch, deprecated Husky notice).【F:docs/installation_logs/F1.6_npm_install.md†L1-L12】
+
 ---
 
 ## 📋 Missing Components Inventory
@@ -85,6 +89,21 @@
 | **F1.4** | Create `src/errors/index.ts` with APIError class                      | - Existing API client error handling                         | - `APIError` class<br>- Error types enum<br>- Error helper functions                                                                  | - API modules can import APIError<br>- TypeScript compiles                                                     | 🔴       |
 | **F1.5** | Update `package.json` with all missing dependencies                   | - Missing dependencies list                                  | - Updated `package.json`<br>- `package-lock.json`                                                                                     | - `npm install` succeeds<br>- No peer dependency warnings                                                      | 🔴       |
 | **F1.6** | Run `npm install` to install all dependencies                         | - Updated `package.json`                                     | - `node_modules/` populated<br>- Lock file updated                                                                                    | - All dependencies installed<br>- No errors                                                                    | 🔴       |
+
+---
+
+## 🔜 Upcoming Open Development Tasks
+
+1. **F1.1 – Create `src/stores/` directory and implement Zustand stores** (Admin, CRM, Crew, Finance, Project, Auth) to unblock state management for every console surface.【F:AGENTIC_AI_TASK_LIST.md†L45-L66】
+2. **F1.2 – Create `src/types/` directory and author all domain type definitions** so UI modules compile against shared contracts.【F:AGENTIC_AI_TASK_LIST.md†L67-L82】
+3. **F1.3 – Establish the routing layer in `src/router/`** with router entry point and guards to enable authenticated navigation flows.【F:AGENTIC_AI_TASK_LIST.md†L83-L92】
+4. **F1.4 – Deliver `src/errors/index.ts` with the `APIError` class** to standardise client error handling across API modules.【F:AGENTIC_AI_TASK_LIST.md†L93-L100】
+5. **F1.5 – Update `package.json` with missing dependencies** (`zustand`, `uuid`, `react-router-dom`, `immer`, `socket.io-client`, `react-leaflet`, `leaflet`) so subsequent installs succeed without manual edits.【F:AGENTIC_AI_TASK_LIST.md†L101-L113】
+6. **F2.1 – Fix `tsconfig.json` and unblock production builds** ensuring `npm run build` generates the Vite bundle cleanly.【F:AGENTIC_AI_TASK_LIST.md†L117-L124】
+7. **F2.2 – Wire `App.tsx` to the new router infrastructure** to make the SPA render via `RouterProvider`.【F:AGENTIC_AI_TASK_LIST.md†L125-L131】
+8. **F2.3 – Create `src/main.tsx` with the React 18 root** enabling dev server and build entry consistency.【F:AGENTIC_AI_TASK_LIST.md†L132-L138】
+9. **F2.4 – Repair the frontend Dockerfile** so container builds succeed ahead of deployment.【F:AGENTIC_AI_TASK_LIST.md†L139-L145】
+10. **F2.5 – Produce the `rentguy-frontend` Docker image** as a precursor to Compose orchestration.【F:AGENTIC_AI_TASK_LIST.md†L146-L152】
 
 ---
 
