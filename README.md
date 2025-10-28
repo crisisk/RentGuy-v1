@@ -158,6 +158,27 @@ The command launches the esbuild development server on `http://localhost:5175`
 and mirrors `index.html` into the generated `dist/` directory so static assets
 stay in sync.
 
+### Analytics events registreren
+
+Nieuwe UI-modules registreren hun analytics via de helper in `src/utils/analytics.ts`. Importeer `track` vanuit `@utils/analytics`, kies een canonieke eventnaam (`rentguy.<domein>.<actie>`) en vul de context/attribuutvelden in. De helper zorgt ervoor dat events veilig in `window.dataLayer` terechtkomen, buffered worden wanneer de laag nog niet bestaat en dat de queue automatisch wordt getrimd.
+
+```ts
+import { track } from '@utils/analytics'
+
+track('rentguy.onboarding.step_completed', {
+  context: {
+    module: 'onboarding',
+    tenantId: activeTenantId,
+  },
+  properties: {
+    stepCode,
+    completionState: 'complete',
+  },
+})
+```
+
+Voeg eventuele domeinspecifieke velden toe in `properties` en hergebruik dezelfde modulewaarde in `context.module` zodat dashboards kunnen groeperen op UI-onderdeel.
+
 ### Secretsbeheer via het dashboard
 
 Beheerders kunnen alle `.env`-variabelen beheren via het beveiligde dashboard op
