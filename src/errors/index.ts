@@ -30,11 +30,11 @@ export class APIError extends AppError {
       return true
     }
 
-    if (!value || typeof value !== 'object') {
+    if (!(value instanceof AppError)) {
       return false
     }
 
-    return (value as { name?: string }).name === API_ERROR_NAME
+    return value.name === API_ERROR_NAME
   }
 
   private static fromAppError(appError: AppError): APIError {
@@ -71,8 +71,10 @@ export function mapUnknownToApiError(error: unknown): APIError {
   return APIError.from(error)
 }
 
-export function assertApiError(error: unknown): APIError {
-  return APIError.from(error)
+export function assertApiError(error: unknown): asserts error is APIError {
+  if (!APIError.isApiError(error)) {
+    throw APIError.from(error)
+  }
 }
 
 export {

@@ -27,14 +27,17 @@ export interface UserActivity {
 
 export interface GeneralSettings {
   systemName?: string
+  legalEntity?: string
 }
 
 export interface EmailSettings {
   smtpServer?: string
+  senderEmail?: string
 }
 
 export interface SecuritySettings {
   twoFactorEnabled?: 'enabled' | 'disabled'
+  sessionTimeoutMinutes?: number
 }
 
 export interface AdminSettings {
@@ -49,82 +52,79 @@ interface AdminState {
   settings: AdminSettings
   loading: boolean
   error: string | null
+  clearError: () => void
   loadUsers: () => Promise<AdminUser[]>
   fetchUsers: () => Promise<AdminUser[]>
-  createUser: (user: Partial<AdminUser>) => Promise<AdminUser | null>
-  updateUser: (id: string, userData: Partial<AdminUser>) => Promise<AdminUser | null>
+  createUser: (payload: Partial<AdminUser>) => Promise<AdminUser>
+  updateUser: (id: string, payload: Partial<AdminUser>) => Promise<AdminUser>
   deleteUser: (id: string) => Promise<void>
   fetchRoles: () => Promise<string[]>
   getSystemStats: () => Promise<SystemStats>
   getUserActivities: () => Promise<UserActivity[]>
   getSystemSettings: () => Promise<AdminSettings>
   updateSystemSettings: (settings: AdminSettings) => Promise<AdminSettings>
-  clearError: () => void
 }
 
 const ADMIN_BASE_PATH = '/api/v1/admin'
+const USERS_PATH = `${ADMIN_BASE_PATH}/users`
+const ROLES_PATH = `${ADMIN_BASE_PATH}/roles`
+const STATS_PATH = `${ADMIN_BASE_PATH}/system/stats`
+const ACTIVITIES_PATH = `${ADMIN_BASE_PATH}/activity`
+const SETTINGS_PATH = `${ADMIN_BASE_PATH}/settings`
 
-function resolveError(error: unknown): string {
-  return mapUnknownToApiError(error).message
-}
-
-const defaultSettings: AdminSettings = {
+const EMPTY_SETTINGS: AdminSettings = {
   general: {},
   email: {},
   security: {},
 }
 
-function isString(value: unknown): value is string {
-  return typeof value === 'string'
+function resolveError(error: unknown, fallback: string): string {
+  const mapped = mapUnknownToApiError(error)
+  return mapped.message || fallback
 }
 
-function toFiniteNumber(value: unknown, fallback = 0): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
+function toStringSafe(value: unknown, fallback = ''): string {
+  if (typeof value === 'string' && value.trim().length > 0) {
     return value
   }
-
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value)
   }
-
   return fallback
 }
 
-function parseAdminUser(data: unknown): AdminUser | null {
-  if (!data || typeof data !== 'object') {
+function toNumber(value: unknown, fallback = 0): number {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(numeric) ? numeric : fallback
+}
+
+function parseUser(payload: unknown): AdminUser | null {
+  if (!payload || typeof payload !== 'object') {
     return null
   }
 
-  const record = data as Record<string, unknown>
-  const idCandidate = record.id ?? record.userId
-  const createdAtCandidate = record.createdAt ?? record.created_at
+  const record = payload as Record<string, unknown>
+  const id = record.id ?? record.userId
+  const name = record.name ?? record.fullName
+  const email = record.email ?? record.mail
+  const role = record.role ?? record.permission ?? 'user'
+  const createdAt = record.createdAt ?? record.created_at ?? new Date().toISOString()
 
-  if (!idCandidate || (!isString(idCandidate) && typeof idCandidate !== 'number')) {
-    return null
-  }
-
-  if (!isString(record.name) || !isString(record.email) || !isString(record.role)) {
-    return null
-  }
-
-  if (!createdAtCandidate || !isString(createdAtCandidate)) {
+  if (!id || !name || !email) {
     return null
   }
 
   return {
-    id: String(idCandidate),
-    name: record.name,
-    email: record.email,
-    role: record.role,
-    createdAt: createdAtCandidate,
+    id: toStringSafe(id),
+    name: toStringSafe(name),
+    email: toStringSafe(email),
+    role: toStringSafe(role, 'user'),
+    createdAt: new Date(createdAt as string | number | Date).toISOString(),
   }
 }
 
-function parseSystemStats(data: unknown): SystemStats {
-  if (!data || typeof data !== 'object') {
+function parseSystemStats(payload: unknown): SystemStats {
+  if (!payload || typeof payload !== 'object') {
     return {
       totalUsers: 0,
       activeUsers: 0,
@@ -133,102 +133,92 @@ function parseSystemStats(data: unknown): SystemStats {
     }
   }
 
-  const record = data as Record<string, unknown>
+  const record = payload as Record<string, unknown>
 
   return {
-    totalUsers: toFiniteNumber(record.totalUsers),
-    activeUsers: toFiniteNumber(record.activeUsers),
-    uptimeSeconds: toFiniteNumber(record.uptimeSeconds ?? record.serverUptime),
-    memoryUsage: toFiniteNumber(record.memoryUsage),
+    totalUsers: toNumber(record.totalUsers ?? record.total_users),
+    activeUsers: toNumber(record.activeUsers ?? record.active_users),
+    uptimeSeconds: toNumber(record.uptimeSeconds ?? record.server_uptime ?? 0),
+    memoryUsage: toNumber(record.memoryUsage ?? record.memory_usage ?? 0),
   }
 }
 
-function parseUserActivity(data: unknown): UserActivity | null {
-  if (!data || typeof data !== 'object') {
+function parseActivity(payload: unknown): UserActivity | null {
+  if (!payload || typeof payload !== 'object') {
     return null
   }
 
-  const record = data as Record<string, unknown>
-  const idCandidate = record.id ?? record.activityId
-  const usernameCandidate = record.username ?? record.userName
-  const lastLoginCandidate = record.lastLogin ?? record.last_login
-  const loginCountCandidate = record.loginCount ?? record.login_count
+  const record = payload as Record<string, unknown>
+  const id = record.id ?? record.activityId ?? crypto.randomUUID?.() ?? `${Date.now()}`
+  const username = record.username ?? record.user ?? record.userName
+  const lastLogin = record.lastLogin ?? record.last_login ?? new Date().toISOString()
+  const loginCount = record.loginCount ?? record.login_count ?? 0
 
-  if (!idCandidate || (!isString(idCandidate) && typeof idCandidate !== 'number')) {
-    return null
-  }
-
-  if (!isString(usernameCandidate) || !isString(lastLoginCandidate)) {
-    return null
-  }
-
-  const loginCount = toFiniteNumber(loginCountCandidate, -1)
-  if (loginCount < 0) {
+  if (!username) {
     return null
   }
 
   return {
-    id: String(idCandidate),
-    username: usernameCandidate,
-    lastLogin: lastLoginCandidate,
-    loginCount,
+    id: toStringSafe(id),
+    username: toStringSafe(username, 'Onbekend'),
+    lastLogin: new Date(lastLogin as string | number | Date).toISOString(),
+    loginCount: toNumber(loginCount),
   }
 }
 
-function parseAdminSettings(data: unknown): AdminSettings {
-  if (!data || typeof data !== 'object') {
-    return { ...defaultSettings }
+function mergeSettings(payload: unknown): AdminSettings {
+  if (!payload || typeof payload !== 'object') {
+    return EMPTY_SETTINGS
   }
 
-  const record = data as Record<string, unknown>
-  const settings: AdminSettings = {
-    general: {},
-    email: {},
-    security: {},
+  const record = payload as Record<string, unknown>
+
+  const general: GeneralSettings = {}
+  const generalSource = (record.general as Record<string, unknown>) ?? {}
+  const generalName = toStringSafe(generalSource.systemName ?? record.systemName)
+  if (generalName) {
+    general.systemName = generalName
+  }
+  const generalEntity = toStringSafe(generalSource.legalEntity ?? record.legalEntity)
+  if (generalEntity) {
+    general.legalEntity = generalEntity
   }
 
-  const general = record.general
-  if (general && typeof general === 'object') {
-    const generalRecord = general as Record<string, unknown>
-    if (isString(generalRecord.systemName)) {
-      settings.general.systemName = generalRecord.systemName
-    }
+  const email: EmailSettings = {}
+  const emailSource = (record.email as Record<string, unknown>) ?? {}
+  const smtpServer = toStringSafe(emailSource.smtpServer ?? record.smtpServer)
+  if (smtpServer) {
+    email.smtpServer = smtpServer
+  }
+  const sender = toStringSafe(emailSource.senderEmail ?? record.senderEmail)
+  if (sender) {
+    email.senderEmail = sender
   }
 
-  const email = record.email
-  if (email && typeof email === 'object') {
-    const emailRecord = email as Record<string, unknown>
-    if (isString(emailRecord.smtpServer)) {
-      settings.email.smtpServer = emailRecord.smtpServer
-    }
+  const security: SecuritySettings = {}
+  const securitySource = (record.security as Record<string, unknown>) ?? {}
+  const twoFactor = securitySource.twoFactorEnabled ?? record.twoFactorEnabled
+  if (twoFactor === 'enabled' || twoFactor === 'disabled') {
+    security.twoFactorEnabled = twoFactor
+  }
+  const timeoutRaw = securitySource.sessionTimeoutMinutes ?? record.sessionTimeoutMinutes
+  const timeoutValue = toNumber(timeoutRaw, Number.NaN)
+  if (Number.isFinite(timeoutValue)) {
+    security.sessionTimeoutMinutes = timeoutValue
   }
 
-  const security = record.security
-  if (security && typeof security === 'object') {
-    const securityRecord = security as Record<string, unknown>
-    const twoFactorRaw = securityRecord.twoFactorEnabled ?? securityRecord.two_factor_enabled
-
-    if (typeof twoFactorRaw === 'boolean') {
-      settings.security.twoFactorEnabled = twoFactorRaw ? 'enabled' : 'disabled'
-    } else if (isString(twoFactorRaw)) {
-      if (twoFactorRaw === 'enabled' || twoFactorRaw === 'disabled') {
-        settings.security.twoFactorEnabled = twoFactorRaw
-      } else if (twoFactorRaw === 'true') {
-        settings.security.twoFactorEnabled = 'enabled'
-      } else if (twoFactorRaw === 'false') {
-        settings.security.twoFactorEnabled = 'disabled'
-      }
-    }
+  return {
+    general,
+    email,
+    security,
   }
-
-  return settings
 }
 
-const useAdminStoreBase = create<AdminState>()(
+export const useAdminStore = create<AdminState>()(
   immer((set, get) => ({
     users: [],
     roles: [],
-    settings: { ...defaultSettings },
+    settings: EMPTY_SETTINGS,
     loading: false,
     error: null,
 
@@ -239,15 +229,23 @@ const useAdminStoreBase = create<AdminState>()(
     },
 
     loadUsers: async () => {
+      const { users } = get()
+      if (users.length > 0) {
+        return users
+      }
+      return get().fetchUsers()
+    },
+
+    fetchUsers: async () => {
       set((state) => {
         state.loading = true
         state.error = null
       })
 
       try {
-        const response = await api.get(`${ADMIN_BASE_PATH}/users`)
+        const response = await api.get(USERS_PATH)
         const users = Array.isArray(response.data)
-          ? response.data.map(parseAdminUser).filter((user): user is AdminUser => Boolean(user))
+          ? response.data.map(parseUser).filter((user): user is AdminUser => Boolean(user))
           : []
 
         set((state) => {
@@ -257,81 +255,73 @@ const useAdminStoreBase = create<AdminState>()(
 
         return users
       } catch (error) {
-        const message = resolveError(error)
+        const message = resolveError(error, 'Kon gebruikers niet ophalen')
         set((state) => {
-          state.error = message
           state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
     },
 
-    fetchUsers: () => get().loadUsers(),
-
-    createUser: async (user) => {
+    createUser: async (payload) => {
       set((state) => {
         state.loading = true
         state.error = null
       })
 
       try {
-        const response = await api.post(`${ADMIN_BASE_PATH}/users`, user)
-        const parsedUser = parseAdminUser(response.data)
-
-        if (parsedUser) {
-          set((state) => {
-            const index = state.users.findIndex((existing) => existing.id === parsedUser.id)
-            if (index >= 0) {
-              state.users[index] = parsedUser
-            } else {
-              state.users.push(parsedUser)
-            }
-            state.loading = false
-          })
-        } else {
-          set((state) => {
-            state.loading = false
-          })
+        const response = await api.post(USERS_PATH, payload)
+        const user = parseUser(response.data ?? payload)
+        if (!user) {
+          throw new Error('Onbekend gebruikersantwoord ontvangen')
         }
 
-        return parsedUser ?? null
-      } catch (error) {
-        const message = resolveError(error)
         set((state) => {
-          state.error = message
+          state.users.push(user)
           state.loading = false
+        })
+
+        return user
+      } catch (error) {
+        const message = resolveError(error, 'Kon gebruiker niet aanmaken')
+        set((state) => {
+          state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
     },
 
-    updateUser: async (id, userData) => {
+    updateUser: async (id, payload) => {
       set((state) => {
         state.loading = true
         state.error = null
       })
 
       try {
-        const response = await api.put(`${ADMIN_BASE_PATH}/users/${id}`, userData)
-        const parsedUser = parseAdminUser(response.data)
-
-        if (parsedUser) {
-          set((state) => {
-            state.users = state.users.map((user) => (user.id === parsedUser.id ? parsedUser : user))
-            state.loading = false
-          })
-        } else {
-          set((state) => {
-            state.loading = false
-          })
+        const response = await api.put(`${USERS_PATH}/${id}`, payload)
+        const updated = parseUser({ ...payload, ...response.data, id })
+        if (!updated) {
+          throw new Error('Onbekend gebruikersantwoord ontvangen')
         }
 
-        return parsedUser ?? null
-      } catch (error) {
-        const message = resolveError(error)
         set((state) => {
-          state.error = message
+          const index = state.users.findIndex((user) => user.id === id)
+          if (index >= 0) {
+            state.users[index] = updated
+          } else {
+            state.users.push(updated)
+          }
           state.loading = false
+        })
+
+        return updated
+      } catch (error) {
+        const message = resolveError(error, 'Kon gebruiker niet bijwerken')
+        set((state) => {
+          state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
@@ -344,16 +334,16 @@ const useAdminStoreBase = create<AdminState>()(
       })
 
       try {
-        await api.delete(`${ADMIN_BASE_PATH}/users/${id}`)
+        await api.delete(`${USERS_PATH}/${id}`)
         set((state) => {
           state.users = state.users.filter((user) => user.id !== id)
           state.loading = false
         })
       } catch (error) {
-        const message = resolveError(error)
+        const message = resolveError(error, 'Kon gebruiker niet verwijderen')
         set((state) => {
-          state.error = message
           state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
@@ -366,7 +356,7 @@ const useAdminStoreBase = create<AdminState>()(
       })
 
       try {
-        const response = await api.get(`${ADMIN_BASE_PATH}/roles`)
+        const response = await api.get(ROLES_PATH)
         const roles = Array.isArray(response.data)
           ? response.data.filter((role): role is string => typeof role === 'string')
           : []
@@ -378,10 +368,10 @@ const useAdminStoreBase = create<AdminState>()(
 
         return roles
       } catch (error) {
-        const message = resolveError(error)
+        const message = resolveError(error, 'Kon rollen niet ophalen')
         set((state) => {
-          state.error = message
           state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
@@ -394,17 +384,19 @@ const useAdminStoreBase = create<AdminState>()(
       })
 
       try {
-        const response = await api.get(`${ADMIN_BASE_PATH}/stats`)
+        const response = await api.get(STATS_PATH)
         const stats = parseSystemStats(response.data)
+
         set((state) => {
           state.loading = false
         })
+
         return stats
       } catch (error) {
-        const message = resolveError(error)
+        const message = resolveError(error, 'Kon systeemsstatistieken niet ophalen')
         set((state) => {
-          state.error = message
           state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
@@ -417,10 +409,10 @@ const useAdminStoreBase = create<AdminState>()(
       })
 
       try {
-        const response = await api.get(`${ADMIN_BASE_PATH}/activities`)
+        const response = await api.get(ACTIVITIES_PATH)
         const activities = Array.isArray(response.data)
           ? response.data
-              .map(parseUserActivity)
+              .map(parseActivity)
               .filter((activity): activity is UserActivity => Boolean(activity))
           : []
 
@@ -430,10 +422,10 @@ const useAdminStoreBase = create<AdminState>()(
 
         return activities
       } catch (error) {
-        const message = resolveError(error)
+        const message = resolveError(error, 'Kon gebruikersactiviteit niet ophalen')
         set((state) => {
-          state.error = message
           state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
@@ -446,20 +438,20 @@ const useAdminStoreBase = create<AdminState>()(
       })
 
       try {
-        const response = await api.get(`${ADMIN_BASE_PATH}/settings`)
-        const parsedSettings = parseAdminSettings(response.data)
+        const response = await api.get(SETTINGS_PATH)
+        const settings = mergeSettings(response.data)
 
         set((state) => {
-          state.settings = parsedSettings
+          state.settings = settings
           state.loading = false
         })
 
-        return parsedSettings
+        return settings
       } catch (error) {
-        const message = resolveError(error)
+        const message = resolveError(error, 'Kon systeeminstellingen niet ophalen')
         set((state) => {
-          state.error = message
           state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
@@ -472,20 +464,20 @@ const useAdminStoreBase = create<AdminState>()(
       })
 
       try {
-        const response = await api.put(`${ADMIN_BASE_PATH}/settings`, settings)
-        const parsed = parseAdminSettings(response.data)
+        const response = await api.put(SETTINGS_PATH, settings)
+        const merged = mergeSettings({ ...settings, ...response.data })
 
         set((state) => {
-          state.settings = parsed
+          state.settings = merged
           state.loading = false
         })
 
-        return parsed
+        return merged
       } catch (error) {
-        const message = resolveError(error)
+        const message = resolveError(error, 'Kon systeeminstellingen niet bijwerken')
         set((state) => {
-          state.error = message
           state.loading = false
+          state.error = message
         })
         throw new Error(message)
       }
@@ -493,20 +485,20 @@ const useAdminStoreBase = create<AdminState>()(
   })),
 )
 
-const adminStore = Object.assign(useAdminStoreBase, {
-  loadUsers: () => useAdminStoreBase.getState().loadUsers(),
-  fetchUsers: () => useAdminStoreBase.getState().fetchUsers(),
-  createUser: (user: Partial<AdminUser>) => useAdminStoreBase.getState().createUser(user),
-  updateUser: (id: string, userData: Partial<AdminUser>) =>
-    useAdminStoreBase.getState().updateUser(id, userData),
-  deleteUser: (id: string) => useAdminStoreBase.getState().deleteUser(id),
-  fetchRoles: () => useAdminStoreBase.getState().fetchRoles(),
-  getSystemStats: () => useAdminStoreBase.getState().getSystemStats(),
-  getUserActivities: () => useAdminStoreBase.getState().getUserActivities(),
-  getSystemSettings: () => useAdminStoreBase.getState().getSystemSettings(),
+const adminStore = Object.assign(useAdminStore, {
+  loadUsers: () => useAdminStore.getState().loadUsers(),
+  fetchUsers: () => useAdminStore.getState().fetchUsers(),
+  createUser: (payload: Partial<AdminUser>) => useAdminStore.getState().createUser(payload),
+  updateUser: (id: string, payload: Partial<AdminUser>) =>
+    useAdminStore.getState().updateUser(id, payload),
+  deleteUser: (id: string) => useAdminStore.getState().deleteUser(id),
+  fetchRoles: () => useAdminStore.getState().fetchRoles(),
+  getSystemStats: () => useAdminStore.getState().getSystemStats(),
+  getUserActivities: () => useAdminStore.getState().getUserActivities(),
+  getSystemSettings: () => useAdminStore.getState().getSystemSettings(),
   updateSystemSettings: (settings: AdminSettings) =>
-    useAdminStoreBase.getState().updateSystemSettings(settings),
-  clearError: () => useAdminStoreBase.getState().clearError(),
+    useAdminStore.getState().updateSystemSettings(settings),
+  clearError: () => useAdminStore.getState().clearError(),
 })
 
 export default adminStore
