@@ -1,28 +1,34 @@
+export type EmailDiagnosticsStatus = 'ok' | 'warning' | 'error'
+
 export interface ManagedSecret {
-  key: string
-  label: string
-  category: string
-  description?: string | null
-  isSensitive: boolean
-  requiresRestart: boolean
-  hasValue: boolean
-  valueHint?: string | null
-  updatedAt?: string | null
-  lastSyncedAt?: string | null
+  readonly key: string
+  readonly label: string
+  readonly category: string
+  readonly description?: string | null
+  readonly isSensitive: boolean
+  readonly requiresRestart: boolean
+  readonly hasValue: boolean
+  readonly valueHint?: string | null
+  readonly updatedAt?: string | null
+  readonly lastSyncedAt?: string | null
+}
+
+export interface SecretUpdatePayload {
+  readonly value?: string | null
 }
 
 export interface SecretsSyncSummary {
-  applied: number
-  envPath: string
-  triggeredRestart: boolean
-  timestamp: string
+  readonly applied: number
+  readonly envPath: string
+  readonly triggeredRestart: boolean
+  readonly timestamp: string
 }
 
 export interface EmailDiagnostics {
-  status: 'ok' | 'warning' | 'error'
-  message: string
-  missing: string[]
-  configured: string[]
-  nodeReady: boolean
-  authConfigured: boolean
+  readonly status: EmailDiagnosticsStatus
+  readonly message: string
+  readonly missing: readonly string[]
+  readonly configured: readonly string[]
+  readonly nodeReady: boolean
+  readonly authConfigured: boolean
 }

@@ -4,6 +4,7 @@ export * from './crewTypes'
 export * from './financeTypes'
 export * from './projectTypes'
 export * from './equipmentTypes'
+export * from './platform'
 export * from './supplierDashboard'
 
 export interface ApiResponse<T> {
