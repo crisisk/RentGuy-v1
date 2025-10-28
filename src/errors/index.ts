@@ -1,6 +1,6 @@
 import {
   AppError,
-  assertAppError,
+  assertAppError as assertAppErrorLegacy,
   mapUnknownToAppError,
   type AppErrorCode,
   type AppErrorOptions,
@@ -12,19 +12,16 @@ export type ApiErrorCode = AppErrorCode
 export type ApiErrorOptions = AppErrorOptions
 
 function extractOptionsFromAppError(appError: AppError): ApiErrorOptions {
-  const { httpStatus, meta, cause } = appError
   const options: ApiErrorOptions = {}
-
-  if (httpStatus !== undefined) {
-    options.httpStatus = httpStatus
+  if (appError.httpStatus !== undefined) {
+    options.httpStatus = appError.httpStatus
   }
-  if (meta !== undefined) {
-    options.meta = meta
+  if (appError.meta !== undefined) {
+    options.meta = appError.meta
   }
-  if (cause !== undefined) {
-    options.cause = cause
+  if (appError.cause !== undefined) {
+    options.cause = appError.cause
   }
-
   return options
 }
 
@@ -87,4 +84,10 @@ export function assertApiError(error: unknown): asserts error is APIError {
   }
 }
 
-export { AppError, assertAppError, mapUnknownToAppError, type AppErrorCode, type AppErrorOptions }
+export {
+  AppError,
+  assertAppErrorLegacy,
+  mapUnknownToAppError,
+  type AppErrorCode,
+  type AppErrorOptions,
+}
