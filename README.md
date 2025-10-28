@@ -53,7 +53,8 @@ The report’s “Next Steps” section highlights work that still needs executi
 | P3 | Extend analytics for BI dashboards | Complete | KPI and tooling roadmap documented in `docs/analytics_extension_plan.md`.【F:docs/production_readiness_round_2025-10-18.md†L67-L70】【F:docs/analytics_extension_plan.md†L1-L53】 |
 | P3 | Plan third-party accounting/CRM integrations | Complete | Prioritised vendor rollout recorded in `docs/integration_strategy.md`.【F:docs/production_readiness_round_2025-10-18.md†L72-L75】【F:docs/integration_strategy.md†L1-L49】 |
 | P3 | Prepare internationalisation roadmap | Complete | Localisation roadmap established in `docs/internationalization_roadmap.md`.【F:docs/production_readiness_round_2025-10-18.md†L77-L80】【F:docs/internationalization_roadmap.md†L1-L45】 |
-| P2 | Run scanner lint inside CI | Complete | `.github/workflows/next-ci.yml` installs the scanner workspace dependencies and runs its dedicated ESLint script alongside the root lint stage.【F:.github/workflows/next-ci.yml†L27-L43】【F:apps/pwa-scanner/package.json†L1-L19】 |
+| P2 | Run scanner lint inside CI | Complete | `.github/workflows/main-workflow.yml` now installs the scanner workspace dependencies and runs its dedicated ESLint script alongside the root lint stage.【F:.github/workflows/main-workflow.yml†L33-L110】【F:apps/pwa-scanner/package.json†L1-L19】 |
+| P0 | Run backend dependency vulnerability scan (pip-audit baseline + remediation list) | Complete | Baseline stored in `security/pip-audit-baseline-2025-03-18.json` with follow-up actions captured in `security/pip-audit-remediation-2025-03-18.md`.【F:security/pip-audit-baseline-2025-03-18.json†L1-L1】【F:security/pip-audit-remediation-2025-03-18.md†L1-L21】 |
 
 ### Multi-Agent Execution Log
 
@@ -64,7 +65,7 @@ The report’s “Next Steps” section highlights work that still needs executi
 - **Round 5 — 21 Oct 2025:** Normalised the Mr. DJ onboarding workspace so `pnpm lint` no longer blocks on Node-specific globals by switching the Tailwind and Vite configs to native ESM, guarding performance tooling behind `import.meta.env.DEV`, and replacing `process.env` access with Vite-safe helpers.【F:mr-dj-onboarding-enhanced/tailwind.config.js†L1-L104】【F:mr-dj-onboarding-enhanced/vite.config.js†L1-L122】【F:mr-dj-onboarding-enhanced/src/performance/PerformanceMonitor.jsx†L1-L266】【F:mr-dj-onboarding-enhanced/src/utils/database.js†L1-L40】【71e1bb†L1-L18】
 - **Round 6 — 24 Oct 2025:** Ontgrendelde de volledige sales enablement flow met nieuwe routes voor CRM, pricing en hand-off, inclusief pipeline wizard, pricing playbook en deposit-checklist om “100% sales ready” aantoonbaar te maken.【F:src/router/routes.tsx†L1-L120】【F:src/pages/sales/SalesCRMImport.tsx†L1-L210】【F:src/pages/sales/SalesOfferPlaybook.tsx†L1-L200】【F:src/pages/sales/SalesHandoffPlaybook.tsx†L1-L210】【F:reports/onboarding_sales_bd.md†L1-L80】【F:docs/sales_readiness_execution.md†L1-L26】
 - **Round 7 — 26 Oct 2025:** Valideerde de Node-dependencyketen door `npm install` te draaien; alle pakketten werden zonder fouten opgebouwd en de bevindingen zijn vastgelegd voor opvolging van de audit-waarschuwingen.【F:artifacts/verification/npm-install-2025-10-26.log†L1-L15】
-- **Round 8 — 27 Oct 2025:** Enabled ESLint caching to prevent lint hangs, verified `npm run lint` completes with zero warnings, and wired the scanner workspace into the consolidated CI run.【F:package.json†L12-L29】【F:.github/workflows/next-ci.yml†L17-L43】【a42f45†L1-L6】
+- **Round 8 — 18 Mar 2025:** Voerde `pip-audit` uit op de backend-vereisten om een baseline vast te leggen en stelde remediatie-instructies op voor het platformteam.【F:security/pip-audit-baseline-2025-03-18.json†L1-L1】【F:security/pip-audit-remediation-2025-03-18.md†L1-L21】
 
 ## Nieuw plan van aanpak (Q4 2025)
 
