@@ -239,6 +239,20 @@ const CRMDashboard = () => {
     )
   }
 
+  if (!summary) {
+    return (
+      <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-empty">
+        <h1 className="text-3xl font-bold" data-testid="crm-dashboard-title">
+          Sales &amp; CRM Dashboard
+        </h1>
+        <p className="mt-4 text-gray-600" data-testid="crm-dashboard-empty-message">
+          Er zijn nog geen CRM-statistieken beschikbaar. Probeer de pagina te verversen nadat de
+          synchronisatie is voltooid.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto p-4 md:p-8" data-testid="crm-dashboard-root">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">

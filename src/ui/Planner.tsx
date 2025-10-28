@@ -900,7 +900,7 @@ export default function Planner({ onLogout }: PlannerProps) {
     [events],
   )
 
-  const personaMetricValues = useMemo(
+  const personaMetricValues = useMemo<Record<string, number>>(
     () => ({
       totalProjects: summary.total,
       activeProjects: summary.active,

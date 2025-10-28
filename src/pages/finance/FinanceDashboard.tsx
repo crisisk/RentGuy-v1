@@ -34,7 +34,11 @@ function deriveStats(invoices: Invoice[], stats: FinanceStats | null): FinanceSt
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value)
+  return new Intl.NumberFormat('nl-NL', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 2,
+  }).format(value)
 }
 
 function formatDate(value: string | undefined): string {
@@ -53,12 +57,12 @@ function formatDate(value: string | undefined): string {
 }
 
 export default function FinanceDashboard(): JSX.Element {
-  const invoices = useFinanceStore(state => state.invoices)
-  const stats = useFinanceStore(state => state.stats)
-  const loading = useFinanceStore(state => state.loading)
-  const error = useFinanceStore(state => state.error)
-  const getDashboardData = useFinanceStore(state => state.getDashboardData)
-  const clearError = useFinanceStore(state => state.clearError)
+  const invoices = useFinanceStore((state) => state.invoices)
+  const stats = useFinanceStore((state) => state.stats)
+  const loading = useFinanceStore((state) => state.loading)
+  const error = useFinanceStore((state) => state.error)
+  const getDashboardData = useFinanceStore((state) => state.getDashboardData)
+  const clearError = useFinanceStore((state) => state.clearError)
 
   useEffect(() => {
     let cancelled = false
@@ -88,7 +92,15 @@ export default function FinanceDashboard(): JSX.Element {
       .sort((a, b) => {
         const aTime = new Date(a.dueDate ?? a.date).getTime()
         const bTime = new Date(b.dueDate ?? b.date).getTime()
-        return Number.isNaN(bTime) - Number.isNaN(aTime) || bTime - aTime
+
+        const aInvalid = Number.isNaN(aTime)
+        const bInvalid = Number.isNaN(bTime)
+
+        if (aInvalid && bInvalid) return 0
+        if (aInvalid) return 1
+        if (bInvalid) return -1
+
+        return bTime - aTime
       })
       .slice(0, 8)
   }, [invoices])
@@ -190,23 +202,38 @@ export default function FinanceDashboard(): JSX.Element {
         }}
       >
         {[
-          { label: 'Maandelijkse omzet', value: metrics.monthlyRevenue, accent: brand.colors.success },
-          { label: 'Openstaand', value: metrics.pendingInvoicesTotal, accent: brand.colors.warning },
+          {
+            label: 'Maandelijkse omzet',
+            value: metrics.monthlyRevenue,
+            accent: brand.colors.success,
+          },
+          {
+            label: 'Openstaand',
+            value: metrics.pendingInvoicesTotal,
+            accent: brand.colors.warning,
+          },
           { label: 'Betaald', value: metrics.paidInvoicesTotal, accent: brand.colors.primary },
-        ].map(metric => (
+        ].map((metric) => (
           <article
             key={metric.label}
             style={{
               padding: '20px 22px',
               borderRadius: 24,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(231, 236, 255, 0.88) 100%)',
+              background:
+                'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(231, 236, 255, 0.88) 100%)',
               border: `1px solid ${withOpacity(metric.accent, 0.22)}`,
               boxShadow: brand.colors.shadow,
               display: 'grid',
               gap: 8,
             }}
           >
-            <span style={{ fontSize: '0.9rem', color: withOpacity(metric.accent, 0.75), fontWeight: 600 }}>
+            <span
+              style={{
+                fontSize: '0.9rem',
+                color: withOpacity(metric.accent, 0.75),
+                fontWeight: 600,
+              }}
+            >
               {metric.label}
             </span>
             <span style={{ fontSize: '1.8rem', fontWeight: 700, color: brand.colors.secondary }}>
@@ -238,7 +265,13 @@ export default function FinanceDashboard(): JSX.Element {
         >
           <div>
             <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>Recentste facturen</h2>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: withOpacity(brand.colors.secondary, 0.7) }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.9rem',
+                color: withOpacity(brand.colors.secondary, 0.7),
+              }}
+            >
               Laatste acht facturen gesorteerd op vervaldatum.
             </p>
           </div>
@@ -269,7 +302,13 @@ export default function FinanceDashboard(): JSX.Element {
             }}
           >
             <thead>
-              <tr style={{ textAlign: 'left', color: withOpacity(brand.colors.secondary, 0.65), fontSize: '0.82rem' }}>
+              <tr
+                style={{
+                  textAlign: 'left',
+                  color: withOpacity(brand.colors.secondary, 0.65),
+                  fontSize: '0.82rem',
+                }}
+              >
                 <th style={{ padding: '14px 24px' }}>Klant</th>
                 <th style={{ padding: '14px 24px' }}>Bedrag</th>
                 <th style={{ padding: '14px 24px' }}>Factuurdatum</th>
@@ -279,10 +318,17 @@ export default function FinanceDashboard(): JSX.Element {
               </tr>
             </thead>
             <tbody>
-              {recentInvoices.map(invoice => {
-                const palette = statusPalette[invoice.status] ?? statusPalette.draft
+              {recentInvoices.map((invoice) => {
+                const palette = (statusPalette[invoice.status] ?? statusPalette.draft) as {
+                  background: string
+                  color: string
+                }
+                const { background, color } = palette
                 return (
-                  <tr key={invoice.id} style={{ borderTop: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}` }}>
+                  <tr
+                    key={invoice.id}
+                    style={{ borderTop: `1px solid ${withOpacity(brand.colors.secondary, 0.08)}` }}
+                  >
                     <td style={{ padding: '16px 24px', fontWeight: 600 }}>{invoice.clientName}</td>
                     <td style={{ padding: '16px 24px' }}>{formatCurrency(invoice.amount)}</td>
                     <td style={{ padding: '16px 24px' }}>{formatDate(invoice.date)}</td>
@@ -295,8 +341,8 @@ export default function FinanceDashboard(): JSX.Element {
                           justifyContent: 'center',
                           padding: '6px 12px',
                           borderRadius: 999,
-                          background: palette.background,
-                          color: palette.color,
+                          background,
+                          color,
                           fontSize: '0.78rem',
                           fontWeight: 600,
                           textTransform: 'uppercase',
@@ -309,7 +355,11 @@ export default function FinanceDashboard(): JSX.Element {
                     <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                       <Link
                         to={`/invoices/${invoice.id}`}
-                        style={{ color: brand.colors.primary, fontWeight: 600, textDecoration: 'none' }}
+                        style={{
+                          color: brand.colors.primary,
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                        }}
                       >
                         Details
                       </Link>
@@ -319,7 +369,14 @@ export default function FinanceDashboard(): JSX.Element {
               })}
               {!recentInvoices.length && (
                 <tr>
-                  <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: withOpacity(brand.colors.secondary, 0.65) }}>
+                  <td
+                    colSpan={6}
+                    style={{
+                      padding: '24px',
+                      textAlign: 'center',
+                      color: withOpacity(brand.colors.secondary, 0.65),
+                    }}
+                  >
                     Er zijn nog geen facturen beschikbaar.
                   </td>
                 </tr>

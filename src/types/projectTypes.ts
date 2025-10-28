@@ -21,6 +21,11 @@ export type PersonaKey =
   | 'peter'
   | 'nadia'
   | 'david'
+  | 'operations'
+  | 'support'
+  | 'cfo'
+  | 'compliance'
+  | 'sales'
 
 export interface PersonaKpiConfig {
   readonly id: string

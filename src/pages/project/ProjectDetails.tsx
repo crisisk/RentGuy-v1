@@ -1,39 +1,18 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import projectStore from '../../stores/projectStore'
-
-interface CrewMember {
-  id: string
-  name: string
-  role: string
-  email: string
-}
-
-interface Equipment {
-  id: string
-  name: string
-  type: string
-  quantity: number
-}
-
-interface Project {
-  id: string
-  name: string
-  description: string
-  startDate: string
-  endDate: string
-  crewMembers: CrewMember[]
-  equipment: Equipment[]
-}
+import projectStore, { type ProjectDetails as StoreProjectDetails } from '../../stores/projectStore'
 
 const ProjectDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [project, setProject] = useState<Project | null>(null)
+  const [project, setProject] = useState<StoreProjectDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) {
+      return '—'
+    }
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -47,7 +26,11 @@ const ProjectDetails: React.FC = () => {
       try {
         if (!id) return
         const data = await projectStore.getProjectById(id)
-        setProject(data)
+        if (data) {
+          setProject(data)
+        } else {
+          setError('Project not found')
+        }
       } catch {
         setError('Failed to load project')
         navigate('/projects')

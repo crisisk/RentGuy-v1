@@ -10,12 +10,31 @@ declare module 'react' {
 
   export type PropsWithChildren<P = {}> = P & { children?: ReactNode }
 
+  export type ComponentType<P = {}> = (props: PropsWithChildren<P>) => ReactElement | null
+
   export interface FunctionComponent<P = {}> {
     (props: PropsWithChildren<P>): ReactElement | null
     displayName?: string
   }
 
   export type FC<P = {}> = FunctionComponent<P>
+
+  export interface LazyExoticComponent<T extends ComponentType<any>>
+    extends FunctionComponent<Parameters<T>[0]> {
+    readonly _payload?: unknown
+    readonly _init?: unknown
+  }
+
+  export function lazy<T extends ComponentType<any>>(
+    factory: () => Promise<{ default: T }>,
+  ): LazyExoticComponent<T>
+
+  export interface SuspenseProps {
+    readonly fallback?: ReactNode
+    readonly children?: ReactNode
+  }
+
+  export const Suspense: FunctionComponent<SuspenseProps>
 
   export interface Context<T> {
     Provider: FunctionComponent<{ value: T }>
@@ -65,18 +84,25 @@ declare module 'react' {
 
   export function createElement<P>(type: any, props?: P, ...children: ReactNode[]): ReactElement<P>
   export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>]
-  export function useState<S = undefined>(): [S | undefined, Dispatch<SetStateAction<S | undefined>>]
+  export function useState<S = undefined>(): [
+    S | undefined,
+    Dispatch<SetStateAction<S | undefined>>,
+  ]
   export function useEffect(effect: () => void | (() => void), deps?: unknown[]): void
   export function useLayoutEffect(effect: () => void | (() => void), deps?: unknown[]): void
   export function useMemo<T>(factory: () => T, deps: unknown[]): T
   export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: unknown[]): T
   export function useRef<T>(initialValue: T): MutableRefObject<T>
   export function useRef<T>(initialValue: T | null): RefObject<T>
-  export function useImperativeHandle<T>(ref: ForwardedRef<T>, init: () => T, deps?: unknown[]): void
+  export function useImperativeHandle<T>(
+    ref: ForwardedRef<T>,
+    init: () => T,
+    deps?: unknown[],
+  ): void
   export function useReducer<R extends (state: any, action: any) => any, I>(
     reducer: R,
     initialArg: I,
-    init?: (arg: I) => any
+    init?: (arg: I) => any,
   ): [ReturnType<R>, Dispatch<Parameters<R>[1]>]
   export function useContext<T>(context: Context<T>): T
   export function useId(): string
@@ -91,7 +117,10 @@ declare module 'react' {
   export function forwardRef<T, P = {}>(
     render: (props: PropsWithChildren<P>, ref: ForwardedRef<T>) => ReactElement | null,
   ): FunctionComponent<P & { ref?: ForwardedRef<T> }>
-  export function memo<T>(component: FunctionComponent<T>, propsAreEqual?: (prev: T, next: T) => boolean): FunctionComponent<T>
+  export function memo<T>(
+    component: FunctionComponent<T>,
+    propsAreEqual?: (prev: T, next: T) => boolean,
+  ): FunctionComponent<T>
 
   export const Fragment: FunctionComponent<{ children?: ReactNode; key?: string | number }>
   export const StrictMode: FunctionComponent

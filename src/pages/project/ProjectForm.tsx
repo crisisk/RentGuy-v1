@@ -1,27 +1,21 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import projectStore from '../../stores/projectStore'
+import projectStore, { type Project, type ProjectStatus } from '../../stores/projectStore'
 
 interface ProjectFormProps {}
 
-interface ProjectData {
-  id?: string
-  name: string
-  description: string
-  startDate: string
-  endDate: string
-  status: 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD'
-}
+type ProjectFormData = Omit<Project, 'id'> & { id?: string }
+
+const todayIsoDate = () => new Date().toISOString().slice(0, 10)
 
 const ProjectForm: React.FC<ProjectFormProps> = () => {
   const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
 
-  const [formData, setFormData] = useState<ProjectData>({
+  const [formData, setFormData] = useState<ProjectFormData>({
     name: '',
     description: '',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: '',
+    startDate: todayIsoDate(),
     status: 'PLANNING',
   })
 
@@ -39,8 +33,9 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
               name: project.name,
               description: project.description,
               startDate: project.startDate,
-              endDate: project.endDate || '',
               status: project.status,
+              ...(project.endDate ? { endDate: project.endDate } : {}),
+              ...(project.client ? { client: project.client } : {}),
             })
           }
           setLoading(false)
@@ -61,7 +56,7 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'status' ? (value as ProjectStatus) : value,
     }))
   }
 
@@ -72,9 +67,11 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
 
     try {
       if (id) {
-        await projectStore.updateProject(formData)
+        const { id: _unusedId, ...updatePayload } = formData
+        await projectStore.updateProject({ id, ...updatePayload })
       } else {
-        await projectStore.createProject(formData)
+        const { id: _unused, ...createPayload } = formData
+        await projectStore.createProject(createPayload)
       }
       navigate('/projects')
     } catch {
@@ -84,7 +81,7 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
   }
 
   const validateForm = () => {
-    return formData.name.trim() && formData.description.trim()
+    return formData.name.trim().length > 0 && formData.description.trim().length > 0
   }
 
   if (loading) {
@@ -155,7 +152,7 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
               type="date"
               id="endDate"
               name="endDate"
-              value={formData.endDate}
+              value={formData.endDate ?? ''}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
             />
@@ -173,10 +170,16 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
           >
-            <option value="PLANNING">Planning</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="ON_HOLD">On Hold</option>
+            {(['PLANNING', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD'] as ProjectStatus[]).map(
+              (status) => (
+                <option key={status} value={status}>
+                  {status
+                    .replace('_', ' ')
+                    .toLowerCase()
+                    .replace(/(^|\s)\w/g, (char) => char.toUpperCase())}
+                </option>
+              ),
+            )}
           </select>
         </div>
 

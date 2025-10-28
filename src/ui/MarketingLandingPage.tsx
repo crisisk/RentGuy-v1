@@ -32,7 +32,14 @@ interface SectionHeaderProps {
 function SectionHeader({ eyebrow, title, description }: SectionHeaderProps) {
   return (
     <header style={{ display: 'grid', gap: '12px', maxWidth: '720px' }}>
-      <span style={{ color: brand.colors.accent, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+      <span
+        style={{
+          color: brand.colors.accent,
+          fontWeight: 600,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+        }}
+      >
         {eyebrow}
       </span>
       <h2
@@ -46,7 +53,9 @@ function SectionHeader({ eyebrow, title, description }: SectionHeaderProps) {
       >
         {title}
       </h2>
-      <p style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.6, color: '#CBD5F5' }}>{description}</p>
+      <p style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.6, color: '#CBD5F5' }}>
+        {description}
+      </p>
     </header>
   )
 }
@@ -97,13 +106,15 @@ const testimonials = [
 const chatCaptureOptions = [
   {
     title: 'Plan live chat met onboarding',
-    description: 'Binnen 15 minuten krijg je een walkthrough van de demo-tenant en checklist voor je eigen subdomein.',
+    description:
+      'Binnen 15 minuten krijg je een walkthrough van de demo-tenant en checklist voor je eigen subdomein.',
     href: 'https://cal.com/rentguy/chat',
     actionLabel: 'Start live chat',
   },
   {
     title: 'Vraag pricing & SLA documentatie op',
-    description: 'Ontvang binnen één werkdag een voorstel met SLA-matrix, implementatieplanning en partnerkortingen.',
+    description:
+      'Ontvang binnen één werkdag een voorstel met SLA-matrix, implementatieplanning en partnerkortingen.',
     href: 'mailto:hello@rentguy.nl?subject=RentGuy%20SLA%20aanvraag',
     actionLabel: 'Vraag aan',
   },
@@ -116,11 +127,13 @@ const pains = [
   },
   {
     pain: 'Gebrekkig inzicht in beschikbaarheid',
-    solution: 'Realtime dashboards combineren verhuurkalenders, voorraad en crewplanning in één scherm.',
+    solution:
+      'Realtime dashboards combineren verhuurkalenders, voorraad en crewplanning in één scherm.',
   },
   {
     pain: 'Inconsistent klantcontact',
-    solution: 'Geautomatiseerde flows sturen reminders, checklists en aftercare direct vanuit RentGuy.',
+    solution:
+      'Geautomatiseerde flows sturen reminders, checklists en aftercare direct vanuit RentGuy.',
   },
 ]
 
@@ -148,7 +161,12 @@ const pricingTiers = [
     price: '€349',
     cadence: 'per maand',
     description: 'Voor scale-ups die binnen één regio actief zijn.',
-    bullets: ['20 actieve projecten', 'Standaard AI-planner', 'E-mail/SMS notificaties', 'Support binnen 1 werkdag'],
+    bullets: [
+      '20 actieve projecten',
+      'Standaard AI-planner',
+      'E-mail/SMS notificaties',
+      'Support binnen 1 werkdag',
+    ],
   },
   {
     name: 'Professional',
@@ -168,7 +186,12 @@ const pricingTiers = [
     price: 'Op maat',
     cadence: 'met SLA en governance afspraken',
     description: 'Voor internationale verhuurketens met maatwerk integraties.',
-    bullets: ['Multi-tenant setup', 'Advanced security controls', 'Premium support 24/7', 'Integraties op aanvraag'],
+    bullets: [
+      'Multi-tenant setup',
+      'Advanced security controls',
+      'Premium support 24/7',
+      'Integraties op aanvraag',
+    ],
   },
 ]
 
@@ -189,11 +212,19 @@ const explainerSteps = [
 
 const contactChannels = [
   { label: 'Bel ons', value: '+31 20 123 45 67', href: 'tel:+31201234567' },
-  { label: 'Plan een demo', value: 'Calendly.com/rentguy/demo', href: 'https://calendly.com/rentguy/demo' },
+  {
+    label: 'Plan een demo',
+    value: 'Calendly.com/rentguy/demo',
+    href: 'https://calendly.com/rentguy/demo',
+  },
   { label: 'Mail', value: 'hello@rentguy.nl', href: 'mailto:hello@rentguy.nl' },
 ]
 
-export function MarketingLandingPage({ config, onNavigate, currentPath }: MarketingLandingPageProps): JSX.Element {
+export function MarketingLandingPage({
+  config,
+  onNavigate,
+  currentPath,
+}: MarketingLandingPageProps): JSX.Element {
   const [activeTestimonial, setActiveTestimonial] = useState(0)
 
   const testimonialItems = useMemo(() => {
@@ -202,7 +233,8 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
     }
     return [
       {
-        quote: 'RentGuy levert consistente journeys en governance zodat elk team >99% ready blijft.',
+        quote:
+          'RentGuy levert consistente journeys en governance zodat elk team >99% ready blijft.',
         author: 'RentGuy Onboarding Team',
         role: 'Customer Success',
         company: 'RentGuy',
@@ -218,7 +250,7 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
       return
     }
     const id = window.setInterval(() => {
-      setActiveTestimonial(prev => (prev + 1) % totalTestimonials)
+      setActiveTestimonial((prev) => (prev + 1) % totalTestimonials)
     }, 8000)
     return () => {
       window.clearInterval(id)
@@ -226,7 +258,7 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
   }, [totalTestimonials])
 
   const handleManualTestimonialChange = (direction: -1 | 1) => {
-    setActiveTestimonial(prev => {
+    setActiveTestimonial((prev) => {
       const next = prev + direction
       if (next < 0) {
         return totalTestimonials - 1
@@ -309,17 +341,20 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
     () => [
       {
         label: 'Realtime platformstatus',
-        description: 'Monitor uptime, incidentmeldingen en geplande onderhoudsvensters voor alle tenants.',
+        description:
+          'Monitor uptime, incidentmeldingen en geplande onderhoudsvensters voor alle tenants.',
         href: statusPageUrl,
       },
       {
         label: 'Helpcenter per tenant',
-        description: 'Documentatie en journey explainers afgestemd op jouw merk en operating model.',
+        description:
+          'Documentatie en journey explainers afgestemd op jouw merk en operating model.',
         href: helpCenterUrl,
       },
       {
         label: 'Onboarding compliance',
-        description: 'Auditklare checklists en security controls met duidelijke eigenaarschap per stap.',
+        description:
+          'Auditklare checklists en security controls met duidelijke eigenaarschap per stap.',
         href: complianceUrl,
       },
     ],
@@ -335,7 +370,11 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
     return false
   }
 
-  const handleInternalNavigation = (event: MouseEvent<HTMLAnchorElement>, href: string, options?: { replace?: boolean }) => {
+  const handleInternalNavigation = (
+    event: MouseEvent<HTMLAnchorElement>,
+    href: string,
+    options?: { replace?: boolean },
+  ) => {
     if (!onNavigate || !isInternalLink(href)) {
       return
     }
@@ -348,7 +387,11 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
   const contactEntries = useMemo(
     () => [
       ...contactChannels,
-      { label: 'Helpcenter', value: `${brand.shortName} · ${support.tenantSlug}`, href: helpCenterUrl },
+      {
+        label: 'Helpcenter',
+        value: `${brand.shortName} · ${support.tenantSlug}`,
+        href: helpCenterUrl,
+      },
       { label: 'Status', value: 'status.sevensa.nl', href: statusPageUrl },
     ],
     [helpCenterUrl, statusPageUrl, support.tenantSlug],
@@ -379,7 +422,14 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
             }}
           />
           <div style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontFamily: headingFontStack, fontWeight: 700, fontSize: '1.35rem', color: '#F8FAFC' }}>
+            <span
+              style={{
+                fontFamily: headingFontStack,
+                fontWeight: 700,
+                fontSize: '1.35rem',
+                color: '#F8FAFC',
+              }}
+            >
               {brand.shortName}
             </span>
             <span style={{ color: '#94A3B8', fontSize: '0.95rem' }}>{brand.partnerTagline}</span>
@@ -388,7 +438,9 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
         <div style={{ display: 'flex', gap: '16px' }}>
           <a
             href={config.primaryCtaHref}
-            onClick={event => handleInternalNavigation(event, config.primaryCtaHref)}
+            onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+              handleInternalNavigation(event, config.primaryCtaHref)
+            }
             aria-current={isOnDemoPage ? 'page' : undefined}
             style={{
               padding: '12px 20px',
@@ -404,7 +456,9 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
           </a>
           <a
             href={config.secondaryCtaHref}
-            onClick={event => handleInternalNavigation(event, config.secondaryCtaHref)}
+            onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+              handleInternalNavigation(event, config.secondaryCtaHref)
+            }
             style={{
               padding: '12px 20px',
               borderRadius: '999px',
@@ -430,7 +484,14 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
           >
             <div style={{ display: 'grid', gap: '24px' }}>
               <div style={{ display: 'grid', gap: '16px' }}>
-                <span style={{ color: '#A5B4FC', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <span
+                  style={{
+                    color: '#A5B4FC',
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   Verhuur zonder frictie
                 </span>
                 <h1
@@ -445,14 +506,17 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                   Alles-in-één verhuurplatform voor crews, planners en finance
                 </h1>
                 <p style={{ fontSize: '1.12rem', lineHeight: 1.7, margin: 0, color: '#CBD5F5' }}>
-                  RentGuy verenigt planning, voorraad, crew en facturatie in één AI-gestuurde omgeving. We laten je team sneller
-                  schakelen met realtime inzicht en actiegerichte journeys per persona.
+                  RentGuy verenigt planning, voorraad, crew en facturatie in één AI-gestuurde
+                  omgeving. We laten je team sneller schakelen met realtime inzicht en actiegerichte
+                  journeys per persona.
                 </p>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
                 <a
                   href={config.primaryCtaHref}
-                  onClick={event => handleInternalNavigation(event, config.primaryCtaHref)}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                    handleInternalNavigation(event, config.primaryCtaHref)
+                  }
                   style={{
                     padding: '14px 28px',
                     borderRadius: '999px',
@@ -467,7 +531,9 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                 </a>
                 <a
                   href={demoOnboardingPath}
-                  onClick={event => handleInternalNavigation(event, demoOnboardingPath)}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                    handleInternalNavigation(event, demoOnboardingPath)
+                  }
                   style={{
                     padding: '14px 28px',
                     borderRadius: '999px',
@@ -486,18 +552,28 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                 position: 'relative',
                 borderRadius: '32px',
                 padding: '32px',
-                background: 'linear-gradient(145deg, rgba(148,163,255,0.16) 0%, rgba(15,23,42,0.86) 55%)',
+                background:
+                  'linear-gradient(145deg, rgba(148,163,255,0.16) 0%, rgba(15,23,42,0.86) 55%)',
                 border: '1px solid rgba(148, 163, 184, 0.35)',
                 boxShadow: brand.colors.shadow,
               }}
             >
               <div style={{ display: 'grid', gap: '16px' }}>
-                {heroHighlights.map(highlight => (
+                {heroHighlights.map((highlight) => (
                   <div key={highlight.label} style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ color: '#A5B4FC', fontSize: '0.85rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    <span
+                      style={{
+                        color: '#A5B4FC',
+                        fontSize: '0.85rem',
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       {highlight.label}
                     </span>
-                    <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 500 }}>{highlight.value}</p>
+                    <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 500 }}>
+                      {highlight.value}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -530,7 +606,8 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                   width: '220px',
                   height: '220px',
                   borderRadius: '50%',
-                  background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, rgba(15,23,42,0) 65%)',
+                  background:
+                    'radial-gradient(circle, rgba(99,102,241,0.5) 0%, rgba(15,23,42,0) 65%)',
                   opacity: 0.8,
                   pointerEvents: 'none',
                 }}
@@ -552,13 +629,14 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
               gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
             }}
           >
-            {salesFunnelStages.map(stage => (
+            {salesFunnelStages.map((stage) => (
               <article
                 key={stage.id}
                 style={{
                   padding: '24px',
                   borderRadius: '24px',
-                  background: 'linear-gradient(160deg, rgba(15, 23, 42, 0.78) 0%, rgba(59, 130, 246, 0.24) 100%)',
+                  background:
+                    'linear-gradient(160deg, rgba(15, 23, 42, 0.78) 0%, rgba(59, 130, 246, 0.24) 100%)',
                   border: '1px solid rgba(148, 163, 184, 0.35)',
                   display: 'grid',
                   gap: '12px',
@@ -566,15 +644,33 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                 }}
               >
                 <div style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ color: '#A5B4FC', fontSize: '0.85rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  <span
+                    style={{
+                      color: '#A5B4FC',
+                      fontSize: '0.85rem',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     {stage.metric}
                   </span>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#F8FAFC', fontFamily: headingFontStack }}>{stage.title}</h3>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: '1.25rem',
+                      color: '#F8FAFC',
+                      fontFamily: headingFontStack,
+                    }}
+                  >
+                    {stage.title}
+                  </h3>
                 </div>
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{stage.description}</p>
                 <a
                   href={stage.actionHref}
-                  onClick={event => handleInternalNavigation(event, stage.actionHref)}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                    handleInternalNavigation(event, stage.actionHref)
+                  }
                   style={{
                     marginTop: 'auto',
                     alignSelf: 'start',
@@ -598,7 +694,14 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
         </section>
 
         <section style={{ display: 'grid', gap: '18px' }} aria-label="Partnernetwerk">
-          <span style={{ color: '#94A3B8', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
+          <span
+            style={{
+              color: '#94A3B8',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+            }}
+          >
             Vertrouwd door operationele partners
           </span>
           <div
@@ -608,7 +711,7 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
             }}
           >
-            {partnerBadges.map(partner => (
+            {partnerBadges.map((partner) => (
               <div
                 key={partner.name}
                 style={{
@@ -620,7 +723,9 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                   gap: '6px',
                 }}
               >
-                <strong style={{ color: '#F8FAFC', fontFamily: headingFontStack }}>{partner.name}</strong>
+                <strong style={{ color: '#F8FAFC', fontFamily: headingFontStack }}>
+                  {partner.name}
+                </strong>
                 <span style={{ color: '#A5B4FC', fontSize: '0.85rem' }}>{partner.tagline}</span>
               </div>
             ))}
@@ -639,16 +744,33 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
               gap: '20px',
               padding: '28px',
               borderRadius: '28px',
-              background: 'linear-gradient(135deg, rgba(148, 163, 255, 0.18) 0%, rgba(15, 23, 42, 0.82) 100%)',
+              background:
+                'linear-gradient(135deg, rgba(148, 163, 255, 0.18) 0%, rgba(15, 23, 42, 0.82) 100%)',
               border: '1px solid rgba(148, 163, 184, 0.35)',
               boxShadow: '0 24px 60px rgba(15, 23, 42, 0.45)',
               position: 'relative',
             }}
           >
-            <p style={{ margin: 0, fontSize: '1.15rem', lineHeight: 1.7, color: '#F8FAFC', fontFamily: headingFontStack }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '1.15rem',
+                lineHeight: 1.7,
+                color: '#F8FAFC',
+                fontFamily: headingFontStack,
+              }}
+            >
               “{testimonial.quote}”
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', color: '#CBD5F5' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '12px',
+                alignItems: 'center',
+                color: '#CBD5F5',
+              }}
+            >
               <strong style={{ fontSize: '1rem', color: '#F8FAFC' }}>{testimonial.author}</strong>
               <span style={{ fontSize: '0.95rem' }}>{testimonial.role}</span>
               <span style={{ fontSize: '0.95rem', color: '#A5B4FC' }}>{testimonial.company}</span>
@@ -685,7 +807,15 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                 Volgende
               </button>
             </div>
-            <div style={{ display: 'flex', gap: '6px', position: 'absolute', bottom: '16px', right: '24px' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '6px',
+                position: 'absolute',
+                bottom: '16px',
+                right: '24px',
+              }}
+            >
               {testimonialItems.map((item, index) => (
                 <span
                   key={item.author}
@@ -694,7 +824,8 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                     width: 10,
                     height: 10,
                     borderRadius: '50%',
-                    background: index === activeTestimonial ? '#F8FAFC' : 'rgba(148, 163, 184, 0.4)',
+                    background:
+                      index === activeTestimonial ? '#F8FAFC' : 'rgba(148, 163, 184, 0.4)',
                     transition: 'background 0.2s ease',
                   }}
                 />
@@ -716,19 +847,29 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             }}
           >
-            {offerings.map(offer => (
+            {offerings.map((offer) => (
               <article
                 key={offer.title}
                 style={{
                   padding: '28px',
                   borderRadius: '24px',
-                  background: 'linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 27, 75, 0.65) 100%)',
+                  background:
+                    'linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 27, 75, 0.65) 100%)',
                   border: '1px solid rgba(148, 163, 184, 0.25)',
                   display: 'grid',
                   gap: '12px',
                 }}
               >
-                <h3 style={{ margin: 0, fontFamily: headingFontStack, fontSize: '1.45rem', color: '#F8FAFC' }}>{offer.title}</h3>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontFamily: headingFontStack,
+                    fontSize: '1.45rem',
+                    color: '#F8FAFC',
+                  }}
+                >
+                  {offer.title}
+                </h3>
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{offer.description}</p>
               </article>
             ))}
@@ -748,7 +889,7 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
               gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
             }}
           >
-            {pains.map(item => (
+            {pains.map((item) => (
               <article
                 key={item.pain}
                 style={{
@@ -780,7 +921,7 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             }}
           >
-            {pricingTiers.map(tier => (
+            {pricingTiers.map((tier) => (
               <article
                 key={tier.name}
                 style={{
@@ -798,26 +939,44 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                 }}
               >
                 <div style={{ display: 'grid', gap: '8px' }}>
-                  <span style={{ fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94A3B8' }}>
+                  <span
+                    style={{
+                      fontWeight: 600,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: '#94A3B8',
+                    }}
+                  >
                     {tier.name}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                    <span style={{ fontSize: '2.4rem', fontWeight: 700, color: '#F8FAFC' }}>{tier.price}</span>
+                    <span style={{ fontSize: '2.4rem', fontWeight: 700, color: '#F8FAFC' }}>
+                      {tier.price}
+                    </span>
                     <span style={{ color: '#CBD5F5' }}>{tier.cadence}</span>
                   </div>
                   <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{tier.description}</p>
                 </div>
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: '12px' }}>
-                  {tier.bullets.map(bullet => (
-                    <li key={bullet} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                      <span aria-hidden="true" style={{ color: brand.colors.accent }}>✓</span>
+                <ul
+                  style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: '12px' }}
+                >
+                  {tier.bullets.map((bullet) => (
+                    <li
+                      key={bullet}
+                      style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}
+                    >
+                      <span aria-hidden="true" style={{ color: brand.colors.accent }}>
+                        ✓
+                      </span>
                       <span style={{ color: '#E2E8F0' }}>{bullet}</span>
                     </li>
                   ))}
                 </ul>
                 <a
                   href={config.primaryCtaHref}
-                  onClick={event => handleInternalNavigation(event, config.primaryCtaHref)}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                    handleInternalNavigation(event, config.primaryCtaHref)
+                  }
                   style={{
                     marginTop: '8px',
                     padding: '14px 24px',
@@ -825,7 +984,9 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                     textAlign: 'center',
                     textDecoration: 'none',
                     fontWeight: 600,
-                    background: tier.highlighted ? brand.colors.gradient : 'rgba(148, 163, 184, 0.25)',
+                    background: tier.highlighted
+                      ? brand.colors.gradient
+                      : 'rgba(148, 163, 184, 0.25)',
                     color: tier.highlighted ? '#0B1026' : '#F8FAFC',
                   }}
                 >
@@ -843,7 +1004,7 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
             description="Een bewezen onboardingmodel zorgt ervoor dat nieuwe klanten binnen één sprint operationeel zijn."
           />
           <div style={{ display: 'grid', gap: '18px' }}>
-            {explainerSteps.map(step => (
+            {explainerSteps.map((step) => (
               <article
                 key={step.title}
                 style={{
@@ -868,24 +1029,44 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
             title="Customer success begeleidt elke stap"
             description="Een dedicated team bewaakt data, governance en adoptie zodat jouw launch voorspelbaar verloopt."
           />
-          <div style={{ display: 'grid', gap: '18px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-            {onboardingMilestones.map(milestone => (
+          <div
+            style={{
+              display: 'grid',
+              gap: '18px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            }}
+          >
+            {onboardingMilestones.map((milestone) => (
               <article
                 key={milestone.id}
                 style={{
                   padding: '24px',
                   borderRadius: '24px',
-                  background: 'linear-gradient(180deg, rgba(30, 64, 175, 0.35) 0%, rgba(15, 23, 42, 0.85) 100%)',
+                  background:
+                    'linear-gradient(180deg, rgba(30, 64, 175, 0.35) 0%, rgba(15, 23, 42, 0.85) 100%)',
                   border: '1px solid rgba(148, 163, 184, 0.3)',
                   display: 'grid',
                   gap: '12px',
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#F8FAFC', fontFamily: headingFontStack }}>{milestone.title}</h3>
-                <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{milestone.description}</p>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: '1.15rem',
+                    color: '#F8FAFC',
+                    fontFamily: headingFontStack,
+                  }}
+                >
+                  {milestone.title}
+                </h3>
+                <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>
+                  {milestone.description}
+                </p>
                 <a
                   href={milestone.resourceHref}
-                  onClick={event => handleInternalNavigation(event, milestone.resourceHref)}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                    handleInternalNavigation(event, milestone.resourceHref)
+                  }
                   style={{
                     marginTop: 'auto',
                     color: brand.colors.accent,
@@ -906,20 +1087,36 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
             title="Plan je volgende stap met ons onboarding team"
             description="Gebruik live chat of vraag direct de SLA-documentatie aan. We begeleiden je tot het moment dat jouw tenant >99% klaar is."
           />
-          <div style={{ display: 'grid', gap: '18px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-            {chatCaptureOptions.map(option => (
+          <div
+            style={{
+              display: 'grid',
+              gap: '18px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            }}
+          >
+            {chatCaptureOptions.map((option) => (
               <article
                 key={option.title}
                 style={{
                   padding: '24px',
                   borderRadius: '20px',
-                  background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.82) 0%, rgba(30, 64, 175, 0.55) 100%)',
+                  background:
+                    'linear-gradient(145deg, rgba(15, 23, 42, 0.82) 0%, rgba(30, 64, 175, 0.55) 100%)',
                   border: '1px solid rgba(148, 163, 184, 0.35)',
                   display: 'grid',
                   gap: '12px',
                 }}
               >
-                <h3 style={{ margin: 0, fontFamily: headingFontStack, color: '#F8FAFC', fontSize: '1.2rem' }}>{option.title}</h3>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontFamily: headingFontStack,
+                    color: '#F8FAFC',
+                    fontSize: '1.2rem',
+                  }}
+                >
+                  {option.title}
+                </h3>
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{option.description}</p>
                 <a
                   href={option.href}
@@ -946,8 +1143,14 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
             title="Transparante status en documentatie voor elk tenant"
             description="SLA’s, helpcenter en monitoring zijn altijd up-to-date zodat stakeholders direct kunnen handelen."
           />
-          <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-            {trustSignals.map(signal => (
+          <div
+            style={{
+              display: 'grid',
+              gap: '16px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            }}
+          >
+            {trustSignals.map((signal) => (
               <article
                 key={signal.label}
                 style={{
@@ -963,7 +1166,9 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{signal.description}</p>
                 <a
                   href={signal.href}
-                  onClick={event => handleInternalNavigation(event, signal.href)}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                    handleInternalNavigation(event, signal.href)
+                  }
                   style={{ color: brand.colors.accent, fontWeight: 600, textDecoration: 'none' }}
                 >
                   Bekijk details →
@@ -986,7 +1191,7 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
               gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
             }}
           >
-            {contactEntries.map(channel => (
+            {contactEntries.map((channel) => (
               <a
                 key={channel.label}
                 href={channel.href}
@@ -1001,7 +1206,14 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
                   gap: '8px',
                 }}
               >
-                <span style={{ fontSize: '0.9rem', color: '#94A3B8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                <span
+                  style={{
+                    fontSize: '0.9rem',
+                    color: '#94A3B8',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   {channel.label}
                 </span>
                 <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>{channel.value}</span>
@@ -1020,18 +1232,35 @@ export function MarketingLandingPage({ config, onNavigate, currentPath }: Market
           fontSize: '0.9rem',
         }}
       >
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between' }}>
-          <span>© {new Date().getFullYear()} {brand.shortName}. Alle rechten voorbehouden.</span>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            justifyContent: 'space-between',
+          }}
+        >
+          <span>
+            © {new Date().getFullYear()} {brand.shortName}. Alle rechten voorbehouden.
+          </span>
           <div style={{ display: 'flex', gap: '16px' }}>
-            <a href="https://sevensa.ai/privacy" style={{ color: '#CBD5F5', textDecoration: 'none' }}>
+            <a
+              href="https://sevensa.ai/privacy"
+              style={{ color: '#CBD5F5', textDecoration: 'none' }}
+            >
               Privacy
             </a>
-            <a href="https://sevensa.ai/security" style={{ color: '#CBD5F5', textDecoration: 'none' }}>
+            <a
+              href="https://sevensa.ai/security"
+              style={{ color: '#CBD5F5', textDecoration: 'none' }}
+            >
               Security
             </a>
             <a
               href={config.primaryCtaHref}
-              onClick={event => handleInternalNavigation(event, config.primaryCtaHref)}
+              onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                handleInternalNavigation(event, config.primaryCtaHref)
+              }
               style={{ color: brand.colors.accent, textDecoration: 'none' }}
             >
               Start demo

@@ -1,21 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
-import projectStore from '../../stores/projectStore'
-
-interface Project {
-  id: string
-  name: string
-  status: string
-  createdAt: string
-  teamSize: number
-}
+import projectStore, { type Project, type ProjectStatus } from '../../stores/projectStore'
 
 const ProjectOverview: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState<string>('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | ProjectStatus>('all')
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -32,12 +24,37 @@ const ProjectOverview: React.FC = () => {
     fetchProjects()
   }, [])
 
-  const filterProjects = (projects: Project[]): Project[] => {
-    return projects.filter(
+  const filterProjects = (projectsToFilter: Project[]): Project[] =>
+    projectsToFilter.filter(
       (project) =>
         project.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         (statusFilter === 'all' || project.status === statusFilter),
     )
+
+  const resolveStatusStyles = (status: ProjectStatus): string => {
+    switch (status) {
+      case 'COMPLETED':
+        return 'bg-blue-100 text-blue-800'
+      case 'IN_PROGRESS':
+        return 'bg-green-100 text-green-800'
+      case 'ON_HOLD':
+        return 'bg-yellow-100 text-yellow-800'
+      default:
+        return 'bg-slate-100 text-slate-700'
+    }
+  }
+
+  const resolveStatusLabel = (status: ProjectStatus): string => {
+    switch (status) {
+      case 'COMPLETED':
+        return 'Completed'
+      case 'IN_PROGRESS':
+        return 'In progress'
+      case 'ON_HOLD':
+        return 'On hold'
+      default:
+        return 'Planning'
+    }
   }
 
   const formatDate = (dateString: string): string => {
@@ -85,19 +102,22 @@ const ProjectOverview: React.FC = () => {
           placeholder="Search projects..."
           className="w-full md:w-1/3 px-3 py-2 border rounded-md mb-2 md:mb-0"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value)}
           data-testid="project-overview-search"
         />
         <select
           className="w-full md:w-1/4 px-3 py-2 border rounded-md"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+            setStatusFilter(event.target.value as ProjectStatus | 'all')
+          }
           data-testid="project-overview-status-filter"
         >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-          <option value="pending">Pending</option>
+          <option value="all">All Statuses</option>
+          <option value="PLANNING">Planning</option>
+          <option value="IN_PROGRESS">In progress</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="ON_HOLD">On hold</option>
         </select>
       </div>
 
@@ -130,29 +150,20 @@ const ProjectOverview: React.FC = () => {
                   data-testid={`project-overview-status-${project.id}`}
                 >
                   <span
-                    className={`
-                    px-2 py-1 rounded-full text-xs font-semibold
-                    ${
-                      project.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : project.status === 'completed'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                    }
-                  `}
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${resolveStatusStyles(project.status)}`}
                     data-testid={`project-overview-status-badge-${project.id}`}
                   >
-                    {project.status}
+                    {resolveStatusLabel(project.status)}
                   </span>
                 </td>
                 <td
                   className="px-4 py-3 hidden md:table-cell"
                   data-testid={`project-overview-created-${project.id}`}
                 >
-                  {formatDate(project.createdAt)}
+                  {formatDate(project.startDate)}
                 </td>
                 <td className="px-4 py-3" data-testid={`project-overview-team-${project.id}`}>
-                  {project.teamSize}
+                  —
                 </td>
                 <td
                   className="px-4 py-3 text-right"

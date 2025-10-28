@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import projectStore from '../../stores/projectStore'
-
-interface TimelineEvent {
-  id: string
-  title: string
-  description: string
-  date: string
-}
+import projectStore, { type TimelineEvent } from '../../stores/projectStore'
 
 const ProjectTimeline: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>()
@@ -16,13 +9,13 @@ const ProjectTimeline: React.FC = () => {
   const [events, setEvents] = useState<TimelineEvent[]>([])
 
   useEffect(() => {
-    const loadProject = async () => {
+    const loadTimeline = async () => {
       try {
         if (!projectId) {
           throw new Error('Project id missing')
         }
-        const project = await projectStore.getProject(projectId)
-        setEvents(project.events || [])
+        const timeline = await projectStore.fetchTimeline(projectId)
+        setEvents(timeline)
         setError('')
       } catch {
         setError('Failed to load project timeline')
@@ -31,7 +24,7 @@ const ProjectTimeline: React.FC = () => {
       }
     }
 
-    loadProject()
+    void loadTimeline()
   }, [projectId])
 
   const formatDate = (isoString: string) => {
