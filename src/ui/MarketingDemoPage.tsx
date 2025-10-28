@@ -32,7 +32,14 @@ interface SectionHeaderProps {
 function SectionHeader({ eyebrow, title, description }: SectionHeaderProps) {
   return (
     <header style={{ display: 'grid', gap: '12px', maxWidth: '720px' }}>
-      <span style={{ color: brand.colors.accent, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+      <span
+        style={{
+          color: brand.colors.accent,
+          fontWeight: 600,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+        }}
+      >
         {eyebrow}
       </span>
       <h2
@@ -46,7 +53,9 @@ function SectionHeader({ eyebrow, title, description }: SectionHeaderProps) {
       >
         {title}
       </h2>
-      <p style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.6, color: '#CBD5F5' }}>{description}</p>
+      <p style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.6, color: '#CBD5F5' }}>
+        {description}
+      </p>
     </header>
   )
 }
@@ -88,19 +97,22 @@ const experienceStages = [
   {
     id: 'kickoff',
     title: 'Kick-off call',
-    description: 'We plannen een 30 minuten sessie om doelstellingen, datastructuren en branding vast te leggen.',
+    description:
+      'We plannen een 30 minuten sessie om doelstellingen, datastructuren en branding vast te leggen.',
     duration: 'Dag 0',
   },
   {
     id: 'sandbox',
     title: 'Demo sandbox activeren',
-    description: 'Jouw team krijgt persona-toegang, monitoring en journey explainers met tenant branding.',
+    description:
+      'Jouw team krijgt persona-toegang, monitoring en journey explainers met tenant branding.',
     duration: 'Dag 1',
   },
   {
     id: 'validation',
     title: 'Scenario validatie',
-    description: 'Doorloop operations, finance en success scenario’s met audit-trails en status monitoring.',
+    description:
+      'Doorloop operations, finance en success scenario’s met audit-trails en status monitoring.',
     duration: 'Dag 2-4',
   },
   {
@@ -121,13 +133,15 @@ const onboardingChecklistBlueprint = [
   {
     id: 'integrations',
     title: 'Integraties & data',
-    description: 'Koppel CRM, finance en voorraad. We leveren validatiescripts en datakwaliteit-rapportages.',
+    description:
+      'Koppel CRM, finance en voorraad. We leveren validatiescripts en datakwaliteit-rapportages.',
     resourceSlug: 'integration-readiness',
   },
   {
     id: 'go-live',
     title: 'Go-live governance',
-    description: 'Controlelijsten voor audits, escalaties en monitoring zijn gekoppeld aan statuspagina en helpcenter.',
+    description:
+      'Controlelijsten voor audits, escalaties en monitoring zijn gekoppeld aan statuspagina en helpcenter.',
     resourceSlug: 'go-live-checklist',
   },
 ] as const
@@ -159,7 +173,10 @@ const proofLinksBlueprint = [
   },
 ] as const
 
-export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoPageProps): JSX.Element {
+export default function MarketingDemoPage({
+  config,
+  onNavigate,
+}: MarketingDemoPageProps): JSX.Element {
   const support = config.support
   const helpCenterUrl = support.helpCenterBaseUrl
   const journeyLibraryUrl = buildHelpCenterUrl(support, 'customer-journeys')
@@ -170,18 +187,19 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
 
   const personaTracks = useMemo(
     () =>
-      personaTrackBlueprint.map(track => ({
+      personaTrackBlueprint.map((track) => ({
         ...track,
-        resourceHref: track.resourceSlug === 'journey-library'
-          ? journeyLibraryUrl
-          : buildHelpCenterUrl(support, track.resourceSlug),
+        resourceHref:
+          track.resourceSlug === 'journey-library'
+            ? journeyLibraryUrl
+            : buildHelpCenterUrl(support, track.resourceSlug),
       })),
     [journeyLibraryUrl, support],
   )
 
   const onboardingChecklist = useMemo(
     () =>
-      onboardingChecklistBlueprint.map(item => ({
+      onboardingChecklistBlueprint.map((item) => ({
         ...item,
         resourceHref: buildHelpCenterUrl(support, item.resourceSlug),
       })),
@@ -203,7 +221,11 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
 
   const isInternalLink = (href: string) => href.startsWith('/') && !href.startsWith('//')
 
-  const handleInternalNavigation = (event: MouseEvent<HTMLAnchorElement>, href: string, options?: { replace?: boolean }) => {
+  const handleInternalNavigation = (
+    event: MouseEvent<HTMLAnchorElement>,
+    href: string,
+    options?: { replace?: boolean },
+  ) => {
     if (!onNavigate || !isInternalLink(href)) {
       return
     }
@@ -279,7 +301,14 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
             }}
           >
             <div style={{ display: 'grid', gap: '18px' }}>
-              <span style={{ color: '#A5B4FC', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <span
+                style={{
+                  color: '#A5B4FC',
+                  fontWeight: 600,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}
+              >
                 Interactieve demo
               </span>
               <h1
@@ -294,13 +323,16 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
                 Ontdek de journeys per persona
               </h1>
               <p style={{ margin: 0, fontSize: '1.1rem', lineHeight: 1.7, color: '#CBD5F5' }}>
-                Doorloop de drie kernpersona’s en activeer monitoring, explainers en governance zoals prospects het ervaren.
-                De demo is gekoppeld aan statuspagina en helpcenter zodat je direct kunt opschalen.
+                Doorloop de drie kernpersona’s en activeer monitoring, explainers en governance
+                zoals prospects het ervaren. De demo is gekoppeld aan statuspagina en helpcenter
+                zodat je direct kunt opschalen.
               </p>
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 <a
                   href="/"
-                  onClick={event => handleInternalNavigation(event, '/')}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                    handleInternalNavigation(event, '/')
+                  }
                   style={{
                     padding: '12px 24px',
                     borderRadius: '999px',
@@ -315,7 +347,9 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
                 </a>
                 <a
                   href="/#contact"
-                  onClick={event => handleInternalNavigation(event, '/#contact')}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                    handleInternalNavigation(event, '/#contact')
+                  }
                   style={{
                     padding: '12px 24px',
                     borderRadius: '999px',
@@ -333,20 +367,32 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
               style={{
                 borderRadius: '28px',
                 padding: '28px',
-                background: 'linear-gradient(150deg, rgba(148, 163, 255, 0.18) 0%, rgba(15, 23, 42, 0.82) 100%)',
+                background:
+                  'linear-gradient(150deg, rgba(148, 163, 255, 0.18) 0%, rgba(15, 23, 42, 0.82) 100%)',
                 border: '1px solid rgba(148, 163, 184, 0.35)',
                 boxShadow: '0 24px 60px rgba(15, 23, 42, 0.45)',
                 display: 'grid',
                 gap: '12px',
               }}
             >
-              {experienceStages.map(stage => (
+              {experienceStages.map((stage) => (
                 <div key={stage.id} style={{ display: 'grid', gap: 4 }}>
-                  <span style={{ color: '#A5B4FC', fontSize: '0.85rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  <span
+                    style={{
+                      color: '#A5B4FC',
+                      fontSize: '0.85rem',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     {stage.duration}
                   </span>
-                  <strong style={{ color: '#F8FAFC', fontFamily: headingFontStack }}>{stage.title}</strong>
-                  <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.5 }}>{stage.description}</p>
+                  <strong style={{ color: '#F8FAFC', fontFamily: headingFontStack }}>
+                    {stage.title}
+                  </strong>
+                  <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.5 }}>
+                    {stage.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -359,8 +405,14 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
             title="Kies een scenario en activeer de juiste explainers"
             description="Elke journey koppelt dashboards, monitoring en helpcenter artikelen zodat prospects exact zien wat ze krijgen."
           />
-          <div style={{ display: 'grid', gap: '18px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-            {personaTracks.map(track => (
+          <div
+            style={{
+              display: 'grid',
+              gap: '18px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            }}
+          >
+            {personaTracks.map((track) => (
               <article
                 key={track.id}
                 style={{
@@ -372,10 +424,26 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
                   gap: '10px',
                 }}
               >
-                <span style={{ color: '#A5B4FC', fontSize: '0.85rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                <span
+                  style={{
+                    color: '#A5B4FC',
+                    fontSize: '0.85rem',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   {track.persona}
                 </span>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#F8FAFC', fontFamily: headingFontStack }}>{track.title}</h3>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: '1.2rem',
+                    color: '#F8FAFC',
+                    fontFamily: headingFontStack,
+                  }}
+                >
+                  {track.title}
+                </h3>
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{track.description}</p>
                 <a
                   href={track.resourceHref}
@@ -394,20 +462,36 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
             title="Van demo naar productie in drie werven"
             description="Customer success volgt deze checklist voor maximale adoptie en converteert demo’s naar live tenants."
           />
-          <div style={{ display: 'grid', gap: '18px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-            {onboardingChecklist.map(item => (
+          <div
+            style={{
+              display: 'grid',
+              gap: '18px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            }}
+          >
+            {onboardingChecklist.map((item) => (
               <article
                 key={item.id}
                 style={{
                   padding: '24px',
                   borderRadius: '22px',
-                  background: 'linear-gradient(180deg, rgba(99, 102, 241, 0.18) 0%, rgba(15, 23, 42, 0.85) 100%)',
+                  background:
+                    'linear-gradient(180deg, rgba(99, 102, 241, 0.18) 0%, rgba(15, 23, 42, 0.85) 100%)',
                   border: '1px solid rgba(148, 163, 184, 0.35)',
                   display: 'grid',
                   gap: '10px',
                 }}
               >
-                <h3 style={{ margin: 0, color: '#F8FAFC', fontSize: '1.2rem', fontFamily: headingFontStack }}>{item.title}</h3>
+                <h3
+                  style={{
+                    margin: 0,
+                    color: '#F8FAFC',
+                    fontSize: '1.2rem',
+                    fontFamily: headingFontStack,
+                  }}
+                >
+                  {item.title}
+                </h3>
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{item.description}</p>
                 <a
                   href={item.resourceHref}
@@ -428,7 +512,9 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
               gap: '12px',
             }}
           >
-            <strong style={{ color: '#F8FAFC', fontFamily: headingFontStack }}>Checklist downloaden?</strong>
+            <strong style={{ color: '#F8FAFC', fontFamily: headingFontStack }}>
+              Checklist downloaden?
+            </strong>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               <a
                 href={onboardingChecklistUrl}
@@ -466,8 +552,14 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
             title="Alle bewijslast binnen handbereik"
             description="Gebruik deze bronnen tijdens demo’s, interne alignment en besluitvorming."
           />
-          <div style={{ display: 'grid', gap: '18px', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-            {proofLinks.map(link => (
+          <div
+            style={{
+              display: 'grid',
+              gap: '18px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            }}
+          >
+            {proofLinks.map((link) => (
               <article
                 key={link.id}
                 style={{
@@ -481,7 +573,10 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
               >
                 <h3 style={{ margin: 0, color: '#F8FAFC', fontSize: '1.1rem' }}>{link.label}</h3>
                 <p style={{ margin: 0, color: '#CBD5F5', lineHeight: 1.6 }}>{link.description}</p>
-                <a href={link.href} style={{ color: brand.colors.accent, fontWeight: 600, textDecoration: 'none' }}>
+                <a
+                  href={link.href}
+                  style={{ color: brand.colors.accent, fontWeight: 600, textDecoration: 'none' }}
+                >
                   Open resource →
                 </a>
               </article>
@@ -499,8 +594,17 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
           fontSize: '0.9rem',
         }}
       >
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between' }}>
-          <span>© {new Date().getFullYear()} {brand.shortName}. Demo-ervaring.</span>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            justifyContent: 'space-between',
+          }}
+        >
+          <span>
+            © {new Date().getFullYear()} {brand.shortName}. Demo-ervaring.
+          </span>
           <div style={{ display: 'flex', gap: '16px' }}>
             <a href={statusUrl} style={{ color: '#CBD5F5', textDecoration: 'none' }}>
               Status
@@ -508,7 +612,13 @@ export default function MarketingDemoPage({ config, onNavigate }: MarketingDemoP
             <a href={helpCenterUrl} style={{ color: '#CBD5F5', textDecoration: 'none' }}>
               Helpcenter
             </a>
-            <a href="/" onClick={event => handleInternalNavigation(event, '/')} style={{ color: brand.colors.accent, textDecoration: 'none' }}>
+            <a
+              href="/"
+              onClick={(event: MouseEvent<HTMLAnchorElement>) =>
+                handleInternalNavigation(event, '/')
+              }
+              style={{ color: brand.colors.accent, textDecoration: 'none' }}
+            >
               Terug naar overzicht
             </a>
           </div>

@@ -30,7 +30,7 @@ interface Project {
 const ProjectDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [project, setProject] = useState<Project | null>(null)
+  const [project, setProject] = useState<StoreProjectDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -46,7 +46,11 @@ const ProjectDetails: React.FC = () => {
       try {
         if (!id) return
         const data = await projectStore.getProjectById(id)
-        setProject(data)
+        if (data) {
+          setProject(data)
+        } else {
+          setError('Project not found')
+        }
       } catch {
         setError('Failed to load project')
         navigate('/projects')

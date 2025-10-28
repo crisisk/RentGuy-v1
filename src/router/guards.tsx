@@ -162,16 +162,13 @@ export function AuthGuard({
   requiredRoles,
   fallback,
 }: AuthGuardProps): JSX.Element {
-  const location = useLocation()
   const {
     isChecking,
     isAuthenticated,
     allowed,
     role,
     requiredRoles: roles,
-  } = useAuthGuard({
-    requiredRoles,
-  })
+  } = useAuthGuard(requiredRoles ? { requiredRoles } : undefined)
 
   if (isChecking) {
     return fallback ?? <AuthSpinner />
@@ -179,7 +176,7 @@ export function AuthGuard({
 
   if (!allowed) {
     if (!isAuthenticated) {
-      return <Navigate to={redirectTo} state={{ from: location }} replace />
+      return <Navigate to={redirectTo} replace />
     }
     return <AccessDenied requiredRoles={roles} currentRole={role} />
   }
@@ -198,7 +195,6 @@ export function PublicGuard({
   redirectTo = '/',
   fallback,
 }: PublicGuardProps): JSX.Element {
-  const location = useLocation()
   const { isChecking, isAuthenticated } = useAuthGuard()
 
   if (isChecking) {
@@ -206,8 +202,7 @@ export function PublicGuard({
   }
 
   if (isAuthenticated) {
-    const target = redirectTo || location.state?.from?.pathname || '/'
-    return <Navigate to={target} replace />
+    return <Navigate to={redirectTo || '/'} replace />
   }
 
   return children ?? <Outlet />

@@ -176,18 +176,15 @@ function parseInvoice(payload: unknown): Invoice | null {
   return invoice
 }
 
-function parseQuote(payload: unknown): Quote | null {
-  if (!payload || typeof payload !== 'object') {
-    return null
-  }
-  const record = payload as Record<string, unknown>
-  const id = record.id ?? crypto.randomUUID?.() ?? `${Date.now()}`
-  const status = record.status ?? (record.converted ? 'converted' : 'draft')
-  const number = record.number ?? record.reference ?? `Q-${String(id).slice(-6).toUpperCase()}`
-  const amount = Number(record.amount ?? record.total ?? 0)
-
-  const normalisedStatus: Quote['status'] =
-    status === 'sent' || status === 'converted' ? status : 'draft'
+const mapQuoteResponse = (payload: any): Quote => {
+  const id = String(payload.id ?? generateId())
+  const status: Quote['status'] = (
+    typeof payload.status === 'string' && payload.status.length
+      ? payload.status
+      : payload.converted
+        ? 'converted'
+        : 'draft'
+  ) as Quote['status']
 
   return {
     id: toStringSafe(id),

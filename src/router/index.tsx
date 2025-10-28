@@ -1,11 +1,5 @@
 import { Suspense, useMemo, type ReactNode } from 'react'
-import {
-  createBrowserRouter,
-  RouterProvider,
-  Navigate,
-  useLocation,
-  type RouteObject,
-} from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, type RouteObject } from 'react-router-dom'
 import type { AuthUser } from '@application/auth/api'
 import Login from '@ui/Login'
 import { createAppRoutes } from './routes'
@@ -117,6 +111,13 @@ function withSuspense(node: ReactNode): JSX.Element {
   return <Suspense fallback={<RouteLoadingFallback />}>{node}</Suspense>
 }
 
+function resolveCurrentSearch(): string {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+  return window.location.search ?? ''
+}
+
 function PasswordResetConfirmRoute({
   onLogin,
   isAuthenticated,
@@ -126,8 +127,7 @@ function PasswordResetConfirmRoute({
   isAuthenticated: boolean
   redirectPath: string
 }): JSX.Element {
-  const location = useLocation()
-  const params = new URLSearchParams(location.search)
+  const params = new URLSearchParams(resolveCurrentSearch())
   const token = params.get('token') ?? ''
 
   if (isAuthenticated) {
@@ -152,7 +152,9 @@ export function AppRouter({
   const postLoginTarget = normalisePath(postLoginPath, authedHomePath)
 
   const routeConfig = useMemo(() => {
-    const applicationRoutes = createAppRoutes({ onLogout, secretsFocusPath })
+    const applicationRoutes = createAppRoutes(
+      secretsFocusPath ? { onLogout, secretsFocusPath } : { onLogout },
+    )
 
     const guardedApplicationRoutes: RouteObject[] = applicationRoutes.map((route) => {
       const { requiresAuth, element, ...rest } = route
@@ -253,7 +255,7 @@ export function AppRouter({
   ])
 
   const router = useMemo(
-    () => createBrowserRouter(routeConfig, { basename }),
+    () => createBrowserRouter(routeConfig, basename ? { basename } : undefined),
     [basename, routeConfig],
   )
 

@@ -17,13 +17,13 @@ const ProjectTimeline: React.FC = () => {
   const [events, setEvents] = useState<TimelineEvent[]>([])
 
   useEffect(() => {
-    const loadProject = async () => {
+    const loadTimeline = async () => {
       try {
         if (!projectId) {
           throw new Error('Project id missing')
         }
-        const project = await projectStore.getProject(projectId)
-        setEvents(project.events || [])
+        const timeline = await projectStore.fetchTimeline(projectId)
+        setEvents(timeline)
         setError('')
       } catch {
         setError('Failed to load project timeline')
@@ -32,7 +32,7 @@ const ProjectTimeline: React.FC = () => {
       }
     }
 
-    loadProject()
+    void loadTimeline()
   }, [projectId])
 
   const formatEventDate = (isoString: string) =>

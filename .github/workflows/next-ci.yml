@@ -1,0 +1,80 @@
+name: Next Generation CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+env:
+  CI: true
+
+jobs:
+  quality-and-audits:
+    name: Quality, Playwright, and Lighthouse
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Install scanner dependencies
+        working-directory: apps/pwa-scanner
+        run: npm ci
+
+      - name: Run scanner lint
+        working-directory: apps/pwa-scanner
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run onboarding Playwright spec
+        run: npx playwright test tests/e2e/onboarding_rentguy.spec.ts
+
+      - name: Upload Playwright reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
+      - name: Run Lighthouse audit
+        run: |
+          mkdir -p artifacts/lighthouse
+          npx lighthouse https://rentguy.example.com \
+            --config-path=qa/lighthouse/lighthouserc.json \
+            --output json \
+            --output-path=artifacts/lighthouse/report.json \
+            --quiet \
+            --chrome-flags="--headless=new"
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: artifacts/lighthouse
+          if-no-files-found: warn

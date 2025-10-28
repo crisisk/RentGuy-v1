@@ -10,6 +10,18 @@ interface ActivityLogEntry {
   user: string
 }
 
+const normalizeActivityType = (type: string): ActivityLogEntry['type'] => {
+  switch (type) {
+    case 'call':
+    case 'email':
+    case 'meeting':
+    case 'note':
+      return type
+    default:
+      return 'note'
+  }
+}
+
 const formatRelativeTime = (dateString: string): string => {
   const date = new Date(dateString)
   if (Number.isNaN(date.getTime())) {
@@ -45,7 +57,16 @@ const ActivityLog: React.FC = () => {
       try {
         setIsLoading(true)
         const fetchedActivities = await crmStore.getActivityLog()
-        setActivities(fetchedActivities)
+        const mappedActivities: ActivityLogEntry[] = fetchedActivities.map(
+          (activity: CRMActivity) => ({
+            id: activity.id,
+            type: normalizeActivityType(activity.type),
+            timestamp: activity.date,
+            description: activity.description,
+            user: activity.owner ?? 'Onbekende gebruiker',
+          }),
+        )
+        setActivities(mappedActivities)
       } catch {
         setError('Failed to load activities')
       } finally {

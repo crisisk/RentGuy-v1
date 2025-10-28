@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDate } from '../../core/storage'
 import crmStore from '../../stores/crmStore'
@@ -15,9 +15,9 @@ interface Customer {
 const CustomerList = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [customers, setCustomers] = useState<StoreCustomer[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<CustomerStatus | null>(null)
 
   useEffect(() => {
     const loadCustomers = async () => {
@@ -43,9 +43,9 @@ const CustomerList = () => {
     })
   }, [customers, searchQuery, selectedStatus])
 
-  const statusOptions = ['active', 'pending', 'inactive', 'archived']
+  const statusOptions: CustomerStatus[] = ['active', 'pending', 'inactive', 'archived']
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: CustomerStatus) => {
     switch (status) {
       case 'active':
         return 'bg-green-100 text-green-800'
@@ -81,7 +81,7 @@ const CustomerList = () => {
           placeholder="Search customers..."
           className="w-full p-2 border rounded-lg"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
           data-testid="customer-list-search"
         />
 

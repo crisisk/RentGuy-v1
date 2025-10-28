@@ -13,11 +13,7 @@ import { brand, brandFontStack } from '@ui/branding'
 import { useBrandingChrome, useDocumentTitle, useOnboardingPreferences } from '@hooks'
 import OnboardingOverlay from './OnboardingOverlay'
 import RoleSelection from './RoleSelection'
-import {
-  getLocalStorageItem,
-  removeLocalStorageItem,
-  setLocalStorageItem,
-} from '@core/storage'
+import { getLocalStorageItem, removeLocalStorageItem, setLocalStorageItem } from '@core/storage'
 import { subscribeToTokenChanges } from '@core/auth-token-storage'
 import { useAuthStore, signalManualLogout } from '@stores/authStore'
 import AppRouter from '@router/index'
@@ -53,11 +49,8 @@ function normaliseMarketingPath(path: string): string {
   const trimmed = path.trim()
   const [rawPath, rawHash] = trimmed.split('#', 2)
   const ensuredPath = rawPath ? (rawPath.startsWith('/') ? rawPath : `/${rawPath}`) : '/'
-  const cleanedPath = ensuredPath === '/'
-    ? '/'
-    : ensuredPath
-        .replace(/\/{2,}/g, '/')
-        .replace(/\/+$/, '') || '/'
+  const cleanedPath =
+    ensuredPath === '/' ? '/' : ensuredPath.replace(/\/{2,}/g, '/').replace(/\/+$/, '') || '/'
   return rawHash ? `${cleanedPath}#${rawHash}` : cleanedPath
 }
 
@@ -124,31 +117,34 @@ function useMarketingNavigation(fallbackPath: string) {
     scrollToPathAnchor(path)
   }, [path])
 
-  const navigate = useCallback((target: string, options: { replace?: boolean } = {}) => {
-    const next = normaliseMarketingPath(target || fallbackPath)
-    if (typeof window !== 'undefined') {
-      if (options.replace) {
-        window.history.replaceState({}, '', next)
-      } else {
-        window.history.pushState({}, '', next)
+  const navigate = useCallback(
+    (target: string, options: { replace?: boolean } = {}) => {
+      const next = normaliseMarketingPath(target || fallbackPath)
+      if (typeof window !== 'undefined') {
+        if (options.replace) {
+          window.history.replaceState({}, '', next)
+        } else {
+          window.history.pushState({}, '', next)
+        }
       }
-    }
-    setPath(next)
-    scrollToPathAnchor(next)
-  }, [fallbackPath])
+      setPath(next)
+      scrollToPathAnchor(next)
+    },
+    [fallbackPath],
+  )
 
   return { path, navigate }
 }
 
 function TenantPortalApp({ experience }: TenantPortalAppProps) {
-  const token = useAuthStore(state => state.token)
-  const user = useAuthStore(state => state.user)
-  const setAuthCredentials = useAuthStore(state => state.setCredentials)
-  const clearAuth = useAuthStore(state => state.clear)
-  const markAuthChecking = useAuthStore(state => state.markChecking)
-  const markAuthError = useAuthStore(state => state.markError)
-  const markAuthOffline = useAuthStore(state => state.markOffline)
-  const syncAuthToken = useAuthStore(state => state.syncToken)
+  const token = useAuthStore((state) => state.token)
+  const user = useAuthStore((state) => state.user)
+  const setAuthCredentials = useAuthStore((state) => state.setCredentials)
+  const clearAuth = useAuthStore((state) => state.clear)
+  const markAuthChecking = useAuthStore((state) => state.markChecking)
+  const markAuthError = useAuthStore((state) => state.markError)
+  const markAuthOffline = useAuthStore((state) => state.markOffline)
+  const syncAuthToken = useAuthStore((state) => state.syncToken)
   const {
     shouldShow,
     refresh: refreshOnboarding,
@@ -159,7 +155,9 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
   const tenantDisplayName = describeTenantDisplayName(experience)
   useBrandingChrome(BRANDING_CHROME_OPTIONS)
   useDocumentTitle(`${brand.shortName} · ${tenantDisplayName}`)
-  const [userEmail, setUserEmail] = useState(() => ensureAuthEmail(getLocalStorageItem('user_email', '')))
+  const [userEmail, setUserEmail] = useState(() =>
+    ensureAuthEmail(getLocalStorageItem('user_email', '')),
+  )
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
   const [isSavingRole, setIsSavingRole] = useState(false)
   const [roleError, setRoleError] = useState('')
@@ -181,7 +179,6 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
 
     markAuthChecking()
-
     ;(async () => {
       const result = await getCurrentUser(controller ? { signal: controller.signal } : {})
       if (ignore || controller?.signal.aborted) {
@@ -219,7 +216,7 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
   }, [markAuthChecking, markAuthError, markAuthOffline, setAuthCredentials, token, userEmail])
 
   useEffect(() => {
-    const unsubscribe = subscribeToTokenChanges(nextToken => {
+    const unsubscribe = subscribeToTokenChanges((nextToken) => {
       const trimmed = nextToken.trim()
       if (trimmed) {
         syncAuthToken(trimmed)
@@ -325,7 +322,7 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
         setIsSavingRole(false)
       }
     },
-    [setAuthCredentials, token, userEmail]
+    [setAuthCredentials, token, userEmail],
   )
 
   const resolvedUserRole = user?.role ?? getLocalStorageItem('user_role', '')
@@ -340,7 +337,7 @@ function TenantPortalApp({ experience }: TenantPortalAppProps) {
         postLoginPath={experience.postLoginPath}
         defaultAuthenticatedPath={experience.defaultAuthenticatedPath}
         defaultUnauthenticatedPath={experience.defaultUnauthenticatedPath}
-        secretsFocusPath={experience.secretsFocusPath}
+        {...(experience.secretsFocusPath ? { secretsFocusPath: experience.secretsFocusPath } : {})}
       />
       {isRoleModalOpen && (
         <RoleSelection
@@ -368,7 +365,9 @@ function MarketingExperienceApp({ config }: { readonly config: MarketingExperien
   const { path, navigate } = useMarketingNavigation(config.demoPagePath)
   const isDemoRoute = path.startsWith(config.demoPagePath)
   useDocumentTitle(
-    isDemoRoute ? 'RentGuy · Demo-ervaring voor prospects' : 'RentGuy · Alles-in-één verhuurplatform',
+    isDemoRoute
+      ? 'RentGuy · Demo-ervaring voor prospects'
+      : 'RentGuy · Alles-in-één verhuurplatform',
   )
 
   if (isDemoRoute) {
@@ -379,9 +378,8 @@ function MarketingExperienceApp({ config }: { readonly config: MarketingExperien
 }
 
 export function App(): JSX.Element {
-  const experience = resolveExperienceConfig(undefined, {
-    modeOverride: env.isMarketingMode ? 'marketing' : undefined,
-  })
+  const experienceOptions = env.isMarketingMode ? { modeOverride: 'marketing' as const } : undefined
+  const experience = resolveExperienceConfig(undefined, experienceOptions)
   if (experience.mode === 'marketing') {
     return <MarketingExperienceApp config={experience} />
   }
