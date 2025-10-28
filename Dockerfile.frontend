@@ -8,6 +8,7 @@ ENV CI=1 \
     npm_config_audit=false \
     npm_config_fund=false
 
+# Install dependencies once so we can reuse the layer between builds
 FROM base AS deps
 COPY package.json ./
 COPY package-lock.json* ./
@@ -18,15 +19,19 @@ RUN --mount=type=cache,target=/root/.npm \
       npm install --legacy-peer-deps; \
     fi
 
+# Build the production bundle with only the files required by the scanner frontend
 FROM base AS builder
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build && find dist -name '*.map' -delete
 
+# Minimal nginx runtime image to serve the static assets (<100MB total)
 FROM nginx:1.27-alpine AS runner
+WORKDIR /usr/share/nginx/html
+RUN rm -f /etc/nginx/conf.d/default.conf
 COPY deploy/frontend.nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist .
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://localhost/healthz || exit 1
 CMD ["nginx", "-g", "daemon off;"]

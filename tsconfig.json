@@ -40,10 +40,13 @@
       "@fullcalendar/timegrid": ["vendor/fullcalendar/timegrid.ts"],
       "@fullcalendar/interaction": ["vendor/fullcalendar/interaction.ts"],
       "@fullcalendar/core": ["vendor/fullcalendar/core.ts"],
-      "react": ["types/react/index.d.ts"],
-      "react/jsx-runtime": ["types/react/jsx-runtime/index.d.ts"],
-      "react-dom": ["types/react-dom/index.d.ts"],
-      "react-dom/client": ["types/react-dom/client/index.d.ts"],
+      "react": ["types/react/index.d.ts", "node_modules/react/index.js"],
+      "react/jsx-runtime": [
+        "types/react/jsx-runtime/index.d.ts",
+        "node_modules/react/cjs/react-jsx-runtime.production.min.js"
+      ],
+      "react-dom": ["types/react-dom/index.d.ts", "node_modules/react-dom/index.js"],
+      "react-dom/client": ["types/react-dom/client/index.d.ts", "node_modules/react-dom/client.js"],
       "react-router-dom": ["src/vendor/react-router-dom.tsx"],
       "zustand": ["src/vendor/zustand.ts"],
       "zustand/middleware/immer": ["src/vendor/zustand-immer.ts"]

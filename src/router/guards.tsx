@@ -1,97 +1,214 @@
-import React, { useEffect } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { authStore } from './authStore'; // Update import path according to your project structure
+import { useMemo, type ReactElement } from 'react'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useAuthStore, type AuthStatus } from '@stores/authStore'
 
-export const AuthSpinner = () => (
-  <div className="auth-spinner">
-    <div className="spinner-border text-primary" role="status">
-      <span className="visually-hidden">Loading...</span>
-    </div>
-    <p>Authenticating...</p>
-  </div>
-);
-
-export const AccessDenied = () => {
-  const location = useLocation();
+export function AuthSpinner(): JSX.Element {
   return (
-    <div className="access-denied">
-      <h1>403 - Access Denied</h1>
-      <p>You don't have permission to access {location.pathname}</p>
-      <Navigate to="/" replace />
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        display: 'grid',
+        gap: 12,
+        justifyItems: 'center',
+        alignContent: 'center',
+        minHeight: '60vh',
+        padding: '48px 16px',
+        color: '#334155',
+        fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      }}
+      data-testid="auth-spinner"
+    >
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          border: '4px solid rgba(51, 65, 85, 0.3)',
+          borderTopColor: '#2563EB',
+          animation: 'rg-auth-spinner 0.9s linear infinite',
+        }}
+      />
+      <span style={{ fontSize: '0.95rem' }}>Authenticatie controleren…</span>
+      <style>
+        {`
+          @keyframes rg-auth-spinner {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     </div>
-  );
-};
+  )
+}
 
-export const useAuthGuard = (requiredPermissions?: string[], strategy: 'all' | 'any' = 'all') => {
-  const { isAuthenticated, checkAuth, permissions, isLoading } = authStore();
-  const location = useLocation();
+export interface AccessDeniedProps {
+  readonly requiredRoles?: readonly string[]
+  readonly currentRole?: string | null
+}
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth, location.pathname]);
+export function AccessDenied({ requiredRoles = [], currentRole }: AccessDeniedProps): JSX.Element {
+  const location = useLocation()
+  const requirementDescription = requiredRoles.length
+    ? requiredRoles
+        .map((role) => role.trim())
+        .filter(Boolean)
+        .join(', ')
+    : null
 
-  const hasPermissions = () => {
-    if (!requiredPermissions) return true;
-    return strategy === 'all'
-      ? requiredPermissions.every(p => permissions.includes(p))
-      : requiredPermissions.some(p => permissions.includes(p));
-  };
+  return (
+    <div
+      style={{
+        maxWidth: 520,
+        margin: '0 auto',
+        padding: '64px 24px',
+        textAlign: 'center',
+        fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        display: 'grid',
+        gap: 16,
+      }}
+      data-testid="access-denied"
+    >
+      <span aria-hidden="true" style={{ fontSize: '3rem' }}>
+        🔒
+      </span>
+      <h1 style={{ margin: 0, fontSize: '1.8rem', color: '#0F172A' }}>Geen toegang</h1>
+      <p style={{ margin: 0, color: '#475569', fontSize: '1rem' }}>
+        Je hebt geen rechten om <code>{location.pathname}</code> te bekijken.
+      </p>
+      {requirementDescription ? (
+        <p style={{ margin: 0, color: '#64748B', fontSize: '0.95rem' }}>
+          Vereiste rollen: <strong>{requirementDescription}</strong>
+          {currentRole ? (
+            <>
+              {' · '}Jouw rol: <strong>{currentRole}</strong>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+interface UseAuthGuardOptions {
+  readonly requiredRoles?: readonly string[]
+}
+
+export interface AuthGuardState {
+  readonly status: AuthStatus
+  readonly isChecking: boolean
+  readonly isAuthenticated: boolean
+  readonly allowed: boolean
+  readonly reason: 'unauthenticated' | 'unauthorised' | null
+  readonly role: string | null
+  readonly requiredRoles: readonly string[]
+  readonly error: string | null
+}
+
+function normaliseRole(role?: string | null): string {
+  return typeof role === 'string' ? role.trim().toLowerCase() : ''
+}
+
+export function useAuthGuard(options: UseAuthGuardOptions = {}): AuthGuardState {
+  const { status, user, error } = useAuthStore((state) => ({
+    status: state.status,
+    user: state.user,
+    error: state.error,
+  }))
+
+  const requiredRoles = useMemo(() => {
+    if (!options.requiredRoles?.length) {
+      return [] as string[]
+    }
+    return options.requiredRoles
+      .map((role) => normaliseRole(role))
+      .filter((role) => role.length > 0)
+  }, [options.requiredRoles])
+
+  const isChecking = status === 'checking'
+  const isAuthenticated = status === 'authenticated' || status === 'offline'
+  const role = user?.role ?? null
+  const normalisedRole = normaliseRole(role)
+  const roleAllowed = requiredRoles.length === 0 || requiredRoles.includes(normalisedRole)
+  const allowed = isAuthenticated && roleAllowed
+  const reason: AuthGuardState['reason'] = allowed
+    ? null
+    : isAuthenticated
+      ? 'unauthorised'
+      : 'unauthenticated'
 
   return {
+    status,
+    isChecking,
     isAuthenticated,
-    isLoading,
-    isAuthorized: hasPermissions(),
-    requiredPermissions,
-  };
-};
+    allowed,
+    reason,
+    role,
+    requiredRoles,
+    error,
+  }
+}
 
-type ProtectedRouteProps = {
-  children?: React.ReactElement;
-  requiredPermissions?: string[];
-  permissionStrategy?: 'all' | 'any';
-};
+export interface AuthGuardProps {
+  readonly children?: ReactElement
+  readonly redirectTo?: string
+  readonly requiredRoles?: readonly string[]
+  readonly fallback?: ReactElement
+}
 
-export const ProtectedRoute = ({
+export function AuthGuard({
   children,
-  requiredPermissions,
-  permissionStrategy = 'all',
-}: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, isAuthorized } = useAuthGuard(requiredPermissions, permissionStrategy);
-  const location = useLocation();
+  redirectTo = '/login',
+  requiredRoles,
+  fallback,
+}: AuthGuardProps): JSX.Element {
+  const location = useLocation()
+  const {
+    isChecking,
+    isAuthenticated,
+    allowed,
+    role,
+    requiredRoles: roles,
+  } = useAuthGuard({
+    requiredRoles,
+  })
 
-  if (isLoading) {
-    return <AuthSpinner />;
+  if (isChecking) {
+    return fallback ?? <AuthSpinner />
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!allowed) {
+    if (!isAuthenticated) {
+      return <Navigate to={redirectTo} state={{ from: location }} replace />
+    }
+    return <AccessDenied requiredRoles={roles} currentRole={role} />
   }
 
-  if (!isAuthorized) {
-    return <AccessDenied />;
+  return children ?? <Outlet />
+}
+
+export interface PublicGuardProps {
+  readonly children?: ReactElement
+  readonly redirectTo?: string
+  readonly fallback?: ReactElement
+}
+
+export function PublicGuard({
+  children,
+  redirectTo = '/',
+  fallback,
+}: PublicGuardProps): JSX.Element {
+  const location = useLocation()
+  const { isChecking, isAuthenticated } = useAuthGuard()
+
+  if (isChecking) {
+    return fallback ?? <AuthSpinner />
   }
 
-  return children ? children : <Outlet />;
-};
-
-// Optional: Add basic CSS for components
-const styles = `
-  .auth-spinner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    gap: 1rem;
+  if (isAuthenticated) {
+    const target = redirectTo || location.state?.from?.pathname || '/'
+    return <Navigate to={target} replace />
   }
 
-  .access-denied {
-    text-align: center;
-    padding: 2rem;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-`;
-
-// Inject styles (consider using CSS modules or styled-components in real project)
-document.head.insertAdjacentHTML('beforeend', `<style>${styles}</style>`);
+  return children ?? <Outlet />
+}

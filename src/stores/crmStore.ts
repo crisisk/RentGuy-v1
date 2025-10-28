@@ -1,5 +1,5 @@
-import create from 'zustand'
-import { produce } from 'immer'
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
 import { api } from '@infra/http/api'
 import { mapUnknownToApiError } from '@errors'
 import type {
@@ -13,40 +13,66 @@ import type {
   SourcePerformanceMetric,
   DashboardProvenance,
 } from '@rg-types/crmTypes'
+
+export type CustomerStatus = 'active' | 'pending' | 'inactive' | 'archived'
+
 export interface Customer {
-  id?: number
+  id: string
   name: string
   email: string
-  phone?: string
+  phone: string
+  status: CustomerStatus
+  createdAt: string
+  address: string
+  company?: string
   notes?: string
 }
+
+export interface CustomerInput extends Omit<Customer, 'id' | 'createdAt'> {
+  id?: string
+}
+
 export interface Activity {
-  id?: number
-  customerId: number
+  id: string
+  customerId: string
   type: string
   description: string
   date: string
+  owner?: string
 }
-export interface CRMState {
+
+interface CRMState {
   customers: Customer[]
-  activities: Activity[]
+  customerMap: Record<string, Customer>
+  customerActivities: Record<string, Activity[]>
+  activityLog: Activity[]
+  dashboard: CRMDashboardSummary | null
   loading: boolean
   error: string | null
-  dashboard: CRMDashboardSummary | null
-  fetchCustomers: () => Promise<void>
-  createCustomer: (customer: Customer) => Promise<void>
-  updateCustomer: (customer: Customer) => Promise<void>
-  deleteCustomer: (customerId: number) => Promise<void>
-  fetchActivities: (customerId?: number) => Promise<void>
-  createActivity: (activity: Activity) => Promise<void>
+  clearError: () => void
+  loadCustomers: () => Promise<Customer[]>
+  fetchCustomers: () => Promise<Customer[]>
+  getCustomerById: (id: string) => Promise<Customer | null>
+  getCustomer: (id: string) => Promise<Customer | null>
+  createCustomer: (customer: CustomerInput) => Promise<Customer>
+  updateCustomer: (customer: CustomerInput & { id: string }) => Promise<Customer>
+  saveCustomer: (customer: CustomerInput) => Promise<Customer>
+  deleteCustomer: (customerId: string) => Promise<void>
+  fetchActivities: (customerId?: string) => Promise<Activity[]>
+  getCustomerActivities: (customerId: string) => Promise<Activity[]>
+  getActivityLog: () => Promise<Activity[]>
+  createActivity: (activity: Omit<Activity, 'id'> & { id?: string }) => Promise<Activity>
   fetchDashboardSummary: (options?: { lookbackDays?: number }) => Promise<CRMDashboardSummary>
 }
+
 const CRM_BASE_PATH = '/api/v1/crm'
 const CRM_ANALYTICS_PATH = `${CRM_BASE_PATH}/analytics/dashboard`
 
 function resolveError(error: unknown): string {
   return mapUnknownToApiError(error).message
 }
+
+const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 
 const toNumber = (value: unknown, fallback = 0): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -103,6 +129,55 @@ const toIsoStringOrNull = (value: unknown): string | null => {
   }
   const date = new Date(value as string | number | Date)
   return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+function mapCustomer(payload: any): Customer {
+  const id = String(payload?.id ?? payload?.customerId ?? generateId())
+  const createdAt = toIsoString(payload?.createdAt ?? payload?.created_at ?? Date.now())
+  const statusCandidate = (payload?.status ?? 'active') as CustomerStatus
+  const status: CustomerStatus =
+    statusCandidate === 'pending' ||
+    statusCandidate === 'inactive' ||
+    statusCandidate === 'archived'
+      ? statusCandidate
+      : 'active'
+
+  const customer: Customer = {
+    id,
+    name: toStringSafe(payload?.name, 'Onbekende klant'),
+    email: toStringSafe(payload?.email, ''),
+    phone: toStringSafe(payload?.phone ?? payload?.phoneNumber ?? ''),
+    status,
+    createdAt,
+    address: toStringSafe(payload?.address ?? payload?.companyAddress ?? ''),
+  }
+
+  if (payload?.company) {
+    customer.company = String(payload.company)
+  }
+  if (payload?.notes) {
+    customer.notes = String(payload.notes)
+  }
+
+  return customer
+}
+
+function mapActivity(payload: any): Activity {
+  const id = String(payload?.id ?? generateId())
+  const customerId = String(payload?.customerId ?? payload?.customer_id ?? '')
+  const activity: Activity = {
+    id,
+    customerId,
+    type: toStringSafe(payload?.type ?? payload?.category ?? 'activity'),
+    description: toStringSafe(payload?.description ?? payload?.details ?? ''),
+    date: toIsoString(payload?.date ?? payload?.occurred_at ?? Date.now()),
+  }
+
+  if (payload?.owner) {
+    activity.owner = String(payload.owner)
+  }
+
+  return activity
 }
 
 const mapHeadline = (payload: any): DashboardHeadlineKPIs => ({
@@ -216,198 +291,316 @@ const mapDashboardSummary = (payload: any): CRMDashboardSummary => ({
   provenance: mapProvenance(payload?.provenance ?? {}),
 })
 
-export const crmStore = create<CRMState>((set) => ({
-  customers: [],
-  customerActivities: {},
-  activityLog: [],
-  dashboardSummary: null,
-  loading: false,
-  error: null,
-  dashboard: null,
-  fetchCustomers: async () => {
-    set(
-      produce((state) => {
-        state.loading = true
-        state.error = null
-      }),
-    )
-    try {
-      const response = await api.get(`${CRM_BASE_PATH}/customers`)
-      set(
-        produce((state) => {
-          state.customers = Array.isArray(response.data) ? response.data : []
-          state.loading = false
-        }),
-      )
-    } catch (error) {
-      set(
-        produce((state) => {
-          state.error = resolveError(error)
-          state.loading = false
-        }),
-      )
-    }
-  },
-  createCustomer: async (customer) => {
-    set(
-      produce((state) => {
-        state.loading = true
-        state.error = null
-      }),
-    )
-    try {
-      const response = await api.post(`${CRM_BASE_PATH}/customers`, customer)
-      set(
-        produce((state) => {
-          if (response.data) {
-            state.customers.push(response.data as Customer)
-          }
-          state.loading = false
-        }),
-      )
-    } catch (error) {
-      set(
-        produce((state) => {
-          state.error = resolveError(error)
-          state.loading = false
-        }),
-      )
-    }
-  },
-  updateCustomer: async (customer) => {
-    set(
-      produce((state) => {
-        state.loading = true
-        state.error = null
-      }),
-    )
-    try {
-      const response = await api.put(`${CRM_BASE_PATH}/customers/${customer.id}`, customer)
-      set(
-        produce((state) => {
-          const index = state.customers.findIndex((c) => c.id === customer.id)
-          if (index !== -1 && response.data) state.customers[index] = response.data as Customer
-          state.loading = false
-        }),
-      )
-    } catch (error) {
-      set(
-        produce((state) => {
-          state.error = resolveError(error)
-          state.loading = false
-        }),
-      )
-    }
-  },
-  deleteCustomer: async (customerId) => {
-    set(
-      produce((state) => {
-        state.loading = true
-        state.error = null
-      }),
-    )
-    try {
-      await api.delete(`${CRM_BASE_PATH}/customers/${customerId}`)
-      set(
-        produce((state) => {
-          state.customers = state.customers.filter((c) => c.id !== customerId)
-          state.loading = false
-        }),
-      )
-    } catch (error) {
-      set(
-        produce((state) => {
-          state.error = resolveError(error)
-          state.loading = false
-        }),
-      )
-    }
-  },
-  fetchActivities: async (customerId) => {
-    set(
-      produce((state) => {
-        state.loading = true
-        state.error = null
-      }),
-    )
-    try {
-      const url = customerId
-        ? `${CRM_BASE_PATH}/activities?customerId=${customerId}`
-        : `${CRM_BASE_PATH}/activities`
-      const response = await api.get(url)
-      set(
-        produce((state) => {
-          state.activities = Array.isArray(response.data) ? response.data : []
-          state.loading = false
-        }),
-      )
-    } catch (error) {
-      set(
-        produce((state) => {
-          state.error = resolveError(error)
-          state.loading = false
-        }),
-      )
-    }
-  },
-  createActivity: async (activity) => {
-    set(
-      produce((state) => {
-        state.loading = true
-        state.error = null
-      }),
-    )
-    try {
-      const response = await api.post(`${CRM_BASE_PATH}/activities`, activity)
-      set(
-        produce((state) => {
-          if (response.data) {
-            state.activities.push(response.data as Activity)
-          }
-          state.loading = false
-        }),
-      )
-    } catch (error) {
-      set(
-        produce((state) => {
-          state.error = resolveError(error)
-          state.loading = false
-        }),
-      )
-    }
-  },
-  fetchDashboardSummary: async (options) => {
-    set(
-      produce((state) => {
-        state.loading = true
-        state.error = null
-      }),
-    )
+const useCRMStoreBase = create<CRMState>()(
+  immer((set, get) => ({
+    customers: [],
+    customerMap: {},
+    customerActivities: {},
+    activityLog: [],
+    dashboard: null,
+    loading: false,
+    error: null,
 
-    try {
-      const response = await api.get(CRM_ANALYTICS_PATH, {
-        params: options?.lookbackDays ? { lookback_days: options.lookbackDays } : undefined,
+    clearError: () => {
+      set((state) => {
+        state.error = null
       })
-      const summary = mapDashboardSummary(response.data)
+    },
 
-      set(
-        produce((state) => {
-          state.dashboard = summary
+    loadCustomers: async () => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.get(`${CRM_BASE_PATH}/customers`)
+        const customers = Array.isArray(response.data) ? response.data.map(mapCustomer) : []
+
+        set((state) => {
+          state.customers = customers
+          state.customerMap = customers.reduce<Record<string, Customer>>((acc, customer) => {
+            acc[customer.id] = customer
+            return acc
+          }, {})
           state.loading = false
-        }),
-      )
+        })
 
-      return summary
-    } catch (error) {
-      const message = resolveError(error)
-      set(
-        produce((state) => {
+        return customers
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
           state.error = message
           state.loading = false
-        }),
-      )
-      throw new Error(message)
-    }
-  },
-}))
+        })
+        throw new Error(message)
+      }
+    },
+
+    fetchCustomers: () => get().loadCustomers(),
+
+    getCustomerById: async (id: string) => {
+      const cached = get().customerMap[id]
+      if (cached) {
+        return cached
+      }
+
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.get(`${CRM_BASE_PATH}/customers/${id}`)
+        const customer = mapCustomer(response.data)
+
+        set((state) => {
+          state.customerMap[customer.id] = customer
+          const existingIndex = state.customers.findIndex((item) => item.id === customer.id)
+          if (existingIndex >= 0) {
+            state.customers[existingIndex] = customer
+          } else {
+            state.customers.push(customer)
+          }
+          state.loading = false
+        })
+
+        return customer
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        return null
+      }
+    },
+
+    getCustomer: (id: string) => get().getCustomerById(id),
+
+    createCustomer: async (customerInput) => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.post(`${CRM_BASE_PATH}/customers`, customerInput)
+        const customer = mapCustomer({ ...customerInput, ...response.data })
+        set((state) => {
+          state.customers.push(customer)
+          state.customerMap[customer.id] = customer
+          state.loading = false
+        })
+        return customer
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    updateCustomer: async (customerInput) => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.put(
+          `${CRM_BASE_PATH}/customers/${customerInput.id}`,
+          customerInput,
+        )
+        const customer = mapCustomer({ ...customerInput, ...response.data })
+        set((state) => {
+          state.customerMap[customer.id] = customer
+          state.customers = state.customers.map((existing) =>
+            existing.id === customer.id ? customer : existing,
+          )
+          state.loading = false
+        })
+        return customer
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    saveCustomer: async (customerInput) => {
+      if (customerInput.id) {
+        return get().updateCustomer({ ...customerInput, id: customerInput.id })
+      }
+      return get().createCustomer(customerInput)
+    },
+
+    deleteCustomer: async (customerId) => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        await api.delete(`${CRM_BASE_PATH}/customers/${customerId}`)
+        set((state) => {
+          delete state.customerMap[customerId]
+          state.customers = state.customers.filter((customer) => customer.id !== customerId)
+          delete state.customerActivities[customerId]
+          state.loading = false
+        })
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    fetchActivities: async (customerId) => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const url = customerId
+          ? `${CRM_BASE_PATH}/customers/${customerId}/activities`
+          : `${CRM_BASE_PATH}/activities`
+        const response = await api.get(url)
+        const activities = Array.isArray(response.data) ? response.data.map(mapActivity) : []
+
+        set((state) => {
+          if (customerId) {
+            state.customerActivities[customerId] = activities
+          } else {
+            state.activityLog = activities
+          }
+          state.loading = false
+        })
+
+        return activities
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    getCustomerActivities: async (customerId) => {
+      const cached = get().customerActivities[customerId]
+      if (Array.isArray(cached)) {
+        return cached
+      }
+
+      try {
+        return await get().fetchActivities(customerId)
+      } catch {
+        return []
+      }
+    },
+
+    getActivityLog: async () => {
+      if (Array.isArray(get().activityLog) && get().activityLog.length > 0) {
+        return get().activityLog
+      }
+
+      try {
+        return await get().fetchActivities()
+      } catch {
+        return []
+      }
+    },
+
+    createActivity: async (activityInput) => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.post(`${CRM_BASE_PATH}/activities`, activityInput)
+        const activity = mapActivity({ ...activityInput, ...response.data })
+        set((state) => {
+          const list = state.customerActivities[activity.customerId] ?? []
+          list.push(activity)
+          state.customerActivities[activity.customerId] = list
+          state.activityLog.unshift(activity)
+          state.loading = false
+        })
+        return activity
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    fetchDashboardSummary: async (options) => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const config: Record<string, unknown> = {}
+        if (options && typeof options.lookbackDays === 'number') {
+          config.params = { lookback_days: options.lookbackDays }
+        }
+
+        const response = await api.get(CRM_ANALYTICS_PATH, config)
+        const summary = mapDashboardSummary(response.data)
+
+        set((state) => {
+          state.dashboard = summary
+          state.loading = false
+        })
+
+        return summary
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+  })),
+)
+
+const crmStore = Object.assign(useCRMStoreBase, {
+  clearError: () => useCRMStoreBase.getState().clearError(),
+  loadCustomers: () => useCRMStoreBase.getState().loadCustomers(),
+  fetchCustomers: () => useCRMStoreBase.getState().fetchCustomers(),
+  getCustomerById: (id: string) => useCRMStoreBase.getState().getCustomerById(id),
+  getCustomer: (id: string) => useCRMStoreBase.getState().getCustomer(id),
+  createCustomer: (customer: CustomerInput) => useCRMStoreBase.getState().createCustomer(customer),
+  updateCustomer: (customer: CustomerInput & { id: string }) =>
+    useCRMStoreBase.getState().updateCustomer(customer),
+  saveCustomer: (customer: CustomerInput) => useCRMStoreBase.getState().saveCustomer(customer),
+  deleteCustomer: (customerId: string) => useCRMStoreBase.getState().deleteCustomer(customerId),
+  fetchActivities: (customerId?: string) => useCRMStoreBase.getState().fetchActivities(customerId),
+  getCustomerActivities: (customerId: string) =>
+    useCRMStoreBase.getState().getCustomerActivities(customerId),
+  getActivityLog: () => useCRMStoreBase.getState().getActivityLog(),
+  createActivity: (activity: Omit<Activity, 'id'> & { id?: string }) =>
+    useCRMStoreBase.getState().createActivity(activity),
+  fetchDashboardSummary: (options?: { lookbackDays?: number }) =>
+    useCRMStoreBase.getState().fetchDashboardSummary(options),
+})
+
 export default crmStore
