@@ -78,8 +78,10 @@ export function mapUnknownToApiError(error: unknown): APIError {
   return APIError.from(error)
 }
 
-export function assertApiError(error: unknown): APIError {
-  return APIError.from(error)
+export function assertApiError(error: unknown): asserts error is APIError {
+  if (!APIError.isApiError(error)) {
+    throw APIError.from(error)
+  }
 }
 
 export {

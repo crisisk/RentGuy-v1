@@ -1,7 +1,12 @@
 import { api } from '@infra/http/api'
 import { err, ok, type Result } from '@core/result'
 import { mapUnknownToApiError } from '@errors'
-import type { EmailDiagnostics, ManagedSecret, SecretsSyncSummary } from '@rg-types/platform'
+import type {
+  EmailDiagnostics,
+  ManagedSecret,
+  SecretUpdatePayload,
+  SecretsSyncSummary,
+} from '@rg-types/platform'
 
 interface SecretResponseRaw {
   key: string
@@ -76,16 +81,15 @@ export async function fetchManagedSecrets(): Promise<Result<ManagedSecret[]>> {
   }
 }
 
-export interface UpdateSecretPayload {
-  value: string
-}
-
 export async function updateManagedSecret(
   key: string,
-  payload: UpdateSecretPayload,
+  payload: SecretUpdatePayload,
 ): Promise<Result<ManagedSecret>> {
   try {
-    const { data } = await api.put<SecretResponseRaw>(`/api/v1/platform/secrets/${encodeURIComponent(key)}`, payload)
+    const { data } = await api.put<SecretResponseRaw>(
+      `/api/v1/platform/secrets/${encodeURIComponent(key)}`,
+      payload,
+    )
     return ok(mapSecretResponse(data))
   } catch (error) {
     return err(mapUnknownToApiError(error))
@@ -103,7 +107,9 @@ export async function syncManagedSecrets(): Promise<Result<SecretsSyncSummary>> 
 
 export async function fetchEmailDiagnostics(): Promise<Result<EmailDiagnostics>> {
   try {
-    const { data } = await api.get<EmailDiagnosticsRaw>('/api/v1/platform/secrets/email/diagnostics')
+    const { data } = await api.get<EmailDiagnosticsRaw>(
+      '/api/v1/platform/secrets/email/diagnostics',
+    )
     return ok(mapEmailDiagnostics(data))
   } catch (error) {
     return err(mapUnknownToApiError(error))

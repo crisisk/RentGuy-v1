@@ -6,10 +6,12 @@ export type SetState<State extends object> = (
 
 export type GetState<State> = () => State
 
-export type StateCreator<State extends object> = (
-  set: SetState<State>,
-  get: GetState<State>,
-) => State
+export type StateCreator<
+  State extends object,
+  CustomSetState = SetState<State>,
+  CustomGetState = GetState<State>,
+  StoreApiExt = unknown,
+> = (set: CustomSetState, get: CustomGetState, api: StoreApiExt) => State
 
 export interface StoreApi<State extends object> {
   getState: GetState<State>
@@ -38,8 +40,13 @@ function ensureSelector<State extends object, Selected>(
 
 type BoundStore<State extends object> = Store<State>
 
-function initialiseStore<State extends object>(
-  initializer: StateCreator<State>,
+function initialiseStore<
+  State extends object,
+  CustomSetState = SetState<State>,
+  CustomGetState = GetState<State>,
+  StoreApiExt = unknown,
+>(
+  initializer: StateCreator<State, CustomSetState, CustomGetState, StoreApiExt>,
 ): BoundStore<State> {
   let state = {} as State
   const listeners = new Set<() => void>()
@@ -90,7 +97,8 @@ function initialiseStore<State extends object>(
     })
   }
 
-  state = initializer(setState, getState)
+  const api = undefined as unknown as StoreApiExt
+  state = initializer(setState as CustomSetState, getState as CustomGetState, api)
 
   function useBoundStore<Selected>(selector?: (state: State) => Selected): Selected {
     const selectorRef = useRef(ensureSelector(selector))
@@ -110,15 +118,23 @@ function initialiseStore<State extends object>(
   return useBoundStore as Store<State>
 }
 
-export function create<State extends object>(): (
-  initializer: StateCreator<State>,
+export function create<State extends object>(): <CustomSetState, CustomGetState, StoreApiExt>(
+  initializer: StateCreator<State, CustomSetState, CustomGetState, StoreApiExt>,
 ) => BoundStore<State>
-export function create<State extends object>(initializer: StateCreator<State>): BoundStore<State>
-export function create<State extends object>(
-  initializer?: StateCreator<State>,
-): BoundStore<State> | ((initializer: StateCreator<State>) => BoundStore<State>) {
+export function create<State extends object, CustomSetState, CustomGetState, StoreApiExt>(
+  initializer: StateCreator<State, CustomSetState, CustomGetState, StoreApiExt>,
+): BoundStore<State>
+export function create<State extends object, CustomSetState, CustomGetState, StoreApiExt>(
+  initializer?: StateCreator<State, CustomSetState, CustomGetState, StoreApiExt>,
+):
+  | BoundStore<State>
+  | ((
+      initializer: StateCreator<State, CustomSetState, CustomGetState, StoreApiExt>,
+    ) => BoundStore<State>) {
   if (!initializer) {
-    return (initialiserArgument: StateCreator<State>) => initialiseStore(initialiserArgument)
+    return (
+      initialiserArgument: StateCreator<State, CustomSetState, CustomGetState, StoreApiExt>,
+    ) => initialiseStore(initialiserArgument)
   }
 
   return initialiseStore(initializer)

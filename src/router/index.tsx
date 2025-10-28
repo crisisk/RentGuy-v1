@@ -1,5 +1,11 @@
 import { Suspense, useMemo, type ReactNode } from 'react'
-import { createBrowserRouter, RouterProvider, Navigate, useLocation, type RouteObject } from 'react-router-dom'
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+  useLocation,
+  type RouteObject,
+} from 'react-router-dom'
 import type { AuthUser } from '@application/auth/api'
 import Login from '@ui/Login'
 import { createAppRoutes } from './routes'
@@ -148,104 +154,94 @@ export function AppRouter({
   const routeConfig = useMemo(() => {
     const applicationRoutes = createAppRoutes({ onLogout, secretsFocusPath })
 
-    const guardedApplicationRoutes: RouteObject[] = applicationRoutes.map(route => ({
-      path: route.path,
-      match: route.match,
-      element: route.requiresAuth
-        ? isAuthenticated
-          ? withSuspense(route.element)
-          : <Navigate to={loginPath} replace />
-        : withSuspense(route.element),
-    }))
+    const guardedApplicationRoutes: RouteObject[] = applicationRoutes.map((route) => {
+      const { requiresAuth, element, ...rest } = route
+      const mustAuthenticate = requiresAuth !== false
+      const guardedElement = mustAuthenticate ? (
+        isAuthenticated ? (
+          withSuspense(element)
+        ) : (
+          <Navigate to={loginPath} replace />
+        )
+      ) : (
+        withSuspense(element)
+      )
+
+      return {
+        ...rest,
+        element: guardedElement,
+      }
+    })
+
+    const routes: RouteObject[] = []
+    const seenPaths = new Set<string>()
+
+    const registerRoute = (route: RouteObject) => {
+      if (typeof route.path === 'string') {
+        const normalised = normalisePath(route.path, route.path)
+        if (seenPaths.has(normalised)) {
+          return
+        }
+        seenPaths.add(normalised)
+        routes.push({ ...route, path: normalised })
+        return
+      }
+      routes.push(route)
+    }
 
     const resolveLoginElement = () =>
       isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />
 
-    const baseRoutes: RouteObject[] = [
-      {
-        path: loginPath,
-        element: resolveLoginElement(),
-      },
-      {
-        path: '/register',
-        element: resolveLoginElement(),
-      },
-      {
-        path: '/password-reset',
-        element: resolveLoginElement(),
-      },
-      {
-        path: '/password-reset/confirm',
-        element: resolveLoginElement(),
-      },
-      {
-        path: '/verify-email',
-        element: resolveLoginElement(),
-      },
-      {
-        path: '/register',
-        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} initialMode="register" />,
-      },
-      {
-        path: '/password-reset',
-        element: isAuthenticated
-          ? <Navigate to={postLoginTarget} replace />
-          : <Login onLogin={onLogin} initialMode="reset-request" />,
-      },
-      {
-        path: '/password-reset/confirm',
-        element: (
-          <PasswordResetConfirmRoute
-            onLogin={onLogin}
-            isAuthenticated={isAuthenticated}
-            redirectPath={postLoginTarget}
-          />
-        ),
-      },
-      {
-        path: '/',
-        element: isAuthenticated ? <Navigate to={authedHomePath} replace /> : <Navigate to={loginPath} replace />,
-      },
-      {
-        path: '/register',
-        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
-      },
-      {
-        path: '/forgot-password',
-        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
-      },
-      {
-        path: '/password-reset',
-        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
-      },
-      {
-        path: '/password-reset/confirm',
-        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
-      },
-      {
-        path: '/verify-email',
-        element: isAuthenticated ? <Navigate to={postLoginTarget} replace /> : <Login onLogin={onLogin} />,
-      },
-      ...guardedApplicationRoutes,
-      {
-        path: '*',
-        element: <NotFoundFallback />,
-      },
-    ]
+    const resolveRegisterElement = () =>
+      isAuthenticated ? (
+        <Navigate to={postLoginTarget} replace />
+      ) : (
+        <Login onLogin={onLogin} initialMode="register" />
+      )
 
-    const uniqueRoutes: RouteObject[] = []
-    const seenPaths = new Set<string>()
+    const resolvePasswordResetElement = () =>
+      isAuthenticated ? (
+        <Navigate to={postLoginTarget} replace />
+      ) : (
+        <Login onLogin={onLogin} initialMode="reset-request" />
+      )
 
-    for (const route of baseRoutes) {
-      const key = route.path ?? '*'
-      if (seenPaths.has(key)) {
-        continue
-      }
-      seenPaths.add(key)
-      uniqueRoutes.push(route)
+    registerRoute({ path: loginPath, element: resolveLoginElement() })
+    if (loginPath !== '/login') {
+      registerRoute({ path: '/login', element: resolveLoginElement() })
     }
 
-    return uniqueRoutes
+    registerRoute({ path: '/register', element: resolveRegisterElement() })
+    registerRoute({ path: '/forgot-password', element: resolvePasswordResetElement() })
+    registerRoute({ path: '/password-reset', element: resolvePasswordResetElement() })
+    registerRoute({
+      path: '/password-reset/confirm',
+      element: (
+        <PasswordResetConfirmRoute
+          onLogin={onLogin}
+          isAuthenticated={isAuthenticated}
+          redirectPath={postLoginTarget}
+        />
+      ),
+    })
+    registerRoute({ path: '/verify-email', element: resolveLoginElement() })
+
+    registerRoute({
+      path: '/',
+      element: isAuthenticated ? (
+        <Navigate to={authedHomePath} replace />
+      ) : (
+        <Navigate to={loginPath} replace />
+      ),
+    })
+
+    for (const route of guardedApplicationRoutes) {
+      registerRoute(route)
+    }
+
+    registerRoute({ path: '*', element: <NotFoundFallback /> })
+
+    return routes
   }, [
     authedHomePath,
     isAuthenticated,
@@ -256,10 +252,10 @@ export function AppRouter({
     secretsFocusPath,
   ])
 
-  const router = useMemo(() => createBrowserRouter(routeConfig, { basename }), [
-    basename,
-    routeConfig,
-  ])
+  const router = useMemo(
+    () => createBrowserRouter(routeConfig, { basename }),
+    [basename, routeConfig],
+  )
 
   return <RouterProvider router={router} />
 }

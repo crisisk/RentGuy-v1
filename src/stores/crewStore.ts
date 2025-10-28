@@ -1,7 +1,7 @@
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
 import { api } from '@infra/http/api'
 import { mapUnknownToApiError } from '@errors'
-import { create } from 'zustand'
-import { produce } from 'immer'
 
 const CREW_ENDPOINT = '/api/crew'
 const SHIFT_ENDPOINT = '/api/crew/shifts'
@@ -25,6 +25,12 @@ export interface CrewShift {
   start: string
   end: string
   memberName?: string
+}
+
+export interface WeeklyShift extends CrewShift {
+  employeeName: string
+  startTime: string
+  endTime: string
 }
 
 export interface TimeOffRequest {
@@ -85,7 +91,9 @@ interface CrewState {
   fetchTimeOff: () => Promise<TimeOffRequest[]>
   requestTimeOff: (payload: CreateTimeOffPayload) => Promise<TimeOffRequest>
   fetchTimeEntries: () => Promise<TimeEntry[]>
+  getTimeEntries: () => Promise<TimeEntry[]>
   updateTimeEntry: (id: string, status: UpdateTimeEntryStatus) => Promise<void>
+  getWeeklyShifts: (start?: string, end?: string) => Promise<WeeklyShift[]>
   resetError: () => void
 }
 
@@ -94,26 +102,36 @@ function resolveError(error: unknown): string {
 }
 
 function normaliseCrewMember(raw: any): CrewMember {
-  return {
+  const member: CrewMember = {
     id: String(raw.id ?? ''),
     name: String(raw.name ?? ''),
     role: String(raw.role ?? ''),
     email: String(raw.email ?? ''),
     phone: String(raw.phone ?? ''),
     skills: Array.isArray(raw.skills) ? raw.skills.map(String) : [],
-    createdAt: raw.createdAt ? String(raw.createdAt) : undefined,
   }
+
+  if (raw.createdAt) {
+    member.createdAt = String(raw.createdAt)
+  }
+
+  return member
 }
 
 function normaliseShift(raw: any): CrewShift {
-  return {
+  const shift: CrewShift = {
     id: String(raw.id ?? ''),
     memberId: String(raw.memberId ?? raw.crewMemberId ?? ''),
     date: String(raw.date ?? raw.start?.split?.('T')?.[0] ?? ''),
     start: String(raw.start ?? raw.startTime ?? ''),
     end: String(raw.end ?? raw.endTime ?? ''),
-    memberName: raw.memberName ? String(raw.memberName) : undefined,
   }
+
+  if (raw.memberName) {
+    shift.memberName = String(raw.memberName)
+  }
+
+  return shift
 }
 
 function normaliseTimeOff(raw: any): TimeOffRequest {
@@ -148,207 +166,282 @@ function generateTemporaryId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-const useCrewStore = create<CrewState>((set, get) => ({
-  crew: [],
-  shifts: [],
-  timeOff: [],
-  timeEntries: [],
-  loading: false,
-  error: null,
-  async fetchCrew() {
-    set((state) => ({ ...state, loading: true, error: null }))
-    try {
-      const response = await api.get(CREW_ENDPOINT)
-      const crew = Array.isArray(response.data) ? response.data.map(normaliseCrewMember) : []
-      set((state) => ({ ...state, crew, loading: false }))
-      return crew
-    } catch (error) {
-      const message = resolveError(error)
-      set((state) => ({ ...state, loading: false, error: message }))
-      throw new Error(message)
-    }
-  },
-  async createCrewMember(payload) {
-    set((state) => ({ ...state, loading: true, error: null }))
-    try {
-      const response = await api.post(CREW_ENDPOINT, payload)
-      const created = normaliseCrewMember(
-        response.data ?? {
-          ...payload,
-          id: generateTemporaryId('crew'),
-        },
-      )
-      set(
-        produce<CrewState>((draft) => {
-          draft.loading = false
-          draft.crew.push(created)
-        }),
-      )
-      return created
-    } catch (error) {
-      const message = resolveError(error)
-      set((state) => ({ ...state, loading: false, error: message }))
-      throw new Error(message)
-    }
-  },
-  async fetchShifts() {
-    set((state) => ({ ...state, loading: true, error: null }))
-    try {
-      const response = await api.get(SHIFT_ENDPOINT)
-      const shifts = Array.isArray(response.data) ? response.data.map(normaliseShift) : []
-      set((state) => ({ ...state, shifts, loading: false }))
-      return shifts
-    } catch (error) {
-      const message = resolveError(error)
-      set((state) => ({ ...state, loading: false, error: message }))
-      throw new Error(message)
-    }
-  },
-  async assignShift(payload) {
-    set((state) => ({ ...state, loading: true, error: null }))
-    try {
-      const response = await api.post(SHIFT_ENDPOINT, payload)
-      const created = normaliseShift(
-        response.data ?? {
-          ...payload,
-          id: generateTemporaryId('shift'),
-        },
-      )
-      const member = get().crew.find((crewMember) => crewMember.id === created.memberId)
-      const shiftWithName = { ...created, memberName: created.memberName ?? member?.name }
-      set(
-        produce<CrewState>((draft) => {
-          draft.loading = false
-          draft.shifts.push(shiftWithName)
-        }),
-      )
-      return shiftWithName
-    } catch (error) {
-      const message = resolveError(error)
-      set((state) => ({ ...state, loading: false, error: message }))
-      throw new Error(message)
-    }
-  },
-  async fetchTimeOff() {
-    set((state) => ({ ...state, loading: true, error: null }))
-    try {
-      const response = await api.get(TIME_OFF_ENDPOINT)
-      const requests = Array.isArray(response.data) ? response.data.map(normaliseTimeOff) : []
-      set((state) => ({ ...state, timeOff: requests, loading: false }))
-      return requests
-    } catch (error) {
-      const message = resolveError(error)
-      set((state) => ({ ...state, loading: false, error: message }))
-      throw new Error(message)
-    }
-  },
-  async requestTimeOff(payload) {
-    set((state) => ({ ...state, loading: true, error: null }))
-    try {
-      const response = await api.post(TIME_OFF_ENDPOINT, payload)
-      const created = normaliseTimeOff(
-        response.data ?? {
-          ...payload,
-          id: generateTemporaryId('timeoff'),
-        },
-      )
-      set(
-        produce<CrewState>((draft) => {
-          draft.loading = false
-          draft.timeOff.push(created)
-        }),
-      )
-      return created
-    } catch (error) {
-      const message = resolveError(error)
-      set((state) => ({ ...state, loading: false, error: message }))
-      throw new Error(message)
-    }
-  },
-  async fetchTimeEntries() {
-    set((state) => ({ ...state, loading: true, error: null }))
-    try {
-      const response = await api.get(TIME_ENTRY_ENDPOINT)
-      const entries = Array.isArray(response.data) ? response.data.map(normaliseTimeEntry) : []
-      set((state) => ({ ...state, timeEntries: entries, loading: false }))
-      return entries
-    } catch (error) {
-      const message = resolveError(error)
-      set((state) => ({ ...state, loading: false, error: message }))
-      throw new Error(message)
-    }
-  },
-  async updateTimeEntry(id, status) {
-    set((state) => ({ ...state, loading: true, error: null }))
-    try {
-      await api.patch(`${TIME_ENTRY_ENDPOINT}/${id}`, { status })
-      set(
-        produce<CrewState>((draft) => {
-          draft.loading = false
-          const entry = draft.timeEntries.find((item) => item.id === id)
+const useCrewStoreBase = create<CrewState>()(
+  immer((set, get) => ({
+    crew: [],
+    shifts: [],
+    timeOff: [],
+    timeEntries: [],
+    loading: false,
+    error: null,
+
+    resetError: () => {
+      set((state) => {
+        state.error = null
+      })
+    },
+
+    async fetchCrew() {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+      try {
+        const response = await api.get(CREW_ENDPOINT)
+        const crew = Array.isArray(response.data) ? response.data.map(normaliseCrewMember) : []
+        set((state) => {
+          state.crew = crew
+          state.loading = false
+        })
+        return crew
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    async createCrewMember(payload) {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+      try {
+        const response = await api.post(CREW_ENDPOINT, payload)
+        const created = normaliseCrewMember(
+          response.data ?? {
+            ...payload,
+            id: generateTemporaryId('crew'),
+          },
+        )
+        set((state) => {
+          state.loading = false
+          state.crew.push(created)
+        })
+        return created
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    async fetchShifts() {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+      try {
+        const response = await api.get(SHIFT_ENDPOINT)
+        const shifts = Array.isArray(response.data) ? response.data.map(normaliseShift) : []
+        set((state) => {
+          state.shifts = shifts
+          state.loading = false
+        })
+        return shifts
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    async assignShift(payload) {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+      try {
+        const response = await api.post(SHIFT_ENDPOINT, payload)
+        const created = normaliseShift(
+          response.data ?? {
+            ...payload,
+            id: generateTemporaryId('shift'),
+          },
+        )
+        const member = get().crew.find((crewMember) => crewMember.id === created.memberId)
+        const shiftWithName: CrewShift = { ...created }
+        if (!shiftWithName.memberName && member?.name) {
+          shiftWithName.memberName = member.name
+        }
+        set((state) => {
+          state.loading = false
+          state.shifts.push(shiftWithName)
+        })
+        return shiftWithName
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    async fetchTimeOff() {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+      try {
+        const response = await api.get(TIME_OFF_ENDPOINT)
+        const requests = Array.isArray(response.data) ? response.data.map(normaliseTimeOff) : []
+        set((state) => {
+          state.timeOff = requests
+          state.loading = false
+        })
+        return requests
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    async requestTimeOff(payload) {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+      try {
+        const response = await api.post(TIME_OFF_ENDPOINT, payload)
+        const created = normaliseTimeOff(
+          response.data ?? {
+            ...payload,
+            id: generateTemporaryId('timeoff'),
+          },
+        )
+        set((state) => {
+          state.loading = false
+          state.timeOff.push(created)
+        })
+        return created
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    async fetchTimeEntries() {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+      try {
+        const response = await api.get(TIME_ENTRY_ENDPOINT)
+        const entries = Array.isArray(response.data) ? response.data.map(normaliseTimeEntry) : []
+        set((state) => {
+          state.timeEntries = entries
+          state.loading = false
+        })
+        return entries
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    async getTimeEntries() {
+      if (get().timeEntries.length === 0) {
+        try {
+          return await get().fetchTimeEntries()
+        } catch {
+          return []
+        }
+      }
+      return get().timeEntries
+    },
+
+    async updateTimeEntry(id, status) {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+      try {
+        await api.post(`${TIME_ENTRY_ENDPOINT}/${id}`, { status })
+        set((state) => {
+          state.loading = false
+          const entry = state.timeEntries.find((item) => item.id === id)
           if (entry) {
             entry.status = status
           }
-        }),
-      )
-    } catch (error) {
-      const message = resolveError(error)
-      set((state) => ({ ...state, loading: false, error: message }))
-      throw new Error(message)
-    }
-  },
-  resetError() {
-    set((state) => ({ ...state, error: null }))
-  },
-}))
+        })
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
 
-async function getWeeklyShifts(
-  start: string,
-  end: string,
-): Promise<Array<CrewShift & { employeeName: string }>> {
-  const store = useCrewStore.getState()
-  if (store.shifts.length === 0) {
-    try {
-      await store.fetchShifts()
-    } catch {
-      return []
-    }
-  }
-  const { shifts, crew } = useCrewStore.getState()
-  return shifts
-    .filter((shift) => shift.date >= start && shift.date <= end)
-    .map((shift) => ({
-      ...shift,
-      employeeName:
-        shift.memberName ?? crew.find((member) => member.id === shift.memberId)?.name ?? 'Onbekend',
-    }))
-}
+    async getWeeklyShifts(start, end) {
+      if (!start || !end) {
+        return []
+      }
 
-async function getTimeEntries(): Promise<TimeEntry[]> {
-  const store = useCrewStore.getState()
-  if (store.timeEntries.length === 0) {
-    try {
-      return await store.fetchTimeEntries()
-    } catch {
-      return []
-    }
-  }
-  return store.timeEntries
-}
+      if (get().shifts.length === 0) {
+        try {
+          await get().fetchShifts()
+        } catch {
+          return []
+        }
+      }
 
-const crewStore = Object.assign(useCrewStore, {
-  fetchCrew: () => useCrewStore.getState().fetchCrew(),
+      const { shifts, crew } = get()
+      return shifts
+        .filter((shift) => shift.date >= start && shift.date <= end)
+        .map<WeeklyShift>((shift) => ({
+          ...shift,
+          employeeName:
+            shift.memberName ??
+            crew.find((member) => member.id === shift.memberId)?.name ??
+            'Onbekend',
+          startTime: shift.start,
+          endTime: shift.end,
+        }))
+    },
+  })),
+)
+
+const crewStore = Object.assign(useCrewStoreBase, {
+  fetchCrew: () => useCrewStoreBase.getState().fetchCrew(),
   createCrewMember: (payload: CreateCrewMemberPayload) =>
-    useCrewStore.getState().createCrewMember(payload),
-  fetchShifts: () => useCrewStore.getState().fetchShifts(),
-  assignShift: (payload: CreateShiftPayload) => useCrewStore.getState().assignShift(payload),
-  fetchTimeOff: () => useCrewStore.getState().fetchTimeOff(),
+    useCrewStoreBase.getState().createCrewMember(payload),
+  fetchShifts: () => useCrewStoreBase.getState().fetchShifts(),
+  assignShift: (payload: CreateShiftPayload) => useCrewStoreBase.getState().assignShift(payload),
+  fetchTimeOff: () => useCrewStoreBase.getState().fetchTimeOff(),
   requestTimeOff: (payload: CreateTimeOffPayload) =>
-    useCrewStore.getState().requestTimeOff(payload),
-  getWeeklyShifts,
-  getTimeEntries,
+    useCrewStoreBase.getState().requestTimeOff(payload),
+  fetchTimeEntries: () => useCrewStoreBase.getState().fetchTimeEntries(),
+  getTimeEntries: () => useCrewStoreBase.getState().getTimeEntries(),
   updateTimeEntry: (id: string, status: UpdateTimeEntryStatus) =>
-    useCrewStore.getState().updateTimeEntry(id, status),
+    useCrewStoreBase.getState().updateTimeEntry(id, status),
+  getWeeklyShifts: (start?: string, end?: string) =>
+    useCrewStoreBase.getState().getWeeklyShifts(start, end),
+  resetError: () => useCrewStoreBase.getState().resetError(),
 })
 
 export default crewStore
