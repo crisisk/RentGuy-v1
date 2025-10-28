@@ -13,64 +13,66 @@
 
 ---
 
-## 📋 Missing Components Inventory
+## 📋 Component Inventory Status
 
-### 1. Missing Directories
+All critical frontend scaffolding from Phase 1 now exists in the repository. The tables below capture the verified locations so follow-up work can focus on remaining build and deployment tasks.
 
-| Directory     | Status     | Required For                       | Priority    |
-| ------------- | ---------- | ---------------------------------- | ----------- |
-| `src/stores/` | ❌ Missing | Zustand state management           | 🔴 Critical |
-| `src/types/`  | ❌ Missing | TypeScript type definitions        | 🔴 Critical |
-| `src/router/` | ❌ Missing | React Router guards                | 🔴 Critical |
-| `src/hooks/`  | ⚠️ Partial | useRealtime exists, others missing | 🟡 High     |
+### 1. Core Directories
 
-### 2. Missing Store Files
+| Directory     | Status     | Evidence                                                                                                                                                                                                  |
+| ------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/stores/` | ✅ Ready   | Consolidated Zustand exports and factory utilities live under `src/stores/`, confirming the state layer is available for all surfaces.【F:src/stores/index.ts†L1-L11】                                    |
+| `src/types/`  | ✅ Ready   | Shared domain types, response helpers, and re-exports are maintained within `src/types/` so UI modules compile against consistent contracts.【F:src/types/index.ts†L1-L31】                               |
+| `src/router/` | ✅ Ready   | Router entrypoint, guard utilities, and route definitions are implemented in `src/router/`, enabling authenticated navigation flows.【F:src/router/index.tsx†L1-L208】【F:src/router/routes.tsx†L1-L176】 |
+| `src/hooks/`  | ⚠️ Partial | Custom hooks are present but still require coverage analysis beyond `useRealtime`; plan additional audits in the next cycle.                                                                              |
 
-| File                         | Purpose                  | Used By                                            | Priority    |
-| ---------------------------- | ------------------------ | -------------------------------------------------- | ----------- |
-| `src/stores/adminStore.ts`   | Admin state management   | UserManagement, SystemSettings                     | 🔴 Critical |
-| `src/stores/crmStore.ts`     | CRM state management     | CRMDashboard, CustomerDetails                      | 🔴 Critical |
-| `src/stores/crewStore.ts`    | Crew state management    | CrewManagement, TimeApproval                       | 🔴 Critical |
-| `src/stores/financeStore.ts` | Finance state management | FinanceDashboard, InvoiceOverview, QuoteManagement | 🔴 Critical |
-| `src/stores/projectStore.ts` | Project state management | ProjectOverview, VisualPlanner                     | 🔴 Critical |
-| `src/stores/authStore.ts`    | Authentication state     | All pages                                          | 🔴 Critical |
+### 2. Zustand Stores
 
-### 3. Missing Type Definition Files
+| File                         | Status   | Evidence                                                                                                                                                                                                             |
+| ---------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/stores/adminStore.ts`   | ✅ Ready | Admin store fetches users, roles, system stats, and settings via the shared API client, exposing async actions for dashboard surfaces.【F:src/stores/adminStore.ts†L1-L167】【F:src/stores/adminStore.ts†L217-L349】 |
+| `src/stores/crmStore.ts`     | ✅ Ready | CRM store hydrates customer details, notes, and segmentation helpers with robust error mapping.【F:src/stores/crmStore.ts†L1-L205】【F:src/stores/crmStore.ts†L459-L625】                                            |
+| `src/stores/crewStore.ts`    | ✅ Ready | Crew store coordinates scheduling, availability, and time approval workflows for operations pages.【F:src/stores/crewStore.ts†L1-L160】【F:src/stores/crewStore.ts†L243-L360】                                       |
+| `src/stores/financeStore.ts` | ✅ Ready | Finance store maintains invoices, quotes, and cash-flow analytics with derived selectors for UI consumption.【F:src/stores/financeStore.ts†L1-L132】【F:src/stores/financeStore.ts†L265-L360】                       |
+| `src/stores/projectStore.ts` | ✅ Ready | Project store serves planner/project views with CRUD helpers and structured status parsing.【F:src/stores/projectStore.ts†L1-L191】【F:src/stores/projectStore.ts†L222-L360】                                        |
+| `src/stores/authStore.ts`    | ✅ Ready | Authentication store persists credentials, tracks auth status, and exposes helper actions for guards and UI states.【F:src/stores/authStore.ts†L1-L186】                                                             |
 
-| File                        | Purpose           | Used By                                            | Priority    |
-| --------------------------- | ----------------- | -------------------------------------------------- | ----------- |
-| `src/types/index.ts`        | Main type exports | All pages                                          | 🔴 Critical |
-| `src/types/adminTypes.ts`   | Admin types       | UserManagement, SystemSettings                     | 🔴 Critical |
-| `src/types/crmTypes.ts`     | CRM types         | CRMDashboard, CustomerDetails                      | 🔴 Critical |
-| `src/types/crewTypes.ts`    | Crew types        | CrewManagement, TimeApproval                       | 🔴 Critical |
-| `src/types/financeTypes.ts` | Finance types     | FinanceDashboard, InvoiceOverview, QuoteManagement | 🔴 Critical |
-| `src/types/projectTypes.ts` | Project types     | ProjectOverview, VisualPlanner                     | 🔴 Critical |
+### 3. Shared Type Definitions
 
-### 4. Missing Router Components
+| File                        | Status   | Evidence                                                                                                                                            |
+| --------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/types/index.ts`        | ✅ Ready | Central export hub plus API response helpers provide a stable type surface for all modules.【F:src/types/index.ts†L1-L31】                          |
+| `src/types/adminTypes.ts`   | ✅ Ready | Admin domain types enumerate configuration payloads and audit metadata consumed across admin screens.【F:src/types/adminTypes.ts†L1-L74】           |
+| `src/types/crmTypes.ts`     | ✅ Ready | CRM types cover lifecycle stages, interaction history, and segmentation attributes for CRM flows.【F:src/types/crmTypes.ts†L1-L200】                |
+| `src/types/crewTypes.ts`    | ✅ Ready | Crew types define shift templates, availability windows, and approval payloads required by operations tooling.【F:src/types/crewTypes.ts†L1-L55】   |
+| `src/types/financeTypes.ts` | ✅ Ready | Finance types capture invoices, quotes, ledger rollups, and forecasting summaries for the finance dashboards.【F:src/types/financeTypes.ts†L1-L78】 |
+| `src/types/projectTypes.ts` | ✅ Ready | Project types standardise planner entities, milestones, and resource assignments.【F:src/types/projectTypes.ts†L1-L120】                            |
 
-| File                    | Purpose                                                | Used By              | Priority    |
-| ----------------------- | ------------------------------------------------------ | -------------------- | ----------- |
-| `src/router/index.tsx`  | Main router configuration                              | App.tsx              | 🔴 Critical |
-| `src/router/guards.tsx` | Route guards (useAuthGuard, AuthSpinner, AccessDenied) | All protected routes | 🔴 Critical |
-| `src/router/routes.tsx` | Route definitions                                      | Router               | 🔴 Critical |
+### 4. Router Components
 
-### 5. Missing Dependencies (package.json)
+| File                    | Status   | Evidence                                                                                                                                                      |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/router/index.tsx`  | ✅ Ready | RouterProvider wrapper normalises paths, injects suspense fallbacks, and protects routes based on authentication state.【F:src/router/index.tsx†L1-L208】     |
+| `src/router/guards.tsx` | ✅ Ready | Guard helpers synchronise auth state, expose redirect boundaries, and centralise guard messaging for protected routes.【F:src/router/guards.tsx†L1-L198】     |
+| `src/router/routes.tsx` | ✅ Ready | Route table lazily imports planner, admin, CRM, crew, finance, and sales surfaces with consistent `requiresAuth` metadata.【F:src/router/routes.tsx†L1-L176】 |
 
-| Package            | Version | Purpose                 | Priority    |
-| ------------------ | ------- | ----------------------- | ----------- |
-| `zustand`          | ^4.5.0  | State management        | 🔴 Critical |
-| `uuid`             | ^9.0.0  | UUID generation         | 🔴 Critical |
-| `react-router-dom` | ^6.20.0 | Routing                 | 🔴 Critical |
-| `immer`            | ^10.0.0 | Immutable state updates | 🟡 High     |
-| `socket.io-client` | ^4.6.0  | WebSocket client        | 🟡 High     |
-| `react-leaflet`    | ^4.2.1  | Map component           | 🟡 High     |
-| `leaflet`          | ^1.9.4  | Map library             | 🟡 High     |
+### 5. Dependencies (package.json)
 
-### 6. Missing Errors Module
+| Package            | Status   | Evidence                                                                                          |
+| ------------------ | -------- | ------------------------------------------------------------------------------------------------- |
+| `zustand`          | ✅ Added | Listed under runtime dependencies to back the store layer.【F:package.json†L33-L56】              |
+| `uuid`             | ✅ Added | Available for stable identifier generation across stores and utilities.【F:package.json†L33-L56】 |
+| `react-router-dom` | ✅ Added | Powers the routing infrastructure confirmed above.【F:package.json†L33-L56】                      |
+| `immer`            | ✅ Added | Enables ergonomic immutable mutations in Zustand stores.【F:package.json†L33-L56】                |
+| `socket.io-client` | ✅ Added | Supports real-time planner and dashboard interactions.【F:package.json†L33-L56】                  |
+| `react-leaflet`    | ✅ Added | Provides the mapping components used by logistics views.【F:package.json†L33-L56】                |
+| `leaflet`          | ✅ Added | Core map library required by `react-leaflet` widgets.【F:package.json†L33-L56】                   |
 
-| File                  | Purpose                             | Used By         | Priority    |
-| --------------------- | ----------------------------------- | --------------- | ----------- |
-| `src/errors/index.ts` | API error handling (APIError class) | All API modules | 🔴 Critical |
+### 6. Errors Module
+
+| File                  | Status   | Evidence                                                                                                                                                |
+| --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/errors/index.ts` | ✅ Ready | Unified `APIError` abstraction wraps legacy `AppError`, ensuring API clients share consistent error handling semantics.【F:src/errors/index.ts†L1-L52】 |
 
 ---
 
@@ -95,16 +97,12 @@
 
 ## 🔜 Upcoming Open Development Tasks
 
-1. **F1.1 – Create `src/stores/` directory and implement Zustand stores** (Admin, CRM, Crew, Finance, Project, Auth) to unblock state management for every console surface.【F:AGENTIC_AI_TASK_LIST.md†L45-L66】
-2. **F1.2 – Create `src/types/` directory and author all domain type definitions** so UI modules compile against shared contracts.【F:AGENTIC_AI_TASK_LIST.md†L67-L82】
-3. **F1.3 – Establish the routing layer in `src/router/`** with router entry point and guards to enable authenticated navigation flows.【F:AGENTIC_AI_TASK_LIST.md†L83-L92】
-4. **F1.4 – Deliver `src/errors/index.ts` with the `APIError` class** to standardise client error handling across API modules.【F:AGENTIC_AI_TASK_LIST.md†L93-L100】
-5. **F1.5 – Update `package.json` with missing dependencies** (`zustand`, `uuid`, `react-router-dom`, `immer`, `socket.io-client`, `react-leaflet`, `leaflet`) so subsequent installs succeed without manual edits.【F:AGENTIC_AI_TASK_LIST.md†L101-L113】
-6. **F2.1 – Fix `tsconfig.json` and unblock production builds** ensuring `npm run build` generates the Vite bundle cleanly.【F:AGENTIC_AI_TASK_LIST.md†L117-L124】
-7. **F2.2 – Wire `App.tsx` to the new router infrastructure** to make the SPA render via `RouterProvider`.【F:AGENTIC_AI_TASK_LIST.md†L125-L131】
-8. **F2.3 – Create `src/main.tsx` with the React 18 root** enabling dev server and build entry consistency.【F:AGENTIC_AI_TASK_LIST.md†L132-L138】
-9. **F2.4 – Repair the frontend Dockerfile** so container builds succeed ahead of deployment.【F:AGENTIC_AI_TASK_LIST.md†L139-L145】
-10. **F2.5 – Produce the `rentguy-frontend` Docker image** as a precursor to Compose orchestration.【F:AGENTIC_AI_TASK_LIST.md†L146-L152】
+1. **F2.1 – Fix `tsconfig.json` and unblock production builds** ensuring `npm run build` generates the Vite bundle cleanly.【F:AGENTIC_AI_TASK_LIST.md†L117-L124】
+2. **F2.2 – Verify `App.tsx` integration with the router** and capture any remaining guard gaps before release.【F:src/ui/App.tsx†L1-L40】【F:src/router/index.tsx†L1-L208】
+3. **F2.3 – Exercise `src/main.tsx` via a fresh `npm run build`** to confirm the React 18 root works end-to-end.【F:src/main.tsx†L1-L18】
+4. **F2.4 – Repair the frontend Dockerfile** so container builds succeed ahead of deployment.【F:AGENTIC_AI_TASK_LIST.md†L139-L145】
+5. **F2.5 – Produce the `rentguy-frontend` Docker image** as a precursor to Compose orchestration.【F:AGENTIC_AI_TASK_LIST.md†L146-L152】
+6. **F2.6 – Update Docker Compose to include the frontend** once the image is available for orchestration tests.【F:AGENTIC_AI_TASK_LIST.md†L153-L160】
 
 ---
 
