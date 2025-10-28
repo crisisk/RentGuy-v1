@@ -11,6 +11,7 @@
 - **2025-10-22 18:46 UTC** – Reran `npm run debug:prepare`, `npm run debug:scan`, and
   `npm run debug:run` to refresh the debugging artefacts after the toolchain bootstrap.【F:DEBUG_SUMMARY.json†L1-L15】
 - **2025-10-26 09:20 UTC** – Landed TypeScript remediation (`c2af7ac`) that adds typed stores, router contracts, and shared type exports for planner and dashboard flows so subsequent compiler runs target the implemented data contracts.【F:src/stores/adminStore.ts†L1-L110】【F:src/router/routes.tsx†L1-L112】【F:src/types/index.ts†L1-L30】
+- **2025-10-28 16:07 UTC** – Completed F1.6 `npm install` verification; dependencies install cleanly with only minor warnings noted for future follow-up.【F:docs/installation_logs/F1.6_npm_install.md†L1-L12】
 
 ## Key findings
 
