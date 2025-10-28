@@ -30,6 +30,7 @@
       "@infra/*": ["src/infrastructure/*"],
       "@infra/offline-queue": ["warehouse/offline-queue.js"],
       "@errors": ["src/errors/index.ts"],
+      "@utils/*": ["src/utils/*"],
       "@router": ["src/router/index.tsx"],
       "@router/*": ["src/router/*"],
       "@rg-types/*": ["src/types/*"],
