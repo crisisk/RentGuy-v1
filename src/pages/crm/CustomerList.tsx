@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { formatDate } from '../../core/storage'
 import crmStore from '../../stores/crmStore'
 
 interface Customer {
@@ -177,7 +178,7 @@ const CustomerList = () => {
                     className="px-6 py-4 whitespace-nowrap"
                     data-testid={`customer-list-joined-${customer.id}`}
                   >
-                    {new Date(customer.createdAt).toLocaleDateString()}
+                    {formatDate(customer.createdAt)}
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { formatDate } from '../../core/storage'
 import crmStore from '../../stores/crmStore'
 
 interface Customer {
@@ -24,14 +25,12 @@ const CustomerDetails: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+  const formatDateLabel = (dateString: string): string =>
+    formatDate(dateString, {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: '2-digit',
     })
-  }
 
   useEffect(() => {
     const fetchCustomerDetails = async () => {
@@ -138,7 +137,7 @@ const CustomerDetails: React.FC = () => {
                     data-testid={`customer-details-activity-${activity.id}`}
                   >
                     <td className="p-2">{activity.type}</td>
-                    <td className="p-2">{formatDate(activity.date)}</td>
+                    <td className="p-2">{formatDateLabel(activity.date)}</td>
                     <td className="p-2">{activity.description}</td>
                   </tr>
                 ))}

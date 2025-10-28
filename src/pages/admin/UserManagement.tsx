@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { formatDate } from '../../core/storage'
 import adminStore, { AdminUser } from '../../stores/adminStore'
 
 const UserManagement: React.FC = () => {
@@ -102,11 +103,7 @@ const UserManagement: React.FC = () => {
                   className="px-6 py-4 whitespace-nowrap"
                   data-testid={`user-management-created-${user.id}`}
                 >
-                  {new Date(user.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                  {formatDate(user.createdAt, { year: 'numeric', month: 'long', day: '2-digit' })}
                 </td>
                 <td
                   className="px-6 py-4 whitespace-nowrap space-x-2"

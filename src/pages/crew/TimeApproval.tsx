@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { formatDate } from '../../core/storage'
 import crewStore from '../../stores/crewStore'
 
 interface TimeEntry {
@@ -46,14 +47,12 @@ const TimeApproval: React.FC = () => {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+  const formatEntryDate = (dateString: string) =>
+    formatDate(dateString, {
       month: 'short',
-      day: 'numeric',
+      day: '2-digit',
       year: 'numeric',
     })
-  }
 
   if (isLoading) {
     return <div className="p-4 text-center text-gray-600">Loading time entries...</div>
@@ -94,7 +93,7 @@ const TimeApproval: React.FC = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {timeEntries.map((entry) => (
               <tr key={entry.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{formatDate(entry.date)}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{formatEntryDate(entry.date)}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{entry.user.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{entry.hours}</td>
                 <td className="px-6 py-4 whitespace-nowrap max-w-xs truncate">

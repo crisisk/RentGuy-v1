@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { formatDateTime } from '../../core/storage'
 import crmStore from '../../stores/crmStore'
 
 interface ActivityLogEntry {
@@ -11,14 +12,27 @@ interface ActivityLogEntry {
 
 const formatRelativeTime = (dateString: string): string => {
   const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) {
+    return '—'
+  }
+
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMinutes = Math.floor(diffMs / (1000 * 60))
 
-  if (diffMinutes < 1) return 'Just now'
-  if (diffMinutes < 60) return `${diffMinutes} min ago`
-  if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} hrs ago`
-  return date.toLocaleDateString()
+  if (diffMinutes < 1) return 'Zojuist'
+  if (diffMinutes < 60) return `${diffMinutes} min geleden`
+
+  const diffHours = Math.floor(diffMinutes / 60)
+  if (diffHours < 24) return `${diffHours} uur geleden`
+
+  return formatDateTime(date, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 const ActivityLog: React.FC = () => {

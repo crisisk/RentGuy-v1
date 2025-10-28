@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { formatDate } from '../../core/storage'
 import projectStore from '../../stores/projectStore'
 
 interface CrewMember {
@@ -33,14 +34,12 @@ const ProjectDetails: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+  const formatDateLabel = (dateString: string) =>
+    formatDate(dateString, {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: '2-digit',
     })
-  }
 
   useEffect(() => {
     const loadProject = async () => {
@@ -79,11 +78,11 @@ const ProjectDetails: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="text-gray-500">Start Date:</label>
-            <p className="font-medium">{formatDate(project.startDate)}</p>
+            <p className="font-medium">{formatDateLabel(project.startDate)}</p>
           </div>
           <div>
             <label className="text-gray-500">End Date:</label>
-            <p className="font-medium">{formatDate(project.endDate)}</p>
+            <p className="font-medium">{formatDateLabel(project.endDate)}</p>
           </div>
         </div>
       </div>
