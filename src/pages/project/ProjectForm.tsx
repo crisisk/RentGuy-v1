@@ -25,6 +25,7 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
     description: '',
     startDate: todayIsoDate(),
     status: 'PLANNING',
+    client: '',
   })
 
   const [loading, setLoading] = useState<boolean>(!!id)

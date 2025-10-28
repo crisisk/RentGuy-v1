@@ -14,7 +14,7 @@ import type {
   DashboardProvenance,
 } from '@rg-types/crmTypes'
 
-export type CustomerStatus = 'active' | 'inactive'
+export type CustomerStatus = 'active' | 'pending' | 'inactive' | 'archived'
 
 export interface Customer {
   id: string
@@ -140,8 +140,17 @@ function toStringSafe(value: unknown, fallback = ''): string {
 }
 
 function toCustomerStatus(value: unknown): CustomerStatus {
-  if (value === 'inactive') {
-    return 'inactive'
+  if (typeof value === 'string') {
+    const normalised = value.toLowerCase()
+    if (normalised === 'inactive') {
+      return 'inactive'
+    }
+    if (normalised === 'pending') {
+      return 'pending'
+    }
+    if (normalised === 'archived') {
+      return 'archived'
+    }
   }
   return 'active'
 }

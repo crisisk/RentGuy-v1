@@ -27,9 +27,10 @@ describe('analytics track helper', () => {
     )
 
     expect(dataLayer.length).toBe(1)
-    expect(dataLayer[0]?.event).toBe('rentguy.onboarding.step_completed')
-    expect(dataLayer[0]?.context).toEqual({ tenantId: 'tenant-1', module: 'onboarding' })
-    expect(dataLayer[0]?.properties).toEqual({ stepCode: 'kickoff', durationMs: 4200 })
+    const firstEntry = dataLayer[0]
+    expect(firstEntry?.event).toBe('rentguy.onboarding.step_completed')
+    expect(firstEntry?.context).toEqual({ tenantId: 'tenant-1', module: 'onboarding' })
+    expect(firstEntry?.properties).toEqual({ stepCode: 'kickoff', durationMs: 4200 })
     expect(typeof event.eventId).toBe('string')
     expect(event.timestamp.includes('T')).toBe(true)
   })
@@ -41,9 +42,10 @@ describe('analytics track helper', () => {
 
     const buffered = getBufferedEvents()
     expect(buffered.length).toBe(1)
-    expect(buffered[0]?.event).toBe('rentguy.test.buffered')
-    expect(buffered[0]?.properties).toEqual({ foo: 'bar' })
-    expect(buffered[0]?.eventId).toBe(event.eventId)
+    const firstBuffered = buffered[0]
+    expect(firstBuffered?.event).toBe('rentguy.test.buffered')
+    expect(firstBuffered?.properties).toEqual({ foo: 'bar' })
+    expect(firstBuffered?.eventId).toBe(event.eventId)
   })
 
   it('caps buffered events to the configured limit to avoid overflow', () => {

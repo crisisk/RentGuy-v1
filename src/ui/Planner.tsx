@@ -698,6 +698,39 @@ export default function Planner({ onLogout }: PlannerProps) {
     applyPersonaPreset('all', { persist: false })
   }, [applyPersonaPreset])
 
+  const computePlannerProgress = useCallback(
+    (eventList?: PlannerEvent[]) => {
+      const source = eventList ?? events
+      const total = source.length
+      const completed = source.filter((item) => item.status === 'completed').length
+      return {
+        completed,
+        total,
+        percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+      }
+    },
+    [events],
+  )
+
+  const trackProjectCompletion = useCallback(
+    (project: PlannerEvent, source: string, options: { eventsSnapshot?: PlannerEvent[] } = {}) => {
+      const progress = computePlannerProgress(options.eventsSnapshot)
+      analytics.track('task_completed', {
+        channel: 'planner',
+        module: 'projects',
+        persona: personaPreset,
+        projectId: project.id,
+        status: project.status,
+        risk: project.risk,
+        source,
+        progress,
+        startDate: project.start,
+        endDate: project.end,
+      })
+    },
+    [computePlannerProgress, personaPreset],
+  )
+
   async function submitUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!editing) return

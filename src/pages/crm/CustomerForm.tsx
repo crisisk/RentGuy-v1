@@ -51,14 +51,15 @@ const CustomerForm: React.FC = () => {
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof CustomerInput, string>> = {}
-    if (!formData.name?.trim()) newErrors.name = 'Name is required'
-    if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email'
-    }
-    if (!formData.phone || !/^\d{10,15}$/.test(formData.phone)) {
-      newErrors.phone = 'Invalid phone number'
-    }
-    if (!formData.address?.trim()) newErrors.address = 'Address is required'
+    const name = formData.name?.trim() ?? ''
+    const email = formData.email ?? ''
+    const phone = formData.phone ?? ''
+    const address = formData.address?.trim() ?? ''
+
+    if (!name) newErrors.name = 'Name is required'
+    if (!/^\S+@\S+\.\S+$/.test(email)) newErrors.email = 'Invalid email'
+    if (!/^\d{10,15}$/.test(phone)) newErrors.phone = 'Invalid phone number'
+    if (!address) newErrors.address = 'Address is required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -123,7 +124,7 @@ const CustomerForm: React.FC = () => {
           </label>
           <input
             id="customer-name"
-            value={formData.name}
+            value={formData.name ?? ''}
             onChange={handleChange('name')}
             className={`w-full p-2 border rounded ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
             data-testid="customer-form-input-name"
@@ -142,7 +143,7 @@ const CustomerForm: React.FC = () => {
           <input
             id="customer-email"
             type="email"
-            value={formData.email}
+            value={formData.email ?? ''}
             onChange={handleChange('email')}
             className={`w-full p-2 border rounded ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
             data-testid="customer-form-input-email"
@@ -160,7 +161,7 @@ const CustomerForm: React.FC = () => {
           </label>
           <input
             id="customer-phone"
-            value={formData.phone}
+            value={formData.phone ?? ''}
             onChange={handleChange('phone')}
             className={`w-full p-2 border rounded ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
             data-testid="customer-form-input-phone"
@@ -178,7 +179,7 @@ const CustomerForm: React.FC = () => {
           </label>
           <input
             id="customer-address"
-            value={formData.address}
+            value={formData.address ?? ''}
             onChange={handleChange('address')}
             className={`w-full p-2 border rounded ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
             data-testid="customer-form-input-address"
@@ -196,7 +197,7 @@ const CustomerForm: React.FC = () => {
           </label>
           <select
             id="customer-status"
-            value={formData.status}
+            value={formData.status ?? 'active'}
             onChange={handleChange('status')}
             className="w-full p-2 border border-gray-300 rounded"
             data-testid="customer-form-select-status"

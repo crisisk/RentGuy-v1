@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-const getWindow = (): Window | null => (typeof window === 'undefined' ? null : window)
+const hasWindow = (): boolean => typeof window !== 'undefined'
 
 const ensureDataLayer = (): DataLayerEntry[] | null => {
   const currentWindow = getWindow()

@@ -9,6 +9,7 @@
 ## ✅ Daily Progress — 28 October 2025
 
 - **F1.6 – Run `npm install` to install all dependencies:** Completed successfully at 16:07 UTC with only minor warnings (peer dependency mismatch, deprecated Husky notice).【F:docs/installation_logs/F1.6_npm_install.md†L1-L12】
+- **F1.x – Resolve TypeScript compiler regressions:** `npm run typecheck` now exits cleanly after reconciling analytics utilities, CRM/project views, finance store normalization, and onboarding planner props with the shared contracts.【F:src/utils/analytics.ts†L1-L171】【F:src/pages/project/ProjectDetails.tsx†L1-L200】【F:src/stores/financeStore.ts†L1-L460】【F:src/ui/OnboardingOverlay.tsx†L420-L1700】【6a687c†L1-L5】
 
 ---
 

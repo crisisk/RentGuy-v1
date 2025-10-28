@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { formatDateTime } from '../../core/storage'
-import crmStore, { type Activity } from '../../stores/crmStore'
+import crmStore, { type Activity as CRMActivity } from '../../stores/crmStore'
 
 type ActivityLogEntry = Pick<Activity, 'id' | 'type' | 'description'> & {
   timestamp: string
@@ -54,13 +54,15 @@ const ActivityLog: React.FC = () => {
       try {
         setIsLoading(true)
         const fetchedActivities = await crmStore.getActivityLog()
-        const mappedActivities: ActivityLogEntry[] = fetchedActivities.map((activity) => ({
-          id: activity.id,
-          type: normalizeActivityType(activity.type),
-          timestamp: activity.timestamp ?? activity.date,
-          description: activity.description,
-          user: activity.user ?? 'Onbekende gebruiker',
-        }))
+        const mappedActivities: ActivityLogEntry[] = fetchedActivities.map(
+          (activity: CRMActivity) => ({
+            id: activity.id,
+            type: normalizeActivityType(activity.type),
+            timestamp: activity.date,
+            description: activity.description,
+            user: activity.user ?? 'Onbekende gebruiker',
+          }),
+        )
         setActivities(mappedActivities)
       } catch {
         setError('Failed to load activities')

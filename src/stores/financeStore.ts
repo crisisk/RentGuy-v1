@@ -177,28 +177,31 @@ function parseInvoice(payload: unknown): Invoice | null {
 }
 
 const mapQuoteResponse = (payload: unknown): Quote => {
-  const record = (payload ?? {}) as Record<string, unknown>
+  const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {}
+
   const id = record.id ?? record.quoteId ?? crypto.randomUUID?.() ?? `${Date.now()}`
   const number = record.number ?? record.quoteNumber ?? record.reference ?? id
-  const client = record.client ?? record.clientName ?? 'Onbekende klant'
-  const rawAmount = Number(
-    record.amount ?? record.total ?? record.totalGross ?? record.total_gross ?? 0,
-  )
   const rawStatus = typeof record.status === 'string' ? record.status.toLowerCase() : undefined
+
   const normalisedStatus: Quote['status'] =
-    record.converted === true
-      ? 'converted'
-      : rawStatus === 'sent'
-        ? 'sent'
-        : rawStatus === 'converted'
-          ? 'converted'
-          : 'draft'
+    rawStatus === 'converted' ? 'converted' : rawStatus === 'sent' ? 'sent' : 'draft'
+
+  const amount = Number(
+    record.amount ??
+      record.total ??
+      record.totalGross ??
+      record.total_gross ??
+      record.total_net ??
+      0,
+  )
 
   return {
     id: toStringSafe(id),
-    number: toStringSafe(number),
-    client: toStringSafe(client, 'Onbekende klant'),
-    amount: Number.isFinite(rawAmount) ? rawAmount : 0,
+    number: toStringSafe(number, `QT-${id}`),
+    client: toStringSafe(
+      record.client ?? record.clientName ?? record.customer ?? 'Onbekende klant',
+    ),
+    amount: Number.isFinite(amount) ? amount : 0,
     date: toDateString(record.date ?? record.validUntil ?? record.valid_until ?? Date.now()),
     status: normalisedStatus,
     converted: Boolean(record.converted ?? normalisedStatus === 'converted'),
@@ -436,7 +439,9 @@ export const useFinanceStore = create<FinanceState>()(
       try {
         const response = await api.get(QUOTES_PATH)
         const quotes = Array.isArray(response.data)
-          ? response.data.map((entry) => mapQuoteResponse(entry))
+          ? response.data
+              .map((item) => mapQuoteResponse(item))
+              .filter((quote): quote is Quote => quote !== null)
           : []
 
         set((state) => {

@@ -2,18 +2,31 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { formatDateTime } from '../../core/storage'
 import projectStore, { type Project } from '../../stores/projectStore'
 
-type ProjectStats = Awaited<ReturnType<typeof projectStore.getStats>>
-type RecentActivity = Awaited<ReturnType<typeof projectStore.getRecentActivities>>[number]
+interface DashboardActivity {
+  id: string
+  title: string
+  date: string
+  status: string
+}
 
-const generateRevenueData = () =>
-  Array.from({ length: 12 }, () => Math.floor(Math.random() * 10000) + 5000)
+interface DashboardStats {
+  totalProjects: number
+  completedProjects: number
+  activeProjects: number
+  upcomingProjects: number
+}
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [projects, setProjects] = useState<Project[]>([])
-  const [stats, setStats] = useState<ProjectStats | null>(null)
-  const [activities, setActivities] = useState<RecentActivity[]>([])
+  const [projectCount, setProjectCount] = useState<number>(0)
+  const [stats, setStats] = useState<DashboardStats>({
+    totalProjects: 0,
+    completedProjects: 0,
+    activeProjects: 0,
+    upcomingProjects: 0,
+  })
+  const [activities, setActivities] = useState<DashboardActivity[]>([])
   const [revenueData, setRevenueData] = useState<number[]>([])
 
   const formatActivityDate = useCallback(
@@ -31,11 +44,11 @@ const Dashboard = () => {
     const loadData = async () => {
       try {
         setLoading(true)
-        const projectData = await projectStore.getProjects()
+        const projectData: Project[] = await projectStore.getProjects()
         const statsData = await projectStore.getStats()
         const activitiesData = await projectStore.getRecentActivities()
 
-        setProjects(projectData)
+        setProjectCount(projectData.length)
         setStats(statsData)
         setActivities(activitiesData)
         setRevenueData(generateRevenueData())
@@ -75,29 +88,28 @@ const Dashboard = () => {
           data-testid="dashboard-card-total-projects"
         >
           <h3 className="text-gray-500 text-sm">Total Projects</h3>
-          <p className="text-2xl font-semibold">{projects.length}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm" data-testid="dashboard-card-total-tasks">
-          <h3 className="text-gray-500 text-sm">Total Tasks</h3>
-          <p className="text-2xl font-semibold">{stats?.totalProjects ?? 0}</p>
+          <p className="text-2xl font-semibold">{projectCount}</p>
         </div>
         <div
           className="bg-white p-4 rounded-lg shadow-sm"
-          data-testid="dashboard-card-completed-tasks"
+          data-testid="dashboard-card-active-projects"
         >
-          <h3 className="text-gray-500 text-sm">Completed Tasks</h3>
-          <p className="text-2xl font-semibold">{stats?.completedProjects ?? 0}</p>
+          <h3 className="text-gray-500 text-sm">Active Projects</h3>
+          <p className="text-2xl font-semibold">{stats.activeProjects}</p>
+        </div>
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm"
+          data-testid="dashboard-card-completed-projects"
+        >
+          <h3 className="text-gray-500 text-sm">Completed Projects</h3>
+          <p className="text-2xl font-semibold">{stats.completedProjects}</p>
         </div>
         <div
           className="bg-white p-4 rounded-lg shadow-sm"
           data-testid="dashboard-card-completion-rate"
         >
-          <h3 className="text-gray-500 text-sm">Completion Rate</h3>
-          <p className="text-2xl font-semibold">
-            {stats?.totalProjects
-              ? `${Math.round(((stats.completedProjects ?? 0) / stats.totalProjects) * 100)}%`
-              : '0%'}
-          </p>
+          <h3 className="text-gray-500 text-sm">Upcoming Projects</h3>
+          <p className="text-2xl font-semibold">{stats.upcomingProjects}</p>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatDate } from '../../core/storage'
-import projectStore, { type ProjectDetails } from '../../stores/projectStore'
+import projectStore, { type ProjectDetails as StoreProjectDetails } from '../../stores/projectStore'
 
 const ProjectDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -10,12 +10,14 @@ const ProjectDetails: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const formatDateLabel = (dateString: string) =>
-    formatDate(dateString, {
-      year: 'numeric',
-      month: 'long',
-      day: '2-digit',
-    })
+  const formatDateLabel = (dateString?: string) =>
+    dateString
+      ? formatDate(dateString, {
+          year: 'numeric',
+          month: 'long',
+          day: '2-digit',
+        })
+      : '—'
 
   useEffect(() => {
     const loadProject = async () => {
