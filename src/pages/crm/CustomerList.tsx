@@ -1,21 +1,12 @@
 import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDate } from '../../core/storage'
-import crmStore from '../../stores/crmStore'
-
-interface Customer {
-  id: string
-  name: string
-  email: string
-  phone: string
-  status: 'active' | 'pending' | 'inactive' | 'archived'
-  createdAt: string
-}
+import crmStore, { type Customer, type CustomerStatus } from '../../stores/crmStore'
 
 const CustomerList = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [customers, setCustomers] = useState<StoreCustomer[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<CustomerStatus | null>(null)
 
@@ -43,18 +34,14 @@ const CustomerList = () => {
     })
   }, [customers, searchQuery, selectedStatus])
 
-  const statusOptions: CustomerStatus[] = ['active', 'pending', 'inactive', 'archived']
+  const statusOptions: CustomerStatus[] = ['active', 'inactive']
 
   const getStatusColor = (status: CustomerStatus) => {
     switch (status) {
       case 'active':
         return 'bg-green-100 text-green-800'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
       case 'inactive':
         return 'bg-gray-100 text-gray-800'
-      case 'archived':
-        return 'bg-blue-100 text-blue-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }

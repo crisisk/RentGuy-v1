@@ -19,7 +19,7 @@ const CustomerForm: React.FC = () => {
 
   const [errors, setErrors] = useState<Partial<Record<keyof CustomerInput, string>>>({})
 
-  const statusOptions: CustomerStatus[] = ['active', 'pending', 'inactive', 'archived']
+  const statusOptions: CustomerStatus[] = ['active', 'inactive']
 
   useEffect(() => {
     if (id) {
@@ -51,10 +51,14 @@ const CustomerForm: React.FC = () => {
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof CustomerInput, string>> = {}
-    if (!formData.name.trim()) newErrors.name = 'Name is required'
-    if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email'
-    if (!formData.phone.match(/^\d{10,15}$/)) newErrors.phone = 'Invalid phone number'
-    if (!formData.address.trim()) newErrors.address = 'Address is required'
+    if (!formData.name?.trim()) newErrors.name = 'Name is required'
+    if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email'
+    }
+    if (!formData.phone || !/^\d{10,15}$/.test(formData.phone)) {
+      newErrors.phone = 'Invalid phone number'
+    }
+    if (!formData.address?.trim()) newErrors.address = 'Address is required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }

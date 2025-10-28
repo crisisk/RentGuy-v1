@@ -26,14 +26,12 @@ describe('analytics track helper', () => {
       { dataLayer },
     )
 
-    expect(dataLayer).toHaveLength(1)
-    expect(dataLayer[0]).toMatchObject({
-      event: 'rentguy.onboarding.step_completed',
-      context: { tenantId: 'tenant-1', module: 'onboarding' },
-      properties: { stepCode: 'kickoff', durationMs: 4200 },
-    })
+    expect(dataLayer.length).toBe(1)
+    expect(dataLayer[0]?.event).toBe('rentguy.onboarding.step_completed')
+    expect(dataLayer[0]?.context).toEqual({ tenantId: 'tenant-1', module: 'onboarding' })
+    expect(dataLayer[0]?.properties).toEqual({ stepCode: 'kickoff', durationMs: 4200 })
     expect(typeof event.eventId).toBe('string')
-    expect(event.timestamp).toMatch(/T/)
+    expect(event.timestamp.includes('T')).toBe(true)
   })
 
   it('buffers events when no dataLayer is available', () => {
@@ -42,12 +40,10 @@ describe('analytics track helper', () => {
     })
 
     const buffered = getBufferedEvents()
-    expect(buffered).toHaveLength(1)
-    expect(buffered[0]).toMatchObject({
-      event: 'rentguy.test.buffered',
-      properties: { foo: 'bar' },
-    })
-    expect(buffered[0].eventId).toBe(event.eventId)
+    expect(buffered.length).toBe(1)
+    expect(buffered[0]?.event).toBe('rentguy.test.buffered')
+    expect(buffered[0]?.properties).toEqual({ foo: 'bar' })
+    expect(buffered[0]?.eventId).toBe(event.eventId)
   })
 
   it('caps buffered events to the configured limit to avoid overflow', () => {
@@ -56,7 +52,7 @@ describe('analytics track helper', () => {
     }
 
     const buffered = getBufferedEvents()
-    expect(buffered).toHaveLength(BUFFER_LIMIT)
+    expect(buffered.length).toBe(BUFFER_LIMIT)
     expect(buffered[0]?.event).toBe(`rentguy.buffer.event_${5}`)
     expect(buffered[buffered.length - 1]?.event).toBe(`rentguy.buffer.event_${BUFFER_LIMIT + 4}`)
   })
@@ -68,7 +64,7 @@ describe('analytics track helper', () => {
       track(`rentguy.layer.event_${index}`, {}, { dataLayer })
     }
 
-    expect(dataLayer).toHaveLength(DATA_LAYER_LIMIT)
+    expect(dataLayer.length).toBe(DATA_LAYER_LIMIT)
     expect(dataLayer[0]?.event).toBe(`rentguy.layer.event_${10}`)
     expect(dataLayer[dataLayer.length - 1]?.event).toBe(
       `rentguy.layer.event_${DATA_LAYER_LIMIT + 9}`,

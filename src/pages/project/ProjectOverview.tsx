@@ -1,15 +1,7 @@
 import React, { useState, useEffect, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDate } from '../../core/storage'
-import projectStore from '../../stores/projectStore'
-
-interface Project {
-  id: string
-  name: string
-  status: string
-  createdAt: string
-  teamSize: number
-}
+import projectStore, { type Project, type ProjectStatus } from '../../stores/projectStore'
 
 const ProjectOverview: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([])
@@ -170,7 +162,7 @@ const ProjectOverview: React.FC = () => {
                   {formatDateLabel(project.createdAt)}
                 </td>
                 <td className="px-4 py-3" data-testid={`project-overview-team-${project.id}`}>
-                  —
+                  {project.teamSize ?? '—'}
                 </td>
                 <td
                   className="px-4 py-3 text-right"

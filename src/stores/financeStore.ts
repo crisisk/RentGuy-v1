@@ -176,21 +176,29 @@ function parseInvoice(payload: unknown): Invoice | null {
   return invoice
 }
 
-const mapQuoteResponse = (payload: any): Quote => {
-  const id = String(payload.id ?? generateId())
-  const status: Quote['status'] = (
-    typeof payload.status === 'string' && payload.status.length
-      ? payload.status
-      : payload.converted
-        ? 'converted'
-        : 'draft'
-  ) as Quote['status']
+const mapQuoteResponse = (payload: unknown): Quote => {
+  const record = (payload ?? {}) as Record<string, unknown>
+  const id = record.id ?? record.quoteId ?? crypto.randomUUID?.() ?? `${Date.now()}`
+  const number = record.number ?? record.quoteNumber ?? record.reference ?? id
+  const client = record.client ?? record.clientName ?? 'Onbekende klant'
+  const rawAmount = Number(
+    record.amount ?? record.total ?? record.totalGross ?? record.total_gross ?? 0,
+  )
+  const rawStatus = typeof record.status === 'string' ? record.status.toLowerCase() : undefined
+  const normalisedStatus: Quote['status'] =
+    record.converted === true
+      ? 'converted'
+      : rawStatus === 'sent'
+        ? 'sent'
+        : rawStatus === 'converted'
+          ? 'converted'
+          : 'draft'
 
   return {
     id: toStringSafe(id),
     number: toStringSafe(number),
-    client: toStringSafe(record.client ?? record.clientName ?? 'Onbekende klant'),
-    amount: Number.isFinite(amount) ? amount : 0,
+    client: toStringSafe(client, 'Onbekende klant'),
+    amount: Number.isFinite(rawAmount) ? rawAmount : 0,
     date: toDateString(record.date ?? record.validUntil ?? record.valid_until ?? Date.now()),
     status: normalisedStatus,
     converted: Boolean(record.converted ?? normalisedStatus === 'converted'),
@@ -428,7 +436,7 @@ export const useFinanceStore = create<FinanceState>()(
       try {
         const response = await api.get(QUOTES_PATH)
         const quotes = Array.isArray(response.data)
-          ? response.data.map(parseQuote).filter((quote): quote is Quote => quote !== null)
+          ? response.data.map((entry) => mapQuoteResponse(entry))
           : []
 
         set((state) => {
