@@ -24,6 +24,7 @@ import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/brandi
 import onboardingTipsData from './onboarding_tips.json'
 import { APIError } from '@errors'
 import { ok } from '@core/result'
+import { analytics } from '../utils/analytics'
 
 type ModuleKey =
   | 'projects'
@@ -70,10 +71,6 @@ type NormalizedOnboardingTip = OnboardingTip & { id: string }
 
 type AbortControllerSet = Set<AbortController>
 
-type WindowWithDataLayer = typeof window & {
-  dataLayer?: Array<Record<string, unknown>>
-}
-
 const COMPLETION_RATE_LIMIT_MS = 1500
 const FALLBACK_MESSAGE =
   'Live onboardingdata is tijdelijk niet beschikbaar. We tonen de laatst bekende checklist voor jouw rol.'
@@ -89,17 +86,44 @@ type PersonaKey =
   | 'sales'
   | 'compliance'
 
+interface ProgressSnapshot {
+  completed: number
+  total: number
+  percent: number
+}
+
+function createProgressSnapshot(completed: number, total: number): ProgressSnapshot {
+  const safeTotal = Math.max(0, total)
+  const safeCompleted = Math.min(Math.max(0, completed), safeTotal)
+  const percent = safeTotal > 0 ? Math.round((safeCompleted / safeTotal) * 100) : 0
+  return {
+    completed: safeCompleted,
+    total: safeTotal,
+    percent,
+  }
+}
+
+function createProgressSnapshotFromRecords(records: OnboardingProgressRecord[]): ProgressSnapshot {
+  const total = Array.isArray(records) ? records.length : 0
+  const completed = Array.isArray(records)
+    ? records.filter((item) => item.status === 'complete').length
+    : 0
+  return createProgressSnapshot(completed, total)
+}
+
 const operationsFallbackSteps: OnboardingStep[] = [
   {
     code: 'kickoff',
     title: 'Kick-off met Mister DJ',
-    description: 'Controleer tenantgegevens, hoofdcontacten en eventkalender voor het komende seizoen.',
+    description:
+      'Controleer tenantgegevens, hoofdcontacten en eventkalender voor het komende seizoen.',
     module: 'projects',
   },
   {
     code: 'branding',
     title: 'Branding & tone-of-voice',
-    description: 'Upload het paars-blauwe gradient, logo’s en stel de 100% Dansgarantie tagline in.',
+    description:
+      'Upload het paars-blauwe gradient, logo’s en stel de 100% Dansgarantie tagline in.',
     module: 'templates',
   },
   {
@@ -111,7 +135,8 @@ const operationsFallbackSteps: OnboardingStep[] = [
   {
     code: 'inventory',
     title: 'Gear & voorraad importeren',
-    description: 'Importeer Pioneer decks, moving heads en microfoons als MR-DJ kits voor scanning.',
+    description:
+      'Importeer Pioneer decks, moving heads en microfoons als MR-DJ kits voor scanning.',
     module: 'warehouse',
   },
   {
@@ -144,7 +169,8 @@ const financeFallbackSteps: OnboardingStep[] = [
   {
     code: 'finance-activate',
     title: 'Activeer finance insights',
-    description: 'Synchroniseer facturatie, voorschotten en cashflow KPI’s voordat dashboards live gaan.',
+    description:
+      'Synchroniseer facturatie, voorschotten en cashflow KPI’s voordat dashboards live gaan.',
     module: 'billing',
   },
   {
@@ -309,21 +335,25 @@ const personaNarratives: Record<PersonaKey, { pending: string; complete: string 
       'Fantastisch! Alle Mister DJ modules zijn geactiveerd binnen Sevensa RentGuy. Gebruik de tips hieronder om de UAT-scenario’s te verfijnen.',
   },
   finance: {
-    pending: 'Volg de stappen om facturatie, cashflow en rapportages klaar te zetten voor Mister DJ.',
+    pending:
+      'Volg de stappen om facturatie, cashflow en rapportages klaar te zetten voor Mister DJ.',
     complete:
       'Financeflows zijn live. Gebruik de tips hieronder om controles en rapportages te automatiseren.',
   },
   warehouse: {
     pending: 'Volg de stappen om scanners, onderhoud en voorraadalerts te activeren.',
-    complete: 'Warehouse-operaties draaien. Gebruik de tips hieronder om uitlevering te optimaliseren.',
+    complete:
+      'Warehouse-operaties draaien. Gebruik de tips hieronder om uitlevering te optimaliseren.',
   },
   crew: {
     pending: 'Volg de stappen om crew onboarding, briefings en safety-afspraken af te stemmen.',
-    complete: 'Crewworkflows zijn actief. Gebruik de tips hieronder om shifts en evaluaties te verbeteren.',
+    complete:
+      'Crewworkflows zijn actief. Gebruik de tips hieronder om shifts en evaluaties te verbeteren.',
   },
   support: {
     pending: 'Volg de stappen om supportescalaties, statuspagina en feedbackstromen te activeren.',
-    complete: 'Supportprocessen staan klaar. Gebruik de tips hieronder om SLA-monitoring te verfijnen.',
+    complete:
+      'Supportprocessen staan klaar. Gebruik de tips hieronder om SLA-monitoring te verfijnen.',
   },
   sales: {
     pending:
@@ -332,9 +362,20 @@ const personaNarratives: Record<PersonaKey, { pending: string; complete: string 
       'Saleshand-off loopt en aanbetalingen zijn geautomatiseerd. Gebruik de tips hieronder om pipeline-automatisering te finetunen.',
   },
   compliance: {
-    pending: 'Volg de stappen om veiligheidsdossiers, toegangsrechten en audit exports klaar te zetten.',
-    complete: 'Compliance waarborgen zijn actief. Gebruik de tips hieronder om controles te automatiseren.',
+    pending:
+      'Volg de stappen om veiligheidsdossiers, toegangsrechten en audit exports klaar te zetten.',
+    complete:
+      'Compliance waarborgen zijn actief. Gebruik de tips hieronder om controles te automatiseren.',
   },
+}
+
+const onboardingEventNameMap: Record<OnboardingEventType, string> = {
+  data_fallback: 'onboarding_data_fallback',
+  data_error: 'onboarding_data_error',
+  step_completed: 'onboarding_step_completed',
+  step_error: 'onboarding_step_error',
+  cta_clicked: 'onboarding_cta_clicked',
+  retry_clicked: 'onboarding_retry_clicked',
 }
 
 const fallbackTipsSource: OnboardingTip[] = Array.isArray(onboardingTipsData)
@@ -364,7 +405,11 @@ function derivePersonaKey(role?: string | null, email?: string | null): PersonaK
   if (emailLocal.includes('finance') || emailLocal.includes('cfo')) {
     return 'finance'
   }
-  if (emailLocal.includes('warehouse') || emailLocal.includes('magazijn') || emailLocal.includes('logistiek')) {
+  if (
+    emailLocal.includes('warehouse') ||
+    emailLocal.includes('magazijn') ||
+    emailLocal.includes('logistiek')
+  ) {
     return 'warehouse'
   }
   if (emailLocal.includes('crew') || emailLocal.includes('technicus')) {
@@ -373,10 +418,18 @@ function derivePersonaKey(role?: string | null, email?: string | null): PersonaK
   if (emailLocal.includes('support') || emailLocal.includes('helpdesk')) {
     return 'support'
   }
-  if (emailLocal.includes('sales') || emailLocal.includes('crm') || emailLocal.includes('account')) {
+  if (
+    emailLocal.includes('sales') ||
+    emailLocal.includes('crm') ||
+    emailLocal.includes('account')
+  ) {
     return 'sales'
   }
-  if (emailLocal.includes('psra') || emailLocal.includes('compliance') || emailLocal.includes('audit')) {
+  if (
+    emailLocal.includes('psra') ||
+    emailLocal.includes('compliance') ||
+    emailLocal.includes('audit')
+  ) {
     return 'compliance'
   }
 
@@ -585,14 +638,19 @@ const stepActions: Partial<Record<string, StepAction>> = {
   },
 }
 
-export function normalizeSteps(list: OnboardingStep[] | null | undefined): NormalizedOnboardingStep[] {
+export function normalizeSteps(
+  list: OnboardingStep[] | null | undefined,
+): NormalizedOnboardingStep[] {
   const seen = new Set<string>()
 
   return (list ?? []).map((step, index) => {
     const explicitCode = typeof step.code === 'string' ? step.code.trim() : ''
     const titleBasedCode =
       typeof step.title === 'string'
-        ? step.title.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
+        ? step.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/gi, '-')
+            .replace(/^-|-$/g, '')
         : ''
 
     const baseCode = explicitCode || titleBasedCode || `step-${index}`
@@ -653,26 +711,6 @@ function getErrorMessage(error: unknown): string {
   return 'Onbekende fout'
 }
 
-function emitOnboardingEvent(type: OnboardingEventType, payload: Record<string, unknown> = {}): void {
-  const detail = { type, timestamp: new Date().toISOString(), ...payload }
-
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('rentguy:onboarding', { detail }))
-      const candidate = window as WindowWithDataLayer
-      if (Array.isArray(candidate.dataLayer)) {
-        candidate.dataLayer.push({ event: `rentguy_${type}`, ...detail })
-      }
-    } catch (error) {
-      console.warn('Onboarding event kon niet verstuurd worden', error)
-    }
-  }
-
-  if (typeof console !== 'undefined' && typeof console.info === 'function') {
-    console.info('[onboarding]', type, detail)
-  }
-}
-
 export default function OnboardingOverlay({
   email,
   role,
@@ -689,7 +727,7 @@ export default function OnboardingOverlay({
   const [persona, setPersona] = useState<PersonaKey>(initialPersona)
   const [steps, setSteps] = useState<NormalizedOnboardingStep[]>(() =>
     normalizeSteps(resolveFallbackSteps(initialPersona)),
-  );
+  )
   const [done, setDone] = useState<Set<string>>(() => new Set())
   const [tips, setTips] = useState<NormalizedOnboardingTip[]>(() => [...fallbackTips])
   const [loading, setLoading] = useState(true)
@@ -703,9 +741,35 @@ export default function OnboardingOverlay({
   const controllersRef = useRef<AbortControllerSet>(new Set())
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [headingId] = useState(() => `onboarding-heading-${Math.random().toString(36).slice(2)}`)
-  const [descriptionId] = useState(() => `onboarding-description-${Math.random().toString(36).slice(2)}`)
+  const [descriptionId] = useState(
+    () => `onboarding-description-${Math.random().toString(36).slice(2)}`,
+  )
   const lastCompletionRef = useRef(0)
   const personaNarrative = personaNarratives[persona] ?? personaNarratives[DEFAULT_PERSONA]
+  const progressSnapshot = useMemo(
+    () => createProgressSnapshot(done.size, steps.length),
+    [done, steps],
+  )
+
+  const trackOnboardingEvent = useCallback(
+    (
+      type: OnboardingEventType,
+      payload: Record<string, unknown> = {},
+      options: { progress?: ProgressSnapshot } = {},
+    ) => {
+      const eventName = onboardingEventNameMap[type] ?? `onboarding_${type}`
+      const progress = options.progress ?? progressSnapshot
+      analytics.track(eventName, {
+        channel: 'onboarding',
+        legacyEvent: type,
+        persona,
+        email: emailContext,
+        progress,
+        ...payload,
+      })
+    },
+    [emailContext, persona, progressSnapshot],
+  )
 
   useEffect(() => {
     return () => {
@@ -735,19 +799,19 @@ export default function OnboardingOverlay({
       setAllowRetry(Boolean(options.allowRetry))
     },
     [],
-  );
+  )
 
   const clearError = useCallback(() => {
     setErrorMessage('')
     setErrorDetails([])
     setAllowRetry(false)
-  }, []);
+  }, [])
 
   const handleRetry = useCallback(() => {
-    emitOnboardingEvent('retry_clicked', { email: emailContext, persona })
+    trackOnboardingEvent('retry_clicked', { stepCode: null, action: 'retry' })
     setAllowRetry(false)
     setReloadToken((value) => value + 1)
-  }, [emailContext, persona]);
+  }, [trackOnboardingEvent])
 
   useEffect(() => {
     let ignore = false
@@ -778,12 +842,20 @@ export default function OnboardingOverlay({
         const progressData = progressResult.ok ? progressResult.value : []
 
         const fallbackSource = resolveFallbackSteps(persona)
-        const resolvedSteps = stepsData.length ? normalizeSteps(stepsData) : normalizeSteps(fallbackSource)
+        const resolvedSteps = stepsData.length
+          ? normalizeSteps(stepsData)
+          : normalizeSteps(fallbackSource)
         const resolvedTips = tipsData.length ? normalizeTips(tipsData) : [...fallbackTips]
 
         setSteps(resolvedSteps)
         setTips(resolvedTips)
-        setDone(new Set(progressData.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+        const completedCount = progressData.filter((item) => item.status === 'complete').length
+        const progressForEvent = createProgressSnapshot(completedCount, resolvedSteps.length)
+        setDone(
+          new Set(
+            progressData.filter((item) => item.status === 'complete').map((item) => item.step_code),
+          ),
+        )
 
         const usedFallbackSteps = !stepsResult.ok || stepsData.length === 0
         const usedFallbackTips = !tipsResult.ok || tipsData.length === 0
@@ -791,40 +863,64 @@ export default function OnboardingOverlay({
 
         if (usedFallbackSteps || usedFallbackTips || usedFallbackProgress) {
           const fallbackDetails: string[] = []
-          if (usedFallbackSteps) fallbackDetails.push('Checklist fallback geactiveerd voor deze sessie.')
-          if (usedFallbackTips) fallbackDetails.push('Fallback tips geladen (API niet beschikbaar).')
-          if (usedFallbackProgress && hasEmail) fallbackDetails.push('Voortgang kon niet opgehaald worden voor dit account.')
+          if (usedFallbackSteps)
+            fallbackDetails.push('Checklist fallback geactiveerd voor deze sessie.')
+          if (usedFallbackTips)
+            fallbackDetails.push('Fallback tips geladen (API niet beschikbaar).')
+          if (usedFallbackProgress && hasEmail)
+            fallbackDetails.push('Voortgang kon niet opgehaald worden voor dit account.')
 
-          const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+          const encounteredErrors = collectResultErrors(
+            stepsResult,
+            progressResult,
+            tipsResult,
+            hasEmail,
+          )
           const combinedDetails = [...fallbackDetails, ...encounteredErrors]
 
           showError(FALLBACK_MESSAGE, { details: combinedDetails, allowRetry: true })
-          emitOnboardingEvent('data_fallback', {
-            email: emailContext,
-            persona,
-            usedFallbackSteps,
-            usedFallbackTips,
-            usedFallbackProgress,
-            stepError: stepsResult.ok ? undefined : stepsResult.error.code,
-            tipsError: tipsResult.ok ? undefined : tipsResult.error.code,
-            progressError: progressResult.ok ? undefined : progressResult.error.code,
-          })
+          trackOnboardingEvent(
+            'data_fallback',
+            {
+              stepCode: null,
+              usedFallbackSteps,
+              usedFallbackTips,
+              usedFallbackProgress,
+              stepError: stepsResult.ok ? undefined : stepsResult.error.code,
+              tipsError: tipsResult.ok ? undefined : tipsResult.error.code,
+              progressError: progressResult.ok ? undefined : progressResult.error.code,
+            },
+            { progress: progressForEvent },
+          )
         } else {
-          const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+          const encounteredErrors = collectResultErrors(
+            stepsResult,
+            progressResult,
+            tipsResult,
+            hasEmail,
+          )
           if (encounteredErrors.length > 0) {
             showError('Onboardingdata bevat fouten. Controleer de status voor je verder gaat.', {
               details: encounteredErrors,
               allowRetry: true,
             })
-            emitOnboardingEvent('data_error', {
-              email: emailContext,
-              persona,
-              message: encounteredErrors.join(' | '),
-            })
+            trackOnboardingEvent(
+              'data_error',
+              {
+                stepCode: null,
+                message: encounteredErrors.join(' | '),
+              },
+              { progress: progressForEvent },
+            )
           }
         }
 
-        const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+        const encounteredErrors = collectResultErrors(
+          stepsResult,
+          progressResult,
+          tipsResult,
+          hasEmail,
+        )
         if (encounteredErrors.length > 0) {
           console.error('Kon onboardinggegevens niet volledig laden', encounteredErrors)
         }
@@ -833,15 +929,19 @@ export default function OnboardingOverlay({
           return
         }
         console.error('Kon onboardinggegevens niet laden', error)
-        setSteps(normalizeSteps(resolveFallbackSteps(persona)))
+        const fallbackResolvedSteps = normalizeSteps(resolveFallbackSteps(persona))
+        setSteps(fallbackResolvedSteps)
         setTips([...fallbackTips])
         setDone(new Set())
         showError(FALLBACK_MESSAGE, { details: [getErrorMessage(error)], allowRetry: true })
-        emitOnboardingEvent('data_error', {
-          email: emailContext,
-          persona,
-          message: getErrorMessage(error),
-        })
+        trackOnboardingEvent(
+          'data_error',
+          {
+            stepCode: null,
+            message: getErrorMessage(error),
+          },
+          { progress: createProgressSnapshot(0, fallbackResolvedSteps.length) },
+        )
       } finally {
         controllersRef.current.delete(controller)
         if (!ignore && !controller.signal.aborted) {
@@ -857,7 +957,16 @@ export default function OnboardingOverlay({
       controller.abort()
       controllersRef.current.delete(controller)
     }
-  }, [clearError, emailContext, emailParam, hasEmail, persona, reloadToken, showError])
+  }, [
+    clearError,
+    emailContext,
+    emailParam,
+    hasEmail,
+    persona,
+    reloadToken,
+    showError,
+    trackOnboardingEvent,
+  ])
 
   useEffect(() => {
     if (!containerRef.current || typeof document === 'undefined') {
@@ -878,7 +987,7 @@ export default function OnboardingOverlay({
       }
     },
     [snoozeHandler],
-  );
+  )
 
   const progress = useMemo(() => {
     return steps.length ? Math.round((done.size / steps.length) * 100) : 0
@@ -894,7 +1003,9 @@ export default function OnboardingOverlay({
   const refreshProgress = useCallback(async () => {
     if (refreshingProgress) return
     if (!hasEmail) {
-      showError('Geen gebruikerscontext gevonden om voortgang te laden. Log opnieuw in om verder te gaan.')
+      showError(
+        'Geen gebruikerscontext gevonden om voortgang te laden. Log opnieuw in om verder te gaan.',
+      )
       return
     }
     const controller = new AbortController()
@@ -904,40 +1015,56 @@ export default function OnboardingOverlay({
       const result = await getProgress(emailParam, { signal: controller.signal })
       if (controller.signal.aborted) return
       if (result.ok) {
-        setDone(new Set(result.value.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+        setDone(
+          new Set(
+            result.value.filter((item) => item.status === 'complete').map((item) => item.step_code),
+          ),
+        )
       } else {
         console.error('Kon voortgang niet verversen', result.error)
-        showError('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-          details: [getErrorMessage(result.error)],
-          allowRetry: true,
-        })
-        emitOnboardingEvent('data_error', {
-          email: emailContext,
-          persona,
-          message: getErrorMessage(result.error),
-        })
+        showError(
+          'Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+          {
+            details: [getErrorMessage(result.error)],
+            allowRetry: true,
+          },
+        )
+        trackOnboardingEvent(
+          'data_error',
+          { stepCode: null, message: getErrorMessage(result.error), context: 'refresh' },
+          { progress: progressSnapshot },
+        )
       }
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Kon voortgang niet verversen', error)
-      showError('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-        details: [getErrorMessage(error)],
-        allowRetry: true,
-      })
-      emitOnboardingEvent('data_error', { email: emailContext, persona, message: getErrorMessage(error) })
+      showError(
+        'Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+        {
+          details: [getErrorMessage(error)],
+          allowRetry: true,
+        },
+      )
+      trackOnboardingEvent(
+        'data_error',
+        { stepCode: null, message: getErrorMessage(error), context: 'refresh' },
+        { progress: progressSnapshot },
+      )
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
         setRefreshingProgress(false)
       }
     }
-  }, [emailContext, emailParam, hasEmail, persona, refreshingProgress, showError]);
+  }, [emailParam, hasEmail, progressSnapshot, refreshingProgress, showError, trackOnboardingEvent])
 
   const mark = useCallback(
     async (step: NormalizedOnboardingStep) => {
       if (busyStep) return
       if (!hasEmail) {
-        showError('Geen gebruikerscontext beschikbaar om stappen af te ronden. Log opnieuw in en probeer het opnieuw.')
+        showError(
+          'Geen gebruikerscontext beschikbaar om stappen af te ronden. Log opnieuw in en probeer het opnieuw.',
+        )
         return
       }
       const now = Date.now()
@@ -950,19 +1077,23 @@ export default function OnboardingOverlay({
       setBusyStep(step.code)
       clearError()
       try {
-        const completionResult = await completeStep(emailParam, step.code, { signal: controller.signal })
+        const completionResult = await completeStep(emailParam, step.code, {
+          signal: controller.signal,
+        })
         if (controller.signal.aborted) return
         if (!completionResult.ok) {
           console.error('Stap kon niet worden bijgewerkt', completionResult.error)
-          showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-            details: [getErrorMessage(completionResult.error)],
-            allowRetry: true,
-          })
-          emitOnboardingEvent('step_error', {
-            email: emailContext,
-            persona,
-            step: step.code,
+          showError(
+            'Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+            {
+              details: [getErrorMessage(completionResult.error)],
+              allowRetry: true,
+            },
+          )
+          trackOnboardingEvent('step_error', {
+            stepCode: step.code,
             message: getErrorMessage(completionResult.error),
+            context: 'completeStep',
           })
           return
         }
@@ -971,34 +1102,49 @@ export default function OnboardingOverlay({
         if (controller.signal.aborted) return
 
         if (progressResult.ok) {
-          setDone(new Set(progressResult.value.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+          setDone(
+            new Set(
+              progressResult.value
+                .filter((item) => item.status === 'complete')
+                .map((item) => item.step_code),
+            ),
+          )
           lastCompletionRef.current = Date.now()
-          emitOnboardingEvent('step_completed', { email: emailContext, persona, step: step.code })
+          const updatedProgress = createProgressSnapshotFromRecords(progressResult.value)
+          trackOnboardingEvent(
+            'step_completed',
+            { stepCode: step.code },
+            { progress: updatedProgress },
+          )
         } else {
           console.error('Kon voortgang na stap niet bijwerken', progressResult.error)
-          showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-            details: [getErrorMessage(progressResult.error)],
-            allowRetry: true,
-          })
-          emitOnboardingEvent('step_error', {
-            email: emailContext,
-            persona,
-            step: step.code,
+          showError(
+            'Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+            {
+              details: [getErrorMessage(progressResult.error)],
+              allowRetry: true,
+            },
+          )
+          trackOnboardingEvent('step_error', {
+            stepCode: step.code,
             message: getErrorMessage(progressResult.error),
+            context: 'progressAfterCompletion',
           })
         }
       } catch (error) {
         if (controller.signal.aborted) return
         console.error('Stap kon niet worden bijgewerkt', error)
-        showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-          details: [getErrorMessage(error)],
-          allowRetry: true,
-        })
-        emitOnboardingEvent('step_error', {
-          email: emailContext,
-          persona,
-          step: step.code,
+        showError(
+          'Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+          {
+            details: [getErrorMessage(error)],
+            allowRetry: true,
+          },
+        )
+        trackOnboardingEvent('step_error', {
+          stepCode: step.code,
           message: getErrorMessage(error),
+          context: 'completeStepCatch',
         })
       } finally {
         controllersRef.current.delete(controller)
@@ -1006,7 +1152,9 @@ export default function OnboardingOverlay({
           setBusyStep('')
         }
       }
-    }, [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError]);
+    },
+    [busyStep, clearError, emailParam, hasEmail, showError, trackOnboardingEvent],
+  )
 
   const handleAction = useCallback(
     (step: NormalizedOnboardingStep) => {
@@ -1014,7 +1162,11 @@ export default function OnboardingOverlay({
       const action = stepActions[step.code]
       if (!action?.href) return
       setBusyActionStep(step.code)
-      emitOnboardingEvent('cta_clicked', { email: emailContext, persona, step: step.code, href: action.href })
+      trackOnboardingEvent('cta_clicked', {
+        stepCode: step.code,
+        href: action.href,
+        action: 'open_cta',
+      })
       if (typeof window === 'undefined') {
         setBusyActionStep('')
         return
@@ -1027,8 +1179,8 @@ export default function OnboardingOverlay({
         }
       })
     },
-    [emailContext, persona],
-  );
+    [trackOnboardingEvent],
+  )
 
   return (
     <div
@@ -1057,7 +1209,8 @@ export default function OnboardingOverlay({
         style={{
           maxWidth: 960,
           margin: '0 auto',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
+          background:
+            'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
           borderRadius: 32,
           padding: '36px 40px',
           boxShadow: brand.colors.shadow,
@@ -1137,7 +1290,10 @@ export default function OnboardingOverlay({
           >
             {brand.shortName} × {brand.tenant.name} launchpad
           </span>
-          <h2 id={headingId} style={{ margin: 0, fontSize: '2.2rem', fontFamily: headingFontStack }}>
+          <h2
+            id={headingId}
+            style={{ margin: 0, fontSize: '2.2rem', fontFamily: headingFontStack }}
+          >
             Onboarding cockpit
           </h2>
           <p id={descriptionId} style={{ margin: 0, maxWidth: 540, lineHeight: 1.5 }}>
@@ -1169,7 +1325,9 @@ export default function OnboardingOverlay({
                     fontWeight: 600,
                     cursor: refreshingProgress || loading ? 'wait' : 'pointer',
                     boxShadow:
-                      refreshingProgress || loading ? 'none' : '0 16px 32px rgba(79, 70, 229, 0.25)',
+                      refreshingProgress || loading
+                        ? 'none'
+                        : '0 16px 32px rgba(79, 70, 229, 0.25)',
                   }}
                 >
                   {refreshingProgress ? 'Verversen…' : 'Voortgang verversen'}
@@ -1182,13 +1340,22 @@ export default function OnboardingOverlay({
                   width: `${progress}%`,
                   height: '100%',
                   borderRadius: 999,
-                  background: 'linear-gradient(90deg, rgba(245, 180, 0, 0.65) 0%, rgba(255, 255, 255, 0.85) 100%)',
+                  background:
+                    'linear-gradient(90deg, rgba(245, 180, 0, 0.65) 0%, rgba(255, 255, 255, 0.85) 100%)',
                   transition: 'width 0.3s ease',
                 }}
               ></div>
             </div>
             {!allComplete && nextStep && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: '0.9rem',
+                  flexWrap: 'wrap',
+                }}
+              >
                 <span style={{ opacity: 0.85 }}>Volgende actie:</span>
                 <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span>{stepMeta[nextStep.code]?.icon || '✨'}</span>
@@ -1225,7 +1392,9 @@ export default function OnboardingOverlay({
                   }}
                 >
                   {errorDetails.map((detail) => (
-                    <li key={detail} style={{ marginLeft: 0 }}>{detail}</li>
+                    <li key={detail} style={{ marginLeft: 0 }}>
+                      {detail}
+                    </li>
                   ))}
                 </ul>
               )}
@@ -1274,7 +1443,9 @@ export default function OnboardingOverlay({
           }}
         >
           <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h3 style={{ margin: 0, fontSize: '1.2rem', color: brand.colors.secondary }}>Checklist</h3>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', color: brand.colors.secondary }}>
+              Checklist
+            </h3>
             <ol
               style={{
                 listStyle: 'none',
@@ -1353,13 +1524,13 @@ const StepCard: FC<StepCardProps> = ({
   const borderColor = highlight
     ? withOpacity(brand.colors.primary, 0.5)
     : completed
-    ? withOpacity(brand.colors.accent, 0.35)
-    : withOpacity(brand.colors.secondary, 0.14)
+      ? withOpacity(brand.colors.accent, 0.35)
+      : withOpacity(brand.colors.secondary, 0.14)
   const background = completed
     ? 'linear-gradient(135deg, rgba(107, 70, 193, 0.14) 0%, rgba(16, 185, 129, 0.12) 100%)'
     : highlight
-    ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(107, 70, 193, 0.18) 100%)'
-    : withOpacity('#FFFFFF', 0.86)
+      ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(107, 70, 193, 0.18) 100%)'
+      : withOpacity('#FFFFFF', 0.86)
   const moduleLabel = meta?.module ? moduleLabels[meta.module] : undefined
 
   return (
@@ -1379,7 +1550,9 @@ const StepCard: FC<StepCardProps> = ({
         <span style={{ fontSize: '1.4rem' }}>{meta?.icon || '✨'}</span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <strong style={{ fontSize: '1.05rem', color: brand.colors.secondary }}>{step.title}</strong>
+            <strong style={{ fontSize: '1.05rem', color: brand.colors.secondary }}>
+              {step.title}
+            </strong>
             {moduleLabel && (
               <span
                 style={{
@@ -1411,13 +1584,17 @@ const StepCard: FC<StepCardProps> = ({
               </span>
             )}
           </div>
-          <span style={{ fontSize: '0.95rem', color: brand.colors.mutedText }}>{step.description}</span>
+          <span style={{ fontSize: '0.95rem', color: brand.colors.mutedText }}>
+            {step.description}
+          </span>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 220, flex: 1 }}>
           {action?.description && (
-            <p style={{ margin: 0, fontSize: '0.85rem', color: brand.colors.mutedText }}>{action.description}</p>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: brand.colors.mutedText }}>
+              {action.description}
+            </p>
           )}
           {action && (
             <button
@@ -1498,7 +1675,8 @@ const TipCard: FC<TipCardProps> = ({ tip }) => {
         padding: '18px 20px',
         borderRadius: 18,
         border: `1px solid ${withOpacity(brand.colors.primary, 0.26)}`,
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.82) 100%)',
+        background:
+          'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.82) 100%)',
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
@@ -1522,7 +1700,9 @@ const TipCard: FC<TipCardProps> = ({ tip }) => {
         </div>
       </div>
       {tip.cta && (
-        <span style={{ fontSize: '0.85rem', color: brand.colors.primaryDark, fontWeight: 600 }}>{tip.cta}</span>
+        <span style={{ fontSize: '0.85rem', color: brand.colors.primaryDark, fontWeight: 600 }}>
+          {tip.cta}
+        </span>
       )}
     </article>
   )
@@ -1548,7 +1728,14 @@ const SkeletonRows: FC = () => {
       {[0, 1, 2].map((index) => (
         <li key={`skeleton-${index}`} aria-hidden="true" style={baseStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ width: 28, height: 28, borderRadius: '50%', background: withOpacity('#0d3b66', 0.12) }}></span>
+            <span
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: withOpacity('#0d3b66', 0.12),
+              }}
+            ></span>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={barStyle(16)}></span>
               <span style={{ ...barStyle(12), width: '65%' }}></span>
