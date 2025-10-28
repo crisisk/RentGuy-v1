@@ -93,13 +93,15 @@ const operationsFallbackSteps: OnboardingStep[] = [
   {
     code: 'kickoff',
     title: 'Kick-off met Mister DJ',
-    description: 'Controleer tenantgegevens, hoofdcontacten en eventkalender voor het komende seizoen.',
+    description:
+      'Controleer tenantgegevens, hoofdcontacten en eventkalender voor het komende seizoen.',
     module: 'projects',
   },
   {
     code: 'branding',
     title: 'Branding & tone-of-voice',
-    description: 'Upload het paars-blauwe gradient, logo’s en stel de 100% Dansgarantie tagline in.',
+    description:
+      'Upload het paars-blauwe gradient, logo’s en stel de 100% Dansgarantie tagline in.',
     module: 'templates',
   },
   {
@@ -111,7 +113,8 @@ const operationsFallbackSteps: OnboardingStep[] = [
   {
     code: 'inventory',
     title: 'Gear & voorraad importeren',
-    description: 'Importeer Pioneer decks, moving heads en microfoons als MR-DJ kits voor scanning.',
+    description:
+      'Importeer Pioneer decks, moving heads en microfoons als MR-DJ kits voor scanning.',
     module: 'warehouse',
   },
   {
@@ -144,7 +147,8 @@ const financeFallbackSteps: OnboardingStep[] = [
   {
     code: 'finance-activate',
     title: 'Activeer finance insights',
-    description: 'Synchroniseer facturatie, voorschotten en cashflow KPI’s voordat dashboards live gaan.',
+    description:
+      'Synchroniseer facturatie, voorschotten en cashflow KPI’s voordat dashboards live gaan.',
     module: 'billing',
   },
   {
@@ -309,21 +313,25 @@ const personaNarratives: Record<PersonaKey, { pending: string; complete: string 
       'Fantastisch! Alle Mister DJ modules zijn geactiveerd binnen Sevensa RentGuy. Gebruik de tips hieronder om de UAT-scenario’s te verfijnen.',
   },
   finance: {
-    pending: 'Volg de stappen om facturatie, cashflow en rapportages klaar te zetten voor Mister DJ.',
+    pending:
+      'Volg de stappen om facturatie, cashflow en rapportages klaar te zetten voor Mister DJ.',
     complete:
       'Financeflows zijn live. Gebruik de tips hieronder om controles en rapportages te automatiseren.',
   },
   warehouse: {
     pending: 'Volg de stappen om scanners, onderhoud en voorraadalerts te activeren.',
-    complete: 'Warehouse-operaties draaien. Gebruik de tips hieronder om uitlevering te optimaliseren.',
+    complete:
+      'Warehouse-operaties draaien. Gebruik de tips hieronder om uitlevering te optimaliseren.',
   },
   crew: {
     pending: 'Volg de stappen om crew onboarding, briefings en safety-afspraken af te stemmen.',
-    complete: 'Crewworkflows zijn actief. Gebruik de tips hieronder om shifts en evaluaties te verbeteren.',
+    complete:
+      'Crewworkflows zijn actief. Gebruik de tips hieronder om shifts en evaluaties te verbeteren.',
   },
   support: {
     pending: 'Volg de stappen om supportescalaties, statuspagina en feedbackstromen te activeren.',
-    complete: 'Supportprocessen staan klaar. Gebruik de tips hieronder om SLA-monitoring te verfijnen.',
+    complete:
+      'Supportprocessen staan klaar. Gebruik de tips hieronder om SLA-monitoring te verfijnen.',
   },
   sales: {
     pending:
@@ -332,9 +340,80 @@ const personaNarratives: Record<PersonaKey, { pending: string; complete: string 
       'Saleshand-off loopt en aanbetalingen zijn geautomatiseerd. Gebruik de tips hieronder om pipeline-automatisering te finetunen.',
   },
   compliance: {
-    pending: 'Volg de stappen om veiligheidsdossiers, toegangsrechten en audit exports klaar te zetten.',
-    complete: 'Compliance waarborgen zijn actief. Gebruik de tips hieronder om controles te automatiseren.',
+    pending:
+      'Volg de stappen om veiligheidsdossiers, toegangsrechten en audit exports klaar te zetten.',
+    complete:
+      'Compliance waarborgen zijn actief. Gebruik de tips hieronder om controles te automatiseren.',
   },
+}
+
+const personaLabels: Record<PersonaKey, string> = {
+  planner: 'Operations planner',
+  admin: 'Administrator',
+  viewer: 'Project stakeholder',
+  finance: 'Finance specialist',
+  warehouse: 'Warehouse coördinator',
+  crew: 'Crew lead',
+  support: 'Support agent',
+  sales: 'Sales specialist',
+  compliance: 'Compliance officer',
+}
+
+const personaGateOverrides: Partial<Record<PersonaKey, string>> = {
+  viewer:
+    'Je hebt alleen-lezen toegang als stakeholder. Vraag het operations- of adminteam om deze stap voor je af te ronden.',
+  support:
+    'Supportrollen kunnen deze configuratie niet aanpassen. Escaleer naar de operations planner voor de volgende actie.',
+  sales:
+    'Sales heeft geen schrijfrechten voor deze module. Vraag een operations planner of administrator om dit onderdeel te activeren.',
+  compliance:
+    'Compliance kan deze stap niet vrijgeven. Neem contact op met operations of finance om de workflow te vervolledigen.',
+}
+
+const statusCopy: Record<string, { tone: 'danger' | 'warning' | 'info'; message?: string }> = {
+  blocked: { tone: 'danger' },
+  locked: {
+    tone: 'danger',
+    message:
+      'Deze stap is momenteel vergrendeld door het onboardingteam. Je ontvangt een update zodra dit is vrijgegeven.',
+  },
+  error: {
+    tone: 'danger',
+    message:
+      'Het systeem kon de status van deze stap niet synchroniseren. Probeer het later opnieuw of contacteer Sevensa support.',
+  },
+  in_review: {
+    tone: 'warning',
+    message:
+      'Deze stap wordt gecontroleerd door het onboardingteam. Zodra de review is afgerond kun je verder.',
+  },
+  awaiting_review: {
+    tone: 'warning',
+    message: 'Deze stap wacht op goedkeuring van het onboardingteam.',
+  },
+  paused: {
+    tone: 'warning',
+    message: 'Het onboardingteam heeft deze stap tijdelijk gepauzeerd.',
+  },
+}
+
+function resolvePersonaGateMessage(persona: PersonaKey, moduleLabel?: string): string {
+  const override = personaGateOverrides[persona]
+  if (override) {
+    return override
+  }
+
+  const personaLabel = personaLabels[persona] ?? 'jouw huidige persona'
+  const moduleSuffix = moduleLabel ? ` binnen ${moduleLabel}` : ''
+  return `Deze stap is geblokkeerd voor jouw rol (${personaLabel}). Vraag een administrator of operations collega om${moduleSuffix} vrij te geven.`
+}
+
+function formatStatusLabel(status: string): string {
+  return status
+    .split(/[_-]/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ')
 }
 
 const fallbackTipsSource: OnboardingTip[] = Array.isArray(onboardingTipsData)
@@ -364,7 +443,11 @@ function derivePersonaKey(role?: string | null, email?: string | null): PersonaK
   if (emailLocal.includes('finance') || emailLocal.includes('cfo')) {
     return 'finance'
   }
-  if (emailLocal.includes('warehouse') || emailLocal.includes('magazijn') || emailLocal.includes('logistiek')) {
+  if (
+    emailLocal.includes('warehouse') ||
+    emailLocal.includes('magazijn') ||
+    emailLocal.includes('logistiek')
+  ) {
     return 'warehouse'
   }
   if (emailLocal.includes('crew') || emailLocal.includes('technicus')) {
@@ -373,10 +456,18 @@ function derivePersonaKey(role?: string | null, email?: string | null): PersonaK
   if (emailLocal.includes('support') || emailLocal.includes('helpdesk')) {
     return 'support'
   }
-  if (emailLocal.includes('sales') || emailLocal.includes('crm') || emailLocal.includes('account')) {
+  if (
+    emailLocal.includes('sales') ||
+    emailLocal.includes('crm') ||
+    emailLocal.includes('account')
+  ) {
     return 'sales'
   }
-  if (emailLocal.includes('psra') || emailLocal.includes('compliance') || emailLocal.includes('audit')) {
+  if (
+    emailLocal.includes('psra') ||
+    emailLocal.includes('compliance') ||
+    emailLocal.includes('audit')
+  ) {
     return 'compliance'
   }
 
@@ -585,14 +676,19 @@ const stepActions: Partial<Record<string, StepAction>> = {
   },
 }
 
-export function normalizeSteps(list: OnboardingStep[] | null | undefined): NormalizedOnboardingStep[] {
+export function normalizeSteps(
+  list: OnboardingStep[] | null | undefined,
+): NormalizedOnboardingStep[] {
   const seen = new Set<string>()
 
   return (list ?? []).map((step, index) => {
     const explicitCode = typeof step.code === 'string' ? step.code.trim() : ''
     const titleBasedCode =
       typeof step.title === 'string'
-        ? step.title.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
+        ? step.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/gi, '-')
+            .replace(/^-|-$/g, '')
         : ''
 
     const baseCode = explicitCode || titleBasedCode || `step-${index}`
@@ -618,6 +714,27 @@ function normalizeTips(list: OnboardingTip[] | null | undefined): NormalizedOnbo
     ...tip,
     id: tip.id ?? `${tip.module || 'tip'}-${index}`,
   }))
+}
+
+function buildStatusMap(
+  steps: NormalizedOnboardingStep[],
+  progressRecords: OnboardingProgressRecord[],
+): Record<string, string> {
+  const map: Record<string, string> = {}
+
+  for (const step of steps) {
+    if (step.status) {
+      map[step.code] = step.status
+    }
+  }
+
+  for (const record of progressRecords) {
+    if (record.status) {
+      map[record.step_code] = record.status
+    }
+  }
+
+  return map
 }
 
 function collectResultErrors(
@@ -653,7 +770,10 @@ function getErrorMessage(error: unknown): string {
   return 'Onbekende fout'
 }
 
-function emitOnboardingEvent(type: OnboardingEventType, payload: Record<string, unknown> = {}): void {
+function emitOnboardingEvent(
+  type: OnboardingEventType,
+  payload: Record<string, unknown> = {},
+): void {
   const detail = { type, timestamp: new Date().toISOString(), ...payload }
 
   if (typeof window !== 'undefined') {
@@ -689,9 +809,11 @@ export default function OnboardingOverlay({
   const [persona, setPersona] = useState<PersonaKey>(initialPersona)
   const [steps, setSteps] = useState<NormalizedOnboardingStep[]>(() =>
     normalizeSteps(resolveFallbackSteps(initialPersona)),
-  );
+  )
   const [done, setDone] = useState<Set<string>>(() => new Set())
   const [tips, setTips] = useState<NormalizedOnboardingTip[]>(() => [...fallbackTips])
+  const [stepStatuses, setStepStatuses] = useState<Record<string, string>>({})
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [errorDetails, setErrorDetails] = useState<string[]>([])
@@ -703,7 +825,9 @@ export default function OnboardingOverlay({
   const controllersRef = useRef<AbortControllerSet>(new Set())
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [headingId] = useState(() => `onboarding-heading-${Math.random().toString(36).slice(2)}`)
-  const [descriptionId] = useState(() => `onboarding-description-${Math.random().toString(36).slice(2)}`)
+  const [descriptionId] = useState(
+    () => `onboarding-description-${Math.random().toString(36).slice(2)}`,
+  )
   const lastCompletionRef = useRef(0)
   const personaNarrative = personaNarratives[persona] ?? personaNarratives[DEFAULT_PERSONA]
 
@@ -723,6 +847,8 @@ export default function OnboardingOverlay({
     setSteps(normalizeSteps(resolveFallbackSteps(persona)))
     setDone(new Set())
     setTips([...fallbackTips])
+    setStepStatuses({})
+    setStepErrors({})
   }, [persona])
 
   const showError = useCallback(
@@ -735,19 +861,20 @@ export default function OnboardingOverlay({
       setAllowRetry(Boolean(options.allowRetry))
     },
     [],
-  );
+  )
 
   const clearError = useCallback(() => {
     setErrorMessage('')
     setErrorDetails([])
     setAllowRetry(false)
-  }, []);
+  }, [])
 
   const handleRetry = useCallback(() => {
     emitOnboardingEvent('retry_clicked', { email: emailContext, persona })
     setAllowRetry(false)
+    setStepErrors({})
     setReloadToken((value) => value + 1)
-  }, [emailContext, persona]);
+  }, [emailContext, persona])
 
   useEffect(() => {
     let ignore = false
@@ -778,12 +905,31 @@ export default function OnboardingOverlay({
         const progressData = progressResult.ok ? progressResult.value : []
 
         const fallbackSource = resolveFallbackSteps(persona)
-        const resolvedSteps = stepsData.length ? normalizeSteps(stepsData) : normalizeSteps(fallbackSource)
+        const resolvedSteps = stepsData.length
+          ? normalizeSteps(stepsData)
+          : normalizeSteps(fallbackSource)
         const resolvedTips = tipsData.length ? normalizeTips(tipsData) : [...fallbackTips]
 
         setSteps(resolvedSteps)
         setTips(resolvedTips)
-        setDone(new Set(progressData.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+        setDone(
+          new Set(
+            progressData.filter((item) => item.status === 'complete').map((item) => item.step_code),
+          ),
+        )
+        setStepStatuses(buildStatusMap(resolvedSteps, progressData))
+        setStepErrors((current) => {
+          if (!Object.keys(current).length) {
+            return current
+          }
+          const next: Record<string, string> = {}
+          for (const step of resolvedSteps) {
+            if (current[step.code]) {
+              next[step.code] = current[step.code]
+            }
+          }
+          return next
+        })
 
         const usedFallbackSteps = !stepsResult.ok || stepsData.length === 0
         const usedFallbackTips = !tipsResult.ok || tipsData.length === 0
@@ -791,11 +937,19 @@ export default function OnboardingOverlay({
 
         if (usedFallbackSteps || usedFallbackTips || usedFallbackProgress) {
           const fallbackDetails: string[] = []
-          if (usedFallbackSteps) fallbackDetails.push('Checklist fallback geactiveerd voor deze sessie.')
-          if (usedFallbackTips) fallbackDetails.push('Fallback tips geladen (API niet beschikbaar).')
-          if (usedFallbackProgress && hasEmail) fallbackDetails.push('Voortgang kon niet opgehaald worden voor dit account.')
+          if (usedFallbackSteps)
+            fallbackDetails.push('Checklist fallback geactiveerd voor deze sessie.')
+          if (usedFallbackTips)
+            fallbackDetails.push('Fallback tips geladen (API niet beschikbaar).')
+          if (usedFallbackProgress && hasEmail)
+            fallbackDetails.push('Voortgang kon niet opgehaald worden voor dit account.')
 
-          const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+          const encounteredErrors = collectResultErrors(
+            stepsResult,
+            progressResult,
+            tipsResult,
+            hasEmail,
+          )
           const combinedDetails = [...fallbackDetails, ...encounteredErrors]
 
           showError(FALLBACK_MESSAGE, { details: combinedDetails, allowRetry: true })
@@ -810,7 +964,12 @@ export default function OnboardingOverlay({
             progressError: progressResult.ok ? undefined : progressResult.error.code,
           })
         } else {
-          const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+          const encounteredErrors = collectResultErrors(
+            stepsResult,
+            progressResult,
+            tipsResult,
+            hasEmail,
+          )
           if (encounteredErrors.length > 0) {
             showError('Onboardingdata bevat fouten. Controleer de status voor je verder gaat.', {
               details: encounteredErrors,
@@ -824,7 +983,12 @@ export default function OnboardingOverlay({
           }
         }
 
-        const encounteredErrors = collectResultErrors(stepsResult, progressResult, tipsResult, hasEmail)
+        const encounteredErrors = collectResultErrors(
+          stepsResult,
+          progressResult,
+          tipsResult,
+          hasEmail,
+        )
         if (encounteredErrors.length > 0) {
           console.error('Kon onboardinggegevens niet volledig laden', encounteredErrors)
         }
@@ -833,9 +997,12 @@ export default function OnboardingOverlay({
           return
         }
         console.error('Kon onboardinggegevens niet laden', error)
-        setSteps(normalizeSteps(resolveFallbackSteps(persona)))
+        const fallbackResolvedSteps = normalizeSteps(resolveFallbackSteps(persona))
+        setSteps(fallbackResolvedSteps)
         setTips([...fallbackTips])
         setDone(new Set())
+        setStepStatuses(buildStatusMap(fallbackResolvedSteps, []))
+        setStepErrors({})
         showError(FALLBACK_MESSAGE, { details: [getErrorMessage(error)], allowRetry: true })
         emitOnboardingEvent('data_error', {
           email: emailContext,
@@ -878,7 +1045,7 @@ export default function OnboardingOverlay({
       }
     },
     [snoozeHandler],
-  );
+  )
 
   const progress = useMemo(() => {
     return steps.length ? Math.round((done.size / steps.length) * 100) : 0
@@ -894,7 +1061,9 @@ export default function OnboardingOverlay({
   const refreshProgress = useCallback(async () => {
     if (refreshingProgress) return
     if (!hasEmail) {
-      showError('Geen gebruikerscontext gevonden om voortgang te laden. Log opnieuw in om verder te gaan.')
+      showError(
+        'Geen gebruikerscontext gevonden om voortgang te laden. Log opnieuw in om verder te gaan.',
+      )
       return
     }
     const controller = new AbortController()
@@ -904,13 +1073,39 @@ export default function OnboardingOverlay({
       const result = await getProgress(emailParam, { signal: controller.signal })
       if (controller.signal.aborted) return
       if (result.ok) {
-        setDone(new Set(result.value.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+        setDone(
+          new Set(
+            result.value.filter((item) => item.status === 'complete').map((item) => item.step_code),
+          ),
+        )
+        setStepStatuses(buildStatusMap(steps, result.value))
+        setStepErrors((current) => {
+          if (!Object.keys(current).length) {
+            return current
+          }
+          const completedCodes = new Set(
+            result.value.filter((item) => item.status === 'complete').map((item) => item.step_code),
+          )
+          if (completedCodes.size === 0) {
+            return current
+          }
+          const next = { ...current }
+          completedCodes.forEach((code) => {
+            if (next[code]) {
+              delete next[code]
+            }
+          })
+          return next
+        })
       } else {
         console.error('Kon voortgang niet verversen', result.error)
-        showError('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-          details: [getErrorMessage(result.error)],
-          allowRetry: true,
-        })
+        showError(
+          'Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+          {
+            details: [getErrorMessage(result.error)],
+            allowRetry: true,
+          },
+        )
         emitOnboardingEvent('data_error', {
           email: emailContext,
           persona,
@@ -920,44 +1115,98 @@ export default function OnboardingOverlay({
     } catch (error) {
       if (controller.signal.aborted) return
       console.error('Kon voortgang niet verversen', error)
-      showError('Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-        details: [getErrorMessage(error)],
-        allowRetry: true,
+      showError(
+        'Kon de voortgang niet verversen. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+        {
+          details: [getErrorMessage(error)],
+          allowRetry: true,
+        },
+      )
+      emitOnboardingEvent('data_error', {
+        email: emailContext,
+        persona,
+        message: getErrorMessage(error),
       })
-      emitOnboardingEvent('data_error', { email: emailContext, persona, message: getErrorMessage(error) })
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
         setRefreshingProgress(false)
       }
     }
-  }, [emailContext, emailParam, hasEmail, persona, refreshingProgress, showError]);
+  }, [emailContext, emailParam, hasEmail, persona, refreshingProgress, showError, steps])
 
   const mark = useCallback(
     async (step: NormalizedOnboardingStep) => {
       if (busyStep) return
       if (!hasEmail) {
-        showError('Geen gebruikerscontext beschikbaar om stappen af te ronden. Log opnieuw in en probeer het opnieuw.')
+        showError(
+          'Geen gebruikerscontext beschikbaar om stappen af te ronden. Log opnieuw in en probeer het opnieuw.',
+        )
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]:
+            'We konden niet vaststellen voor welk account deze stap moet worden afgerond. Log opnieuw in en probeer het opnieuw.',
+        }))
         return
       }
       const now = Date.now()
       if (now - lastCompletionRef.current < COMPLETION_RATE_LIMIT_MS) {
         showError('Rustig aan! Wacht een paar tellen voordat je de volgende stap afrondt.')
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]:
+            'Je hebt net een andere stap afgerond. Wacht een paar seconden voordat je verder gaat.',
+        }))
+        return
+      }
+      const currentStatus =
+        stepStatuses[step.code] ?? (done.has(step.code) ? 'complete' : (step.status ?? ''))
+      const meta = stepMeta[step.code]
+      const moduleLabel = meta?.module ? moduleLabels[meta.module] : undefined
+      if (currentStatus === 'blocked' || currentStatus === 'locked') {
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]: resolvePersonaGateMessage(persona, moduleLabel),
+        }))
+        return
+      }
+      if (currentStatus === 'complete') {
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]: 'Deze stap is al gemarkeerd als voltooid.',
+        }))
         return
       }
       const controller = new AbortController()
       controllersRef.current.add(controller)
       setBusyStep(step.code)
       clearError()
+      setStepErrors((current) => {
+        if (!current[step.code]) {
+          return current
+        }
+        const next = { ...current }
+        delete next[step.code]
+        return next
+      })
       try {
-        const completionResult = await completeStep(emailParam, step.code, { signal: controller.signal })
+        const completionResult = await completeStep(emailParam, step.code, {
+          signal: controller.signal,
+        })
         if (controller.signal.aborted) return
         if (!completionResult.ok) {
           console.error('Stap kon niet worden bijgewerkt', completionResult.error)
-          showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-            details: [getErrorMessage(completionResult.error)],
-            allowRetry: true,
-          })
+          showError(
+            'Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+            {
+              details: [getErrorMessage(completionResult.error)],
+              allowRetry: true,
+            },
+          )
+          setStepErrors((current) => ({
+            ...current,
+            [step.code]: getErrorMessage(completionResult.error),
+          }))
           emitOnboardingEvent('step_error', {
             email: emailContext,
             persona,
@@ -971,15 +1220,37 @@ export default function OnboardingOverlay({
         if (controller.signal.aborted) return
 
         if (progressResult.ok) {
-          setDone(new Set(progressResult.value.filter((item) => item.status === 'complete').map((item) => item.step_code)))
+          setDone(
+            new Set(
+              progressResult.value
+                .filter((item) => item.status === 'complete')
+                .map((item) => item.step_code),
+            ),
+          )
+          setStepStatuses(buildStatusMap(steps, progressResult.value))
+          setStepErrors((current) => {
+            if (!current[step.code]) {
+              return current
+            }
+            const next = { ...current }
+            delete next[step.code]
+            return next
+          })
           lastCompletionRef.current = Date.now()
           emitOnboardingEvent('step_completed', { email: emailContext, persona, step: step.code })
         } else {
           console.error('Kon voortgang na stap niet bijwerken', progressResult.error)
-          showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-            details: [getErrorMessage(progressResult.error)],
-            allowRetry: true,
-          })
+          showError(
+            'Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+            {
+              details: [getErrorMessage(progressResult.error)],
+              allowRetry: true,
+            },
+          )
+          setStepErrors((current) => ({
+            ...current,
+            [step.code]: getErrorMessage(progressResult.error),
+          }))
           emitOnboardingEvent('step_error', {
             email: emailContext,
             persona,
@@ -990,10 +1261,17 @@ export default function OnboardingOverlay({
       } catch (error) {
         if (controller.signal.aborted) return
         console.error('Stap kon niet worden bijgewerkt', error)
-        showError('Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.', {
-          details: [getErrorMessage(error)],
-          allowRetry: true,
-        })
+        showError(
+          'Kon de stap niet bijwerken. Probeer het opnieuw of contacteer het Sevensa supportteam.',
+          {
+            details: [getErrorMessage(error)],
+            allowRetry: true,
+          },
+        )
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]: getErrorMessage(error),
+        }))
         emitOnboardingEvent('step_error', {
           email: emailContext,
           persona,
@@ -1006,15 +1284,44 @@ export default function OnboardingOverlay({
           setBusyStep('')
         }
       }
-    }, [busyStep, clearError, emailContext, emailParam, hasEmail, persona, showError]);
+    },
+    [
+      busyStep,
+      clearError,
+      done,
+      emailContext,
+      emailParam,
+      hasEmail,
+      persona,
+      showError,
+      stepStatuses,
+      steps,
+    ],
+  )
 
   const handleAction = useCallback(
     (step: NormalizedOnboardingStep) => {
       if (!step?.code) return
       const action = stepActions[step.code]
       if (!action?.href) return
+      const currentStatus =
+        stepStatuses[step.code] ?? (done.has(step.code) ? 'complete' : (step.status ?? ''))
+      if (currentStatus === 'blocked' || currentStatus === 'locked') {
+        const meta = stepMeta[step.code]
+        const moduleLabel = meta?.module ? moduleLabels[meta.module] : undefined
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]: resolvePersonaGateMessage(persona, moduleLabel),
+        }))
+        return
+      }
       setBusyActionStep(step.code)
-      emitOnboardingEvent('cta_clicked', { email: emailContext, persona, step: step.code, href: action.href })
+      emitOnboardingEvent('cta_clicked', {
+        email: emailContext,
+        persona,
+        step: step.code,
+        href: action.href,
+      })
       if (typeof window === 'undefined') {
         setBusyActionStep('')
         return
@@ -1027,8 +1334,8 @@ export default function OnboardingOverlay({
         }
       })
     },
-    [emailContext, persona],
-  );
+    [done, emailContext, persona, stepStatuses],
+  )
 
   return (
     <div
@@ -1057,7 +1364,8 @@ export default function OnboardingOverlay({
         style={{
           maxWidth: 960,
           margin: '0 auto',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
+          background:
+            'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.84) 100%)',
           borderRadius: 32,
           padding: '36px 40px',
           boxShadow: brand.colors.shadow,
@@ -1137,7 +1445,10 @@ export default function OnboardingOverlay({
           >
             {brand.shortName} × {brand.tenant.name} launchpad
           </span>
-          <h2 id={headingId} style={{ margin: 0, fontSize: '2.2rem', fontFamily: headingFontStack }}>
+          <h2
+            id={headingId}
+            style={{ margin: 0, fontSize: '2.2rem', fontFamily: headingFontStack }}
+          >
             Onboarding cockpit
           </h2>
           <p id={descriptionId} style={{ margin: 0, maxWidth: 540, lineHeight: 1.5 }}>
@@ -1169,7 +1480,9 @@ export default function OnboardingOverlay({
                     fontWeight: 600,
                     cursor: refreshingProgress || loading ? 'wait' : 'pointer',
                     boxShadow:
-                      refreshingProgress || loading ? 'none' : '0 16px 32px rgba(79, 70, 229, 0.25)',
+                      refreshingProgress || loading
+                        ? 'none'
+                        : '0 16px 32px rgba(79, 70, 229, 0.25)',
                   }}
                 >
                   {refreshingProgress ? 'Verversen…' : 'Voortgang verversen'}
@@ -1182,13 +1495,22 @@ export default function OnboardingOverlay({
                   width: `${progress}%`,
                   height: '100%',
                   borderRadius: 999,
-                  background: 'linear-gradient(90deg, rgba(245, 180, 0, 0.65) 0%, rgba(255, 255, 255, 0.85) 100%)',
+                  background:
+                    'linear-gradient(90deg, rgba(245, 180, 0, 0.65) 0%, rgba(255, 255, 255, 0.85) 100%)',
                   transition: 'width 0.3s ease',
                 }}
               ></div>
             </div>
             {!allComplete && nextStep && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: '0.9rem',
+                  flexWrap: 'wrap',
+                }}
+              >
                 <span style={{ opacity: 0.85 }}>Volgende actie:</span>
                 <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span>{stepMeta[nextStep.code]?.icon || '✨'}</span>
@@ -1225,7 +1547,9 @@ export default function OnboardingOverlay({
                   }}
                 >
                   {errorDetails.map((detail) => (
-                    <li key={detail} style={{ marginLeft: 0 }}>{detail}</li>
+                    <li key={detail} style={{ marginLeft: 0 }}>
+                      {detail}
+                    </li>
                   ))}
                 </ul>
               )}
@@ -1274,7 +1598,9 @@ export default function OnboardingOverlay({
           }}
         >
           <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <h3 style={{ margin: 0, fontSize: '1.2rem', color: brand.colors.secondary }}>Checklist</h3>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', color: brand.colors.secondary }}>
+              Checklist
+            </h3>
             <ol
               style={{
                 listStyle: 'none',
@@ -1292,6 +1618,10 @@ export default function OnboardingOverlay({
                   const completed = done.has(step.code)
                   const isNext = !completed && step.code === nextStepCode
                   const action = stepActions[step.code]
+                  const status = completed
+                    ? 'complete'
+                    : (stepStatuses[step.code] ?? step.status ?? 'pending')
+                  const stepErrorMessage = stepErrors[step.code]
                   return (
                     <StepCard
                       key={step.code}
@@ -1304,6 +1634,9 @@ export default function OnboardingOverlay({
                       action={action}
                       onAction={() => handleAction(step)}
                       actionBusy={busyActionStep === step.code}
+                      status={status}
+                      errorMessage={stepErrorMessage}
+                      persona={persona}
                     />
                   )
                 })}
@@ -1336,6 +1669,9 @@ interface StepCardProps {
   action?: StepAction | undefined
   onAction: () => void
   actionBusy: boolean
+  status?: string
+  persona: PersonaKey
+  errorMessage?: string
 }
 
 const StepCard: FC<StepCardProps> = ({
@@ -1348,19 +1684,64 @@ const StepCard: FC<StepCardProps> = ({
   action,
   onAction,
   actionBusy,
+  status,
+  persona,
+  errorMessage,
 }) => {
   const highlight = isNext && !completed
   const borderColor = highlight
     ? withOpacity(brand.colors.primary, 0.5)
     : completed
-    ? withOpacity(brand.colors.accent, 0.35)
-    : withOpacity(brand.colors.secondary, 0.14)
+      ? withOpacity(brand.colors.accent, 0.35)
+      : withOpacity(brand.colors.secondary, 0.14)
   const background = completed
     ? 'linear-gradient(135deg, rgba(107, 70, 193, 0.14) 0%, rgba(16, 185, 129, 0.12) 100%)'
     : highlight
-    ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(107, 70, 193, 0.18) 100%)'
-    : withOpacity('#FFFFFF', 0.86)
+      ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(107, 70, 193, 0.18) 100%)'
+      : withOpacity('#FFFFFF', 0.86)
   const moduleLabel = meta?.module ? moduleLabels[meta.module] : undefined
+  const effectiveStatus = status ?? (completed ? 'complete' : (step.status ?? 'pending'))
+  const statusInfo = statusCopy[effectiveStatus]
+  const blocked = effectiveStatus === 'blocked' || effectiveStatus === 'locked'
+  const statusLabel = formatStatusLabel(effectiveStatus)
+  const showStatusBadge =
+    effectiveStatus !== 'pending' && effectiveStatus !== 'complete' && statusLabel.length > 0
+  const badgeTone = statusInfo?.tone ?? (blocked ? 'danger' : 'info')
+  const badgeStyles = (() => {
+    switch (badgeTone) {
+      case 'danger':
+        return {
+          background: withOpacity(brand.colors.danger, 0.18),
+          color: brand.colors.danger,
+          border: `1px solid ${withOpacity(brand.colors.danger, 0.35)}`,
+        }
+      case 'warning':
+        return {
+          background: withOpacity(brand.colors.warning, 0.2),
+          color: brand.colors.warning,
+          border: `1px solid ${withOpacity(brand.colors.warning, 0.3)}`,
+        }
+      default:
+        return {
+          background: withOpacity(brand.colors.secondary, 0.08),
+          color: brand.colors.secondary,
+          border: `1px solid ${withOpacity(brand.colors.secondary, 0.18)}`,
+        }
+    }
+  })()
+  const statusMessage = (() => {
+    if (blocked) {
+      return resolvePersonaGateMessage(persona, moduleLabel)
+    }
+    if (statusInfo?.message) {
+      return statusInfo.message
+    }
+    if (showStatusBadge && effectiveStatus !== 'pending' && effectiveStatus !== 'complete') {
+      return `Status: ${statusLabel}.`
+    }
+    return undefined
+  })()
+  const combinedErrorMessage = errorMessage
 
   return (
     <li
@@ -1379,7 +1760,9 @@ const StepCard: FC<StepCardProps> = ({
         <span style={{ fontSize: '1.4rem' }}>{meta?.icon || '✨'}</span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <strong style={{ fontSize: '1.05rem', color: brand.colors.secondary }}>{step.title}</strong>
+            <strong style={{ fontSize: '1.05rem', color: brand.colors.secondary }}>
+              {step.title}
+            </strong>
             {moduleLabel && (
               <span
                 style={{
@@ -1393,6 +1776,20 @@ const StepCard: FC<StepCardProps> = ({
                 }}
               >
                 {moduleLabel}
+              </span>
+            )}
+            {showStatusBadge && (
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  ...badgeStyles,
+                }}
+              >
+                {statusLabel}
               </span>
             )}
             {highlight && (
@@ -1411,35 +1808,40 @@ const StepCard: FC<StepCardProps> = ({
               </span>
             )}
           </div>
-          <span style={{ fontSize: '0.95rem', color: brand.colors.mutedText }}>{step.description}</span>
+          <span style={{ fontSize: '0.95rem', color: brand.colors.mutedText }}>
+            {step.description}
+          </span>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 220, flex: 1 }}>
           {action?.description && (
-            <p style={{ margin: 0, fontSize: '0.85rem', color: brand.colors.mutedText }}>{action.description}</p>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: brand.colors.mutedText }}>
+              {action.description}
+            </p>
           )}
           {action && (
             <button
               type="button"
               onClick={onAction}
-              disabled={actionBusy}
+              disabled={actionBusy || blocked}
               style={{
                 alignSelf: 'flex-start',
                 border: `1px solid ${withOpacity(brand.colors.primary, 0.38)}`,
                 padding: '8px 16px',
                 borderRadius: 12,
-                background: actionBusy
-                  ? withOpacity(brand.colors.primary, 0.2)
-                  : withOpacity('#FFFFFF', 0.92),
+                background:
+                  actionBusy || blocked
+                    ? withOpacity(brand.colors.primary, 0.2)
+                    : withOpacity('#FFFFFF', 0.92),
                 color: brand.colors.secondary,
                 fontWeight: 600,
-                cursor: actionBusy ? 'wait' : 'pointer',
-                boxShadow: actionBusy ? 'none' : '0 18px 34px rgba(37, 99, 235, 0.18)',
+                cursor: actionBusy || blocked ? 'not-allowed' : 'pointer',
+                boxShadow: actionBusy || blocked ? 'none' : '0 18px 34px rgba(37, 99, 235, 0.18)',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               }}
             >
-              {actionBusy ? 'Openen…' : action.label}
+              {actionBusy ? 'Openen…' : blocked ? 'Niet beschikbaar' : action.label}
             </button>
           )}
         </div>
@@ -1460,7 +1862,7 @@ const StepCard: FC<StepCardProps> = ({
             <button
               type="button"
               onClick={onMark}
-              disabled={busy}
+              disabled={busy || blocked}
               style={{
                 border: 'none',
                 padding: '8px 18px',
@@ -1468,17 +1870,48 @@ const StepCard: FC<StepCardProps> = ({
                 backgroundImage: brand.colors.gradient,
                 color: '#fff',
                 fontWeight: 600,
-                cursor: busy ? 'wait' : 'pointer',
-                boxShadow: busy ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.24)',
+                cursor: busy || blocked ? 'not-allowed' : 'pointer',
+                boxShadow: busy || blocked ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.24)',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                opacity: busy ? 0.75 : 1,
+                opacity: busy || blocked ? 0.65 : 1,
               }}
             >
-              {busy ? 'Bezig…' : 'Markeer gereed'}
+              {busy ? 'Bezig…' : blocked ? 'Geblokkeerd' : 'Markeer gereed'}
             </button>
           )}
         </div>
       </div>
+      {(statusMessage || combinedErrorMessage) && (
+        <div style={{ display: 'grid', gap: 6 }}>
+          {statusMessage && (
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.82rem',
+                color:
+                  badgeTone === 'danger'
+                    ? brand.colors.danger
+                    : badgeTone === 'warning'
+                      ? brand.colors.warning
+                      : brand.colors.mutedText,
+              }}
+            >
+              {statusMessage}
+            </p>
+          )}
+          {combinedErrorMessage && (
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.82rem',
+                color: brand.colors.danger,
+              }}
+            >
+              {combinedErrorMessage}
+            </p>
+          )}
+        </div>
+      )}
     </li>
   )
 }
@@ -1498,7 +1931,8 @@ const TipCard: FC<TipCardProps> = ({ tip }) => {
         padding: '18px 20px',
         borderRadius: 18,
         border: `1px solid ${withOpacity(brand.colors.primary, 0.26)}`,
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.82) 100%)',
+        background:
+          'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(227, 232, 255, 0.82) 100%)',
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
@@ -1522,7 +1956,9 @@ const TipCard: FC<TipCardProps> = ({ tip }) => {
         </div>
       </div>
       {tip.cta && (
-        <span style={{ fontSize: '0.85rem', color: brand.colors.primaryDark, fontWeight: 600 }}>{tip.cta}</span>
+        <span style={{ fontSize: '0.85rem', color: brand.colors.primaryDark, fontWeight: 600 }}>
+          {tip.cta}
+        </span>
       )}
     </article>
   )
@@ -1548,7 +1984,14 @@ const SkeletonRows: FC = () => {
       {[0, 1, 2].map((index) => (
         <li key={`skeleton-${index}`} aria-hidden="true" style={baseStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ width: 28, height: 28, borderRadius: '50%', background: withOpacity('#0d3b66', 0.12) }}></span>
+            <span
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: withOpacity('#0d3b66', 0.12),
+              }}
+            ></span>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={barStyle(16)}></span>
               <span style={{ ...barStyle(12), width: '65%' }}></span>
