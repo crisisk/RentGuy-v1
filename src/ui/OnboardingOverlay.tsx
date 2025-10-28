@@ -495,6 +495,73 @@ const moduleIcons: Record<ModuleKey, string> = {
   compliance: '🛡️',
 }
 
+type StatusTone = 'info' | 'warning' | 'danger'
+
+const statusCopy: Record<string, { label: string; tone?: StatusTone; message?: string }> = {
+  pending: { label: 'In afwachting', tone: 'info' },
+  complete: { label: 'Afgerond', tone: 'info' },
+  'in-progress': {
+    label: 'Bezig',
+    tone: 'info',
+    message: 'Deze stap wordt momenteel uitgevoerd door het team.',
+  },
+  review: {
+    label: 'In review',
+    tone: 'warning',
+    message: 'Een collega bekijkt deze stap. Je ontvangt een melding zodra hij is goedgekeurd.',
+  },
+  attention: {
+    label: 'Actie vereist',
+    tone: 'warning',
+    message: 'Controleer de details van deze stap om verder te kunnen.',
+  },
+  blocked: {
+    label: 'Geblokkeerd',
+    tone: 'danger',
+    message: 'Deze stap is geblokkeerd. Vraag een beheerder om de module vrij te geven.',
+  },
+  locked: {
+    label: 'Vergrendeld',
+    tone: 'warning',
+    message: 'Extra rechten zijn nodig voor deze module. Vraag je beheerder om toegang.',
+  },
+}
+
+const personaGateMessages: Record<PersonaKey | 'default', string> = {
+  default:
+    'Deze stap is vergrendeld. Neem contact op met je beheerder om toegang tot {module} te krijgen.',
+  planner:
+    'Deze stap vereist admin-toegang. Vraag je RentGuy-beheerder om {module} te ontgrendelen.',
+  admin: 'Controleer het rechtenbeheer om {module} vrij te geven voor je team.',
+  viewer: 'Vraag een beheerder om toegang tot {module} te geven.',
+  finance:
+    'Financiële modules zijn beperkt tot finance-beheerders. Vraag toegang aan voor {module} via support.',
+  warehouse: 'Operations moet {module} eerst activeren voordat jij verder kunt.',
+  crew: 'Neem contact op met HR om {module} vrij te geven voor je crew.',
+  support:
+    'Support-workflows voor {module} worden centraal beheerd. Meld je bij operations voor toegang.',
+  sales: 'Vraag het sales enablement-team om {module} te activeren.',
+  compliance:
+    'Deze stap vereist compliance-goedkeuring. Neem contact op met het compliance-team voor {module}.',
+}
+
+const formatStatusLabel = (status: string | undefined): string => {
+  if (!status) {
+    return ''
+  }
+  const preset = statusCopy[status]?.label
+  if (preset) {
+    return preset
+  }
+  return status.replace(/[_-]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+const resolvePersonaGateMessage = (persona: PersonaKey, moduleLabel?: string): string => {
+  const template = personaGateMessages[persona] ?? personaGateMessages.default
+  const scope = moduleLabel ?? 'deze module'
+  return template.replace('{module}', scope)
+}
+
 const stepActions: Partial<Record<string, StepAction>> = {
   kickoff: {
     href: '/onboarding/company',
@@ -1586,7 +1653,7 @@ interface StepCardProps {
   actionBusy: boolean
   status?: string
   persona: PersonaKey
-  errorMessage?: string
+  errorMessage?: string | undefined
 }
 
 const StepCard: FC<StepCardProps> = ({

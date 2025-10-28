@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import projectStore, { type Project, type ProjectStatus } from '../../stores/projectStore'
+import projectStore, { type ProjectStatus } from '../../stores/projectStore'
 
 interface ProjectFormProps {}
 
-type ProjectFormData = Omit<Project, 'id'> & { id?: string }
+type ProjectFormData = {
+  id?: string
+  name: string
+  description: string
+  startDate: string
+  endDate?: string
+  status: ProjectStatus
+  client?: string
+}
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10)
 
@@ -17,6 +25,7 @@ const ProjectForm: React.FC<ProjectFormProps> = () => {
     description: '',
     startDate: todayIsoDate(),
     status: 'PLANNING',
+    client: '',
   })
 
   const [loading, setLoading] = useState<boolean>(!!id)

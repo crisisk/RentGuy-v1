@@ -17,7 +17,7 @@ function deriveStats(invoices: Invoice[], stats: FinanceStats | null): FinanceSt
 
   const summary = invoices.reduce(
     (acc, invoice) => {
-      if (invoice.status === 'paid' || invoice.status === 'completed') {
+      if (invoice.status === 'paid') {
         acc.paidInvoicesTotal += invoice.amount
         acc.monthlyRevenue += invoice.amount
       } else if (invoice.status === 'pending') {

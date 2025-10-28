@@ -1,18 +1,13 @@
 import React, { useState, useEffect, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDate } from '../../core/storage'
-import projectStore from '../../stores/projectStore'
-
-interface Project {
-  id: string
-  name: string
-  status: string
-  createdAt: string
-  teamSize: number
-}
+import projectStore, {
+  type Project as StoreProject,
+  type ProjectStatus,
+} from '../../stores/projectStore'
 
 const ProjectOverview: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<StoreProject[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState<string>('')
@@ -33,7 +28,7 @@ const ProjectOverview: React.FC = () => {
     fetchProjects()
   }, [])
 
-  const filterProjects = (projectsToFilter: Project[]): Project[] =>
+  const filterProjects = (projectsToFilter: StoreProject[]): StoreProject[] =>
     projectsToFilter.filter(
       (project) =>
         project.name.toLowerCase().includes(searchTerm.toLowerCase()) &&

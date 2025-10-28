@@ -1,16 +1,10 @@
 import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDate } from '../../core/storage'
-import crmStore from '../../stores/crmStore'
-
-interface Customer {
-  id: string
-  name: string
-  email: string
-  phone: string
-  status: 'active' | 'pending' | 'inactive' | 'archived'
-  createdAt: string
-}
+import crmStore, {
+  type Customer as StoreCustomer,
+  type CustomerStatus,
+} from '../../stores/crmStore'
 
 const CustomerList = () => {
   const [loading, setLoading] = useState(true)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { formatDateTime } from '../../core/storage'
-import crmStore from '../../stores/crmStore'
+import crmStore, { type Activity as CRMActivity } from '../../stores/crmStore'
 
 interface ActivityLogEntry {
   id: string
@@ -63,7 +63,7 @@ const ActivityLog: React.FC = () => {
             type: normalizeActivityType(activity.type),
             timestamp: activity.date,
             description: activity.description,
-            user: activity.owner ?? 'Onbekende gebruiker',
+            user: activity.user ?? 'Onbekende gebruiker',
           }),
         )
         setActivities(mappedActivities)

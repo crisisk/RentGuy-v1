@@ -1,22 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { formatDate } from '../../core/storage'
-import crmStore from '../../stores/crmStore'
-
-interface Customer {
-  id: string
-  name: string
-  email: string
-  phone: string
-  company: string
-}
-
-interface Activity {
-  id: string
-  type: string
-  date: string
-  description: string
-}
+import crmStore, {
+  type Customer as StoreCustomer,
+  type Activity as StoreActivity,
+} from '../../stores/crmStore'
 
 const CustomerDetails: React.FC = () => {
   const { customerId } = useParams<{ customerId: string }>()

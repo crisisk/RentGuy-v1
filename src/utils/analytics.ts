@@ -3,11 +3,47 @@ export interface AnalyticsTrackPayload extends Record<string, unknown> {
   legacyEvent?: string
 }
 
-type WindowWithDataLayer = typeof window & {
-  dataLayer?: Array<Record<string, unknown>>
+export interface AnalyticsEventDetail extends Record<string, unknown> {
+  event: string
+  eventId: string
+  timestamp: string
+  channel: string
 }
 
+export type AnalyticsDataLayerEntry = Record<string, unknown>
+export type AnalyticsDataLayer = AnalyticsDataLayerEntry[]
+
+export interface TrackOptions {
+  dataLayer?: AnalyticsDataLayer
+  channel?: string
+  legacyEvent?: string
+}
+
+export const BUFFER_LIMIT = 50
+export const DATA_LAYER_LIMIT = 120
+
 const defaultChannel = 'app'
+
+let bufferedEvents: AnalyticsEventDetail[] = []
+
+const getWindow = (): Window | undefined => (typeof window === 'undefined' ? undefined : window)
+
+const ensureDataLayer = (provided?: AnalyticsDataLayer): AnalyticsDataLayer | undefined => {
+  if (Array.isArray(provided)) {
+    return provided
+  }
+
+  const candidate = getWindow()
+  if (!candidate) {
+    return undefined
+  }
+
+  if (!Array.isArray(candidate.dataLayer)) {
+    candidate.dataLayer = []
+  }
+
+  return candidate.dataLayer as AnalyticsDataLayer
+}
 
 const logAnalyticsError = (error: unknown) => {
   if (typeof console !== 'undefined' && typeof console.warn === 'function') {
@@ -15,9 +51,20 @@ const logAnalyticsError = (error: unknown) => {
   }
 }
 
-const pushToDataLayer = (detail: Record<string, unknown>, legacyEvent?: string) => {
-  const candidate = window as WindowWithDataLayer
-  if (!Array.isArray(candidate.dataLayer)) {
+const pushToBuffer = (event: AnalyticsEventDetail) => {
+  bufferedEvents = [...bufferedEvents, event]
+  if (bufferedEvents.length > BUFFER_LIMIT) {
+    bufferedEvents = bufferedEvents.slice(bufferedEvents.length - BUFFER_LIMIT)
+  }
+}
+
+const pushToDataLayer = (
+  detail: AnalyticsEventDetail,
+  dataLayer: AnalyticsDataLayer | undefined,
+  legacyEvent?: string,
+) => {
+  const target = ensureDataLayer(dataLayer)
+  if (!target) {
     return
   }
 
@@ -26,52 +73,77 @@ const pushToDataLayer = (detail: Record<string, unknown>, legacyEvent?: string) 
     : typeof detail.event === 'string'
       ? detail.event
       : 'rentguy_event'
-  candidate.dataLayer.push({ ...detail, event: eventName })
+
+  target.push({ ...detail, event: eventName })
+
+  if (target.length > DATA_LAYER_LIMIT) {
+    target.splice(0, target.length - DATA_LAYER_LIMIT)
+  }
 }
 
-const dispatchBrowserEvents = (
-  event: string,
-  detail: Record<string, unknown>,
-  channel: string,
-  legacyEvent?: string,
-) => {
-  window.dispatchEvent(new CustomEvent('rentguy:analytics', { detail }))
-
-  if (legacyEvent) {
-    window.dispatchEvent(new CustomEvent(`rentguy:${legacyEvent}`, { detail }))
+const dispatchBrowserEvents = (detail: AnalyticsEventDetail, legacyEvent: string | undefined) => {
+  const candidate = getWindow()
+  if (!candidate) {
+    return
   }
 
-  if (channel === 'onboarding') {
-    const onboardingDetail = {
-      type: legacyEvent ?? event,
-      timestamp: detail.timestamp,
-      ...detail,
+  try {
+    candidate.dispatchEvent(new CustomEvent('rentguy:analytics', { detail }))
+
+    if (legacyEvent) {
+      candidate.dispatchEvent(new CustomEvent(`rentguy:${legacyEvent}`, { detail }))
     }
-    window.dispatchEvent(new CustomEvent('rentguy:onboarding', { detail: onboardingDetail }))
+
+    if (detail.channel === 'onboarding') {
+      const onboardingDetail = {
+        type: legacyEvent ?? detail.event,
+        ...detail,
+      }
+      candidate.dispatchEvent(new CustomEvent('rentguy:onboarding', { detail: onboardingDetail }))
+    }
+  } catch (error) {
+    logAnalyticsError(error)
   }
+}
+
+export const getBufferedEvents = (): ReadonlyArray<AnalyticsEventDetail> => bufferedEvents.slice()
+
+export const resetAnalyticsState = () => {
+  bufferedEvents = []
+}
+
+export const track = (
+  event: string,
+  payload: AnalyticsTrackPayload = {},
+  options: TrackOptions = {},
+): AnalyticsEventDetail => {
+  const { dataLayer, channel: optionChannel, legacyEvent: optionLegacyEvent } = options
+  const { channel: payloadChannel, legacyEvent: payloadLegacyEvent, ...rest } = payload
+  const channel = optionChannel ?? payloadChannel ?? defaultChannel
+  const legacyEvent = optionLegacyEvent ?? payloadLegacyEvent
+  const eventId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  const timestamp = new Date().toISOString()
+  const detail: AnalyticsEventDetail = { event, eventId, timestamp, channel, ...rest }
+
+  if (!ensureDataLayer(dataLayer) && typeof window === 'undefined') {
+    pushToBuffer(detail)
+    return detail
+  }
+
+  pushToDataLayer(detail, dataLayer, legacyEvent)
+  dispatchBrowserEvents(detail, legacyEvent)
+  pushToBuffer(detail)
+
+  if (typeof console !== 'undefined' && typeof console.info === 'function') {
+    console.info('[analytics]', event, detail)
+  }
+
+  return detail
 }
 
 export const analytics = {
-  track(event: string, payload: AnalyticsTrackPayload = {}) {
-    const { channel = defaultChannel, legacyEvent, ...rest } = payload
-    const timestamp = new Date().toISOString()
-    const detail: Record<string, unknown> = { event, channel, timestamp, ...rest }
-
-    if (typeof window !== 'undefined') {
-      try {
-        dispatchBrowserEvents(event, detail, channel, legacyEvent)
-        pushToDataLayer(detail, legacyEvent)
-      } catch (error) {
-        logAnalyticsError(error)
-      }
-    }
-
-    if (typeof console !== 'undefined' && typeof console.info === 'function') {
-      console.info('[analytics]', event, detail)
-    }
-  },
+  track,
 }
 
-type Analytics = typeof analytics
-
+export type Analytics = typeof analytics
 export type AnalyticsClient = Analytics
