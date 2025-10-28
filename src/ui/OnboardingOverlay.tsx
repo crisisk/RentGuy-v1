@@ -24,6 +24,7 @@ import { brand, brandFontStack, headingFontStack, withOpacity } from '@ui/brandi
 import onboardingTipsData from './onboarding_tips.json'
 import { APIError } from '@errors'
 import { ok } from '@core/result'
+import { analytics } from '../utils/analytics'
 
 type ModuleKey =
   | 'projects'
@@ -70,10 +71,6 @@ type NormalizedOnboardingTip = OnboardingTip & { id: string }
 
 type AbortControllerSet = Set<AbortController>
 
-type WindowWithDataLayer = typeof window & {
-  dataLayer?: Array<Record<string, unknown>>
-}
-
 const COMPLETION_RATE_LIMIT_MS = 1500
 const FALLBACK_MESSAGE =
   'Live onboardingdata is tijdelijk niet beschikbaar. We tonen de laatst bekende checklist voor jouw rol.'
@@ -88,6 +85,31 @@ type PersonaKey =
   | 'support'
   | 'sales'
   | 'compliance'
+
+interface ProgressSnapshot {
+  completed: number
+  total: number
+  percent: number
+}
+
+function createProgressSnapshot(completed: number, total: number): ProgressSnapshot {
+  const safeTotal = Math.max(0, total)
+  const safeCompleted = Math.min(Math.max(0, completed), safeTotal)
+  const percent = safeTotal > 0 ? Math.round((safeCompleted / safeTotal) * 100) : 0
+  return {
+    completed: safeCompleted,
+    total: safeTotal,
+    percent,
+  }
+}
+
+function createProgressSnapshotFromRecords(records: OnboardingProgressRecord[]): ProgressSnapshot {
+  const total = Array.isArray(records) ? records.length : 0
+  const completed = Array.isArray(records)
+    ? records.filter((item) => item.status === 'complete').length
+    : 0
+  return createProgressSnapshot(completed, total)
+}
 
 const operationsFallbackSteps: OnboardingStep[] = [
   {
@@ -347,73 +369,13 @@ const personaNarratives: Record<PersonaKey, { pending: string; complete: string 
   },
 }
 
-const personaLabels: Record<PersonaKey, string> = {
-  planner: 'Operations planner',
-  admin: 'Administrator',
-  viewer: 'Project stakeholder',
-  finance: 'Finance specialist',
-  warehouse: 'Warehouse coördinator',
-  crew: 'Crew lead',
-  support: 'Support agent',
-  sales: 'Sales specialist',
-  compliance: 'Compliance officer',
-}
-
-const personaGateOverrides: Partial<Record<PersonaKey, string>> = {
-  viewer:
-    'Je hebt alleen-lezen toegang als stakeholder. Vraag het operations- of adminteam om deze stap voor je af te ronden.',
-  support:
-    'Supportrollen kunnen deze configuratie niet aanpassen. Escaleer naar de operations planner voor de volgende actie.',
-  sales:
-    'Sales heeft geen schrijfrechten voor deze module. Vraag een operations planner of administrator om dit onderdeel te activeren.',
-  compliance:
-    'Compliance kan deze stap niet vrijgeven. Neem contact op met operations of finance om de workflow te vervolledigen.',
-}
-
-const statusCopy: Record<string, { tone: 'danger' | 'warning' | 'info'; message?: string }> = {
-  blocked: { tone: 'danger' },
-  locked: {
-    tone: 'danger',
-    message:
-      'Deze stap is momenteel vergrendeld door het onboardingteam. Je ontvangt een update zodra dit is vrijgegeven.',
-  },
-  error: {
-    tone: 'danger',
-    message:
-      'Het systeem kon de status van deze stap niet synchroniseren. Probeer het later opnieuw of contacteer Sevensa support.',
-  },
-  in_review: {
-    tone: 'warning',
-    message:
-      'Deze stap wordt gecontroleerd door het onboardingteam. Zodra de review is afgerond kun je verder.',
-  },
-  awaiting_review: {
-    tone: 'warning',
-    message: 'Deze stap wacht op goedkeuring van het onboardingteam.',
-  },
-  paused: {
-    tone: 'warning',
-    message: 'Het onboardingteam heeft deze stap tijdelijk gepauzeerd.',
-  },
-}
-
-function resolvePersonaGateMessage(persona: PersonaKey, moduleLabel?: string): string {
-  const override = personaGateOverrides[persona]
-  if (override) {
-    return override
-  }
-
-  const personaLabel = personaLabels[persona] ?? 'jouw huidige persona'
-  const moduleSuffix = moduleLabel ? ` binnen ${moduleLabel}` : ''
-  return `Deze stap is geblokkeerd voor jouw rol (${personaLabel}). Vraag een administrator of operations collega om${moduleSuffix} vrij te geven.`
-}
-
-function formatStatusLabel(status: string): string {
-  return status
-    .split(/[_-]/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ')
+const onboardingEventNameMap: Record<OnboardingEventType, string> = {
+  data_fallback: 'onboarding_data_fallback',
+  data_error: 'onboarding_data_error',
+  step_completed: 'onboarding_step_completed',
+  step_error: 'onboarding_step_error',
+  cta_clicked: 'onboarding_cta_clicked',
+  retry_clicked: 'onboarding_retry_clicked',
 }
 
 const fallbackTipsSource: OnboardingTip[] = Array.isArray(onboardingTipsData)
@@ -770,29 +732,6 @@ function getErrorMessage(error: unknown): string {
   return 'Onbekende fout'
 }
 
-function emitOnboardingEvent(
-  type: OnboardingEventType,
-  payload: Record<string, unknown> = {},
-): void {
-  const detail = { type, timestamp: new Date().toISOString(), ...payload }
-
-  if (typeof window !== 'undefined') {
-    try {
-      window.dispatchEvent(new CustomEvent('rentguy:onboarding', { detail }))
-      const candidate = window as WindowWithDataLayer
-      if (Array.isArray(candidate.dataLayer)) {
-        candidate.dataLayer.push({ event: `rentguy_${type}`, ...detail })
-      }
-    } catch (error) {
-      console.warn('Onboarding event kon niet verstuurd worden', error)
-    }
-  }
-
-  if (typeof console !== 'undefined' && typeof console.info === 'function') {
-    console.info('[onboarding]', type, detail)
-  }
-}
-
 export default function OnboardingOverlay({
   email,
   role,
@@ -830,6 +769,30 @@ export default function OnboardingOverlay({
   )
   const lastCompletionRef = useRef(0)
   const personaNarrative = personaNarratives[persona] ?? personaNarratives[DEFAULT_PERSONA]
+  const progressSnapshot = useMemo(
+    () => createProgressSnapshot(done.size, steps.length),
+    [done, steps],
+  )
+
+  const trackOnboardingEvent = useCallback(
+    (
+      type: OnboardingEventType,
+      payload: Record<string, unknown> = {},
+      options: { progress?: ProgressSnapshot } = {},
+    ) => {
+      const eventName = onboardingEventNameMap[type] ?? `onboarding_${type}`
+      const progress = options.progress ?? progressSnapshot
+      analytics.track(eventName, {
+        channel: 'onboarding',
+        legacyEvent: type,
+        persona,
+        email: emailContext,
+        progress,
+        ...payload,
+      })
+    },
+    [emailContext, persona, progressSnapshot],
+  )
 
   useEffect(() => {
     return () => {
@@ -870,11 +833,11 @@ export default function OnboardingOverlay({
   }, [])
 
   const handleRetry = useCallback(() => {
-    emitOnboardingEvent('retry_clicked', { email: emailContext, persona })
+    trackOnboardingEvent('retry_clicked', { stepCode: null, action: 'retry' })
     setAllowRetry(false)
     setStepErrors({})
     setReloadToken((value) => value + 1)
-  }, [emailContext, persona])
+  }, [trackOnboardingEvent])
 
   useEffect(() => {
     let ignore = false
@@ -912,24 +875,13 @@ export default function OnboardingOverlay({
 
         setSteps(resolvedSteps)
         setTips(resolvedTips)
+        const completedCount = progressData.filter((item) => item.status === 'complete').length
+        const progressForEvent = createProgressSnapshot(completedCount, resolvedSteps.length)
         setDone(
           new Set(
             progressData.filter((item) => item.status === 'complete').map((item) => item.step_code),
           ),
         )
-        setStepStatuses(buildStatusMap(resolvedSteps, progressData))
-        setStepErrors((current) => {
-          if (!Object.keys(current).length) {
-            return current
-          }
-          const next: Record<string, string> = {}
-          for (const step of resolvedSteps) {
-            if (current[step.code]) {
-              next[step.code] = current[step.code]
-            }
-          }
-          return next
-        })
 
         const usedFallbackSteps = !stepsResult.ok || stepsData.length === 0
         const usedFallbackTips = !tipsResult.ok || tipsData.length === 0
@@ -953,16 +905,19 @@ export default function OnboardingOverlay({
           const combinedDetails = [...fallbackDetails, ...encounteredErrors]
 
           showError(FALLBACK_MESSAGE, { details: combinedDetails, allowRetry: true })
-          emitOnboardingEvent('data_fallback', {
-            email: emailContext,
-            persona,
-            usedFallbackSteps,
-            usedFallbackTips,
-            usedFallbackProgress,
-            stepError: stepsResult.ok ? undefined : stepsResult.error.code,
-            tipsError: tipsResult.ok ? undefined : tipsResult.error.code,
-            progressError: progressResult.ok ? undefined : progressResult.error.code,
-          })
+          trackOnboardingEvent(
+            'data_fallback',
+            {
+              stepCode: null,
+              usedFallbackSteps,
+              usedFallbackTips,
+              usedFallbackProgress,
+              stepError: stepsResult.ok ? undefined : stepsResult.error.code,
+              tipsError: tipsResult.ok ? undefined : tipsResult.error.code,
+              progressError: progressResult.ok ? undefined : progressResult.error.code,
+            },
+            { progress: progressForEvent },
+          )
         } else {
           const encounteredErrors = collectResultErrors(
             stepsResult,
@@ -975,11 +930,14 @@ export default function OnboardingOverlay({
               details: encounteredErrors,
               allowRetry: true,
             })
-            emitOnboardingEvent('data_error', {
-              email: emailContext,
-              persona,
-              message: encounteredErrors.join(' | '),
-            })
+            trackOnboardingEvent(
+              'data_error',
+              {
+                stepCode: null,
+                message: encounteredErrors.join(' | '),
+              },
+              { progress: progressForEvent },
+            )
           }
         }
 
@@ -1004,11 +962,14 @@ export default function OnboardingOverlay({
         setStepStatuses(buildStatusMap(fallbackResolvedSteps, []))
         setStepErrors({})
         showError(FALLBACK_MESSAGE, { details: [getErrorMessage(error)], allowRetry: true })
-        emitOnboardingEvent('data_error', {
-          email: emailContext,
-          persona,
-          message: getErrorMessage(error),
-        })
+        trackOnboardingEvent(
+          'data_error',
+          {
+            stepCode: null,
+            message: getErrorMessage(error),
+          },
+          { progress: createProgressSnapshot(0, fallbackResolvedSteps.length) },
+        )
       } finally {
         controllersRef.current.delete(controller)
         if (!ignore && !controller.signal.aborted) {
@@ -1024,7 +985,16 @@ export default function OnboardingOverlay({
       controller.abort()
       controllersRef.current.delete(controller)
     }
-  }, [clearError, emailContext, emailParam, hasEmail, persona, reloadToken, showError])
+  }, [
+    clearError,
+    emailContext,
+    emailParam,
+    hasEmail,
+    persona,
+    reloadToken,
+    showError,
+    trackOnboardingEvent,
+  ])
 
   useEffect(() => {
     if (!containerRef.current || typeof document === 'undefined') {
@@ -1078,25 +1048,6 @@ export default function OnboardingOverlay({
             result.value.filter((item) => item.status === 'complete').map((item) => item.step_code),
           ),
         )
-        setStepStatuses(buildStatusMap(steps, result.value))
-        setStepErrors((current) => {
-          if (!Object.keys(current).length) {
-            return current
-          }
-          const completedCodes = new Set(
-            result.value.filter((item) => item.status === 'complete').map((item) => item.step_code),
-          )
-          if (completedCodes.size === 0) {
-            return current
-          }
-          const next = { ...current }
-          completedCodes.forEach((code) => {
-            if (next[code]) {
-              delete next[code]
-            }
-          })
-          return next
-        })
       } else {
         console.error('Kon voortgang niet verversen', result.error)
         showError(
@@ -1106,11 +1057,11 @@ export default function OnboardingOverlay({
             allowRetry: true,
           },
         )
-        emitOnboardingEvent('data_error', {
-          email: emailContext,
-          persona,
-          message: getErrorMessage(result.error),
-        })
+        trackOnboardingEvent(
+          'data_error',
+          { stepCode: null, message: getErrorMessage(result.error), context: 'refresh' },
+          { progress: progressSnapshot },
+        )
       }
     } catch (error) {
       if (controller.signal.aborted) return
@@ -1122,18 +1073,18 @@ export default function OnboardingOverlay({
           allowRetry: true,
         },
       )
-      emitOnboardingEvent('data_error', {
-        email: emailContext,
-        persona,
-        message: getErrorMessage(error),
-      })
+      trackOnboardingEvent(
+        'data_error',
+        { stepCode: null, message: getErrorMessage(error), context: 'refresh' },
+        { progress: progressSnapshot },
+      )
     } finally {
       controllersRef.current.delete(controller)
       if (!controller.signal.aborted) {
         setRefreshingProgress(false)
       }
     }
-  }, [emailContext, emailParam, hasEmail, persona, refreshingProgress, showError, steps])
+  }, [emailParam, hasEmail, progressSnapshot, refreshingProgress, showError, trackOnboardingEvent])
 
   const mark = useCallback(
     async (step: NormalizedOnboardingStep) => {
@@ -1142,11 +1093,6 @@ export default function OnboardingOverlay({
         showError(
           'Geen gebruikerscontext beschikbaar om stappen af te ronden. Log opnieuw in en probeer het opnieuw.',
         )
-        setStepErrors((current) => ({
-          ...current,
-          [step.code]:
-            'We konden niet vaststellen voor welk account deze stap moet worden afgerond. Log opnieuw in en probeer het opnieuw.',
-        }))
         return
       }
       const now = Date.now()
@@ -1203,15 +1149,10 @@ export default function OnboardingOverlay({
               allowRetry: true,
             },
           )
-          setStepErrors((current) => ({
-            ...current,
-            [step.code]: getErrorMessage(completionResult.error),
-          }))
-          emitOnboardingEvent('step_error', {
-            email: emailContext,
-            persona,
-            step: step.code,
+          trackOnboardingEvent('step_error', {
+            stepCode: step.code,
             message: getErrorMessage(completionResult.error),
+            context: 'completeStep',
           })
           return
         }
@@ -1227,17 +1168,13 @@ export default function OnboardingOverlay({
                 .map((item) => item.step_code),
             ),
           )
-          setStepStatuses(buildStatusMap(steps, progressResult.value))
-          setStepErrors((current) => {
-            if (!current[step.code]) {
-              return current
-            }
-            const next = { ...current }
-            delete next[step.code]
-            return next
-          })
           lastCompletionRef.current = Date.now()
-          emitOnboardingEvent('step_completed', { email: emailContext, persona, step: step.code })
+          const updatedProgress = createProgressSnapshotFromRecords(progressResult.value)
+          trackOnboardingEvent(
+            'step_completed',
+            { stepCode: step.code },
+            { progress: updatedProgress },
+          )
         } else {
           console.error('Kon voortgang na stap niet bijwerken', progressResult.error)
           showError(
@@ -1247,15 +1184,10 @@ export default function OnboardingOverlay({
               allowRetry: true,
             },
           )
-          setStepErrors((current) => ({
-            ...current,
-            [step.code]: getErrorMessage(progressResult.error),
-          }))
-          emitOnboardingEvent('step_error', {
-            email: emailContext,
-            persona,
-            step: step.code,
+          trackOnboardingEvent('step_error', {
+            stepCode: step.code,
             message: getErrorMessage(progressResult.error),
+            context: 'progressAfterCompletion',
           })
         }
       } catch (error) {
@@ -1268,15 +1200,10 @@ export default function OnboardingOverlay({
             allowRetry: true,
           },
         )
-        setStepErrors((current) => ({
-          ...current,
-          [step.code]: getErrorMessage(error),
-        }))
-        emitOnboardingEvent('step_error', {
-          email: emailContext,
-          persona,
-          step: step.code,
+        trackOnboardingEvent('step_error', {
+          stepCode: step.code,
           message: getErrorMessage(error),
+          context: 'completeStepCatch',
         })
       } finally {
         controllersRef.current.delete(controller)
@@ -1285,18 +1212,7 @@ export default function OnboardingOverlay({
         }
       }
     },
-    [
-      busyStep,
-      clearError,
-      done,
-      emailContext,
-      emailParam,
-      hasEmail,
-      persona,
-      showError,
-      stepStatuses,
-      steps,
-    ],
+    [busyStep, clearError, emailParam, hasEmail, showError, trackOnboardingEvent],
   )
 
   const handleAction = useCallback(
@@ -1316,11 +1232,10 @@ export default function OnboardingOverlay({
         return
       }
       setBusyActionStep(step.code)
-      emitOnboardingEvent('cta_clicked', {
-        email: emailContext,
-        persona,
-        step: step.code,
+      trackOnboardingEvent('cta_clicked', {
+        stepCode: step.code,
         href: action.href,
+        action: 'open_cta',
       })
       if (typeof window === 'undefined') {
         setBusyActionStep('')
@@ -1334,7 +1249,7 @@ export default function OnboardingOverlay({
         }
       })
     },
-    [done, emailContext, persona, stepStatuses],
+    [trackOnboardingEvent],
   )
 
   return (

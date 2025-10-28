@@ -1,128 +1,77 @@
-export interface AnalyticsContext {
-  tenantId?: string
-  userId?: string
-  module?: string
-  [key: string]: unknown
+export interface AnalyticsTrackPayload extends Record<string, unknown> {
+  channel?: string
+  legacyEvent?: string
 }
 
-export interface AnalyticsProperties {
-  [key: string]: unknown
+type WindowWithDataLayer = typeof window & {
+  dataLayer?: Array<Record<string, unknown>>
 }
 
-export interface TrackPayload {
-  context?: AnalyticsContext
-  properties?: AnalyticsProperties
-}
+const defaultChannel = 'app'
 
-export interface TrackOptions {
-  dataLayer?: AnalyticsDataLayer
-  timestamp?: Date
-  eventId?: string
-}
-
-export interface AnalyticsEvent {
-  event: string
-  eventId: string
-  timestamp: string
-  context: AnalyticsContext
-  properties: AnalyticsProperties
-}
-
-export type AnalyticsDataLayer = Array<Record<string, unknown>>
-
-const pendingEvents: AnalyticsEvent[] = []
-
-export const BUFFER_LIMIT = 20
-export const DATA_LAYER_LIMIT = 50
-
-type WindowWithDataLayer = Window & { dataLayer?: unknown }
-
-type CryptoLike = {
-  randomUUID?: () => string
-}
-
-function resolveDataLayer(candidate?: AnalyticsDataLayer): AnalyticsDataLayer | null {
-  if (candidate && Array.isArray(candidate)) {
-    return candidate
+const logAnalyticsError = (error: unknown) => {
+  if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn('Kon analytics event niet versturen', error)
   }
-
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  const withLayer = window as WindowWithDataLayer
-  if (Array.isArray(withLayer.dataLayer)) {
-    return withLayer.dataLayer as AnalyticsDataLayer
-  }
-
-  return null
 }
 
-function generateEventId(explicit?: string): string {
-  if (explicit) {
-    return explicit
-  }
-
-  const cryptoLike = globalThis.crypto as CryptoLike | undefined
-  if (cryptoLike && typeof cryptoLike.randomUUID === 'function') {
-    return cryptoLike.randomUUID()
-  }
-
-  return `evt_${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
-}
-
-function trimInPlace<T>(items: T[], limit: number): void {
-  if (items.length <= limit) {
+const pushToDataLayer = (detail: Record<string, unknown>, legacyEvent?: string) => {
+  const candidate = window as WindowWithDataLayer
+  if (!Array.isArray(candidate.dataLayer)) {
     return
   }
 
-  const excess = items.length - limit
-  items.splice(0, excess)
+  const eventName = legacyEvent
+    ? `rentguy_${legacyEvent}`
+    : typeof detail.event === 'string'
+      ? detail.event
+      : 'rentguy_event'
+  candidate.dataLayer.push({ event: eventName, ...detail })
 }
 
-function flushPendingEvents(target: AnalyticsDataLayer): void {
-  if (pendingEvents.length === 0) {
-    return
+const dispatchBrowserEvents = (
+  event: string,
+  detail: Record<string, unknown>,
+  channel: string,
+  legacyEvent?: string,
+) => {
+  window.dispatchEvent(new CustomEvent('rentguy:analytics', { detail }))
+
+  if (legacyEvent) {
+    window.dispatchEvent(new CustomEvent(`rentguy:${legacyEvent}`, { detail }))
   }
 
-  while (pendingEvents.length > 0) {
-    const next = pendingEvents.shift()
-    if (next) {
-      target.push(next)
+  if (channel === 'onboarding') {
+    const onboardingDetail = {
+      type: legacyEvent ?? event,
+      timestamp: detail.timestamp,
+      ...detail,
     }
+    window.dispatchEvent(new CustomEvent('rentguy:onboarding', { detail: onboardingDetail }))
   }
 }
 
-export function track(
-  eventName: string,
-  payload: TrackPayload = {},
-  options: TrackOptions = {},
-): AnalyticsEvent {
-  const event: AnalyticsEvent = {
-    event: eventName,
-    eventId: generateEventId(options.eventId),
-    timestamp: (options.timestamp ?? new Date()).toISOString(),
-    context: { ...(payload.context ?? {}) },
-    properties: { ...(payload.properties ?? {}) },
-  }
+export const analytics = {
+  track(event: string, payload: AnalyticsTrackPayload = {}) {
+    const { channel = defaultChannel, legacyEvent, ...rest } = payload
+    const timestamp = new Date().toISOString()
+    const detail: Record<string, unknown> = { event, channel, timestamp, ...rest }
 
-  const dataLayer = resolveDataLayer(options.dataLayer)
-  if (dataLayer) {
-    flushPendingEvents(dataLayer)
-    dataLayer.push(event)
-    trimInPlace(dataLayer, DATA_LAYER_LIMIT)
-  } else {
-    pendingEvents.push(event)
-    trimInPlace(pendingEvents, BUFFER_LIMIT)
-  }
+    if (typeof window !== 'undefined') {
+      try {
+        dispatchBrowserEvents(event, detail, channel, legacyEvent)
+        pushToDataLayer(detail, legacyEvent)
+      } catch (error) {
+        logAnalyticsError(error)
+      }
+    }
 
-  return event
+    if (typeof console !== 'undefined' && typeof console.info === 'function') {
+      console.info('[analytics]', event, detail)
+    }
+  },
 }
 
-export function getBufferedEvents(): AnalyticsEvent[] {
-  return [...pendingEvents]
-}
+type Analytics = typeof analytics
 
-export function resetAnalyticsState(): void {
-  pendingEvents.length = 0
-}
+export type AnalyticsClient = Analytics

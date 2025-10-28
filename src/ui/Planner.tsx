@@ -28,6 +28,7 @@ import { createFlowNavigation, type FlowNavigationStatus } from '@ui/flowNavigat
 import { defaultProjectPresets } from '@stores/projectStore'
 import { useAuthStore } from '@stores/authStore'
 import InventorySnapshot from '@ui/InventorySnapshot'
+import { analytics } from '../utils/analytics'
 import type {
   PersonaKey,
   PersonaKpiConfig,
@@ -585,7 +586,7 @@ export default function Planner({ onLogout }: PlannerProps) {
   const support = useMemo(() => resolveSupportConfig(), [])
   const runbookUrl = useMemo(() => buildHelpCenterUrl(support, 'runbook'), [support])
 
-  const loadProjects = useCallback(async () => {
+  const loadProjects = useCallback(async (): Promise<PlannerEvent[]> => {
     setLoading(true)
     try {
       const { data } = await api.get<PlannerProjectDto[]>('/api/v1/projects')
@@ -612,9 +613,11 @@ export default function Planner({ onLogout }: PlannerProps) {
       })
       setEvents(mapped)
       setFeedback((previous) => (previous?.type === 'error' ? null : previous))
+      return mapped
     } catch (error) {
       console.error(error)
       setFeedback({ type: 'error', message: 'Projecten konden niet worden geladen.' })
+      return []
     } finally {
       setLoading(false)
     }
@@ -700,6 +703,8 @@ export default function Planner({ onLogout }: PlannerProps) {
     if (!editing) return
 
     try {
+      const projectId = editing.id
+      const previousStatus = editing.status
       await api.put(`/api/v1/projects/${editing.id}/dates`, {
         name: formState.name,
         client_name: formState.client,
@@ -708,7 +713,15 @@ export default function Planner({ onLogout }: PlannerProps) {
         notes: formState.notes,
       })
       setEditing(null)
-      await loadProjects()
+      const nextEvents = await loadProjects()
+      const updatedProject = nextEvents.find((eventItem) => eventItem.id === projectId)
+      if (
+        updatedProject &&
+        updatedProject.status === 'completed' &&
+        previousStatus !== 'completed'
+      ) {
+        trackProjectCompletion(updatedProject, 'editor', { eventsSnapshot: nextEvents })
+      }
       setFeedback({ type: 'success', message: 'Project bijgewerkt.' })
     } catch (error) {
       console.error(error)
@@ -802,6 +815,8 @@ export default function Planner({ onLogout }: PlannerProps) {
         return
       }
 
+      const projectId = String(numericId)
+      const previousProject = events.find((eventItem) => eventItem.id === projectId)
       const start = info.event.startStr.slice(0, 10)
       const exclusiveEnd = info.event.endStr || info.event.startStr
       const endDate = new Date(exclusiveEnd)
@@ -817,8 +832,16 @@ export default function Planner({ onLogout }: PlannerProps) {
           end_date: end,
           notes: '',
         })
-        await loadProjects()
+        const nextEvents = await loadProjects()
         setFeedback({ type: 'success', message: 'Planning bijgewerkt via kalender.' })
+        const updatedProject = nextEvents.find((eventItem) => eventItem.id === projectId)
+        if (
+          updatedProject &&
+          updatedProject.status === 'completed' &&
+          previousProject?.status !== 'completed'
+        ) {
+          trackProjectCompletion(updatedProject, 'calendar_drag', { eventsSnapshot: nextEvents })
+        }
       } catch (error) {
         console.error(error)
         const message = resolvePlannerConflictMessage(
@@ -834,7 +857,7 @@ export default function Planner({ onLogout }: PlannerProps) {
         setCalendarSyncing(false)
       }
     },
-    [loadProjects],
+    [events, loadProjects, trackProjectCompletion],
   )
 
   const summary = useMemo(
@@ -853,6 +876,39 @@ export default function Planner({ onLogout }: PlannerProps) {
         { total: 0, active: 0, upcoming: 0, completed: 0, atRisk: 0, warning: 0, critical: 0 },
       ),
     [events],
+  )
+
+  const computePlannerProgress = useCallback(
+    (eventList?: PlannerEvent[]) => {
+      const source = eventList ?? events
+      const total = source.length
+      const completed = source.filter((item) => item.status === 'completed').length
+      return {
+        completed,
+        total,
+        percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+      }
+    },
+    [events],
+  )
+
+  const trackProjectCompletion = useCallback(
+    (project: PlannerEvent, source: string, options: { eventsSnapshot?: PlannerEvent[] } = {}) => {
+      const progress = computePlannerProgress(options.eventsSnapshot)
+      analytics.track('task_completed', {
+        channel: 'planner',
+        module: 'projects',
+        persona: personaPreset,
+        projectId: project.id,
+        status: project.status,
+        risk: project.risk,
+        source,
+        progress,
+        startDate: project.start,
+        endDate: project.end,
+      })
+    },
+    [computePlannerProgress, personaPreset],
   )
 
   const plannerJourney: FlowJourneyStep[] = useMemo(() => {
