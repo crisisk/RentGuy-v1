@@ -1,122 +1,74 @@
-// adminTypes.ts
-export enum ResourceType {
-  USER = 'USER',
-  ROLE = 'ROLE',
-  SETTING = 'SETTING',
-  PERMISSION = 'PERMISSION',
-  CONTENT = 'CONTENT',
-  API = 'API'
+export type UserRole = 'pending' | 'planner' | 'crew' | 'warehouse' | 'finance' | 'viewer' | 'admin'
+
+export type SelectableRole = Exclude<UserRole, 'pending'>
+
+export interface UserCreatePayload {
+  readonly email: string
+  readonly password: string
+  readonly role?: UserRole
 }
 
-export enum ActionType {
-  CREATE = 'CREATE',
-  READ = 'READ',
-  UPDATE = 'UPDATE',
-  DELETE = 'DELETE',
-  MANAGE = 'MANAGE'
+export interface UserLoginPayload {
+  readonly email: string
+  readonly password: string
 }
 
-export interface Permission {
-  id: string;
-  resource: ResourceType;
-  action: ActionType;
-  description?: string;
+export interface UserRoleUpdatePayload {
+  readonly role: SelectableRole
 }
 
-export interface Role {
-  id: string;
-  name: string;
-  permissions: Permission[];
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
+export interface AdminUser {
+  readonly id: number
+  readonly email: string
+  readonly role: UserRole
 }
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: Role;
-  permissions: Permission[];
-  createdAt: string;
-  updatedAt: string;
+export interface AuthTokenResponse {
+  readonly accessToken: string
+  readonly tokenType: 'bearer'
 }
 
-export interface GeneralSettings {
-  appName: string;
-  timezone: string;
-  maintenanceMode: boolean;
+export interface SSOLoginRequestPayload {
+  readonly redirectUri?: string | null
+  readonly returnUrl?: string | null
 }
 
-export interface EmailSettings {
-  smtpHost: string;
-  smtpPort: number;
-  smtpUser: string;
-  smtpPassword: string;
-  fromEmail: string;
-  fromName: string;
+export interface SSOLoginResponsePayload {
+  readonly authorizationUrl: string
+  readonly state: string
+  readonly codeChallenge: string
+  readonly expiresIn: number
 }
 
-export interface SecuritySettings {
-  passwordPolicy: {
-    minLength: number;
-    requireSpecialChar: boolean;
-    requireNumber: boolean;
-  };
-  twoFactorEnabled: boolean;
-  loginAttemptsLimit: number;
+export interface SSOCallbackRequestPayload {
+  readonly code: string
+  readonly state: string
+  readonly returnUrl?: string | null
 }
 
-export interface IntegrationSettings {
-  googleAuth: {
-    clientId: string;
-    clientSecret: string;
-    enabled: boolean;
-  };
-  aws: {
-    accessKeyId: string;
-    secretAccessKey: string;
-    region: string;
-  };
+export interface SSOCallbackResponsePayload {
+  readonly sessionToken: string
+  readonly redirectUrl: string
+  readonly expiresIn: number
+  readonly tenant: string
 }
 
-export interface Settings {
-  general: GeneralSettings;
-  email: EmailSettings;
-  security: SecuritySettings;
-  integrations: IntegrationSettings;
+export interface RequestSample {
+  readonly path: string
+  readonly method: string
+  readonly statusCode: number
+  readonly latencyMs: number
+  readonly timestamp: string
 }
 
-export interface BaseResponse<T> {
-  success: boolean;
-  message?: string;
-  data?: T;
-  error?: {
-    code: string;
-    details: Record<string, unknown>;
-  };
+export interface ObservabilityStatus {
+  readonly uptimeSeconds: number
+  readonly uptimeHuman: string
+  readonly totalRequests: number
+  readonly availability: number
+  readonly averageLatencyMs: number
+  readonly errorCount: number
+  readonly sampleSize: number
+  readonly recentRequests: RequestSample[]
+  readonly generatedAt: string
 }
-
-export interface PaginatedResponse<T> extends BaseResponse<T[]> {
-  page: number;
-  limit: number;
-  total: number;
-}
-
-export type UserFormData = Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'role' | 'permissions'> & {
-  roleId: string;
-  permissionIds: string[];
-};
-
-export type RoleFormData = Omit<Role, 'id' | 'createdAt' | 'updatedAt' | 'permissions'> & {
-  permissionIds: string[];
-};
-
-export type PermissionFormData = Omit<Permission, 'id'>;
-
-export type SettingsFormData = {
-  general?: Partial<GeneralSettings>;
-  email?: Partial<EmailSettings>;
-  security?: Partial<SecuritySettings>;
-  integrations?: Partial<IntegrationSettings>;
-};
