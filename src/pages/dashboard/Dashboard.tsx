@@ -1,19 +1,31 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { formatDateTime } from '../../core/storage'
-import projectStore from '../../stores/projectStore'
+import projectStore, { type Project } from '../../stores/projectStore'
+
+type ProjectStats = Awaited<ReturnType<typeof projectStore.getStats>>
+type RecentActivity = Awaited<ReturnType<typeof projectStore.getRecentActivities>>[number]
+
+const generateRevenueData = () =>
+  Array.from({ length: 12 }, () => Math.floor(Math.random() * 10000) + 5000)
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [projects, setProjects] = useState<number>(0)
-  const [stats, setStats] = useState<{ totalTasks: number; completedTasks: number }>({
-    totalTasks: 0,
-    completedTasks: 0,
-  })
-  const [activities, setActivities] = useState<
-    Array<{ id: string; title: string; date: string; status: string }>
-  >([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [stats, setStats] = useState<ProjectStats | null>(null)
+  const [activities, setActivities] = useState<RecentActivity[]>([])
   const [revenueData, setRevenueData] = useState<number[]>([])
+
+  const formatActivityDate = useCallback(
+    (dateString: string) =>
+      formatDateTime(dateString, {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    [],
+  )
 
   useEffect(() => {
     const loadData = async () => {
@@ -23,7 +35,7 @@ const Dashboard = () => {
         const statsData = await projectStore.getStats()
         const activitiesData = await projectStore.getRecentActivities()
 
-        setProjects(projectData.length)
+        setProjects(projectData)
         setStats(statsData)
         setActivities(activitiesData)
         setRevenueData(generateRevenueData())
@@ -37,18 +49,6 @@ const Dashboard = () => {
 
     loadData()
   }, [])
-
-  const generateRevenueData = () => {
-    return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10000) + 5000)
-  }
-
-  const formatActivityDate = (dateString: string) =>
-    formatDateTime(dateString, {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
 
   if (loading)
     return (
@@ -75,18 +75,18 @@ const Dashboard = () => {
           data-testid="dashboard-card-total-projects"
         >
           <h3 className="text-gray-500 text-sm">Total Projects</h3>
-          <p className="text-2xl font-semibold">{projects}</p>
+          <p className="text-2xl font-semibold">{projects.length}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm" data-testid="dashboard-card-total-tasks">
           <h3 className="text-gray-500 text-sm">Total Tasks</h3>
-          <p className="text-2xl font-semibold">{stats.totalTasks}</p>
+          <p className="text-2xl font-semibold">{stats?.totalProjects ?? 0}</p>
         </div>
         <div
           className="bg-white p-4 rounded-lg shadow-sm"
           data-testid="dashboard-card-completed-tasks"
         >
           <h3 className="text-gray-500 text-sm">Completed Tasks</h3>
-          <p className="text-2xl font-semibold">{stats.completedTasks}</p>
+          <p className="text-2xl font-semibold">{stats?.completedProjects ?? 0}</p>
         </div>
         <div
           className="bg-white p-4 rounded-lg shadow-sm"
@@ -94,8 +94,8 @@ const Dashboard = () => {
         >
           <h3 className="text-gray-500 text-sm">Completion Rate</h3>
           <p className="text-2xl font-semibold">
-            {stats.totalTasks
-              ? `${Math.round((stats.completedTasks / stats.totalTasks) * 100)}%`
+            {stats?.totalProjects
+              ? `${Math.round(((stats.completedProjects ?? 0) / stats.totalProjects) * 100)}%`
               : '0%'}
           </p>
         </div>

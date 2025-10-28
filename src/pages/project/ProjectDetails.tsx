@@ -1,36 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatDate } from '../../core/storage'
-import projectStore from '../../stores/projectStore'
-
-interface CrewMember {
-  id: string
-  name: string
-  role: string
-  email: string
-}
-
-interface Equipment {
-  id: string
-  name: string
-  type: string
-  quantity: number
-}
-
-interface Project {
-  id: string
-  name: string
-  description: string
-  startDate: string
-  endDate: string
-  crewMembers: CrewMember[]
-  equipment: Equipment[]
-}
+import projectStore, { type ProjectDetails } from '../../stores/projectStore'
 
 const ProjectDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [project, setProject] = useState<StoreProjectDetails | null>(null)
+  const [project, setProject] = useState<ProjectDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -86,7 +62,9 @@ const ProjectDetails: React.FC = () => {
           </div>
           <div>
             <label className="text-gray-500">End Date:</label>
-            <p className="font-medium">{formatDateLabel(project.endDate)}</p>
+            <p className="font-medium">
+              {project.endDate ? formatDateLabel(project.endDate) : '—'}
+            </p>
           </div>
         </div>
       </div>
