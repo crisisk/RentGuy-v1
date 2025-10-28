@@ -23,8 +23,13 @@ RUN --mount=type=cache,target=/root/.npm \
 FROM base AS builder
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npm run build && find dist -name '*.map' -delete
+COPY package.json ./
+COPY scripts ./scripts
+COPY src ./src
+COPY vendor ./vendor
+COPY warehouse ./warehouse
+COPY index.html ./index.html
+RUN npm run build
 
 # Minimal nginx runtime image to serve the static assets (<100MB total)
 FROM nginx:1.27-alpine AS runner
