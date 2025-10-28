@@ -1,0 +1,337 @@
+[
+  {
+    "name": "ACCESS_TOKEN_EXPIRE_MINUTES",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "description": "Expiration for access tokens in minutes",
+    "default": "60"
+  },
+  {
+    "name": "ALLOWED_ORIGINS",
+    "type": "list[str]",
+    "required": false,
+    "secret": false,
+    "description": "List of allowed origins for CORS",
+    "default": "[\"http://localhost:5173\"]"
+  },
+  {
+    "name": "CRM_ANALYTICS_LOOKBACK_DAYS",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "description": "Default lookback window when syncing blended analytics metrics.",
+    "default": "30"
+  },
+  {
+    "name": "CRM_ANALYTICS_SOURCES",
+    "type": "dict[str, dict[str, str]]",
+    "required": false,
+    "secret": false,
+    "description": "Mapping of tenant ids to GA4/GTM configuration.",
+    "default": "{}"
+  },
+  {
+    "name": "DATABASE_URL",
+    "type": "str",
+    "required": true,
+    "secret": false,
+    "description": "SQLAlchemy database URL"
+  },
+  {
+    "name": "DB_MAX_OVERFLOW",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "description": "Maximum overflow connections for the pool",
+    "default": "10"
+  },
+  {
+    "name": "DB_POOL_SIZE",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "description": "SQLAlchemy connection pool size",
+    "default": "5"
+  },
+  {
+    "name": "DB_POOL_TIMEOUT",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "description": "Timeout for acquiring a connection from the pool",
+    "default": "30"
+  },
+  {
+    "name": "ENV",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "description": "Deployment environment name",
+    "default": "dev"
+  },
+  {
+    "name": "FEATURE_PAYMENTS",
+    "type": "bool",
+    "required": false,
+    "secret": false,
+    "default": "True"
+  },
+  {
+    "name": "FEATURE_TRANSPORT",
+    "type": "bool",
+    "required": false,
+    "secret": false,
+    "default": "True"
+  },
+  {
+    "name": "INVENTORY_ADAPTER",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "default": "inprocess"
+  },
+  {
+    "name": "INVENTORY_SERVICE_URL",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "default": "http://inventory:8000"
+  },
+  {
+    "name": "INVOICE_NINJA_TOKEN",
+    "type": "str | None",
+    "required": false,
+    "secret": true,
+    "aliases": ["LEGACY_INVOICE_NINJA_TOKEN"],
+    "vault_path": "secret/rentguy/invoice_ninja_token"
+  },
+  {
+    "name": "INVOICE_NINJA_URL",
+    "type": "str | None",
+    "required": false,
+    "secret": false,
+    "aliases": ["LEGACY_INVOICE_NINJA_URL"]
+  },
+  {
+    "name": "JWT_ALG",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "description": "JWT signing algorithm",
+    "default": "HS512"
+  },
+  {
+    "name": "JWT_SECRET",
+    "type": "SecretStr",
+    "required": true,
+    "secret": true,
+    "description": "Secret used to sign JWT tokens",
+    "vault_path": "secret/rentguy/jwt_secret"
+  },
+  {
+    "name": "MAIL_FROM",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "default": "no-reply@rentguy.local"
+  },
+  {
+    "name": "MOLLIE_API_BASE",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "default": "https://api.mollie.com/v2"
+  },
+  {
+    "name": "MOLLIE_API_KEY",
+    "type": "str | None",
+    "required": false,
+    "secret": true,
+    "vault_path": "secret/rentguy/mollie_api_key"
+  },
+  {
+    "name": "MOLLIE_WEBHOOK_SECRET",
+    "type": "str | None",
+    "required": false,
+    "secret": true,
+    "vault_path": "secret/rentguy/mollie_webhook_secret"
+  },
+  {
+    "name": "MRDJ_LEAD_CAPTURE_CAPTCHA_ENDPOINT",
+    "type": "str | None",
+    "required": false,
+    "secret": false,
+    "description": "Verification endpoint for the marketing site captcha tokens"
+  },
+  {
+    "name": "MRDJ_LEAD_CAPTURE_CAPTCHA_SECRET",
+    "type": "SecretStr | None",
+    "required": false,
+    "secret": true,
+    "description": "Secret shared with the captcha verification service",
+    "vault_path": "secret/rentguy/mrdj_lead_capture_captcha_secret"
+  },
+  {
+    "name": "MRDJ_LEAD_CAPTURE_RATE_LIMIT",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "description": "Maximum lead capture submissions allowed per IP address within the window",
+    "default": "10"
+  },
+  {
+    "name": "MRDJ_LEAD_CAPTURE_RATE_WINDOW_SECONDS",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "description": "Duration of the lead capture rate limit window in seconds",
+    "default": "300"
+  },
+  {
+    "name": "MRDJ_PLATFORM_REDIRECT_URL",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "description": "Default URL the marketing site should forward to after login",
+    "default": "https://mr-dj.rentguy.nl/crm"
+  },
+  {
+    "name": "MRDJ_SSO_AUTHORITY",
+    "type": "str | None",
+    "required": false,
+    "secret": false,
+    "description": "Base authority URL for the Mr. DJ Azure AD B2C tenant"
+  },
+  {
+    "name": "MRDJ_SSO_CLIENT_ID",
+    "type": "str | None",
+    "required": false,
+    "secret": false,
+    "description": "OAuth client id configured for the marketing → platform SSO flow"
+  },
+  {
+    "name": "MRDJ_SSO_CLIENT_SECRET",
+    "type": "SecretStr | None",
+    "required": false,
+    "secret": true,
+    "description": "Optional client secret used when exchanging authorization codes",
+    "vault_path": "secret/rentguy/mrdj_sso_client_secret"
+  },
+  {
+    "name": "MRDJ_SSO_REDIRECT_URI",
+    "type": "str | None",
+    "required": false,
+    "secret": false,
+    "description": "Redirect URI registered for the marketing site callback"
+  },
+  {
+    "name": "MRDJ_SSO_SCOPE",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "description": "Space separated scope list requested during the SSO handshake",
+    "default": "openid offline_access profile email"
+  },
+  {
+    "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "type": "str | None",
+    "required": false,
+    "secret": false
+  },
+  {
+    "name": "OTEL_EXPORTER_OTLP_HEADERS",
+    "type": "str | None",
+    "required": false,
+    "secret": false
+  },
+  {
+    "name": "OTEL_SERVICE_NAME",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "default": "rentguy-api"
+  },
+  {
+    "name": "PAYMENT_WEBHOOK_BASE_URL",
+    "type": "str | None",
+    "required": false,
+    "secret": false
+  },
+  {
+    "name": "REFRESH_TOKEN_EXPIRE_MINUTES",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "description": "Expiration for refresh tokens in minutes",
+    "default": "1440"
+  },
+  {
+    "name": "RENTGUY_FINANCE_TOKEN",
+    "type": "str | None",
+    "required": false,
+    "secret": true,
+    "vault_path": "secret/rentguy/rentguy_finance_token"
+  },
+  {
+    "name": "RENTGUY_FINANCE_URL",
+    "type": "str | None",
+    "required": false,
+    "secret": false
+  },
+  {
+    "name": "SETTINGS_CRYPTO_SECRET",
+    "type": "SecretStr | None",
+    "required": false,
+    "secret": true,
+    "description": "Optional secret used to encrypt values managed through the secrets dashboard.",
+    "vault_path": "secret/rentguy/settings_crypto_secret"
+  },
+  {
+    "name": "SMTP_HOST",
+    "type": "str | None",
+    "required": false,
+    "secret": false
+  },
+  {
+    "name": "SMTP_PASS",
+    "type": "str | None",
+    "required": false,
+    "secret": true,
+    "vault_path": "secret/rentguy/smtp_pass"
+  },
+  {
+    "name": "SMTP_PORT",
+    "type": "int",
+    "required": false,
+    "secret": false,
+    "default": "587"
+  },
+  {
+    "name": "SMTP_USER",
+    "type": "str | None",
+    "required": false,
+    "secret": false
+  },
+  {
+    "name": "STRIPE_API_BASE",
+    "type": "str",
+    "required": false,
+    "secret": false,
+    "default": "https://api.stripe.com/v1"
+  },
+  {
+    "name": "STRIPE_API_KEY",
+    "type": "str | None",
+    "required": false,
+    "secret": true,
+    "vault_path": "secret/rentguy/stripe_api_key"
+  },
+  {
+    "name": "STRIPE_WEBHOOK_SECRET",
+    "type": "str | None",
+    "required": false,
+    "secret": true,
+    "vault_path": "secret/rentguy/stripe_webhook_secret"
+  }
+]
