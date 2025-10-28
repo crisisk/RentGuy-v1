@@ -1,6 +1,15 @@
 import React, { useState, useEffect, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
-import projectStore, { type Project, type ProjectStatus } from '../../stores/projectStore'
+import { formatDate } from '../../core/storage'
+import projectStore from '../../stores/projectStore'
+
+interface Project {
+  id: string
+  name: string
+  status: string
+  createdAt: string
+  teamSize: number
+}
 
 const ProjectOverview: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([])
@@ -57,14 +66,12 @@ const ProjectOverview: React.FC = () => {
     }
   }
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+  const formatDateLabel = (dateString: string): string =>
+    formatDate(dateString, {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: '2-digit',
     })
-  }
 
   if (loading) {
     return (
@@ -160,7 +167,7 @@ const ProjectOverview: React.FC = () => {
                   className="px-4 py-3 hidden md:table-cell"
                   data-testid={`project-overview-created-${project.id}`}
                 >
-                  {formatDate(project.startDate)}
+                  {formatDateLabel(project.createdAt)}
                 </td>
                 <td className="px-4 py-3" data-testid={`project-overview-team-${project.id}`}>
                   —

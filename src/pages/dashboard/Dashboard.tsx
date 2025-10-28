@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { formatDateTime } from '../../core/storage'
 import projectStore from '../../stores/projectStore'
 
 const Dashboard = () => {
@@ -41,10 +42,13 @@ const Dashboard = () => {
     return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10000) + 5000)
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`
-  }
+  const formatActivityDate = (dateString: string) =>
+    formatDateTime(dateString, {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
 
   if (loading)
     return (
@@ -151,7 +155,7 @@ const Dashboard = () => {
                 />
                 <span className="font-medium">{activity.title}</span>
               </div>
-              <span className="text-sm text-gray-500">{formatDate(activity.date)}</span>
+              <span className="text-sm text-gray-500">{formatActivityDate(activity.date)}</span>
             </div>
           ))}
         </div>

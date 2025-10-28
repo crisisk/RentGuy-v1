@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { formatDateTime } from '../../core/storage'
 import adminStore, { SystemStats, UserActivity } from '../../stores/adminStore'
 
 const AdminPanel: React.FC = () => {
@@ -17,16 +18,14 @@ const AdminPanel: React.FC = () => {
     return `${days}d ${hours}h`
   }
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleString('en-US', {
+  const formatDate = (dateString: string): string =>
+    formatDateTime(dateString, {
       month: 'short',
-      day: 'numeric',
+      day: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     })
-  }
 
   useEffect(() => {
     const fetchAdminData = async () => {

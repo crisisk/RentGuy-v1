@@ -1,9 +1,16 @@
 import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
-import crmStore, {
-  type Customer as StoreCustomer,
-  type CustomerStatus,
-} from '../../stores/crmStore'
+import { formatDate } from '../../core/storage'
+import crmStore from '../../stores/crmStore'
+
+interface Customer {
+  id: string
+  name: string
+  email: string
+  phone: string
+  status: 'active' | 'pending' | 'inactive' | 'archived'
+  createdAt: string
+}
 
 const CustomerList = () => {
   const [loading, setLoading] = useState(true)
@@ -171,7 +178,7 @@ const CustomerList = () => {
                     className="px-6 py-4 whitespace-nowrap"
                     data-testid={`customer-list-joined-${customer.id}`}
                   >
-                    {new Date(customer.createdAt).toLocaleDateString()}
+                    {formatDate(customer.createdAt)}
                   </td>
                 </tr>
               ))}
