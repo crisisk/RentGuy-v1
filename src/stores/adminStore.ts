@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { produce } from 'immer'
+import { immer } from 'zustand/middleware/immer'
 import { api } from '@infra/http/api'
 import { mapUnknownToApiError } from '@errors'
 
@@ -59,6 +59,7 @@ interface AdminState {
   getUserActivities: () => Promise<UserActivity[]>
   getSystemSettings: () => Promise<AdminSettings>
   updateSystemSettings: (settings: AdminSettings) => Promise<AdminSettings>
+  clearError: () => void
 }
 
 const ADMIN_BASE_PATH = '/api/v1/admin'
@@ -223,243 +224,289 @@ function parseAdminSettings(data: unknown): AdminSettings {
   return settings
 }
 
-export const adminStore = create<AdminState>((set) => {
-  const setLoading = (loading: boolean) => {
-    set(
-      produce((state: AdminState) => {
-        state.loading = loading
-      }),
-    )
-  }
-
-  const setError = (message: string | null) => {
-    set(
-      produce((state: AdminState) => {
-        state.error = message
-      }),
-    )
-  }
-
-  const loadUsers = async (): Promise<AdminUser[]> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await api.get(`${ADMIN_BASE_PATH}/users`)
-      const users = Array.isArray(response.data)
-        ? response.data.map(parseAdminUser).filter((user): user is AdminUser => Boolean(user))
-        : []
-
-      set(
-        produce((state: AdminState) => {
-          state.users = users
-        }),
-      )
-
-      return users
-    } catch (error: unknown) {
-      const message = resolveError(error)
-      setError(message)
-      throw new Error(message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getSystemStats = async (): Promise<SystemStats> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await api.get(`${ADMIN_BASE_PATH}/stats`)
-      const stats = parseSystemStats(response.data)
-      return stats
-    } catch (error: unknown) {
-      const message = resolveError(error)
-      setError(message)
-      throw new Error(message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getUserActivities = async (): Promise<UserActivity[]> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await api.get(`${ADMIN_BASE_PATH}/activities`)
-      const activities = Array.isArray(response.data)
-        ? response.data
-            .map(parseUserActivity)
-            .filter((activity): activity is UserActivity => Boolean(activity))
-        : []
-
-      return activities
-    } catch (error: unknown) {
-      const message = resolveError(error)
-      setError(message)
-      throw new Error(message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getSystemSettings = async (): Promise<AdminSettings> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await api.get(`${ADMIN_BASE_PATH}/settings`)
-      const parsedSettings = parseAdminSettings(response.data)
-
-      set(
-        produce((state: AdminState) => {
-          state.settings = parsedSettings
-        }),
-      )
-
-      return parsedSettings
-    } catch (error: unknown) {
-      const message = resolveError(error)
-      setError(message)
-      throw new Error(message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const updateSystemSettings = async (settings: AdminSettings): Promise<AdminSettings> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await api.patch(`${ADMIN_BASE_PATH}/settings`, settings)
-      const parsedSettings = parseAdminSettings(response.data ?? settings)
-
-      set(
-        produce((state: AdminState) => {
-          state.settings = parsedSettings
-        }),
-      )
-
-      return parsedSettings
-    } catch (error: unknown) {
-      const message = resolveError(error)
-      setError(message)
-      throw new Error(message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return {
+const useAdminStoreBase = create<AdminState>()(
+  immer((set, get) => ({
     users: [],
     roles: [],
     settings: { ...defaultSettings },
     loading: false,
     error: null,
-    loadUsers,
-    fetchUsers: loadUsers,
+
+    clearError: () => {
+      set((state) => {
+        state.error = null
+      })
+    },
+
+    loadUsers: async () => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.get(`${ADMIN_BASE_PATH}/users`)
+        const users = Array.isArray(response.data)
+          ? response.data.map(parseAdminUser).filter((user): user is AdminUser => Boolean(user))
+          : []
+
+        set((state) => {
+          state.users = users
+          state.loading = false
+        })
+
+        return users
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    fetchUsers: () => get().loadUsers(),
+
     createUser: async (user) => {
-      setLoading(true)
-      setError(null)
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
       try {
         const response = await api.post(`${ADMIN_BASE_PATH}/users`, user)
         const parsedUser = parseAdminUser(response.data)
 
         if (parsedUser) {
-          set(
-            produce((state: AdminState) => {
-              const existingIndex = state.users.findIndex(
-                (existing) => existing.id === parsedUser.id,
-              )
-              if (existingIndex >= 0) {
-                state.users[existingIndex] = parsedUser
-              } else {
-                state.users.push(parsedUser)
-              }
-            }),
-          )
+          set((state) => {
+            const index = state.users.findIndex((existing) => existing.id === parsedUser.id)
+            if (index >= 0) {
+              state.users[index] = parsedUser
+            } else {
+              state.users.push(parsedUser)
+            }
+            state.loading = false
+          })
+        } else {
+          set((state) => {
+            state.loading = false
+          })
         }
 
         return parsedUser ?? null
-      } catch (error: unknown) {
+      } catch (error) {
         const message = resolveError(error)
-        setError(message)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
         throw new Error(message)
-      } finally {
-        setLoading(false)
       }
     },
+
     updateUser: async (id, userData) => {
-      setLoading(true)
-      setError(null)
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
       try {
         const response = await api.put(`${ADMIN_BASE_PATH}/users/${id}`, userData)
         const parsedUser = parseAdminUser(response.data)
 
         if (parsedUser) {
-          set(
-            produce((state: AdminState) => {
-              state.users = state.users.map((user) =>
-                user.id === parsedUser.id ? parsedUser : user,
-              )
-            }),
-          )
+          set((state) => {
+            state.users = state.users.map((user) => (user.id === parsedUser.id ? parsedUser : user))
+            state.loading = false
+          })
+        } else {
+          set((state) => {
+            state.loading = false
+          })
         }
 
         return parsedUser ?? null
-      } catch (error: unknown) {
+      } catch (error) {
         const message = resolveError(error)
-        setError(message)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
         throw new Error(message)
-      } finally {
-        setLoading(false)
       }
     },
+
     deleteUser: async (id) => {
-      setLoading(true)
-      setError(null)
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
       try {
         await api.delete(`${ADMIN_BASE_PATH}/users/${id}`)
-        set(
-          produce((state: AdminState) => {
-            state.users = state.users.filter((user) => user.id !== id)
-          }),
-        )
-      } catch (error: unknown) {
+        set((state) => {
+          state.users = state.users.filter((user) => user.id !== id)
+          state.loading = false
+        })
+      } catch (error) {
         const message = resolveError(error)
-        setError(message)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
         throw new Error(message)
-      } finally {
-        setLoading(false)
       }
     },
+
     fetchRoles: async () => {
-      setLoading(true)
-      setError(null)
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
       try {
         const response = await api.get(`${ADMIN_BASE_PATH}/roles`)
         const roles = Array.isArray(response.data)
           ? response.data.filter((role): role is string => typeof role === 'string')
           : []
 
-        set(
-          produce((state: AdminState) => {
-            state.roles = roles
-          }),
-        )
+        set((state) => {
+          state.roles = roles
+          state.loading = false
+        })
 
         return roles
-      } catch (error: unknown) {
+      } catch (error) {
         const message = resolveError(error)
-        setError(message)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
         throw new Error(message)
-      } finally {
-        setLoading(false)
       }
     },
-    getSystemStats,
-    getUserActivities,
-    getSystemSettings,
-    updateSystemSettings,
-  }
+
+    getSystemStats: async () => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.get(`${ADMIN_BASE_PATH}/stats`)
+        const stats = parseSystemStats(response.data)
+        set((state) => {
+          state.loading = false
+        })
+        return stats
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    getUserActivities: async () => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.get(`${ADMIN_BASE_PATH}/activities`)
+        const activities = Array.isArray(response.data)
+          ? response.data
+              .map(parseUserActivity)
+              .filter((activity): activity is UserActivity => Boolean(activity))
+          : []
+
+        set((state) => {
+          state.loading = false
+        })
+
+        return activities
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    getSystemSettings: async () => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.get(`${ADMIN_BASE_PATH}/settings`)
+        const parsedSettings = parseAdminSettings(response.data)
+
+        set((state) => {
+          state.settings = parsedSettings
+          state.loading = false
+        })
+
+        return parsedSettings
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+
+    updateSystemSettings: async (settings) => {
+      set((state) => {
+        state.loading = true
+        state.error = null
+      })
+
+      try {
+        const response = await api.put(`${ADMIN_BASE_PATH}/settings`, settings)
+        const parsed = parseAdminSettings(response.data)
+
+        set((state) => {
+          state.settings = parsed
+          state.loading = false
+        })
+
+        return parsed
+      } catch (error) {
+        const message = resolveError(error)
+        set((state) => {
+          state.error = message
+          state.loading = false
+        })
+        throw new Error(message)
+      }
+    },
+  })),
+)
+
+const adminStore = Object.assign(useAdminStoreBase, {
+  loadUsers: () => useAdminStoreBase.getState().loadUsers(),
+  fetchUsers: () => useAdminStoreBase.getState().fetchUsers(),
+  createUser: (user: Partial<AdminUser>) => useAdminStoreBase.getState().createUser(user),
+  updateUser: (id: string, userData: Partial<AdminUser>) =>
+    useAdminStoreBase.getState().updateUser(id, userData),
+  deleteUser: (id: string) => useAdminStoreBase.getState().deleteUser(id),
+  fetchRoles: () => useAdminStoreBase.getState().fetchRoles(),
+  getSystemStats: () => useAdminStoreBase.getState().getSystemStats(),
+  getUserActivities: () => useAdminStoreBase.getState().getUserActivities(),
+  getSystemSettings: () => useAdminStoreBase.getState().getSystemSettings(),
+  updateSystemSettings: (settings: AdminSettings) =>
+    useAdminStoreBase.getState().updateSystemSettings(settings),
+  clearError: () => useAdminStoreBase.getState().clearError(),
 })
 
 export default adminStore
