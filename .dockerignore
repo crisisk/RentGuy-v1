@@ -1,11 +1,14 @@
 # General
+.dockerignore
 .git
 .gitignore
 node_modules
+**/node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.pnpm-store
 .DS_Store
 coverage
 dist
@@ -24,3 +27,12 @@ playwright-report
 *.local
 .env
 .env.*
+# Additional large folders and archives excluded to keep context small
+analysis
+ops
+monitoring
+psra
+backup
+*.zip
+*.tar.gz
+*.tgz
