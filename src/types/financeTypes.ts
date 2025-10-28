@@ -1,75 +1,78 @@
-export type InvoiceStatus = 'draft' | 'pending' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+export type InvoiceStatus =
+  | 'draft'
+  | 'pending'
+  | 'sent'
+  | 'paid'
+  | 'overdue'
+  | 'cancelled'
+  | (string & {})
 
-export interface InvoiceLineItem {
-  id: string
-  description: string
-  quantity: number
-  unitPrice: number
+export interface InvoiceLineItemInput {
+  readonly description: string
+  readonly quantity?: number
+  readonly unitPrice: number
+  readonly vatRate?: number | null
 }
 
-export interface InvoiceRecord {
-  id: string
-  clientName: string
-  issuedAt: string
-  dueAt: string
-  status: InvoiceStatus
-  currency: string
-  lineItems: InvoiceLineItem[]
-  totalNet: number
-  totalVat: number
-  totalGross: number
-  reference?: string | null
-  projectId?: number | null
+export interface InvoiceCreatePayload {
+  readonly projectId: number
+  readonly clientName: string
+  readonly currency?: string
+  readonly issuedAt: string
+  readonly dueAt: string
+  readonly reference?: string | null
+  readonly vatRate?: number | null
+  readonly lineItems: InvoiceLineItemInput[]
+  readonly totalNetOverride?: number | null
+  readonly totalVatOverride?: number | null
+  readonly syncWithFinanceBridge?: boolean
 }
 
-export interface InvoiceDraftInput {
-  clientName: string
-  invoiceDate: string
-  dueDate: string
-  lineItems: InvoiceLineItem[]
-  total: number
-  reference?: string | null
-  projectId?: number | null
-  currency?: string
+export interface Invoice {
+  readonly id: number
+  readonly projectId: number
+  readonly clientName: string
+  readonly currency: string
+  readonly totalNet: number
+  readonly totalVat: number
+  readonly totalGross: number
+  readonly vatRate: number
+  readonly status: InvoiceStatus
+  readonly issuedAt: string
+  readonly dueAt: string
+  readonly reference?: string | null
 }
 
-export type QuoteStatus = 'draft' | 'sent' | 'converted'
-
-export interface QuoteRecord {
-  id: string
-  number: string
-  clientName: string
-  amount: number
-  issuedAt: string
-  status: QuoteStatus
+export interface CheckoutRequestPayload {
+  readonly invoiceId: number
+  readonly successUrl: string
+  readonly cancelUrl: string
+  readonly customerEmail?: string | null
 }
 
-export type PaymentMethod = 'bank_transfer' | 'card' | 'cash'
+export type CheckoutProvider = 'stripe' | 'mollie'
 
-export interface PaymentRecord {
-  id: string
-  invoiceId: string
-  amount: number
-  method: PaymentMethod
-  processedAt: string
-  status: 'pending' | 'settled'
-  reference?: string | null
+export interface CheckoutSession {
+  readonly provider: CheckoutProvider
+  readonly externalId: string
+  readonly checkoutUrl: string
 }
 
-export interface PaymentDraft {
-  invoiceId: string
-  amount: number
-  method: PaymentMethod
-  reference?: string | null
+export interface Payment {
+  readonly id: number
+  readonly provider: string
+  readonly externalId: string
+  readonly amount: number
+  readonly status: string
 }
 
 export interface FinanceDashboardMetrics {
-  monthlyRevenue: number
-  pendingInvoicesTotal: number
-  paidInvoicesTotal: number
+  readonly monthlyRevenue: number
+  readonly pendingInvoicesTotal: number
+  readonly paidInvoicesTotal: number
 }
 
 export interface FinanceDashboardData {
-  invoices: InvoiceRecord[]
-  metrics: FinanceDashboardMetrics
+  readonly invoices: Invoice[]
+  readonly metrics: FinanceDashboardMetrics
 }
