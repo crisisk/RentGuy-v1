@@ -9,7 +9,7 @@
     "start:dev": "node scripts/dev-server.mjs",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/dev-server.mjs",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --cache --cache-location .cache/eslint --max-warnings=0",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "lint-staged": "lint-staged",
     "format": "prettier -w .",
