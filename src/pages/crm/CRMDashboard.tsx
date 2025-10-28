@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import crmStore from '../../stores/crmStore'
 import type { CRMDashboardSummary, PipelineStageMetric } from '@rg-types/crmTypes'
+import { analytics } from '../../utils/analytics'
 
 type TaskStatus = 'planned' | 'in-progress' | 'complete'
 
@@ -83,12 +84,15 @@ const statusLabels: Record<TaskStatus, string> = {
 }
 
 const CRMDashboard = () => {
+  const persona = 'sales'
+  const moduleName = 'crm'
   const { dashboard, loading, error, fetchDashboardSummary } = crmStore((state) => ({
     dashboard: state.dashboard,
     loading: state.loading,
     error: state.error,
     fetchDashboardSummary: state.fetchDashboardSummary,
   }))
+  const completedTasksRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     fetchDashboardSummary().catch(() => {
@@ -216,6 +220,43 @@ const CRMDashboard = () => {
     }
   }, [readinessTasks])
 
+  const trackTaskCompletion = useCallback(
+    (taskId: string, context: Record<string, unknown> = {}) => {
+      analytics.track('task_completed', {
+        channel: 'crm',
+        module: moduleName,
+        persona,
+        taskId,
+        progress: {
+          completed: readinessStats.completed,
+          total: readinessStats.total,
+          percent: readinessStats.progress,
+        },
+        ...context,
+      })
+    },
+    [moduleName, persona, readinessStats.completed, readinessStats.progress, readinessStats.total],
+  )
+
+  useEffect(() => {
+    const completedTasks = readinessTasks.filter((task) => task.status === 'complete')
+    const seen = completedTasksRef.current
+    const completedIds = new Set(completedTasks.map((task) => task.id))
+
+    for (const id of Array.from(seen)) {
+      if (!completedIds.has(id)) {
+        seen.delete(id)
+      }
+    }
+
+    completedTasks.forEach((task) => {
+      if (!seen.has(task.id)) {
+        trackTaskCompletion(task.id, { status: task.status, source: 'status_change' })
+        seen.add(task.id)
+      }
+    })
+  }, [readinessTasks, trackTaskCompletion])
+
   if (loading && !summary) {
     return (
       <div
@@ -291,6 +332,13 @@ const CRMDashboard = () => {
             href="/sales/crm-sync"
             className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             data-testid="crm-dashboard-crm-sync-cta"
+            onClick={() =>
+              trackTaskCompletion('crm-sync', {
+                action: 'cta_click',
+                cta: 'crm_import_wizard',
+                status: readinessTasks.find((task) => task.id === 'crm-sync')?.status ?? 'unknown',
+              })
+            }
           >
             Open CRM import wizard
           </a>
