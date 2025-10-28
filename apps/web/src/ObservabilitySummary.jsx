@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { api } from './api'
+import { formatTime } from './storage.js'
 import { brand, brandFontStack, headingFontStack, withOpacity } from './theme.js'
 
 function formatAvailability(value) {
@@ -69,7 +70,14 @@ export default function ObservabilitySummary({ refreshInterval }) {
           fontFamily: brandFontStack,
         }}
       >
-        <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1rem', color: brand.colors.secondary }}>
+        <h3
+          style={{
+            marginTop: 0,
+            marginBottom: '8px',
+            fontSize: '1rem',
+            color: brand.colors.secondary,
+          }}
+        >
           Service status
         </h3>
         <p style={{ margin: 0, color: brand.colors.mutedText }}>Service status laden…</p>
@@ -89,7 +97,14 @@ export default function ObservabilitySummary({ refreshInterval }) {
           fontFamily: brandFontStack,
         }}
       >
-        <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1rem', color: brand.colors.secondary }}>
+        <h3
+          style={{
+            marginTop: 0,
+            marginBottom: '8px',
+            fontSize: '1rem',
+            color: brand.colors.secondary,
+          }}
+        >
           Service status
         </h3>
         <p style={{ margin: 0, color: '#B91C1C' }}>{error}</p>
@@ -117,12 +132,26 @@ export default function ObservabilitySummary({ refreshInterval }) {
         fontFamily: brandFontStack,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: '1.05rem', color: brand.colors.secondary, fontFamily: headingFontStack }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          gap: 12,
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: '1.05rem',
+            color: brand.colors.secondary,
+            fontFamily: headingFontStack,
+          }}
+        >
           Service status
         </h3>
         <span style={{ fontSize: '0.78rem', color: brand.colors.mutedText }}>
-          Laatste update: {status?.generated_at ? new Date(status.generated_at).toLocaleTimeString('nl-NL') : '—'}
+          Laatste update: {formatTime(status?.generated_at)}
         </span>
       </div>
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
@@ -132,22 +161,34 @@ export default function ObservabilitySummary({ refreshInterval }) {
       </div>
       {recent.length > 0 && (
         <div>
-          <div style={{ fontSize: '0.9rem', color: brand.colors.secondary, marginBottom: '6px', fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: '0.9rem',
+              color: brand.colors.secondary,
+              marginBottom: '6px',
+              fontWeight: 600,
+            }}
+          >
             Laatste requests
           </div>
-          <ul style={{ margin: 0, paddingLeft: '18px', color: brand.colors.mutedText, fontSize: '0.85rem' }}>
+          <ul
+            style={{
+              margin: 0,
+              paddingLeft: '18px',
+              color: brand.colors.mutedText,
+              fontSize: '0.85rem',
+            }}
+          >
             {recent.map((entry, index) => (
               <li key={`${entry.method}-${entry.path}-${index}`}>
-                <span style={{ fontWeight: 600 }}>{entry.method}</span> {entry.path} · {entry.status_code} ·{' '}
-                {formatLatency(entry.latency_ms)}
+                <span style={{ fontWeight: 600 }}>{entry.method}</span> {entry.path} ·{' '}
+                {entry.status_code} · {formatLatency(entry.latency_ms)}
               </li>
             ))}
           </ul>
         </div>
       )}
-      {error && status && (
-        <div style={{ fontSize: '0.82rem', color: '#B91C1C' }}>{error}</div>
-      )}
+      {error && status && <div style={{ fontSize: '0.82rem', color: '#B91C1C' }}>{error}</div>}
     </section>
   )
 }
@@ -167,8 +208,12 @@ function MetricTile({ label, value, helper }) {
       }}
     >
       <span style={{ fontSize: '0.85rem', color: brand.colors.mutedText }}>{label}</span>
-      <span style={{ fontSize: '1.35rem', fontWeight: 700, color: brand.colors.secondary }}>{value}</span>
-      {helper && <span style={{ fontSize: '0.78rem', color: brand.colors.mutedText }}>{helper}</span>}
+      <span style={{ fontSize: '1.35rem', fontWeight: 700, color: brand.colors.secondary }}>
+        {value}
+      </span>
+      {helper && (
+        <span style={{ fontSize: '0.78rem', color: brand.colors.mutedText }}>{helper}</span>
+      )}
     </div>
   )
 }

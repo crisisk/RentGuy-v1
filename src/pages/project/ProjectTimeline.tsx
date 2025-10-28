@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import projectStore, { type TimelineEvent } from '../../stores/projectStore'
+import { formatDate } from '../../core/storage'
+import projectStore from '../../stores/projectStore'
+
+interface TimelineEvent {
+  id: string
+  title: string
+  description: string
+  date: string
+}
 
 const ProjectTimeline: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>()
@@ -27,14 +35,12 @@ const ProjectTimeline: React.FC = () => {
     void loadTimeline()
   }, [projectId])
 
-  const formatDate = (isoString: string) => {
-    const date = new Date(isoString)
-    return date.toLocaleDateString('en-US', {
+  const formatEventDate = (isoString: string) =>
+    formatDate(isoString, {
       month: 'short',
-      day: 'numeric',
+      day: '2-digit',
       year: 'numeric',
     })
-  }
 
   if (isLoading) {
     return <div className="p-4 text-center text-gray-500">Loading timeline...</div>
@@ -61,7 +67,7 @@ const ProjectTimeline: React.FC = () => {
               <div className="flex-1 bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-medium text-gray-900">{event.title}</h3>
-                  <span className="text-sm text-gray-500">{formatDate(event.date)}</span>
+                  <span className="text-sm text-gray-500">{formatEventDate(event.date)}</span>
                 </div>
                 <p className="text-gray-600 text-sm">{event.description}</p>
               </div>

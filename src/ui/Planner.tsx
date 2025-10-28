@@ -13,6 +13,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin, { type EventDropArg } from '@fullcalendar/interaction'
 import type { EventInput } from '@fullcalendar/core'
 import { api } from '@infra/http/api'
+import { isApiError } from '@errors'
 import { brand, headingFontStack, withOpacity } from '@ui/branding'
 import { buildHelpCenterUrl, resolveSupportConfig } from './experienceConfig'
 import TipBanner from '@ui/TipBanner'
@@ -80,6 +81,30 @@ interface StatusBadgeProps {
 
 interface PlannerProps {
   onLogout: () => void
+}
+
+interface PlannerConflictDetail {
+  readonly error?: string
+  readonly message?: string
+  readonly crew_conflicts?: Array<{
+    readonly booking_id?: number
+    readonly crew_id?: number
+    readonly crew_name?: string | null
+    readonly start?: string
+    readonly end?: string
+    readonly status?: string
+  }>
+  readonly transport_conflicts?: Array<{
+    readonly route_id?: number
+    readonly vehicle_id?: number
+    readonly vehicle_name?: string | null
+    readonly driver_id?: number
+    readonly driver_name?: string | null
+    readonly date?: string
+    readonly start_time?: string
+    readonly end_time?: string
+    readonly status?: string
+  }>
 }
 
 const personaPresets: Record<PersonaKey, PersonaPreset> = defaultProjectPresets
@@ -306,6 +331,39 @@ function ensureAlerts(value: unknown): string[] {
     return value.filter((item): item is string => typeof item === 'string')
   }
   return []
+}
+
+function resolvePlannerConflictMessage(error: unknown, fallback: string): string {
+  if (!isApiError(error) || error.code !== 'conflict') {
+    return fallback
+  }
+
+  const detail = error.meta?.response as PlannerConflictDetail | undefined
+  const baseMessage =
+    detail?.message && detail.message.trim().length > 0
+      ? detail.message
+      : 'Planning geblokkeerd door conflicterende crew- of transporttaken.'
+
+  const crewConflicts = Array.isArray(detail?.crew_conflicts) ? detail.crew_conflicts : []
+  const transportConflicts = Array.isArray(detail?.transport_conflicts)
+    ? detail.transport_conflicts
+    : []
+  const crewCount = crewConflicts.length
+  const transportCount = transportConflicts.length
+
+  if (crewCount === 0 && transportCount === 0) {
+    return baseMessage
+  }
+
+  const parts: string[] = []
+  if (crewCount > 0) {
+    parts.push(`${crewCount} crew-taak${crewCount > 1 ? 'en' : ''}`)
+  }
+  if (transportCount > 0) {
+    parts.push(`${transportCount} transporttaak${transportCount > 1 ? 'en' : ''}`)
+  }
+
+  return `${baseMessage} (${parts.join(' en ')})`
 }
 
 const filterControlStyle: React.CSSProperties = {
@@ -667,9 +725,13 @@ export default function Planner({ onLogout }: PlannerProps) {
       setFeedback({ type: 'success', message: 'Project bijgewerkt.' })
     } catch (error) {
       console.error(error)
+      const message = resolvePlannerConflictMessage(
+        error,
+        'Bijwerken mislukt. Controleer beschikbaarheid en verplichte velden.',
+      )
       setFeedback({
         type: 'error',
-        message: 'Bijwerken mislukt. Controleer beschikbaarheid en verplichte velden.',
+        message,
       })
     }
   }
@@ -782,9 +844,13 @@ export default function Planner({ onLogout }: PlannerProps) {
         }
       } catch (error) {
         console.error(error)
+        const message = resolvePlannerConflictMessage(
+          error,
+          'Herplannen geblokkeerd. Controleer voorraad of rechten.',
+        )
         setFeedback({
           type: 'error',
-          message: 'Herplannen geblokkeerd. Controleer voorraad of rechten.',
+          message,
         })
         info.revert()
       } finally {

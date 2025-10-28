@@ -678,6 +678,27 @@ function normalizeTips(list: OnboardingTip[] | null | undefined): NormalizedOnbo
   }))
 }
 
+function buildStatusMap(
+  steps: NormalizedOnboardingStep[],
+  progressRecords: OnboardingProgressRecord[],
+): Record<string, string> {
+  const map: Record<string, string> = {}
+
+  for (const step of steps) {
+    if (step.status) {
+      map[step.code] = step.status
+    }
+  }
+
+  for (const record of progressRecords) {
+    if (record.status) {
+      map[record.step_code] = record.status
+    }
+  }
+
+  return map
+}
+
 function collectResultErrors(
   stepsResult: StepsResult,
   progressResult: ProgressResult,
@@ -730,6 +751,8 @@ export default function OnboardingOverlay({
   )
   const [done, setDone] = useState<Set<string>>(() => new Set())
   const [tips, setTips] = useState<NormalizedOnboardingTip[]>(() => [...fallbackTips])
+  const [stepStatuses, setStepStatuses] = useState<Record<string, string>>({})
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [errorDetails, setErrorDetails] = useState<string[]>([])
@@ -787,6 +810,8 @@ export default function OnboardingOverlay({
     setSteps(normalizeSteps(resolveFallbackSteps(persona)))
     setDone(new Set())
     setTips([...fallbackTips])
+    setStepStatuses({})
+    setStepErrors({})
   }, [persona])
 
   const showError = useCallback(
@@ -810,6 +835,7 @@ export default function OnboardingOverlay({
   const handleRetry = useCallback(() => {
     trackOnboardingEvent('retry_clicked', { stepCode: null, action: 'retry' })
     setAllowRetry(false)
+    setStepErrors({})
     setReloadToken((value) => value + 1)
   }, [trackOnboardingEvent])
 
@@ -933,6 +959,8 @@ export default function OnboardingOverlay({
         setSteps(fallbackResolvedSteps)
         setTips([...fallbackTips])
         setDone(new Set())
+        setStepStatuses(buildStatusMap(fallbackResolvedSteps, []))
+        setStepErrors({})
         showError(FALLBACK_MESSAGE, { details: [getErrorMessage(error)], allowRetry: true })
         trackOnboardingEvent(
           'data_error',
@@ -1070,12 +1098,43 @@ export default function OnboardingOverlay({
       const now = Date.now()
       if (now - lastCompletionRef.current < COMPLETION_RATE_LIMIT_MS) {
         showError('Rustig aan! Wacht een paar tellen voordat je de volgende stap afrondt.')
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]:
+            'Je hebt net een andere stap afgerond. Wacht een paar seconden voordat je verder gaat.',
+        }))
+        return
+      }
+      const currentStatus =
+        stepStatuses[step.code] ?? (done.has(step.code) ? 'complete' : (step.status ?? ''))
+      const meta = stepMeta[step.code]
+      const moduleLabel = meta?.module ? moduleLabels[meta.module] : undefined
+      if (currentStatus === 'blocked' || currentStatus === 'locked') {
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]: resolvePersonaGateMessage(persona, moduleLabel),
+        }))
+        return
+      }
+      if (currentStatus === 'complete') {
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]: 'Deze stap is al gemarkeerd als voltooid.',
+        }))
         return
       }
       const controller = new AbortController()
       controllersRef.current.add(controller)
       setBusyStep(step.code)
       clearError()
+      setStepErrors((current) => {
+        if (!current[step.code]) {
+          return current
+        }
+        const next = { ...current }
+        delete next[step.code]
+        return next
+      })
       try {
         const completionResult = await completeStep(emailParam, step.code, {
           signal: controller.signal,
@@ -1161,6 +1220,17 @@ export default function OnboardingOverlay({
       if (!step?.code) return
       const action = stepActions[step.code]
       if (!action?.href) return
+      const currentStatus =
+        stepStatuses[step.code] ?? (done.has(step.code) ? 'complete' : (step.status ?? ''))
+      if (currentStatus === 'blocked' || currentStatus === 'locked') {
+        const meta = stepMeta[step.code]
+        const moduleLabel = meta?.module ? moduleLabels[meta.module] : undefined
+        setStepErrors((current) => ({
+          ...current,
+          [step.code]: resolvePersonaGateMessage(persona, moduleLabel),
+        }))
+        return
+      }
       setBusyActionStep(step.code)
       trackOnboardingEvent('cta_clicked', {
         stepCode: step.code,
@@ -1463,6 +1533,10 @@ export default function OnboardingOverlay({
                   const completed = done.has(step.code)
                   const isNext = !completed && step.code === nextStepCode
                   const action = stepActions[step.code]
+                  const status = completed
+                    ? 'complete'
+                    : (stepStatuses[step.code] ?? step.status ?? 'pending')
+                  const stepErrorMessage = stepErrors[step.code]
                   return (
                     <StepCard
                       key={step.code}
@@ -1475,6 +1549,9 @@ export default function OnboardingOverlay({
                       action={action}
                       onAction={() => handleAction(step)}
                       actionBusy={busyActionStep === step.code}
+                      status={status}
+                      errorMessage={stepErrorMessage}
+                      persona={persona}
                     />
                   )
                 })}
@@ -1507,6 +1584,9 @@ interface StepCardProps {
   action?: StepAction | undefined
   onAction: () => void
   actionBusy: boolean
+  status?: string
+  persona: PersonaKey
+  errorMessage?: string
 }
 
 const StepCard: FC<StepCardProps> = ({
@@ -1519,6 +1599,9 @@ const StepCard: FC<StepCardProps> = ({
   action,
   onAction,
   actionBusy,
+  status,
+  persona,
+  errorMessage,
 }) => {
   const highlight = isNext && !completed
   const borderColor = highlight
@@ -1532,6 +1615,48 @@ const StepCard: FC<StepCardProps> = ({
       ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(107, 70, 193, 0.18) 100%)'
       : withOpacity('#FFFFFF', 0.86)
   const moduleLabel = meta?.module ? moduleLabels[meta.module] : undefined
+  const effectiveStatus = status ?? (completed ? 'complete' : (step.status ?? 'pending'))
+  const statusInfo = statusCopy[effectiveStatus]
+  const blocked = effectiveStatus === 'blocked' || effectiveStatus === 'locked'
+  const statusLabel = formatStatusLabel(effectiveStatus)
+  const showStatusBadge =
+    effectiveStatus !== 'pending' && effectiveStatus !== 'complete' && statusLabel.length > 0
+  const badgeTone = statusInfo?.tone ?? (blocked ? 'danger' : 'info')
+  const badgeStyles = (() => {
+    switch (badgeTone) {
+      case 'danger':
+        return {
+          background: withOpacity(brand.colors.danger, 0.18),
+          color: brand.colors.danger,
+          border: `1px solid ${withOpacity(brand.colors.danger, 0.35)}`,
+        }
+      case 'warning':
+        return {
+          background: withOpacity(brand.colors.warning, 0.2),
+          color: brand.colors.warning,
+          border: `1px solid ${withOpacity(brand.colors.warning, 0.3)}`,
+        }
+      default:
+        return {
+          background: withOpacity(brand.colors.secondary, 0.08),
+          color: brand.colors.secondary,
+          border: `1px solid ${withOpacity(brand.colors.secondary, 0.18)}`,
+        }
+    }
+  })()
+  const statusMessage = (() => {
+    if (blocked) {
+      return resolvePersonaGateMessage(persona, moduleLabel)
+    }
+    if (statusInfo?.message) {
+      return statusInfo.message
+    }
+    if (showStatusBadge && effectiveStatus !== 'pending' && effectiveStatus !== 'complete') {
+      return `Status: ${statusLabel}.`
+    }
+    return undefined
+  })()
+  const combinedErrorMessage = errorMessage
 
   return (
     <li
@@ -1568,6 +1693,20 @@ const StepCard: FC<StepCardProps> = ({
                 {moduleLabel}
               </span>
             )}
+            {showStatusBadge && (
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  ...badgeStyles,
+                }}
+              >
+                {statusLabel}
+              </span>
+            )}
             {highlight && (
               <span
                 style={{
@@ -1600,23 +1739,24 @@ const StepCard: FC<StepCardProps> = ({
             <button
               type="button"
               onClick={onAction}
-              disabled={actionBusy}
+              disabled={actionBusy || blocked}
               style={{
                 alignSelf: 'flex-start',
                 border: `1px solid ${withOpacity(brand.colors.primary, 0.38)}`,
                 padding: '8px 16px',
                 borderRadius: 12,
-                background: actionBusy
-                  ? withOpacity(brand.colors.primary, 0.2)
-                  : withOpacity('#FFFFFF', 0.92),
+                background:
+                  actionBusy || blocked
+                    ? withOpacity(brand.colors.primary, 0.2)
+                    : withOpacity('#FFFFFF', 0.92),
                 color: brand.colors.secondary,
                 fontWeight: 600,
-                cursor: actionBusy ? 'wait' : 'pointer',
-                boxShadow: actionBusy ? 'none' : '0 18px 34px rgba(37, 99, 235, 0.18)',
+                cursor: actionBusy || blocked ? 'not-allowed' : 'pointer',
+                boxShadow: actionBusy || blocked ? 'none' : '0 18px 34px rgba(37, 99, 235, 0.18)',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               }}
             >
-              {actionBusy ? 'Openen…' : action.label}
+              {actionBusy ? 'Openen…' : blocked ? 'Niet beschikbaar' : action.label}
             </button>
           )}
         </div>
@@ -1637,7 +1777,7 @@ const StepCard: FC<StepCardProps> = ({
             <button
               type="button"
               onClick={onMark}
-              disabled={busy}
+              disabled={busy || blocked}
               style={{
                 border: 'none',
                 padding: '8px 18px',
@@ -1645,17 +1785,48 @@ const StepCard: FC<StepCardProps> = ({
                 backgroundImage: brand.colors.gradient,
                 color: '#fff',
                 fontWeight: 600,
-                cursor: busy ? 'wait' : 'pointer',
-                boxShadow: busy ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.24)',
+                cursor: busy || blocked ? 'not-allowed' : 'pointer',
+                boxShadow: busy || blocked ? 'none' : '0 18px 36px rgba(79, 70, 229, 0.24)',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                opacity: busy ? 0.75 : 1,
+                opacity: busy || blocked ? 0.65 : 1,
               }}
             >
-              {busy ? 'Bezig…' : 'Markeer gereed'}
+              {busy ? 'Bezig…' : blocked ? 'Geblokkeerd' : 'Markeer gereed'}
             </button>
           )}
         </div>
       </div>
+      {(statusMessage || combinedErrorMessage) && (
+        <div style={{ display: 'grid', gap: 6 }}>
+          {statusMessage && (
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.82rem',
+                color:
+                  badgeTone === 'danger'
+                    ? brand.colors.danger
+                    : badgeTone === 'warning'
+                      ? brand.colors.warning
+                      : brand.colors.mutedText,
+              }}
+            >
+              {statusMessage}
+            </p>
+          )}
+          {combinedErrorMessage && (
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.82rem',
+                color: brand.colors.danger,
+              }}
+            >
+              {combinedErrorMessage}
+            </p>
+          )}
+        </div>
+      )}
     </li>
   )
 }
