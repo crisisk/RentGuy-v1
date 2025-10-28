@@ -9,7 +9,7 @@ import crmStore, {
 const CustomerList = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [customers, setCustomers] = useState<StoreCustomer[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<CustomerStatus | null>(null)
 
@@ -37,18 +37,14 @@ const CustomerList = () => {
     })
   }, [customers, searchQuery, selectedStatus])
 
-  const statusOptions: CustomerStatus[] = ['active', 'pending', 'inactive', 'archived']
+  const statusOptions: CustomerStatus[] = ['active', 'inactive']
 
   const getStatusColor = (status: CustomerStatus) => {
     switch (status) {
       case 'active':
         return 'bg-green-100 text-green-800'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
       case 'inactive':
         return 'bg-gray-100 text-gray-800'
-      case 'archived':
-        return 'bg-blue-100 text-blue-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }

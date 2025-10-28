@@ -165,7 +165,7 @@ const ProjectOverview: React.FC = () => {
                   {formatDateLabel(project.createdAt)}
                 </td>
                 <td className="px-4 py-3" data-testid={`project-overview-team-${project.id}`}>
-                  —
+                  {project.teamSize ?? '—'}
                 </td>
                 <td
                   className="px-4 py-3 text-right"

@@ -1,6 +1,8 @@
 export interface AnalyticsTrackPayload extends Record<string, unknown> {
   channel?: string
   legacyEvent?: string
+  context?: Record<string, unknown>
+  properties?: Record<string, unknown>
 }
 
 export interface AnalyticsEventDetail extends Record<string, unknown> {
@@ -23,6 +25,10 @@ export const BUFFER_LIMIT = 50
 export const DATA_LAYER_LIMIT = 120
 
 const defaultChannel = 'app'
+export const BUFFER_LIMIT = 100
+export const DATA_LAYER_LIMIT = 300
+
+let bufferedEvents: AnalyticsEventDetail[] = []
 
 let bufferedEvents: AnalyticsEventDetail[] = []
 
@@ -67,6 +73,8 @@ const pushToDataLayer = (
   if (!target) {
     return
   }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
 
   const eventName = legacyEvent
     ? `rentguy_${legacyEvent}`

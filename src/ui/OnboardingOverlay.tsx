@@ -92,6 +92,55 @@ interface ProgressSnapshot {
   percent: number
 }
 
+type StatusTone = 'danger' | 'warning' | 'info'
+
+const statusCopy: Record<string, { tone?: StatusTone; message?: string }> = {
+  blocked: {
+    tone: 'danger',
+    message: 'Deze stap is geblokkeerd totdat de verantwoordelijke module een groen signaal geeft.',
+  },
+  locked: {
+    tone: 'danger',
+    message: 'Je hebt aanvullende rechten nodig om deze stap vrij te geven.',
+  },
+  awaiting_input: {
+    tone: 'warning',
+    message: 'Er is extra input nodig van een collega of stakeholder.',
+  },
+  scheduled: {
+    tone: 'info',
+    message: 'Deze stap staat ingepland; zodra de datum bereikt is kun je afronden.',
+  },
+  in_review: {
+    tone: 'info',
+    message: 'Het Mister DJ team beoordeelt deze stap. Je ontvangt een melding bij goedkeuring.',
+  },
+}
+
+const formatStatusLabel = (status: string): string => {
+  if (!status) return ''
+  return status
+    .split(/[-_]/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+const resolvePersonaGateMessage = (persona: PersonaKey, moduleLabel?: string): string => {
+  const moduleMessage = moduleLabel ? `${moduleLabel.toLowerCase()}-` : ''
+  switch (persona) {
+    case 'finance':
+      return `Finance heeft eerst ${moduleMessage}gegevens nodig voordat je verder kunt.`
+    case 'warehouse':
+      return `Werk de ${moduleMessage || 'warehouse-'}checklist bij om deze stap te ontgrendelen.`
+    case 'sales':
+      return `Sales moet de ${moduleMessage || 'sales-'}handover afronden voordat je deze stap kunt voltooien.`
+    case 'admin':
+      return `Een admin moet de ${moduleMessage || ''}configuratie vrijgeven.`
+    default:
+      return 'Deze stap is nog niet beschikbaar voor jouw rol. Volg eerst de voorgaande acties.'
+  }
+}
+
 function createProgressSnapshot(completed: number, total: number): ProgressSnapshot {
   const safeTotal = Math.max(0, total)
   const safeCompleted = Math.min(Math.max(0, completed), safeTotal)
@@ -1604,6 +1653,7 @@ export default function OnboardingOverlay({
                     ? 'complete'
                     : (stepStatuses[step.code] ?? step.status ?? 'pending')
                   const stepErrorMessage = stepErrors[step.code]
+                  const stepCardProps = stepErrorMessage ? { errorMessage: stepErrorMessage } : {}
                   return (
                     <StepCard
                       key={step.code}
@@ -1617,8 +1667,8 @@ export default function OnboardingOverlay({
                       onAction={() => handleAction(step)}
                       actionBusy={busyActionStep === step.code}
                       status={status}
-                      errorMessage={stepErrorMessage}
                       persona={persona}
+                      {...stepCardProps}
                     />
                   )
                 })}

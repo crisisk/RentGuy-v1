@@ -6,7 +6,7 @@ import projectStore, { type ProjectDetails as StoreProjectDetails } from '../../
 const ProjectDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [project, setProject] = useState<StoreProjectDetails | null>(null)
+  const [project, setProject] = useState<ProjectDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -64,7 +64,9 @@ const ProjectDetails: React.FC = () => {
           </div>
           <div>
             <label className="text-gray-500">End Date:</label>
-            <p className="font-medium">{formatDateLabel(project.endDate)}</p>
+            <p className="font-medium">
+              {project.endDate ? formatDateLabel(project.endDate) : '—'}
+            </p>
           </div>
         </div>
       </div>

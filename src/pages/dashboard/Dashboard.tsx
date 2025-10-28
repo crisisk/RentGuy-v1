@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { formatDateTime } from '../../core/storage'
 import projectStore, { type Project } from '../../stores/projectStore'
 
@@ -29,6 +29,17 @@ const Dashboard = () => {
   const [activities, setActivities] = useState<DashboardActivity[]>([])
   const [revenueData, setRevenueData] = useState<number[]>([])
 
+  const formatActivityDate = useCallback(
+    (dateString: string) =>
+      formatDateTime(dateString, {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    [],
+  )
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -51,18 +62,6 @@ const Dashboard = () => {
 
     loadData()
   }, [])
-
-  const generateRevenueData = () => {
-    return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10000) + 5000)
-  }
-
-  const formatActivityDate = (dateString: string) =>
-    formatDateTime(dateString, {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
 
   if (loading)
     return (

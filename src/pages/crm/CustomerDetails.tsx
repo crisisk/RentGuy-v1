@@ -8,8 +8,8 @@ import crmStore, {
 
 const CustomerDetails: React.FC = () => {
   const { customerId } = useParams<{ customerId: string }>()
-  const [customer, setCustomer] = useState<StoreCustomer | null>(null)
-  const [activities, setActivities] = useState<StoreActivity[]>([])
+  const [customer, setCustomer] = useState<Customer | null>(null)
+  const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 

@@ -21,21 +21,22 @@ declare global {
 const hasWindow = (): boolean => typeof window !== 'undefined'
 
 const ensureDataLayer = (): DataLayerEntry[] | null => {
-  if (!hasWindow()) {
+  const currentWindow = getWindow()
+  if (!currentWindow) {
     console.warn('[analytics] window is not defined; skipping dataLayer push.')
     return null
   }
 
-  if (window.dataLayer === undefined) {
-    window.dataLayer = []
+  if (currentWindow.dataLayer === undefined) {
+    currentWindow.dataLayer = []
   }
 
-  if (!Array.isArray(window.dataLayer)) {
+  if (!Array.isArray(currentWindow.dataLayer)) {
     console.warn('[analytics] window.dataLayer is not an array; skipping dataLayer push.')
     return null
   }
 
-  const dataLayer = window.dataLayer as DataLayerEntry[]
+  const dataLayer = currentWindow.dataLayer as DataLayerEntry[]
 
   if (dataLayer.length >= MAX_DATALAYER_LENGTH) {
     console.warn('[analytics] dataLayer reached maximum size; skipping push.')
@@ -63,9 +64,10 @@ export const track = (event: AnalyticsEvent, payload: AnalyticsPayload): void =>
 
   pushToDataLayer(entry)
 
+  const currentWindow = getWindow()
   if (
-    hasWindow() &&
-    typeof window.dispatchEvent === 'function' &&
+    currentWindow &&
+    typeof currentWindow.dispatchEvent === 'function' &&
     typeof CustomEvent === 'function'
   ) {
     const debugEvent = new CustomEvent('analytics:event', {
@@ -75,6 +77,6 @@ export const track = (event: AnalyticsEvent, payload: AnalyticsPayload): void =>
       },
     })
 
-    window.dispatchEvent(debugEvent)
+    currentWindow.dispatchEvent(debugEvent)
   }
 }

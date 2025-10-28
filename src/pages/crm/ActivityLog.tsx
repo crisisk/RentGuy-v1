@@ -2,11 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { formatDateTime } from '../../core/storage'
 import crmStore, { type Activity as CRMActivity } from '../../stores/crmStore'
 
-interface ActivityLogEntry {
-  id: string
-  type: 'call' | 'email' | 'meeting' | 'note'
+type ActivityLogEntry = Pick<Activity, 'id' | 'type' | 'description'> & {
   timestamp: string
-  description: string
   user: string
 }
 

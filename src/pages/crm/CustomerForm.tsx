@@ -19,7 +19,7 @@ const CustomerForm: React.FC = () => {
 
   const [errors, setErrors] = useState<Partial<Record<keyof CustomerInput, string>>>({})
 
-  const statusOptions: CustomerStatus[] = ['active', 'pending', 'inactive', 'archived']
+  const statusOptions: CustomerStatus[] = ['active', 'inactive']
 
   useEffect(() => {
     if (id) {
