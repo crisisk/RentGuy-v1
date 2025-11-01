@@ -31,3 +31,60 @@
 | P3       | Extend analytics for BI dashboards                                                 | Complete    | KPI roadmap captured in `docs/analytics_extension_plan.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | P3       | Plan third-party accounting/CRM integrations                                       | Complete    | Strategy defined in `docs/integration_strategy.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | P3       | Prepare internationalisation roadmap                                               | Complete    | Localisation milestones outlined in `docs/internationalization_roadmap.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+
+## Enterprise/Sales Readiness Outstanding Batches (2025-10-26 audit)
+
+_The batches below consolidate every open production, enterprise, and sales-readiness activity we identified while cross-referencing the production tracker, deployment runbooks, CI next steps, and enterprise hardening reports. Prioritise earlier batches first when a dependency is called out; otherwise, batches are safe to run in parallel._
+
+### Batch 1 — Production access & backend bring-up _(sequential)_
+
+- Unlock infrastructure credentials and execute the VPS deployment runbook so containers can be promoted from staging to production.【F:README.md†L25-L57】【F:docs/DEPLOYMENT.md†L1-L120】
+- Confirm the backend image build artefacts exist on the target host before releasing any workloads.【F:AGENTIC_AI_TASK_LIST.md†L134-L138】
+- Re-run the Alembic migrations/seed scripts remotely and verify health/ready endpoints respond once the API is online.【F:AGENTIC_AI_TASK_LIST.md†L134-L138】【F:README.md†L34-L39】
+
+### Batch 2 — Frontend build & container pipeline _(sequential)_
+
+- Repair the TypeScript configuration, router wiring, and React 18 entrypoint so `npm run build` succeeds deterministically.【F:AGENTIC_AI_TASK_LIST.md†L115-L123】
+- Fix the frontend Dockerfile, produce the `rentguy-frontend` image, and push it to the registry that the compose stack expects.【F:AGENTIC_AI_TASK_LIST.md†L120-L123】
+
+### Batch 3 — Full stack orchestration _(depends on Batches 1-2)_
+
+- Update the production Compose manifest to include the new frontend image alongside the backend stack.【F:AGENTIC_AI_TASK_LIST.md†L120-L155】
+- Deploy the refreshed compose bundle, validate Traefik routing, and smoke-test the UI↔API integration plus WebSocket channels once both services are live.【F:AGENTIC_AI_TASK_LIST.md†L148-L155】
+
+### Batch 4 — Platform configuration hardening _(partially sequential)_
+
+- Create the initial admin account directly in production, rotate credentials, and confirm login paths are working end-to-end.【F:NEXT_STEPS_CONFIGURATION.md†L13-L80】
+- Configure SMTP settings, domain + TLS certificates, and tighten the UFW firewall so only public entrypoints stay exposed.【F:NEXT_STEPS_CONFIGURATION.md†L82-L200】
+
+### Batch 5 — Secrets, integrations & observability _(parallel after Batch 3)_
+
+- Integrate OpenBao (or Vault equivalent), Keycloak SSO, Mollie payments, and Sentry error tracking to unlock the full enterprise feature set.【F:AGENTIC_AI_TASK_LIST.md†L158-L170】
+- Stand up centralised logging, metrics, and tracing so operations gains production-grade observability beyond container stdout.【F:verbeterpunten_enterprise_grade.md†L30-L40】
+- Validate backup jobs, log rotation, and monitoring probes from the deployment checklist to close operational risk gaps.【F:NEXT_STEPS_CONFIGURATION.md†L144-L186】
+
+### Batch 6 — Automated quality gates _(parallel after Batch 2)_
+
+- Unblock the Cypress regression harness by provisioning Xvfb (or using the Cypress container) and finishing selector instrumentation.【F:README.md†L31-L44】
+- Execute the Playwright suite, Lighthouse audits, and axe-core accessibility checks so the CI/CD pipeline covers the high-touch user flows.【F:NEXT_CI_ACTIONS.md†L1-L5】【F:AGENTIC_AI_TASK_LIST.md†L180-L186】
+
+### Batch 7 — Test-suite stabilisation & coverage _(sequential)_
+
+- Resolve the Vitest environment issues (`vi.mock` scope, Zustand initialisation) and author backend integration tests so automated suites stop failing silently.【F:README.md†L31-L51】
+- Re-run pytest plus targeted API module checks (customer portal, recurring invoices, jobboard, booking, scanning, sub-renting) to confirm domain logic parity.【F:AGENTIC_AI_TASK_LIST.md†L182-L185】
+
+### Batch 8 — Performance, security & compliance _(depends on Batches 3 & 5)_
+
+- Perform performance and load testing against the new deployment to validate latency, throughput, and WebSocket responsiveness goals.【F:README.md†L48-L51】【F:AGENTIC_AI_TASK_LIST.md†L182-L186】
+- Conduct security audits across auth/RBAC plus integrate SAST/DAST scanners into CI so enterprise security baselines are demonstrably met.【F:README.md†L48-L51】【F:verbeterpunten_enterprise_grade.md†L19-L29】
+
+### Batch 9 — Sales readiness & stakeholder activation _(parallel after Batch 3)_
+
+- Schedule stakeholder UAT, confirm release communications, and verify the go-live collateral stays in sync with the deployed build.【F:README.md†L48-L55】【F:uat_go_live_assessment.md†L1-L40】
+- Publish any remaining sales enablement artefacts (pricing playbooks, deposit checklists) alongside the CRM onboarding wizard to prove “100% sales ready” coverage in live demos.【F:README.md†L61-L67】
+
+### Batch 10 — Enterprise platform uplift _(longer-term program)_
+
+- Migrate from Docker Compose to Kubernetes (or equivalent orchestration) for auto-scaling, self-healing, and controlled rollouts.【F:verbeterpunten_enterprise_grade.md†L7-L18】
+- Expand CI/CD with promotion environments, blue/green release paths, and continuous test automation so releases become audit-proof.【F:verbeterpunten_enterprise_grade.md†L41-L50】
+- Externalise secrets/config management and embed periodic maintenance (debug scans, dependency upgrades) into the release calendar.【F:verbeterpunten_enterprise_grade.md†L52-L58】【F:README.md†L70-L86】
